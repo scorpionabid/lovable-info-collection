@@ -9,14 +9,34 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return null;
       
-      const { data, error: profileError } = await supabase
+      // First fetch user data without joining roles
+      const { data: userData, error: profileError } = await supabase
         .from('users')
-        .select('*, roles(*)')
+        .select('*')
         .eq('email', user.email)
         .single();
       
       if (profileError) throw profileError;
-      return data;
+      
+      // If role_id exists, fetch the role separately
+      let roleData = null;
+      if (userData && userData.role_id) {
+        const { data: roleResult, error: roleError } = await supabase
+          .from('roles')
+          .select('*')
+          .eq('id', userData.role_id)
+          .maybeSingle();
+          
+        if (!roleError && roleResult) {
+          roleData = roleResult;
+        }
+      }
+      
+      // Combine user and role data
+      return {
+        ...userData,
+        roles: roleData
+      };
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
@@ -30,28 +50,29 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return [];
       
-      const { data, error: roleError } = await supabase
+      // Get the user's role_id first
+      const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role_id, roles(permissions)')
+        .select('role_id')
         .eq('email', user.email)
         .single();
       
+      if (userError) throw userError;
+      
+      if (!userData || !userData.role_id) return [];
+      
+      // Then fetch permissions from the roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('permissions')
+        .eq('id', userData.role_id)
+        .maybeSingle();
+      
       if (roleError) throw roleError;
       
-      if (data?.roles) {
-        if (Array.isArray(data.roles)) {
-          if (data.roles.length > 0) {
-            const firstRole = data.roles[0];
-            if (firstRole && typeof firstRole === 'object' && 'permissions' in firstRole) {
-              return (firstRole as { permissions: string[] }).permissions;
-            }
-          }
-        } else if (data.roles && typeof data.roles === 'object') {
-          const rolesObj = data.roles as { permissions?: string[] };
-          if (rolesObj && rolesObj.permissions) {
-            return rolesObj.permissions;
-          }
-        }
+      // Return permissions if they exist
+      if (roleData && roleData.permissions) {
+        return Array.isArray(roleData.permissions) ? roleData.permissions : [];
       }
       
       return [];

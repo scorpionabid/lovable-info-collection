@@ -36,9 +36,10 @@ const authCore = {
       
       console.log('Auth successful, fetching user data');
       
+      // Modified query: First fetch the user without joining roles
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('*, roles(*)')
+        .select('*')
         .eq('email', credentials.email)
         .single();
       
@@ -47,14 +48,34 @@ const authCore = {
         throw userError;
       }
       
+      // If role_id exists, fetch the role separately
+      let roleData = null;
+      if (userData && userData.role_id) {
+        const { data: roleResult, error: roleError } = await supabase
+          .from('roles')
+          .select('*')
+          .eq('id', userData.role_id)
+          .maybeSingle();
+          
+        if (!roleError && roleResult) {
+          roleData = roleResult;
+        }
+      }
+      
+      // Combine user and role data
+      const combinedUserData = {
+        ...userData,
+        roles: roleData
+      };
+      
       console.log('User data fetched successfully');
       
       localStorage.setItem('token', data.session?.access_token || '');
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(combinedUserData));
       
       return {
         token: data.session?.access_token,
-        user: userData
+        user: combinedUserData
       };
     } catch (error) {
       console.error('Login error:', error);

@@ -5,14 +5,14 @@ import authService, { LoginCredentials } from '@/services/api/authService';
 import { toast } from 'sonner';
 
 // Define UserRole type
-export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';
+export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin' | 'superadmin';
 
 interface User {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  role: UserRole; 
+  role?: UserRole; 
   role_id: string;
   region_id?: string;
   sector_id?: string;
@@ -75,12 +75,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Verify token is still valid by calling getCurrentUser
           const userData = await authService.getCurrentUser();
           if (userData) {
+            // Determine role from either roles object or role_id
+            const userRole = userData.roles?.name || 
+                            (typeof userData.role_id === 'string' ? userData.role_id as UserRole : 'school-admin');
+            
             setUser({
               id: userData.id,
               email: userData.email,
               first_name: userData.first_name,
               last_name: userData.last_name,
-              role: (userData.roles?.name as UserRole) || 'school-admin',
+              role: userRole,
               role_id: userData.role_id,
               region_id: userData.region_id,
               sector_id: userData.sector_id,
@@ -120,12 +124,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { user: userData } = await authService.login(credentials);
       
       if (userData) {
+        // Determine role from either roles object or role_id
+        const userRole = userData.roles?.name || 
+                         (typeof userData.role_id === 'string' ? userData.role_id as UserRole : 'school-admin');
+        
         setUser({
           id: userData.id,
           email: userData.email,
           first_name: userData.first_name,
           last_name: userData.last_name,
-          role: (userData.roles?.name as UserRole) || 'school-admin',
+          role: userRole,
           role_id: userData.role_id,
           region_id: userData.region_id,
           sector_id: userData.sector_id,

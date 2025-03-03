@@ -4,26 +4,72 @@ import { supabase } from '../services/supabase/supabaseClient';
 
 export const createSuperAdmin = async () => {
   try {
-    // Skip role management since we're getting row-level security policy violations
-    // Go directly to checking if the superadmin user exists
+    // Check if superadmin role exists, create if not
+    let roleId: string;
+    const { data: existingRole, error: roleCheckError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'superadmin')
+      .maybeSingle();
+    
+    if (roleCheckError || !existingRole) {
+      console.log('Creating superadmin role...');
+      // Create the role
+      const { data: newRole, error: createRoleError } = await supabase
+        .from('roles')
+        .insert([
+          { 
+            name: 'superadmin', 
+            description: 'Super Administrator with full access',
+            permissions: ['all']
+          }
+        ])
+        .select('id')
+        .single();
+      
+      if (createRoleError) {
+        console.log('Error creating role, using string identifier:', createRoleError);
+        // If we can't create the role, just use the string as identifier
+        roleId = 'superadmin';
+      } else {
+        roleId = newRole.id;
+      }
+    } else {
+      roleId = existingRole.id;
+    }
+    
+    // Check if superadmin user exists
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
       .eq('email', 'superadmin@edu.az')
-      .single();
+      .maybeSingle();
 
-    // If user exists, make sure it's properly configured in auth
     if (!checkError && existingUser) {
       console.log('Superadmin user exists, updating...');
       
-      // Try to sign in to check if the account is valid
+      // Update the user to ensure role is correct
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          is_active: true,
+          role_id: roleId,
+          first_name: 'Super',
+          last_name: 'Admin'
+        })
+        .eq('id', existingUser.id);
+        
+      if (updateError) {
+        console.error('Failed to update user record:', updateError);
+      }
+      
+      // Try to sign in to check if auth account is valid
       try {
         await authService.login({
           email: 'superadmin@edu.az',
           password: 'Admin123!'
         });
         
-        // If login succeeds, the credentials are correct
         return { 
           success: true, 
           message: 'Superadmin account exists and is working! You can log in with superadmin@edu.az / Admin123!'
@@ -32,7 +78,7 @@ export const createSuperAdmin = async () => {
         console.log('Login failed, recreating auth user...');
         
         // Try to recreate the auth user with the correct password
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email: 'superadmin@edu.az',
           password: 'Admin123!',
           options: {
@@ -48,21 +94,6 @@ export const createSuperAdmin = async () => {
             success: false, 
             message: "Failed to recreate superadmin auth account: " + signUpError.message 
           };
-        }
-        
-        // Update the user record with role information
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            is_active: true,
-            role_id: 'superadmin',  // Just use a string identifier instead of UUID
-            first_name: 'Super',
-            last_name: 'Admin'
-          })
-          .eq('id', existingUser.id);
-          
-        if (updateError) {
-          console.error('Failed to update user record:', updateError);
         }
         
         return { 
@@ -109,7 +140,7 @@ export const createSuperAdmin = async () => {
         email: 'superadmin@edu.az',
         first_name: 'Super',
         last_name: 'Admin',
-        role_id: 'superadmin',  // Just use a string identifier instead of UUID
+        role_id: roleId,
         is_active: true
       }]);
     
