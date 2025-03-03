@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -29,6 +28,8 @@ interface RegionDetailProps {
     schools: number;
     users: number;
     completionRate: number;
+    sectorCount?: number;
+    schoolCount?: number;
   };
 }
 

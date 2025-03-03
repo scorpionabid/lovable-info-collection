@@ -38,7 +38,10 @@ const RegionDetails = () => {
     sectors: 5,
     schools: 134,
     users: 24,
-    completionRate: 87
+    completionRate: 87,
+    // Add these properties for compatibility with RegionTable
+    sectorCount: 5,
+    schoolCount: 134
   };
   
   return (
