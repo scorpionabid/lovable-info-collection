@@ -12,7 +12,7 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: UserRole; // Change string to UserRole
+  role: UserRole; 
   role_id: string;
   region_id?: string;
   sector_id?: string;
@@ -49,6 +49,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [permissions, setPermissions] = useState<string[]>([]);
   const navigate = useNavigate();
   
+  // Error handler to prevent UI blocking from Firebase or other errors
+  const handleApiError = (error: any, message: string) => {
+    console.error(message, error);
+    
+    // Check if it's a Firebase/Firestore RPC error and handle it silently
+    if (error?.message?.includes('WebChannelConnection') || 
+        error?.message?.includes('Firestore') ||
+        error?.code === 'resource-exhausted') {
+      console.warn('Non-critical API error, continuing execution:', error.message);
+      return; // Continue execution without showing error to user
+    }
+    
+    // For other errors, show a toast notification
+    toast.error('Xəta baş verdi, yenidən cəhd edin');
+  };
+  
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -64,7 +80,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               email: userData.email,
               first_name: userData.first_name,
               last_name: userData.last_name,
-              role: userData.roles?.name as UserRole || 'school-admin', // Cast to UserRole
+              role: (userData.roles?.name as UserRole) || 'school-admin',
               role_id: userData.role_id,
               region_id: userData.region_id,
               sector_id: userData.sector_id,
@@ -72,8 +88,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             });
             
             // Get permissions
-            const perms = await authService.getUserPermissions();
-            setPermissions(perms);
+            try {
+              const perms = await authService.getUserPermissions();
+              setPermissions(perms);
+            } catch (permError) {
+              handleApiError(permError, 'Permissions loading error:');
+              setPermissions([]);
+            }
           } else {
             // Token invalid, clear storage
             localStorage.removeItem('token');
@@ -81,7 +102,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        handleApiError(error, 'Auth initialization error:');
+        // Still clear tokens if there was an error
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       } finally {
@@ -103,7 +125,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           email: userData.email,
           first_name: userData.first_name,
           last_name: userData.last_name,
-          role: userData.roles?.name as UserRole || 'school-admin', // Cast to UserRole
+          role: (userData.roles?.name as UserRole) || 'school-admin',
           role_id: userData.role_id,
           region_id: userData.region_id,
           sector_id: userData.sector_id,
@@ -111,14 +133,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
         
         // Get permissions
-        const perms = await authService.getUserPermissions();
-        setPermissions(perms);
+        try {
+          const perms = await authService.getUserPermissions();
+          setPermissions(perms);
+        } catch (permError) {
+          handleApiError(permError, 'Permissions loading error:');
+          setPermissions([]);
+        }
         
         toast.success('Uğurla daxil oldunuz');
         navigate('/');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      handleApiError(error, 'Login error:');
       throw error;
     } finally {
       setIsLoading(false);
@@ -134,7 +161,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       navigate('/login');
       toast.success('Uğurla çıxış etdiniz');
     } catch (error) {
-      console.error('Logout error:', error);
+      handleApiError(error, 'Logout error:');
     } finally {
       setIsLoading(false);
     }

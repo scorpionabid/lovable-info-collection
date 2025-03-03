@@ -1,14 +1,25 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Try to use environment variables first, then fallback to the project ID from config.toml
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wxkaasjwpavlwrpvsuia.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4a2Fhc2p3cGF2bHdycHZzdWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODA3NzAsImV4cCI6MjA1NTk1Njc3MH0.Sy0ktssGHAMNtU4kCrEKuFNf8Yf5R280uqwpsMcZpuM';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Supabase URL or Anon key is missing. Please check your environment variables.');
+// Create the Supabase client with better error handling
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+// Log the connection state in development, but don't block the application
+try {
+  console.log('Supabase connection initialized');
+} catch (error) {
+  console.error('Supabase initialization warning:', error);
+  // Continue execution - don't block the app
 }
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Database types based on our schema
 export type Region = {

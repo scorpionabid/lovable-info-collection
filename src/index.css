@@ -75,6 +75,13 @@
     background-color: hsl(var(--muted));
     border-radius: 20px;
   }
+  
+  /* Modern alternative to deprecated -ms-high-contrast */
+  @media (forced-colors: active) {
+    .high-contrast-visible {
+      forced-color-adjust: none;
+    }
+  }
 }
 
 @layer components {
