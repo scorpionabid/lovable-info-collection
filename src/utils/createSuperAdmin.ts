@@ -7,6 +7,6 @@ export const createSuperAdmin = async () => {
     return result;
   } catch (error) {
     console.error('Error creating superadmin account:', error);
-    return { success: false, error };
+    return { success: false, message: "Unknown error occurred", error };
   }
 };
