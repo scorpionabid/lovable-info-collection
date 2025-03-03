@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabase/supabaseClient';
 
 export interface LoginCredentials {
@@ -189,31 +190,8 @@ const authService = {
   
   createSuperAdmin: async () => {
     try {
-      const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', 'superadmin@edu.az')
-        .single();
-
-      if (!checkError && existingUser) {
-        console.log('Superadmin already exists');
-        return { success: true, message: 'Superadmin already exists' };
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email: 'superadmin@edu.az',
-        password: 'Admin123!',
-        options: {
-          data: {
-            first_name: 'Super',
-            last_name: 'Admin'
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      let roleId;
+      // Step 1: Check if superadmin role exists, if not create it
+      let roleId: string;
       const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select('id')
@@ -221,6 +199,7 @@ const authService = {
         .single();
 
       if (roleError) {
+        // Create the superadmin role
         const { data: newRole, error: createRoleError } = await supabase
           .from('roles')
           .insert([
@@ -239,11 +218,54 @@ const authService = {
         roleId = roleData.id;
       }
 
+      // Step 2: Check if superadmin user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', 'superadmin@edu.az')
+        .single();
+
+      if (!checkError && existingUser) {
+        console.log('Superadmin user already exists');
+        
+        // Step 3a: If exists, verify the auth account exists and is properly configured
+        await supabase.auth.admin.updateUserById(existingUser.id, {
+          email: 'superadmin@edu.az',
+          password: 'Admin123!',
+          email_confirm: true,
+          user_metadata: {
+            first_name: 'Super',
+            last_name: 'Admin'
+          }
+        });
+        
+        return { 
+          success: true, 
+          message: 'Superadmin updated successfully. You can now log in with superadmin@edu.az / Admin123!' 
+        };
+      }
+
+      // Step 3b: If not exists, create the auth account and user record
+      const { data, error } = await supabase.auth.signUp({
+        email: 'superadmin@edu.az',
+        password: 'Admin123!',
+        options: {
+          data: {
+            first_name: 'Super',
+            last_name: 'Admin'
+          },
+          emailRedirectTo: `${window.location.origin}/login`
+        }
+      });
+
+      if (error) throw error;
+
+      // Step 4: Insert the user record
       const { error: userError } = await supabase
         .from('users')
         .insert([
           { 
-            id: data.user.id,
+            id: data.user?.id,
             email: 'superadmin@edu.az',
             first_name: 'Super',
             last_name: 'Admin',
@@ -254,13 +276,26 @@ const authService = {
       
       if (userError) throw userError;
       
+      // Step 5: Try to auto-confirm the email (this will only work if email confirmation is disabled)
+      try {
+        await supabase.auth.admin.updateUserById(data.user?.id as string, {
+          email_confirm: true
+        });
+      } catch (confirmError) {
+        console.log('Could not auto-confirm email, user will need to confirm via email');
+      }
+      
       return { 
         success: true, 
-        message: 'Superadmin created successfully. Please check your email to confirm your account before logging in.' 
+        message: 'Superadmin created successfully. If email confirmation is enabled, please check the email to confirm account before logging in. Email: superadmin@edu.az, Password: Admin123!' 
       };
     } catch (error) {
       console.error('Failed to create superadmin:', error);
-      return { success: false, message: 'Failed to create superadmin', error };
+      return { 
+        success: false, 
+        message: 'Failed to create superadmin: ' + (error instanceof Error ? error.message : 'Unknown error'), 
+        error 
+      };
     }
   }
 };

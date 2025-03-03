@@ -29,7 +29,7 @@ const Login = () => {
     } catch (error) {
       toast({
         title: "Xəta",
-        description: "Super Admin yaradıla bilmədi",
+        description: "Super Admin yaradıla bilmədi: " + (error instanceof Error ? error.message : "Naməlum xəta"),
         variant: "destructive",
       });
     } finally {
