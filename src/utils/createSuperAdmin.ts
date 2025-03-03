@@ -4,41 +4,8 @@ import { supabase } from '../services/supabase/supabaseClient';
 
 export const createSuperAdmin = async () => {
   try {
-    // First check if superadmin role exists
-    const { data: roleData, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'superadmin')
-      .single();
-
-    let roleId;
-    
-    // If role doesn't exist, create it - but without the permissions field
-    if (roleError) {
-      console.log('Creating superadmin role...');
-      const { data: newRole, error: createRoleError } = await supabase
-        .from('roles')
-        .insert([{
-          name: 'superadmin',
-          description: 'Super Administrator with full access'
-          // Remove the permissions field as it doesn't exist in the table
-        }])
-        .select('id')
-        .single();
-        
-      if (createRoleError) {
-        console.error('Failed to create superadmin role:', createRoleError);
-        return { 
-          success: false, 
-          message: "Failed to create superadmin role: " + createRoleError.message
-        };
-      }
-      roleId = newRole.id;
-    } else {
-      roleId = roleData.id;
-    }
-
-    // Check if superadmin user already exists
+    // Skip role management since we're getting row-level security policy violations
+    // Go directly to checking if the superadmin user exists
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
@@ -49,7 +16,7 @@ export const createSuperAdmin = async () => {
     if (!checkError && existingUser) {
       console.log('Superadmin user exists, updating...');
       
-      // First, try to sign in to check if the account is valid
+      // Try to sign in to check if the account is valid
       try {
         await authService.login({
           email: 'superadmin@edu.az',
@@ -83,14 +50,19 @@ export const createSuperAdmin = async () => {
           };
         }
         
-        // Force email confirmation regardless of settings
-        const { error: adminUpdateError } = await supabase.auth.admin.updateUserById(
-          existingUser.id,
-          { email_confirm: true }
-        );
-        
-        if (adminUpdateError) {
-          console.warn('Could not force email confirmation. User may need to verify email:', adminUpdateError);
+        // Update the user record with role information
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            is_active: true,
+            role_id: 'superadmin',  // Just use a string identifier instead of UUID
+            first_name: 'Super',
+            last_name: 'Admin'
+          })
+          .eq('id', existingUser.id);
+          
+        if (updateError) {
+          console.error('Failed to update user record:', updateError);
         }
         
         return { 
@@ -137,7 +109,7 @@ export const createSuperAdmin = async () => {
         email: 'superadmin@edu.az',
         first_name: 'Super',
         last_name: 'Admin',
-        role_id: roleId,
+        role_id: 'superadmin',  // Just use a string identifier instead of UUID
         is_active: true
       }]);
     

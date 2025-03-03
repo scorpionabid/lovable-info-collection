@@ -1,31 +1,46 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { createSuperAdmin } from '@/utils/createSuperAdmin';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Login = () => {
   const [isCreatingSuperAdmin, setIsCreatingSuperAdmin] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusType, setStatusType] = useState<'default' | 'error' | 'success'>('default');
   const { toast } = useToast();
+
+  // Reset status message after 10 seconds
+  useEffect(() => {
+    if (statusMessage) {
+      const timer = setTimeout(() => {
+        setStatusMessage(null);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusMessage]);
 
   const handleCreateSuperAdmin = async () => {
     setIsCreatingSuperAdmin(true);
     setStatusMessage("Super Admin yaradılır...");
+    setStatusType('default');
     
     try {
       const result = await createSuperAdmin();
       
       if (result.success) {
         setStatusMessage("Super Admin yaradıldı! Daxil olmağa cəhd edin.");
+        setStatusType('success');
         toast({
           title: "Super Admin yaradıldı",
           description: result.message || "superadmin@edu.az hesabı uğurla yaradıldı. Şifrə: Admin123!",
         });
       } else {
         setStatusMessage("Xəta: " + (result.message || "Naməlum xəta"));
+        setStatusType('error');
         toast({
           title: "Xəta",
           description: "Super Admin yaradıla bilmədi: " + (result.message || ""),
@@ -34,6 +49,7 @@ const Login = () => {
       }
     } catch (error) {
       setStatusMessage("Xəta: " + (error instanceof Error ? error.message : "Naməlum xəta"));
+      setStatusType('error');
       toast({
         title: "Xəta",
         description: "Super Admin yaradıla bilmədi: " + (error instanceof Error ? error.message : "Naməlum xəta"),
@@ -81,13 +97,24 @@ const Login = () => {
           </Button>
           
           {statusMessage && (
-            <div className={`mt-3 p-2 text-sm rounded ${statusMessage.includes('Xəta') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-              {statusMessage}
-            </div>
+            <Alert 
+              className={`mt-3 ${
+                statusType === 'error' 
+                  ? 'bg-red-50 border-red-200 text-red-800' 
+                  : statusType === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-blue-50 border-blue-200 text-blue-800'
+              }`}
+            >
+              <AlertTitle className="text-sm font-medium">
+                {statusType === 'error' ? 'Xəta' : statusType === 'success' ? 'Uğurlu' : 'Məlumat'}
+              </AlertTitle>
+              <AlertDescription className="text-xs">{statusMessage}</AlertDescription>
+            </Alert>
           )}
           
-          <p className="mt-2 text-xs text-gray-500 text-center">
-            Yalnız inkişaf məqsədləri üçün. E-poçt: superadmin@edu.az, Şifrə: Admin123!
+          <p className="mt-4 text-xs text-gray-500 text-center">
+            Super Admin: superadmin@edu.az, Şifrə: Admin123!
           </p>
         </div>
       </div>

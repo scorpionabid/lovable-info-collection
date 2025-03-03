@@ -48,7 +48,7 @@ export const LoginForm = () => {
 
   // Sample login credentials
   const sampleCredentials = [
-    { role: 'Super Admin', email: 'admin@infoline.az', password: 'infoline123' },
+    { role: 'Super Admin', email: 'superadmin@edu.az', password: 'Admin123!' },
     { role: 'Region Admin', email: 'region@infoline.az', password: 'infoline123' },
     { role: 'Sector Admin', email: 'sector@infoline.az', password: 'infoline123' },
     { role: 'School Admin', email: 'school@infoline.az', password: 'infoline123' },
