@@ -1,19 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { Bell, Check, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { X, Bell, Check, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import notificationService from '@/services/api/notificationService';
-import { useApi } from '@/hooks/useApi';
-
-type Notification = {
-  id: string;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  type: 'info' | 'warning' | 'success' | 'error';
-};
+import { Notification } from '@/services/supabase/supabaseClient';
+import { supabase } from '@/services/supabase/supabaseClient';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface NotificationPanelProps {
   onClose: () => void;
@@ -21,202 +15,226 @@ interface NotificationPanelProps {
 
 export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { toast } = useToast();
-  
-  const { execute: fetchNotifications } = useApi(notificationService.getNotifications);
-  const { execute: markAsReadApi } = useApi(notificationService.markAsRead);
-  const { execute: markAllAsReadApi } = useApi(notificationService.markAllAsRead);
-  
+
   useEffect(() => {
-    const loadNotifications = async () => {
+    const fetchNotifications = async () => {
       try {
-        setIsLoading(true);
-        const result = await fetchNotifications();
-        if (result) {
-          setNotifications(result);
-        }
+        setLoading(true);
+        const result = await notificationService.getNotifications();
+        setNotifications(result.notifications);
+        setUnreadCount(result.notifications.filter(n => !n.is_read).length);
       } catch (error) {
-        console.error('Failed to load notifications:', error);
-        // If API fails, use sample data
-        setNotifications(sampleNotifications);
+        console.error('Error fetching notifications:', error);
+        toast({
+          title: 'Xəta',
+          description: 'Bildirişlər yüklənərkən xəta baş verdi',
+          variant: 'destructive',
+        });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
+
+    fetchNotifications();
+
+    // Set up real-time subscription
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const channel = supabase
+        .channel(`public:notifications:user_id=eq.${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = payload.new as Notification;
+            setNotifications(prev => [newNotification, ...prev]);
+            setUnreadCount(prev => prev + 1);
+            
+            toast({
+              title: newNotification.title,
+              description: newNotification.message,
+            });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    const unsubscribe = setupSubscription();
     
-    loadNotifications();
-  }, [fetchNotifications]);
-  
-  const markAsRead = async (id: string) => {
+    // Cleanup subscription
+    return () => {
+      if (unsubscribe) {
+        unsubscribe.then(fn => fn && fn());
+      }
+    };
+  }, [toast]);
+
+  const handleMarkAllAsRead = async () => {
     try {
-      await markAsReadApi(id);
-      setNotifications(notifications.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      ));
+      await notificationService.markAllAsRead();
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
       toast({
-        title: "Bildiriş oxundu",
-        description: "Bildiriş oxunmuş kimi işarələndi",
+        title: 'Uğurlu əməliyyat',
+        description: 'Bütün bildirişlər oxunmuş kimi işarələndi',
       });
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
-  
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(notif => notif.id !== id));
-    toast({
-      title: "Bildiriş silindi",
-      description: "Bildiriş uğurla silindi",
-    });
-  };
-  
-  const markAllAsRead = async () => {
-    try {
-      await markAllAsReadApi();
-      setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+      console.error('Error marking all as read:', error);
       toast({
-        title: "Bütün bildirişlər oxundu",
-        description: "Bütün bildirişlər oxunmuş kimi işarələndi",
+        title: 'Xəta',
+        description: 'Bildirişlər yenilənərkən xəta baş verdi',
+        variant: 'destructive',
       });
-    } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
     }
   };
 
-  const getTypeColor = (type: Notification['type']) => {
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(
+        notifications.map(n => 
+          n.id === id ? { ...n, is_read: true } : n
+        )
+      );
+      setUnreadCount(prev => prev - 1);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast({
+        title: 'Xəta',
+        description: 'Bildiriş yenilənərkən xəta baş verdi',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'info': return 'bg-blue-500';
-      case 'warning': return 'bg-yellow-500';
-      case 'success': return 'bg-green-500';
-      case 'error': return 'bg-red-500';
-      default: return 'bg-blue-500';
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-500" />;
+      case 'warning':
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+      case 'error':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      default:
+        return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  // Sample notifications data as fallback
-  const sampleNotifications: Notification[] = [
-    {
-      id: '1',
-      title: 'Yeni məlumat tələbi',
-      message: 'Şimal regionu üçün yeni məlumat tələbi yaradıldı',
-      time: '15 dəq əvvəl',
-      read: false,
-      type: 'info',
-    },
-    {
-      id: '2',
-      title: 'Məlumat təsdiqləndi',
-      message: 'Müəllim məlumatları Bakı region admini tərəfindən təsdiqləndi',
-      time: '2 saat əvvəl',
-      read: false,
-      type: 'success',
-    },
-    {
-      id: '3',
-      title: 'Diqqət!',
-      message: 'Məktəb #42 hesabatında məlumat çatışmazlığı var',
-      time: '1 gün əvvəl',
-      read: true,
-      type: 'warning',
-    },
-    {
-      id: '4',
-      title: 'Sistem yeniləməsi',
-      message: 'Sistem bu gün 22:00-da texniki işlər üçün müvəqqəti olaraq əlçatan olmayacaq',
-      time: '2 gün əvvəl',
-      read: true,
-      type: 'info',
-    },
-  ];
 
   return (
-    <div className="absolute top-full right-0 mt-2 w-80 bg-white shadow-lg rounded-lg overflow-hidden z-50 border border-infoline-light-gray max-h-[500px] flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-infoline-light-gray">
+    <div className="fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-80 bg-white border-l border-infoline-light-gray shadow-lg animate-in slide-in-from-right">
+      <div className="flex items-center justify-between border-b border-infoline-light-gray p-4">
         <div className="flex items-center gap-2">
-          <Bell size={16} className="text-infoline-dark-gray" />
-          <span className="font-medium text-infoline-dark-blue">Bildirişlər</span>
+          <Bell className="h-5 w-5 text-infoline-dark-blue" />
+          <h2 className="font-semibold text-infoline-dark-blue">Bildirişlər</h2>
           {unreadCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-infoline-blue text-white">
+            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
               {unreadCount}
             </span>
           )}
         </div>
-        <button 
-          onClick={markAllAsRead}
-          className="text-xs text-infoline-blue hover:text-infoline-dark-blue"
-        >
-          Hamısını oxunmuş et
-        </button>
+        <div className="flex gap-2">
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={handleMarkAllAsRead}
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Hamısını oxunmuş et
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center p-6 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-infoline-blue"></div>
-          <p className="text-infoline-dark-gray mt-2">Bildirişlər yüklənir...</p>
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-6 text-center">
-          <Bell size={40} className="text-infoline-light-gray mb-2" />
-          <p className="text-infoline-dark-gray">Bildiriş yoxdur</p>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-y-auto divide-y divide-infoline-light-gray">
+
+      <ScrollArea className="h-[calc(100%-4rem)]">
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-infoline-blue"></div>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-infoline-dark-gray">
+            <Bell className="h-8 w-8 mb-2 opacity-30" />
+            <p>Bildirişiniz yoxdur</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-infoline-light-gray">
             {notifications.map((notification) => (
-              <div 
+              <div
                 key={notification.id}
-                className={cn(
-                  "flex gap-3 p-4 transition-colors hover:bg-infoline-light-gray",
-                  !notification.read && "bg-blue-50"
-                )}
+                className={`p-4 hover:bg-infoline-light-gray/20 ${
+                  !notification.is_read ? 'bg-blue-50' : ''
+                }`}
               >
-                <div className={cn(
-                  "w-2 h-2 mt-1.5 rounded-full flex-shrink-0",
-                  getTypeColor(notification.type)
-                )} />
-                
-                <div className="flex-grow min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium text-sm text-infoline-dark-blue">{notification.title}</p>
-                    <span className="text-xs text-infoline-dark-gray whitespace-nowrap">
-                      {notification.time}
-                    </span>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    {getNotificationIcon(notification.type)}
                   </div>
-                  <p className="text-sm text-infoline-dark-gray mt-1 break-words">
-                    {notification.message}
-                  </p>
-                </div>
-                
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  {!notification.read && (
-                    <button 
-                      onClick={() => markAsRead(notification.id)}
-                      className="p-1.5 text-infoline-blue hover:bg-white rounded-full"
-                    >
-                      <Check size={14} />
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => deleteNotification(notification.id)}
-                    className="p-1.5 text-infoline-dark-gray hover:text-red-500 hover:bg-white rounded-full"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <h4 className="font-medium text-infoline-dark-blue">
+                        {notification.title}
+                      </h4>
+                      {!notification.is_read && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleMarkAsRead(notification.id)}
+                        >
+                          <Check className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-sm text-infoline-dark-gray mt-1">
+                      {notification.message}
+                    </p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-infoline-gray">
+                        {format(new Date(notification.created_at), 'dd.MM.yyyy HH:mm')}
+                      </span>
+                      {notification.link && (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-6 p-0 text-xs text-infoline-blue"
+                          asChild
+                        >
+                          <a href={notification.link}>Bax</a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-          
-          <div className="border-t border-infoline-light-gray p-3">
-            <button className="w-full py-2 text-center text-sm text-infoline-blue hover:bg-infoline-light-gray rounded-md">
-              Bütün bildirişlərə bax
-            </button>
-          </div>
-        </>
-      )}
+        )}
+      </ScrollArea>
     </div>
   );
 };

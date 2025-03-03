@@ -1,373 +1,147 @@
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService, { LoginCredentials } from '@/services/api/authService';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
-// User role types
-export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';
-
-// User interface
-export interface User {
+interface User {
   id: string;
   email: string;
-  name: string;
-  surname: string;
-  role: UserRole;
-  entityId?: string; // Region, sector or school ID depending on role
-  entityName?: string;
-  lastActive: string;
-}
-
-// Permissions interface
-export interface Permissions {
-  canCreateUsers: boolean;
-  canModifyUsers: boolean;
-  canDeleteUsers: boolean;
-  canCreateRegions: boolean;
-  canModifyRegions: boolean;
-  canDeleteRegions: boolean;
-  canCreateSectors: boolean;
-  canModifySectors: boolean;
-  canDeleteSectors: boolean;
-  canCreateSchools: boolean;
-  canModifySchools: boolean;
-  canDeleteSchools: boolean;
-  canCreateCategories: boolean;
-  canModifyCategories: boolean;
-  canDeleteCategories: boolean;
-  canApproveData: boolean;
-  canRejectData: boolean;
-  canExportData: boolean;
-  canImportData: boolean;
+  first_name: string;
+  last_name: string;
+  role: string;
+  role_id: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  permissions: Permissions | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  permissions: string[];
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => {},
+  logout: async () => {},
+  permissions: [],
+});
 
-// Default permissions based on user role
-const getDefaultPermissions = (role: UserRole): Permissions => {
-  switch (role) {
-    case 'super-admin':
-      return {
-        canCreateUsers: true,
-        canModifyUsers: true,
-        canDeleteUsers: true,
-        canCreateRegions: true,
-        canModifyRegions: true,
-        canDeleteRegions: true,
-        canCreateSectors: true,
-        canModifySectors: true,
-        canDeleteSectors: true,
-        canCreateSchools: true,
-        canModifySchools: true,
-        canDeleteSchools: true,
-        canCreateCategories: true,
-        canModifyCategories: true,
-        canDeleteCategories: true,
-        canApproveData: true,
-        canRejectData: true,
-        canExportData: true,
-        canImportData: true,
-      };
-    case 'region-admin':
-      return {
-        canCreateUsers: true,
-        canModifyUsers: true,
-        canDeleteUsers: false,
-        canCreateRegions: false,
-        canModifyRegions: true,
-        canDeleteRegions: false,
-        canCreateSectors: true,
-        canModifySectors: true,
-        canDeleteSectors: true,
-        canCreateSchools: true,
-        canModifySchools: true,
-        canDeleteSchools: true,
-        canCreateCategories: false,
-        canModifyCategories: false,
-        canDeleteCategories: false,
-        canApproveData: true,
-        canRejectData: true,
-        canExportData: true,
-        canImportData: true,
-      };
-    case 'sector-admin':
-      return {
-        canCreateUsers: false,
-        canModifyUsers: false,
-        canDeleteUsers: false,
-        canCreateRegions: false,
-        canModifyRegions: false,
-        canDeleteRegions: false,
-        canCreateSectors: false,
-        canModifySectors: true,
-        canDeleteSectors: false,
-        canCreateSchools: true,
-        canModifySchools: true,
-        canDeleteSchools: false,
-        canCreateCategories: false,
-        canModifyCategories: false,
-        canDeleteCategories: false,
-        canApproveData: true,
-        canRejectData: true,
-        canExportData: true,
-        canImportData: true,
-      };
-    case 'school-admin':
-      return {
-        canCreateUsers: false,
-        canModifyUsers: false,
-        canDeleteUsers: false,
-        canCreateRegions: false,
-        canModifyRegions: false,
-        canDeleteRegions: false,
-        canCreateSectors: false,
-        canModifySectors: false,
-        canDeleteSectors: false,
-        canCreateSchools: false,
-        canModifySchools: true,
-        canDeleteSchools: false,
-        canCreateCategories: false,
-        canModifyCategories: false,
-        canDeleteCategories: false,
-        canApproveData: false,
-        canRejectData: false,
-        canExportData: true,
-        canImportData: true,
-      };
-    default:
-      return {
-        canCreateUsers: false,
-        canModifyUsers: false,
-        canDeleteUsers: false,
-        canCreateRegions: false,
-        canModifyRegions: false,
-        canDeleteRegions: false,
-        canCreateSectors: false,
-        canModifySectors: false,
-        canDeleteSectors: false,
-        canCreateSchools: false,
-        canModifySchools: false,
-        canDeleteSchools: false,
-        canCreateCategories: false,
-        canModifyCategories: false,
-        canDeleteCategories: false,
-        canApproveData: false,
-        canRejectData: false,
-        canExportData: false,
-        canImportData: false,
-      };
-  }
-};
+export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [permissions, setPermissions] = useState<Permissions | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Check if user is already logged in on mount
+  
   useEffect(() => {
-    const checkAuth = async () => {
+    const initializeAuth = async () => {
       try {
-        setIsLoading(true);
-        const savedToken = localStorage.getItem('token');
+        // Check for stored user
+        const storedUser = localStorage.getItem('user');
         
-        if (savedToken) {
-          // Get current user from API
+        if (storedUser) {
+          // Verify token is still valid by calling getCurrentUser
           const userData = await authService.getCurrentUser();
-          setUser(userData);
-          
-          // Get user permissions
-          try {
-            const permissionsData = await authService.getUserPermissions();
-            setPermissions(permissionsData);
-          } catch (error) {
-            // Fallback to default permissions based on role
-            if (userData?.role) {
-              setPermissions(getDefaultPermissions(userData.role));
-            }
+          if (userData) {
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              role: userData.roles?.name || '',
+              role_id: userData.role_id,
+              region_id: userData.region_id,
+              sector_id: userData.sector_id,
+              school_id: userData.school_id,
+            });
+            
+            // Get permissions
+            const perms = await authService.getUserPermissions();
+            setPermissions(perms);
+          } else {
+            // Token invalid, clear storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
           }
         }
       } catch (error) {
-        // Clear localStorage if authentication fails
+        console.error('Auth initialization error:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        setUser(null);
-        setPermissions(null);
       } finally {
         setIsLoading(false);
       }
     };
-
-    checkAuth();
+    
+    initializeAuth();
   }, []);
-
-  // Login function
+  
   const login = async (credentials: LoginCredentials) => {
     try {
       setIsLoading(true);
+      const { user: userData } = await authService.login(credentials);
       
-      // In the real implementation, this would call the API
-      const response = await authService.login(credentials);
-      
-      // Store token in localStorage
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      if (userData) {
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.roles?.name || '',
+          role_id: userData.role_id,
+          region_id: userData.region_id,
+          sector_id: userData.sector_id,
+          school_id: userData.school_id,
+        });
+        
+        // Get permissions
+        const perms = await authService.getUserPermissions();
+        setPermissions(perms);
+        
+        toast.success('Uğurla daxil oldunuz');
+        navigate('/');
       }
-      
-      // Store user data
-      const userData = response.user;
-      setUser(userData);
-      
-      // Get permissions
-      try {
-        const permissionsData = await authService.getUserPermissions();
-        setPermissions(permissionsData);
-      } catch (error) {
-        // Fallback to default permissions based on role
-        if (userData?.role) {
-          setPermissions(getDefaultPermissions(userData.role));
-        }
-      }
-      
-      // Navigate to appropriate dashboard based on role
-      navigate('/');
-      
-      toast({
-        title: "Giriş uğurlu oldu",
-        description: "Xoş gəlmisiniz!",
-      });
     } catch (error) {
-      const err = error as Error;
-      toast({
-        title: "Giriş xətası",
-        description: err.message || "Daxil etdiyiniz məlumatlar yanlışdır",
-        variant: "destructive",
-      });
+      console.error('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Logout function
+  
   const logout = async () => {
     try {
       setIsLoading(true);
-      
-      // Call logout API
       await authService.logout();
-      
-      // Clear local storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      
-      // Reset state
       setUser(null);
-      setPermissions(null);
-      
-      // Navigate to login
+      setPermissions([]);
       navigate('/login');
-      
-      toast({
-        title: "Çıxış edildi",
-        description: "Sistemdən çıxış etdiniz",
-      });
+      toast.success('Uğurla çıxış etdiniz');
     } catch (error) {
-      // Still clear local storage and state on error
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      setPermissions(null);
-      navigate('/login');
+      console.error('Logout error:', error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Forgot password function
-  const forgotPassword = async (email: string) => {
-    try {
-      setIsLoading(true);
-      await authService.forgotPassword(email);
-      
-      toast({
-        title: "Şifrə bərpası",
-        description: "Şifrə bərpası üçün email göndərildi",
-      });
-    } catch (error) {
-      const err = error as Error;
-      toast({
-        title: "Xəta",
-        description: err.message || "Şifrə bərpası zamanı xəta baş verdi",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Reset password function
-  const resetPassword = async (token: string, newPassword: string) => {
-    try {
-      setIsLoading(true);
-      await authService.resetPassword({ token, newPassword });
-      
-      toast({
-        title: "Şifrə yeniləndi",
-        description: "Şifrəniz uğurla yeniləndi",
-      });
-      
-      navigate('/login');
-    } catch (error) {
-      const err = error as Error;
-      toast({
-        title: "Xəta",
-        description: err.message || "Şifrə yeniləmə zamanı xəta baş verdi",
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
+  const isAuthenticated = !!user;
+  
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        permissions,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-        forgotPassword,
-        resetPassword,
-      }}
-    >
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout, permissions }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

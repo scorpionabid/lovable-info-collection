@@ -1,40 +1,95 @@
 
-// API Base configuration
-import axios from 'axios';
+import { supabase } from '../supabase/supabaseClient';
 
-// Create axios instance with default configs
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor for adding auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// API Base configuration - switched to use Supabase
+const api = {
+  auth: supabase.auth,
+  db: supabase,
+  
+  // Custom request methods that maintain the same interface as before
+  get: async (path: string, params?: any) => {
+    const pathParts = path.split('/');
+    const resource = pathParts[1]; // e.g., 'users' from '/users'
+    const id = pathParts[2]; // e.g., '123' from '/users/123'
+    
+    let query = supabase.from(resource).select('*');
+    
+    if (id) {
+      query = query.eq('id', id);
+      const { data, error } = await query.single();
+      if (error) throw error;
+      return { data };
     }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor for handling errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle 401 Unauthorized errors (token expired)
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Redirect to login
-      window.location.href = '/login';
+    
+    if (params) {
+      // Apply filters
+      Object.entries(params).forEach(([key, value]) => {
+        if (key === 'limit') {
+          query = query.limit(value as number);
+        } else if (key === 'page') {
+          const limit = params.limit || 10;
+          const page = value as number;
+          const from = (page - 1) * limit;
+          const to = from + limit - 1;
+          query = query.range(from, to);
+        } else {
+          query = query.eq(key, value);
+        }
+      });
     }
-    return Promise.reject(error);
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    return { data };
+  },
+  
+  post: async (path: string, body: any) => {
+    const pathParts = path.split('/');
+    const resource = pathParts[1]; // e.g., 'users' from '/users'
+    
+    const { data, error } = await supabase
+      .from(resource)
+      .insert([{ ...body, created_at: new Date().toISOString() }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  },
+  
+  put: async (path: string, body: any) => {
+    const pathParts = path.split('/');
+    const resource = pathParts[1]; // e.g., 'users' from '/users'
+    const id = pathParts[2]; // e.g., '123' from '/users/123'
+    
+    if (!id) throw new Error('ID is required for PUT requests');
+    
+    const { data, error } = await supabase
+      .from(resource)
+      .update({ ...body, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { data };
+  },
+  
+  delete: async (path: string) => {
+    const pathParts = path.split('/');
+    const resource = pathParts[1]; // e.g., 'users' from '/users'
+    const id = pathParts[2]; // e.g., '123' from '/users/123'
+    
+    if (!id) throw new Error('ID is required for DELETE requests');
+    
+    const { error } = await supabase
+      .from(resource)
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return { data: true };
   }
-);
+};
 
 export default api;

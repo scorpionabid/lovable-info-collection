@@ -48,10 +48,10 @@ export const LoginForm = () => {
 
   // Sample login credentials
   const sampleCredentials = [
-    { role: 'Super Admin', email: 'admin@example.com', password: 'password' },
-    { role: 'Region Admin', email: 'region@example.com', password: 'password' },
-    { role: 'Sector Admin', email: 'sector@example.com', password: 'password' },
-    { role: 'School Admin', email: 'school@example.com', password: 'password' },
+    { role: 'Super Admin', email: 'admin@infoline.az', password: 'infoline123' },
+    { role: 'Region Admin', email: 'region@infoline.az', password: 'infoline123' },
+    { role: 'Sector Admin', email: 'sector@infoline.az', password: 'infoline123' },
+    { role: 'School Admin', email: 'school@infoline.az', password: 'infoline123' },
   ];
 
   const fillCredentials = (email: string, password: string) => {

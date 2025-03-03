@@ -1,16 +1,8 @@
 
-import { supabase } from '../supabase/supabaseClient';
-import type { Notification } from '../supabase/supabaseClient';
-
-interface NotificationFilter {
-  read?: boolean;
-  type?: string;
-  page?: number;
-  limit?: number;
-}
+import { supabase, Notification } from './supabaseClient';
 
 const notificationService = {
-  getNotifications: async (filters: NotificationFilter = {}) => {
+  getNotifications: async (filters: { read?: boolean; type?: string; page?: number; limit?: number } = {}) => {
     // Get current user ID from auth
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
@@ -87,6 +79,35 @@ const notificationService = {
     
     if (error) throw error;
     return true;
+  },
+  
+  // Setup realtime notifications
+  subscribeToNotifications: (onNotification: (notification: Notification) => void) => {
+    // Get current user ID from auth
+    supabase.auth.getUser().then(({ data: { user }, error }) => {
+      if (error || !user) return;
+      
+      const subscription = supabase
+        .channel('public:notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            onNotification(payload.new as Notification);
+          }
+        )
+        .subscribe();
+      
+      // Return cleanup function
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    });
   }
 };
 

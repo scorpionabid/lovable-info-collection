@@ -1,5 +1,5 @@
 
-import { supabase } from '../supabase/supabaseClient';
+import { supabase, User } from './supabaseClient';
 
 export interface LoginCredentials {
   email: string;
@@ -13,6 +13,7 @@ export interface ResetPasswordData {
 
 const authService = {
   login: async (credentials: LoginCredentials) => {
+    // Using Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
@@ -29,10 +30,6 @@ const authService = {
     
     if (userError) throw userError;
     
-    // Store token in localStorage
-    localStorage.setItem('token', data.session?.access_token || '');
-    localStorage.setItem('user', JSON.stringify(userData));
-    
     return {
       token: data.session?.access_token,
       user: userData
@@ -41,11 +38,6 @@ const authService = {
   
   logout: async () => {
     const { error } = await supabase.auth.signOut();
-    
-    // Remove token from localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    
     if (error) throw error;
     return true;
   },
