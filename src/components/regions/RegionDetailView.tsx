@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -18,19 +19,21 @@ import { RegionSectorTable } from './RegionSectorTable';
 import { RegionModal } from './RegionModal';
 import { RegionExportModal } from './RegionExportModal';
 
+interface Region {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  sectors: number;
+  schools: number;
+  users: number;
+  completionRate: number;
+  sectorCount: number;
+  schoolCount: number;
+}
+
 interface RegionDetailProps {
-  region: {
-    id: string;
-    name: string;
-    description: string;
-    createdAt: string;
-    sectors: number;
-    schools: number;
-    users: number;
-    completionRate: number;
-    sectorCount?: number;
-    schoolCount?: number;
-  };
+  region: Region;
 }
 
 export const RegionDetailView = ({ region }: RegionDetailProps) => {

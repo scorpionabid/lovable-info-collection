@@ -66,7 +66,7 @@ export const Sidebar = ({ userRole = 'super-admin' }: SidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   
-  const isLinkActive = (path: string) => location.pathname === path;
+  const isLinkActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   const commonLinks = [
     { to: '/', icon: <Home size={18} />, label: 'Dashboard' },
