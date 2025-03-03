@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,25 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  assignment: string;
-  columns: number;
-  deadline: string;
-  completionRate: number;
-  status: string;
-  priority: number;
-  createdAt: string;
-}
+import { CategoryType } from './CategoryDetailView';
 
 interface CategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  category?: Category;
+  category?: CategoryType;
 }
 
 export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModalProps) => {

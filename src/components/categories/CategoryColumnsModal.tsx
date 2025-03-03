@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,39 +12,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X, Plus, GripVertical, AlignJustify, Edit, Trash2 } from "lucide-react";
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  assignment: string;
-  columns: number;
-  deadline: string;
-  completionRate: number;
-  status: string;
-  priority: number;
-  createdAt: string;
-}
-
-interface Column {
-  id: string;
-  name: string;
-  type: string;
-  required: boolean;
-  description: string;
-  options?: string[];
-  order: number;
-}
+import { CategoryType, CategoryColumn } from "./CategoryDetailView";
 
 interface CategoryColumnsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  category: Category;
+  category: CategoryType;
 }
 
 export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColumnsModalProps) => {
   // Mock columns data
-  const [columns, setColumns] = useState<Column[]>([
+  const [columns, setColumns] = useState<CategoryColumn[]>([
     {
       id: '1',
       name: 'Ad',
@@ -91,7 +68,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
   ]);
 
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
-  const [selectedColumn, setSelectedColumn] = useState<Column | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<CategoryColumn | null>(null);
   const [columnFormMode, setColumnFormMode] = useState<'create' | 'edit'>('create');
 
   const handleAddColumn = () => {
@@ -100,7 +77,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     setIsColumnModalOpen(true);
   };
 
-  const handleEditColumn = (column: Column) => {
+  const handleEditColumn = (column: CategoryColumn) => {
     setSelectedColumn(column);
     setColumnFormMode('edit');
     setIsColumnModalOpen(true);
@@ -110,7 +87,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     setColumns(columns.filter(column => column.id !== columnId));
   };
 
-  const handleSaveColumn = (column: Column) => {
+  const handleSaveColumn = (column: CategoryColumn) => {
     if (columnFormMode === 'create') {
       // Generate a new ID and add the column
       const newColumn = {

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,51 +10,37 @@ import { Button } from "@/components/ui/button";
 import { CategoryModal } from './CategoryModal';
 import { CategoryColumnsModal } from './CategoryColumnsModal';
 import { Eye, Edit, Archive, MoreHorizontal, Download, Table2, ArrowUp, ArrowDown } from "lucide-react";
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  assignment: string;
-  columns: number;
-  deadline: string;
-  completionRate: number;
-  status: string;
-  priority: number;
-  createdAt: string;
-}
+import { CategoryType } from './CategoryDetailView';
 
 interface CategoryTableProps {
-  categories: Category[];
+  categories: CategoryType[];
 }
 
 export const CategoryTable = ({ categories }: CategoryTableProps) => {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
 
-  const handleView = (category: Category) => {
+  const handleView = (category: CategoryType) => {
     navigate(`/categories/${category.id}`);
   };
 
-  const handleEdit = (category: Category) => {
+  const handleEdit = (category: CategoryType) => {
     setSelectedCategory(category);
     setIsEditModalOpen(true);
   };
 
-  const handleArchive = (category: Category) => {
-    // This would typically send an API request to archive the category
+  const handleArchive = (category: CategoryType) => {
     console.log(`Archiving category: ${category.name}`);
   };
 
-  const handleManageColumns = (category: Category) => {
+  const handleManageColumns = (category: CategoryType) => {
     setSelectedCategory(category);
     setIsColumnsModalOpen(true);
   };
 
-  const handlePriorityChange = (category: Category, direction: 'up' | 'down') => {
-    // This would typically send an API request to change the priority
+  const handlePriorityChange = (category: CategoryType, direction: 'up' | 'down') => {
     console.log(`Moving ${category.name} ${direction}`);
   };
 
@@ -99,7 +84,9 @@ export const CategoryTable = ({ categories }: CategoryTableProps) => {
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{category.name}</td>
                 <td className="px-4 py-3 text-sm text-infoline-dark-gray">{category.assignment}</td>
-                <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{category.columns}</td>
+                <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">
+                  {typeof category.columns === 'number' ? category.columns : category.columns.length}
+                </td>
                 <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">
                   {new Date(category.deadline).toLocaleDateString('az-AZ')}
                 </td>

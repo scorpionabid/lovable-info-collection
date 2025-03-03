@@ -34,7 +34,6 @@ const CategoryDetails = () => {
     name: 'Müəllim Məlumatları',
     description: 'Məktəb müəllimlərinin əsas məlumatları',
     assignment: 'All',
-    columns: 12,
     priority: 1,
     deadline: '2023-12-15',
     completionRate: 78,

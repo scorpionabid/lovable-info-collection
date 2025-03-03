@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ import {
   XCircle
 } from "lucide-react";
 
-interface CategoryColumn {
+export interface CategoryColumn {
   id: string;
   name: string;
   type: string;
@@ -29,7 +28,7 @@ interface CategoryColumn {
   order: number;
 }
 
-interface Category {
+export interface CategoryType {
   id: string;
   name: string;
   description: string;
@@ -43,7 +42,7 @@ interface Category {
 }
 
 interface CategoryDetailViewProps {
-  category: Category;
+  category: CategoryType;
 }
 
 export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
@@ -52,12 +51,10 @@ export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   
-  // Determine if columns is an array or just a number
   const columnsCount = typeof category.columns === 'number' 
     ? category.columns 
     : category.columns.length;
   
-  // Mock data for completion by region
   const regionCompletionData = [
     { name: 'Bakı şəhəri', completion: 85 },
     { name: 'Gəncə şəhəri', completion: 72 },
@@ -66,7 +63,6 @@ export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
     { name: 'Quba rayonu', completion: 43 }
   ];
   
-  // Get deadline status
   const deadlineDate = new Date(category.deadline);
   const today = new Date();
   const daysUntilDeadline = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
