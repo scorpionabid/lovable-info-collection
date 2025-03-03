@@ -1,4 +1,3 @@
-
 import { 
   BarChart3, 
   Users, 
@@ -17,6 +16,7 @@ import {
 import { Layout } from "@/components/layout/Layout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ChartCard } from '@/components/dashboard/ChartCard';
+import { useAuth } from "@/contexts/AuthContext";
 
 // Sample data for charts
 const schoolsData = [
@@ -44,8 +44,10 @@ const regionsData = [
 ];
 
 const Index = () => {
+  const { user } = useAuth();
+  
   return (
-    <Layout>
+    <Layout userRole={user?.role}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-infoline-dark-blue">İdarəetmə Paneli</h1>
         <p className="text-infoline-dark-gray mt-1">Sistem məlumatlarının ümumi statistikası və icmalı</p>

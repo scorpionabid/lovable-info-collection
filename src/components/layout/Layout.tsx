@@ -3,10 +3,11 @@ import { useState, ReactNode } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { cn } from '@/lib/utils';
+import { UserRole } from '@/contexts/AuthContext';
 
 interface LayoutProps {
   children: ReactNode;
-  userRole?: 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';
+  userRole?: UserRole;
 }
 
 export const Layout = ({ 
