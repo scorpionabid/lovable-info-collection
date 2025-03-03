@@ -110,12 +110,18 @@ const authService = {
         // Access permissions safely if array has items
         if (data.roles.length > 0) {
           const firstRole = data.roles[0];
-          return firstRole && 'permissions' in firstRole ? firstRole.permissions : [];
+          // Use type checking to ensure permissions exists and is accessible
+          if (firstRole && typeof firstRole === 'object' && 'permissions' in firstRole) {
+            return firstRole.permissions as string[];
+          }
         }
       } 
       // If roles is not an array but an object
       else if (data.roles && typeof data.roles === 'object') {
-        return 'permissions' in data.roles ? data.roles.permissions : [];
+        // Use type checking to ensure permissions exists and is accessible
+        if ('permissions' in data.roles) {
+          return data.roles.permissions as string[];
+        }
       }
     }
     
