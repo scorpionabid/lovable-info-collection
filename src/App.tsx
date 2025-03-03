@@ -15,6 +15,8 @@ import Sectors from "./pages/Sectors";
 import SectorDetails from "./pages/SectorDetails";
 import Schools from "./pages/Schools";
 import SchoolDetails from "./pages/SchoolDetails";
+import Categories from "./pages/Categories";
+import CategoryDetails from "./pages/CategoryDetails";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +37,8 @@ const App = () => (
           <Route path="/sectors/:id" element={<SectorDetails />} />
           <Route path="/schools" element={<Schools />} />
           <Route path="/schools/:id" element={<SchoolDetails />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/categories/:id" element={<CategoryDetails />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
