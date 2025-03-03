@@ -5,7 +5,7 @@ import userProfileService from './userProfileService';
 import superAdminService from './superAdminService';
 
 // Re-export types for easy importing
-export { LoginCredentials, RegisterCredentials, ResetPasswordData };
+export type { LoginCredentials, RegisterCredentials, ResetPasswordData };
 
 // Combine all auth services into one export
 const authService = {

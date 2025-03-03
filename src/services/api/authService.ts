@@ -3,5 +3,5 @@
 // for backward compatibility
 import authService, { LoginCredentials, RegisterCredentials, ResetPasswordData } from './auth';
 
-export { LoginCredentials, RegisterCredentials, ResetPasswordData };
+export type { LoginCredentials, RegisterCredentials, ResetPasswordData };
 export default authService;
