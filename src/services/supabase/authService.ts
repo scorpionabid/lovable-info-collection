@@ -1,3 +1,4 @@
+
 import { supabase, User } from './supabaseClient';
 
 export interface LoginCredentials {
@@ -96,15 +97,17 @@ const authService = {
     
     // The permissions are in the roles object
     if (data?.roles) {
-      // If roles is an array, get the first item's permissions
+      // Check if roles is an array
       if (Array.isArray(data.roles)) {
-        if (data.roles.length > 0 && data.roles[0].permissions) {
-          return data.roles[0].permissions;
+        // Access permissions safely if array has items
+        if (data.roles.length > 0) {
+          const firstRole = data.roles[0];
+          return firstRole && 'permissions' in firstRole ? firstRole.permissions : [];
         }
       } 
-      // If roles is an object (not an array)
-      else if (typeof data.roles === 'object' && data.roles.permissions) {
-        return data.roles.permissions;
+      // If roles is not an array but an object
+      else if (data.roles && typeof data.roles === 'object') {
+        return 'permissions' in data.roles ? data.roles.permissions : [];
       }
     }
     
