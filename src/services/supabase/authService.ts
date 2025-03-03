@@ -94,7 +94,8 @@ const authService = {
       .single();
     
     if (roleError) throw roleError;
-    // Fix: access permissions properly from the roles object, not as an array
+    
+    // Fix: Access permissions from the roles object correctly - it's a nested object, not an array
     return data?.roles?.permissions || [];
   }
 };
