@@ -1,9 +1,16 @@
-
 import { supabase } from '../supabase/supabaseClient';
 
 export interface LoginCredentials {
   email: string;
   password: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role?: string;
 }
 
 export interface ResetPasswordData {
@@ -40,6 +47,44 @@ const authService = {
       };
     } catch (error) {
       console.error('Login error:', error);
+      throw error;
+    }
+  },
+  
+  register: async (credentials: RegisterCredentials) => {
+    try {
+      // First register the user with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password,
+        options: {
+          data: {
+            first_name: credentials.firstName,
+            last_name: credentials.lastName,
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Then create a record in our users table
+      const { error: userError } = await supabase
+        .from('users')
+        .insert([
+          { 
+            email: credentials.email,
+            first_name: credentials.firstName,
+            last_name: credentials.lastName,
+            role_id: credentials.role || 'user', // Default to user role if not specified
+            is_active: true
+          }
+        ]);
+      
+      if (userError) throw userError;
+      
+      return data;
+    } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   },
@@ -156,6 +201,80 @@ const authService = {
     } catch (error) {
       console.error('Get user permissions error:', error);
       return []; // Return empty array instead of throwing to prevent UI blocking
+    }
+  },
+
+  createSuperAdmin: async () => {
+    try {
+      // Check if superadmin already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', 'superadmin@edu.az')
+        .single();
+
+      if (!checkError && existingUser) {
+        console.log('Superadmin already exists');
+        return { success: true, message: 'Superadmin already exists' };
+      }
+
+      // Create the user in Auth
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: 'superadmin@edu.az',
+        password: 'Admin123!',
+        email_confirm: true,
+      });
+
+      if (error) throw error;
+
+      // Get or create superadmin role
+      let roleId;
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'superadmin')
+        .single();
+
+      if (roleError) {
+        // Create the role if it doesn't exist
+        const { data: newRole, error: createRoleError } = await supabase
+          .from('roles')
+          .insert([
+            { 
+              name: 'superadmin', 
+              description: 'Super Administrator with full access',
+              permissions: ['*'] // All permissions
+            }
+          ])
+          .select('id')
+          .single();
+          
+        if (createRoleError) throw createRoleError;
+        roleId = newRole.id;
+      } else {
+        roleId = roleData.id;
+      }
+
+      // Create user profile
+      const { error: userError } = await supabase
+        .from('users')
+        .insert([
+          { 
+            id: data.user.id,
+            email: 'superadmin@edu.az',
+            first_name: 'Super',
+            last_name: 'Admin',
+            role_id: roleId,
+            is_active: true
+          }
+        ]);
+      
+      if (userError) throw userError;
+      
+      return { success: true, message: 'Superadmin created successfully' };
+    } catch (error) {
+      console.error('Failed to create superadmin:', error);
+      return { success: false, message: 'Failed to create superadmin', error };
     }
   }
 };
