@@ -13,15 +13,15 @@ export const createSuperAdmin = async () => {
 
     let roleId;
     
-    // If role doesn't exist, create it
+    // If role doesn't exist, create it - but without the permissions field
     if (roleError) {
       console.log('Creating superadmin role...');
       const { data: newRole, error: createRoleError } = await supabase
         .from('roles')
         .insert([{
           name: 'superadmin',
-          description: 'Super Administrator with full access',
-          permissions: ['*']
+          description: 'Super Administrator with full access'
+          // Remove the permissions field as it doesn't exist in the table
         }])
         .select('id')
         .single();
