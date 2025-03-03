@@ -1,3 +1,4 @@
+
 import api from './index';
 
 export interface SchoolData {
@@ -51,11 +52,8 @@ const schoolService = {
   },
   
   importSchools: async (fileData: FormData) => {
-    const response = await api.post('/schools/import', fileData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    // Fix: Removed the third argument, using object format instead
+    const response = await api.post('/schools/import', fileData);
     return response.data;
   },
   

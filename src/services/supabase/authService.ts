@@ -84,7 +84,7 @@ const authService = {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) throw error;
-    if (!user) return null;
+    if (!user) return [];
     
     // Get the user's role and permissions
     const { data, error: roleError } = await supabase
@@ -94,7 +94,7 @@ const authService = {
       .single();
     
     if (roleError) throw roleError;
-    // Fix: access permissions properly, handle possible null or undefined
+    // Fix: access permissions properly from the roles object, not as an array
     return data?.roles?.permissions || [];
   }
 };

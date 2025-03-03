@@ -1,5 +1,5 @@
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout/Layout";
 import { UsersOverview } from "@/components/users/UsersOverview";
 

@@ -30,11 +30,8 @@ const dataEntryService = {
   },
   
   importData: async (fileData: FormData) => {
-    const response = await api.post('/data-entry/import', fileData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    // Fix: Removed the third argument, using object format instead
+    const response = await api.post('/data-entry/import', fileData);
     return response.data;
   },
   
