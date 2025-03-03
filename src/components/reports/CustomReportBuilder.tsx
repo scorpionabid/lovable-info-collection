@@ -80,7 +80,7 @@ export const CustomReportBuilder = () => {
           >
             Saxlanmış Hesabatlar
           </TabsTrigger>
-        </Tabs>
+        </TabsList>
         
         <TabsContent value="build" className="mt-6">
           <div className="bg-white rounded-lg shadow-sm p-6 animate-scale-in">
