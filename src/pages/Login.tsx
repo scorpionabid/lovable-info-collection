@@ -17,7 +17,7 @@ const Login = () => {
       if (result.success) {
         toast({
           title: "Super Admin yaradıldı",
-          description: "superadmin@edu.az hesabı uğurla yaradıldı. Şifrə: Admin123!",
+          description: result.message || "superadmin@edu.az hesabı uğurla yaradıldı. Şifrə: Admin123!",
         });
       } else {
         toast({

@@ -28,7 +28,6 @@ const authService = {
       
       if (error) throw error;
       
-      // After successful auth, get the user profile from our custom users table
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*, roles(*)')
@@ -37,7 +36,6 @@ const authService = {
       
       if (userError) throw userError;
       
-      // Store token in localStorage
       localStorage.setItem('token', data.session?.access_token || '');
       localStorage.setItem('user', JSON.stringify(userData));
       
@@ -53,7 +51,6 @@ const authService = {
   
   register: async (credentials: RegisterCredentials) => {
     try {
-      // First register the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: credentials.email,
         password: credentials.password,
@@ -67,7 +64,6 @@ const authService = {
       
       if (error) throw error;
       
-      // Then create a record in our users table
       const { error: userError } = await supabase
         .from('users')
         .insert([
@@ -75,7 +71,7 @@ const authService = {
             email: credentials.email,
             first_name: credentials.firstName,
             last_name: credentials.lastName,
-            role_id: credentials.role || 'user', // Default to user role if not specified
+            role_id: credentials.role || 'user',
             is_active: true
           }
         ]);
@@ -93,7 +89,6 @@ const authService = {
     try {
       const { error } = await supabase.auth.signOut();
       
-      // Remove token from localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
@@ -121,7 +116,6 @@ const authService = {
   
   resetPassword: async (data: ResetPasswordData) => {
     try {
-      // In the real flow, Supabase handles the token validation automatically when redirected
       const { error } = await supabase.auth.updateUser({
         password: data.newPassword
       });
@@ -136,13 +130,11 @@ const authService = {
   
   getCurrentUser: async () => {
     try {
-      // First get the authenticated user
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) throw error;
       if (!user) return null;
       
-      // Then get the user profile
       const { data, error: profileError } = await supabase
         .from('users')
         .select('*, roles(*)')
@@ -153,19 +145,17 @@ const authService = {
       return data;
     } catch (error) {
       console.error('Get current user error:', error);
-      return null; // Return null instead of throwing to prevent UI blocking
+      return null;
     }
   },
   
   getUserPermissions: async () => {
     try {
-      // First get the authenticated user to get their role
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) throw error;
       if (!user) return [];
       
-      // Get the user's role and permissions
       const { data, error: roleError } = await supabase
         .from('users')
         .select('role_id, roles(permissions)')
@@ -174,22 +164,15 @@ const authService = {
       
       if (roleError) throw roleError;
       
-      // Fix for TypeScript error - use proper type assertions and checks
       if (data?.roles) {
-        // Check if roles is an array
         if (Array.isArray(data.roles)) {
-          // Access permissions safely if array has items
           if (data.roles.length > 0) {
             const firstRole = data.roles[0];
-            // Use type checking to ensure permissions exists and is accessible
             if (firstRole && typeof firstRole === 'object' && 'permissions' in firstRole) {
               return (firstRole as { permissions: string[] }).permissions;
             }
           }
-        } 
-        // If roles is not an array but an object
-        else if (data.roles && typeof data.roles === 'object') {
-          // Use type assertion to help TypeScript understand the structure
+        } else if (data.roles && typeof data.roles === 'object') {
           const rolesObj = data.roles as { permissions?: string[] };
           if (rolesObj && rolesObj.permissions) {
             return rolesObj.permissions;
@@ -200,13 +183,12 @@ const authService = {
       return [];
     } catch (error) {
       console.error('Get user permissions error:', error);
-      return []; // Return empty array instead of throwing to prevent UI blocking
+      return [];
     }
   },
-
+  
   createSuperAdmin: async () => {
     try {
-      // Check if superadmin already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
@@ -218,16 +200,19 @@ const authService = {
         return { success: true, message: 'Superadmin already exists' };
       }
 
-      // Create the user in Auth
-      const { data, error } = await supabase.auth.admin.createUser({
+      const { data, error } = await supabase.auth.signUp({
         email: 'superadmin@edu.az',
         password: 'Admin123!',
-        email_confirm: true,
+        options: {
+          data: {
+            first_name: 'Super',
+            last_name: 'Admin'
+          }
+        }
       });
 
       if (error) throw error;
 
-      // Get or create superadmin role
       let roleId;
       const { data: roleData, error: roleError } = await supabase
         .from('roles')
@@ -236,14 +221,13 @@ const authService = {
         .single();
 
       if (roleError) {
-        // Create the role if it doesn't exist
         const { data: newRole, error: createRoleError } = await supabase
           .from('roles')
           .insert([
             { 
               name: 'superadmin', 
               description: 'Super Administrator with full access',
-              permissions: ['*'] // All permissions
+              permissions: ['*'] 
             }
           ])
           .select('id')
@@ -255,7 +239,6 @@ const authService = {
         roleId = roleData.id;
       }
 
-      // Create user profile
       const { error: userError } = await supabase
         .from('users')
         .insert([
@@ -271,7 +254,10 @@ const authService = {
       
       if (userError) throw userError;
       
-      return { success: true, message: 'Superadmin created successfully' };
+      return { 
+        success: true, 
+        message: 'Superadmin created successfully. Please check your email to confirm your account before logging in.' 
+      };
     } catch (error) {
       console.error('Failed to create superadmin:', error);
       return { success: false, message: 'Failed to create superadmin', error };
