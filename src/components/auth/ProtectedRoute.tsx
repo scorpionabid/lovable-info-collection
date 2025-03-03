@@ -30,7 +30,7 @@ export const ProtectedRoute = ({
   }
 
   // If user doesn't have required role, redirect to unauthorized page
-  if (user && !allowedRoles.includes(user.role)) {
+  if (user && !allowedRoles.includes(user.role as UserRole)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

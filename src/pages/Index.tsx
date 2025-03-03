@@ -16,7 +16,7 @@ import {
 import { Layout } from "@/components/layout/Layout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ChartCard } from '@/components/dashboard/ChartCard';
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
 
 // Sample data for charts
 const schoolsData = [
@@ -138,7 +138,7 @@ const Index = () => {
                 <tr className="border-b border-infoline-light-gray">
                   <th className="text-left text-xs font-medium text-infoline-dark-gray uppercase py-3 px-4">Region</th>
                   <th className="text-left text-xs font-medium text-infoline-dark-gray uppercase py-3 px-4">Məktəblər</th>
-                  <th className="text-left text-xs font-medium text-infoline-dark-gray uppercase py-3 px-4">İrəliləyiş</th>
+                  <th className="text-left text-xs font-medium text-infoline-dark-gray uppercase py-3 px-4">Irəliləyiş</th>
                   <th className="text-left text-xs font-medium text-infoline-dark-gray uppercase py-3 px-4">Status</th>
                 </tr>
               </thead>

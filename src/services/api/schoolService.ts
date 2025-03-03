@@ -1,27 +1,25 @@
-
 import api from './index';
 
 export interface SchoolData {
   id?: string;
   name: string;
-  type: string;
-  regionId: string;
-  sectorId: string;
-  studentCount?: number;
-  teacherCount?: number;
-  director?: string;
-  contactEmail?: string;
-  contactPhone?: string;
-  address?: string;
-  status?: string;
+  code: string;
+  address: string;
+  phone: string;
+  email: string;
+  website?: string;
+  region_id: string;
+  sector_id: string;
+  type_id: string;
+  status: 'active' | 'inactive';
 }
 
 export interface SchoolFilter {
-  regionId?: string;
-  sectorId?: string;
-  type?: string;
-  search?: string;
+  region_id?: string;
+  sector_id?: string;
+  type_id?: string;
   status?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -55,7 +53,7 @@ const schoolService = {
   importSchools: async (fileData: FormData) => {
     const response = await api.post('/schools/import', fileData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'multipart/form-data'
       }
     });
     return response.data;

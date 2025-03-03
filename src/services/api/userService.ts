@@ -50,7 +50,7 @@ const userService = {
   importUsers: async (fileData: FormData) => {
     const response = await api.post('/users/import', fileData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'multipart/form-data'
       }
     });
     return response.data;

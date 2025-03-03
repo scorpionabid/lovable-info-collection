@@ -12,7 +12,7 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: string;
+  role: UserRole; // Change string to UserRole
   role_id: string;
   region_id?: string;
   sector_id?: string;
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               email: userData.email,
               first_name: userData.first_name,
               last_name: userData.last_name,
-              role: userData.roles?.name || '',
+              role: userData.roles?.name as UserRole || 'school-admin', // Cast to UserRole
               role_id: userData.role_id,
               region_id: userData.region_id,
               sector_id: userData.sector_id,
@@ -103,7 +103,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           email: userData.email,
           first_name: userData.first_name,
           last_name: userData.last_name,
-          role: userData.roles?.name || '',
+          role: userData.roles?.name as UserRole || 'school-admin', // Cast to UserRole
           role_id: userData.role_id,
           region_id: userData.region_id,
           sector_id: userData.sector_id,
