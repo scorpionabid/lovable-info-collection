@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabase/supabaseClient';
 
 export interface LoginCredentials {
@@ -118,9 +117,10 @@ const authService = {
       } 
       // If roles is not an array but an object
       else if (data.roles && typeof data.roles === 'object') {
-        // Use type checking to ensure permissions exists and is accessible
-        if ('permissions' in data.roles) {
-          return data.roles.permissions as string[];
+        // Use type assertion to help TypeScript understand the structure
+        const rolesObj = data.roles as { permissions?: string[] };
+        if (rolesObj.permissions) {
+          return rolesObj.permissions;
         }
       }
     }
