@@ -95,7 +95,8 @@ const authService = {
     
     if (roleError) throw roleError;
     
-    // Fix: Access permissions from the roles object correctly - it's a nested object, not an array
+    // The data structure is { roles: { permissions: string[] } }
+    // So we access it correctly as a property on the roles object
     return data?.roles?.permissions || [];
   }
 };
