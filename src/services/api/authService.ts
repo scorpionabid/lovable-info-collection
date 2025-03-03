@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabase/supabaseClient';
 
 export interface LoginCredentials {
@@ -104,15 +103,16 @@ const authService = {
     if (roleError) throw roleError;
     
     // The permissions are in the roles object
-    // Based on the error, it appears roles might be an array
     if (data?.roles) {
-      // If roles is an array, get the first item
-      if (Array.isArray(data.roles) && data.roles.length > 0) {
-        return data.roles[0].permissions || [];
-      }
+      // If roles is an array, get the first item's permissions
+      if (Array.isArray(data.roles)) {
+        if (data.roles.length > 0 && data.roles[0].permissions) {
+          return data.roles[0].permissions;
+        }
+      } 
       // If roles is an object (not an array)
-      else if (typeof data.roles === 'object') {
-        return data.roles.permissions || [];
+      else if (typeof data.roles === 'object' && data.roles.permissions) {
+        return data.roles.permissions;
       }
     }
     
