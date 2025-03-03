@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogIn } from 'lucide-react';
+import { LoginCredentials } from '@/services/api/authService';
 
 // Validation schema
 const loginSchema = z.object({
@@ -34,7 +35,12 @@ export const LoginForm = () => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
-      await login(data);
+      // Ensure we have a value for each required field
+      const credentials: LoginCredentials = {
+        email: data.email,
+        password: data.password,
+      };
+      await login(credentials);
     } catch (err) {
       setError("Daxil etdiyiniz məlumatlar yanlışdır");
     }
