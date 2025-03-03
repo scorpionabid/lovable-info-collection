@@ -1,148 +1,139 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, School } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { LogIn } from 'lucide-react';
+
+// Validation schema
+const loginSchema = z.object({
+  email: z.string().email("Email düzgün formatda deyil"),
+  password: z.string().min(8, "Şifrə minimum 8 simvol olmalıdır"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const LoginForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  
-  const navigate = useNavigate();
   const { login, isLoading } = useAuth();
-  const { toast } = useToast();
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation
-    if (!email || !password) {
-      setError('Bütün sahələri doldurun');
-      return;
-    }
-    
-    setError('');
-    
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize form
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = async (data: LoginFormValues) => {
     try {
-      await login(email, password);
-      toast({
-        title: "Uğurlu giriş",
-        description: "Sistemə daxil oldunuz",
-      });
-    } catch (error) {
-      setError('Email və ya şifrə yanlışdır');
-      toast({
-        title: "Giriş xətası",
-        description: "Email və ya şifrə yanlışdır",
-        variant: "destructive",
-      });
+      setError(null);
+      await login(data);
+    } catch (err) {
+      setError("Daxil etdiyiniz məlumatlar yanlışdır");
     }
   };
-  
-  // User test accounts information
-  const testAccounts = [
-    { email: 'admin@example.com', password: 'password', role: 'SuperAdmin' },
-    { email: 'region@example.com', password: 'password', role: 'RegionAdmin' },
-    { email: 'sector@example.com', password: 'password', role: 'SectorAdmin' },
-    { email: 'school@example.com', password: 'password', role: 'SchoolAdmin' },
+
+  // Sample login credentials
+  const sampleCredentials = [
+    { role: 'Super Admin', email: 'admin@example.com', password: 'password' },
+    { role: 'Region Admin', email: 'region@example.com', password: 'password' },
+    { role: 'Sector Admin', email: 'sector@example.com', password: 'password' },
+    { role: 'School Admin', email: 'school@example.com', password: 'password' },
   ];
-  
-  const setTestAccount = (email: string, password: string) => {
-    setEmail(email);
-    setPassword(password);
+
+  const fillCredentials = (email: string, password: string) => {
+    form.setValue('email', email);
+    form.setValue('password', password);
   };
-  
+
   return (
-    <div className="w-full max-w-md">
+    <div>
       <div className="text-center mb-8">
-        <div className="flex justify-center mb-4">
-          <div className="bg-infoline-blue/10 p-3 rounded-full">
-            <School size={36} className="text-infoline-blue" />
-          </div>
-        </div>
-        <h1 className="text-2xl font-bold text-infoline-dark-blue">İnfoLine Sistemə Giriş</h1>
-        <p className="text-infoline-dark-gray mt-2">Məktəb Məlumatları Toplama Sistemi</p>
+        <h1 className="text-2xl font-bold text-infoline-dark-blue">InfoLine</h1>
+        <p className="text-infoline-dark-gray mt-2">Məlumat İdarəetmə Sistemi</p>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-        
-        <div className="space-y-1">
-          <label htmlFor="email" className="form-label">E-mail</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="sizin@email.com"
-            className="input-primary"
-            required
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="email@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label htmlFor="password" className="form-label">Şifrə</label>
-            <a href="/password-reset" className="text-xs text-infoline-blue hover:underline">
-              Şifrəni unutmusunuz?
-            </a>
-          </div>
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="input-primary pr-10"
-              required
-            />
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-infoline-dark-gray"
-              onClick={() => setShowPassword(!showPassword)}
+          
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Şifrə</FormLabel>
+                <FormControl>
+                  <Input type="password" placeholder="********" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          
+          <Button 
+            type="submit" 
+            className="w-full bg-infoline-blue hover:bg-infoline-dark-blue"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              "Giriş edilir..."
+            ) : (
+              <>
+                <LogIn className="mr-2 h-4 w-4" />
+                Giriş
+              </>
+            )}
+          </Button>
+          
+          <div className="text-center">
+            <Link 
+              to="/password-reset" 
+              className="text-sm text-infoline-blue hover:underline"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+              Şifrəni unutmusunuz?
+            </Link>
           </div>
-        </div>
-        
-        <button
-          type="submit"
-          className={cn(
-            "w-full py-2.5 text-white font-medium rounded-md transition-colors",
-            isLoading ? "bg-infoline-blue/70 cursor-not-allowed" : "bg-infoline-blue hover:bg-infoline-dark-blue"
-          )}
-          disabled={isLoading}
-        >
-          {isLoading ? "Giriş edilir..." : "Daxil ol"}
-        </button>
-      </form>
-
-      {/* Demo accounts for testing */}
-      <div className="mt-8 border-t border-gray-200 pt-4">
-        <p className="text-sm text-center text-infoline-dark-gray mb-3">Test hesablar:</p>
-        <div className="grid grid-cols-1 gap-2">
-          {testAccounts.map((account, index) => (
-            <button
+        </form>
+      </Form>
+      
+      <div className="mt-10 border-t pt-6">
+        <p className="text-sm text-center text-infoline-dark-gray mb-4">
+          Demo giriş məlumatları:
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {sampleCredentials.map((cred, index) => (
+            <Button
               key={index}
               type="button"
-              onClick={() => setTestAccount(account.email, account.password)}
-              className="text-xs py-2 px-3 bg-infoline-lightest-gray hover:bg-infoline-light-gray rounded-md transition-colors text-left"
+              variant="outline"
+              className="text-xs justify-start"
+              onClick={() => fillCredentials(cred.email, cred.password)}
             >
-              <div className="font-medium">{account.role}</div>
-              <div className="text-infoline-dark-gray">Email: {account.email}</div>
-              <div className="text-infoline-dark-gray">Şifrə: {account.password}</div>
-            </button>
+              <span className="mr-2 font-medium">{cred.role}:</span>
+              {cred.email}
+            </Button>
           ))}
         </div>
       </div>

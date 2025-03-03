@@ -1,7 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import notificationService from '@/services/api/notificationService';
+import { useApi } from '@/hooks/useApi';
 
 type Notification = {
   id: string;
@@ -12,61 +15,73 @@ type Notification = {
   type: 'info' | 'warning' | 'success' | 'error';
 };
 
-// Sample notifications data
-const sampleNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Yeni məlumat tələbi',
-    message: 'Şimal regionu üçün yeni məlumat tələbi yaradıldı',
-    time: '15 dəq əvvəl',
-    read: false,
-    type: 'info',
-  },
-  {
-    id: '2',
-    title: 'Məlumat təsdiqləndi',
-    message: 'Müəllim məlumatları Bakı region admini tərəfindən təsdiqləndi',
-    time: '2 saat əvvəl',
-    read: false,
-    type: 'success',
-  },
-  {
-    id: '3',
-    title: 'Diqqət!',
-    message: 'Məktəb #42 hesabatında məlumat çatışmazlığı var',
-    time: '1 gün əvvəl',
-    read: true,
-    type: 'warning',
-  },
-  {
-    id: '4',
-    title: 'Sistem yeniləməsi',
-    message: 'Sistem bu gün 22:00-da texniki işlər üçün müvəqqəti olaraq əlçatan olmayacaq',
-    time: '2 gün əvvəl',
-    read: true,
-    type: 'info',
-  },
-];
-
 interface NotificationPanelProps {
   onClose: () => void;
 }
 
 export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
   
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, read: true } : notif
-    ));
+  const { execute: fetchNotifications } = useApi(notificationService.getNotifications);
+  const { execute: markAsReadApi } = useApi(notificationService.markAsRead);
+  const { execute: markAllAsReadApi } = useApi(notificationService.markAllAsRead);
+  
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        setIsLoading(true);
+        const result = await fetchNotifications();
+        if (result) {
+          setNotifications(result);
+        }
+      } catch (error) {
+        console.error('Failed to load notifications:', error);
+        // If API fails, use sample data
+        setNotifications(sampleNotifications);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadNotifications();
+  }, [fetchNotifications]);
+  
+  const markAsRead = async (id: string) => {
+    try {
+      await markAsReadApi(id);
+      setNotifications(notifications.map(notif => 
+        notif.id === id ? { ...notif, read: true } : notif
+      ));
+      toast({
+        title: "Bildiriş oxundu",
+        description: "Bildiriş oxunmuş kimi işarələndi",
+      });
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
   
   const deleteNotification = (id: string) => {
     setNotifications(notifications.filter(notif => notif.id !== id));
+    toast({
+      title: "Bildiriş silindi",
+      description: "Bildiriş uğurla silindi",
+    });
   };
   
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+  const markAllAsRead = async () => {
+    try {
+      await markAllAsReadApi();
+      setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+      toast({
+        title: "Bütün bildirişlər oxundu",
+        description: "Bütün bildirişlər oxunmuş kimi işarələndi",
+      });
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   };
 
   const getTypeColor = (type: Notification['type']) => {
@@ -80,6 +95,42 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Sample notifications data as fallback
+  const sampleNotifications: Notification[] = [
+    {
+      id: '1',
+      title: 'Yeni məlumat tələbi',
+      message: 'Şimal regionu üçün yeni məlumat tələbi yaradıldı',
+      time: '15 dəq əvvəl',
+      read: false,
+      type: 'info',
+    },
+    {
+      id: '2',
+      title: 'Məlumat təsdiqləndi',
+      message: 'Müəllim məlumatları Bakı region admini tərəfindən təsdiqləndi',
+      time: '2 saat əvvəl',
+      read: false,
+      type: 'success',
+    },
+    {
+      id: '3',
+      title: 'Diqqət!',
+      message: 'Məktəb #42 hesabatında məlumat çatışmazlığı var',
+      time: '1 gün əvvəl',
+      read: true,
+      type: 'warning',
+    },
+    {
+      id: '4',
+      title: 'Sistem yeniləməsi',
+      message: 'Sistem bu gün 22:00-da texniki işlər üçün müvəqqəti olaraq əlçatan olmayacaq',
+      time: '2 gün əvvəl',
+      read: true,
+      type: 'info',
+    },
+  ];
 
   return (
     <div className="absolute top-full right-0 mt-2 w-80 bg-white shadow-lg rounded-lg overflow-hidden z-50 border border-infoline-light-gray max-h-[500px] flex flex-col">
@@ -101,7 +152,12 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
         </button>
       </div>
       
-      {notifications.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-infoline-blue"></div>
+          <p className="text-infoline-dark-gray mt-2">Bildirişlər yüklənir...</p>
+        </div>
+      ) : notifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-6 text-center">
           <Bell size={40} className="text-infoline-light-gray mb-2" />
           <p className="text-infoline-dark-gray">Bildiriş yoxdur</p>
