@@ -102,6 +102,7 @@ const authService = {
       .single();
     
     if (roleError) throw roleError;
+    // Fix: access permissions properly, handle possible null or undefined
     return data?.roles?.permissions || [];
   }
 };

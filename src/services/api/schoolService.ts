@@ -56,7 +56,7 @@ const schoolService = {
     const response = await api.post('/schools/import', fileData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-      },
+      }
     });
     return response.data;
   },

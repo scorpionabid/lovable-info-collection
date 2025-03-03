@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import authService, { LoginCredentials } from '@/services/api/authService';
 import { toast } from 'sonner';
 
+// Define UserRole type
+export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';
+
 interface User {
   id: string;
   email: string;
