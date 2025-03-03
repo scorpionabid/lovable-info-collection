@@ -96,9 +96,16 @@ const authService = {
     if (roleError) throw roleError;
     
     // The permissions are in the roles object
-    // Check if roles exists and if it has a permissions property
-    if (data?.roles && typeof data.roles === 'object') {
-      return data.roles.permissions || [];
+    // Based on the error, it appears roles might be an array
+    if (data?.roles) {
+      // If roles is an array, get the first item
+      if (Array.isArray(data.roles) && data.roles.length > 0) {
+        return data.roles[0].permissions || [];
+      }
+      // If roles is an object (not an array)
+      else if (typeof data.roles === 'object') {
+        return data.roles.permissions || [];
+      }
     }
     
     return [];
