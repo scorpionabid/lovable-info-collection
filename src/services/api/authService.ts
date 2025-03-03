@@ -103,9 +103,13 @@ const authService = {
     
     if (roleError) throw roleError;
     
-    // The data structure is { roles: { permissions: string[] } }
-    // So we access it correctly as a property on the roles object
-    return data?.roles?.permissions || [];
+    // The permissions are in the roles object
+    // Check if roles exists and if it has a permissions property
+    if (data?.roles && typeof data.roles === 'object') {
+      return data.roles.permissions || [];
+    }
+    
+    return [];
   }
 };
 
