@@ -1,6 +1,5 @@
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -13,11 +12,14 @@ import {
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import userService, { User } from "@/services/api/userService";
+import { User } from "@/services/api/userService";
 import { UserProfileTab } from "./UserProfileTab";
 import { RoleTab } from "./role/RoleTab";
 import { userFormSchema, UserFormValues } from "./UserFormSchema";
 import { useUserFormSubmit } from "../hooks/useUserFormSubmit";
+import { useUtisCodeValidation } from "../hooks/useUtisCodeValidation";
+import { useOrganizationData } from "../hooks/useOrganizationData";
+import { LoadingState } from "./LoadingState";
 
 interface UserModalContentProps {
   user?: User;
@@ -37,7 +39,6 @@ export const UserModalContent = ({
   const [selectedRole, setSelectedRole] = useState(user?.role_id || "");
   const [selectedRegion, setSelectedRegion] = useState(user?.region_id || "");
   const [selectedSector, setSelectedSector] = useState(user?.sector_id || "");
-  const [isCheckingUtisCode, setIsCheckingUtisCode] = useState(false);
   const isEditing = !!user;
 
   // Set up form with validation
@@ -58,131 +59,22 @@ export const UserModalContent = ({
     },
   });
 
-  // Get mutation hook
+  // Use hooks for functionality
   const { createUserMutation, isCreatingAuth } = useUserFormSubmit(user, onSuccess, onClose);
-
-  // Get the current UTIS code value
-  const utisCode = form.watch("utis_code");
-
-  // Fetch data for dropdowns
-  const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => userService.getRoles(),
-  });
-
-  const { data: regions = [], isLoading: isLoadingRegions } = useQuery({
-    queryKey: ['regions', currentUserId, currentUserRole],
-    queryFn: () => userService.getRegions(currentUserId, currentUserRole),
-  });
-  
-  const { data: sectors = [], isLoading: isLoadingSectors } = useQuery({
-    queryKey: ['sectors', selectedRegion, currentUserId, currentUserRole],
-    queryFn: () => userService.getSectors(selectedRegion, currentUserId, currentUserRole),
-    enabled: !!selectedRegion || !!currentUserId,
-  });
-
-  const { data: schools = [], isLoading: isLoadingSchools } = useQuery({
-    queryKey: ['schools', selectedSector, currentUserId, currentUserRole],
-    queryFn: () => userService.getSchools(selectedSector, currentUserId, currentUserRole),
-    enabled: !!selectedSector || !!currentUserId,
-  });
-
-  // UTIS code uniqueness check
-  useEffect(() => {
-    const checkUtisCodeUniqueness = async () => {
-      if (utisCode && utisCode.length >= 5) {
-        setIsCheckingUtisCode(true);
-        try {
-          const exists = await userService.checkUtisCodeExists(utisCode, isEditing ? user?.id : undefined);
-          if (exists) {
-            form.setError("utis_code", { 
-              type: "manual", 
-              message: "Bu UTIS kodu artıq istifadə olunur" 
-            });
-          } else {
-            form.clearErrors("utis_code");
-          }
-        } catch (error) {
-          console.error("UTIS code check error:", error);
-        } finally {
-          setIsCheckingUtisCode(false);
-        }
-      }
-    };
-
-    const debounceCheck = setTimeout(() => {
-      checkUtisCodeUniqueness();
-    }, 500);
-
-    return () => clearTimeout(debounceCheck);
-  }, [utisCode, form, isEditing, user?.id]);
-
-  // Update form values when role selection changes
-  useEffect(() => {
-    const role = roles.find(r => r.id === selectedRole);
-    if (role) {
-      form.setValue("role_id", role.id);
-      
-      // Clear irrelevant fields based on role
-      const roleName = role.name || "";
-      
-      if (roleName.includes("super")) {
-        // Super admin doesn't need region, sector, or school
-        form.setValue("region_id", "");
-        form.setValue("sector_id", "");
-        form.setValue("school_id", "");
-      } else if (roleName.includes("region")) {
-        // Region admin needs region but not sector or school
-        form.setValue("sector_id", "");
-        form.setValue("school_id", "");
-      } else if (roleName.includes("sector")) {
-        // Sector admin needs region and sector but not school
-        form.setValue("school_id", "");
-      }
-    }
-  }, [selectedRole, roles, form]);
-
-  // Update region, sector, school fields in form when they change
-  useEffect(() => {
-    form.setValue("region_id", selectedRegion || "");
-    
-    // Reset sector and school if region changes
-    if (!selectedRegion) {
-      setSelectedSector("");
-      form.setValue("sector_id", "");
-      form.setValue("school_id", "");
-    }
-  }, [selectedRegion, form]);
-
-  useEffect(() => {
-    form.setValue("sector_id", selectedSector || "");
-    
-    // Reset school if sector changes
-    if (!selectedSector) {
-      form.setValue("school_id", "");
-    }
-  }, [selectedSector, form]);
-
-  // Find role details
-  const getRoleById = (roleId: string) => {
-    return roles.find(role => role.id === roleId);
-  };
+  const { isCheckingUtisCode } = useUtisCodeValidation(form, isEditing, user);
+  const { roles, regions, sectors, schools, isLoading, getRoleById } = useOrganizationData(
+    currentUserId,
+    currentUserRole,
+    selectedRegion,
+    selectedSector
+  );
 
   const onSubmit = (values: UserFormValues) => {
     createUserMutation.mutate(values);
   };
 
-  const isLoading = isLoadingRoles || isLoadingRegions || isLoadingSectors || isLoadingSchools;
-
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-6">
-        <div className="flex flex-col items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-infoline-blue mb-2" />
-          <p className="text-sm text-infoline-dark-gray">Məlumatlar yüklənir...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   return (
@@ -210,15 +102,8 @@ export const UserModalContent = ({
               regions={regions}
               sectors={sectors}
               schools={schools}
-              selectedRole={selectedRole}
-              selectedRegion={selectedRegion}
-              selectedSector={selectedSector}
-              onRoleSelect={setSelectedRole}
-              onRegionChange={setSelectedRegion}
-              onSectorChange={setSelectedSector}
               isEditing={isEditing}
               user={user}
-              getRoleById={getRoleById}
               currentUserRole={currentUserRole}
             />
           </TabsContent>
