@@ -10,9 +10,9 @@ const superAdminService = {
         .from('roles')
         .select('id')
         .eq('name', 'superadmin')
-        .single();
+        .maybeSingle();
 
-      if (roleError) {
+      if (roleError || !roleData) {
         // Create the superadmin role
         const { data: newRole, error: createRoleError } = await supabase
           .from('roles')
@@ -20,7 +20,7 @@ const superAdminService = {
             { 
               name: 'superadmin', 
               description: 'Super Administrator with full access',
-              // Omit permissions field as it causes issues
+              permissions: ['all']
             }
           ])
           .select('id')
@@ -32,111 +32,115 @@ const superAdminService = {
         roleId = roleData.id;
       }
 
-      // Step 2: Check if superadmin user already exists
+      // Step 2: Check for auth user
+      let authUserId: string | undefined;
+      
+      try {
+        // Try sign-in to check if the auth user exists
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: 'superadmin@edu.az',
+          password: 'Admin123!'
+        });
+        
+        if (!signInError && signInData.user) {
+          authUserId = signInData.user.id;
+          console.log('Auth user exists with ID:', authUserId);
+        }
+      } catch (e) {
+        console.log('Auth user does not exist or invalid credentials');
+      }
+      
+      // Create auth user if needed
+      if (!authUserId) {
+        console.log('Creating new auth user...');
+        const { data, error } = await supabase.auth.signUp({
+          email: 'superadmin@edu.az',
+          password: 'Admin123!',
+          options: {
+            data: {
+              first_name: 'Super',
+              last_name: 'Admin'
+            }
+          }
+        });
+
+        if (error && error.message !== 'User already registered') throw error;
+        authUserId = data.user?.id;
+        
+        // Try to auto-confirm the email
+        if (authUserId) {
+          try {
+            await supabase.auth.admin.updateUserById(
+              authUserId,
+              { email_confirm: true }
+            );
+          } catch (confirmError) {
+            console.log('Could not auto-confirm email, user may need manual verification');
+          }
+        }
+      }
+      
+      if (!authUserId) {
+        return { 
+          success: false, 
+          message: 'Failed to get or create auth user' 
+        };
+      }
+
+      // Step 3: Check for user record in users table
       const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
         .eq('email', 'superadmin@edu.az')
-        .single();
+        .maybeSingle();
 
       if (!checkError && existingUser) {
-        console.log('Superadmin user already exists');
+        console.log('User record exists, updating...');
         
-        // Step 3a: Try to update the password if user exists
-        const { error: authUpdateError } = await supabase.auth.admin.updateUserById(
-          existingUser.id,
-          {
-            password: 'Admin123!',
-            email_confirm: true
-          }
-        );
-        
-        if (authUpdateError) {
-          console.log('Unable to update auth user:', authUpdateError);
-          // If we can't update, try to recreate the auth user
-          const { data, error } = await supabase.auth.signUp({
-            email: 'superadmin@edu.az',
-            password: 'Admin123!',
-            options: {
-              data: {
-                first_name: 'Super',
-                last_name: 'Admin'
-              }
-            }
-          });
-          
-          if (error && error.message !== 'User already registered') throw error;
-        }
-        
-        return { 
-          success: true, 
-          message: 'Superadmin user exists. You can log in with superadmin@edu.az / Admin123!' 
-        };
-      }
-
-      // Step 3b: If not exists, create the auth account
-      console.log('Creating new superadmin user...');
-      const { data, error } = await supabase.auth.signUp({
-        email: 'superadmin@edu.az',
-        password: 'Admin123!',
-        options: {
-          data: {
+        // Update the user record
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
             first_name: 'Super',
-            last_name: 'Admin'
-          }
+            last_name: 'Admin',
+            role_id: roleId,
+            is_active: true
+          })
+          .eq('id', existingUser.id);
+        
+        if (updateError) {
+          console.error('Failed to update user record:', updateError);
+          return {
+            success: false,
+            message: 'Failed to update user record: ' + updateError.message
+          };
         }
-      });
-
-      if (error) throw error;
-      
-      if (!data.user?.id) {
-        return { 
-          success: false, 
-          message: 'Failed to get user ID from sign up response' 
-        };
-      }
-
-      // Step 4: Insert the user record with all required fields
-      const { error: userError } = await supabase
-        .from('users')
-        .insert([
-          { 
-            id: data.user.id,
+      } else {
+        // Insert user record if it doesn't exist
+        console.log('Creating user record...');
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([{ 
+            id: authUserId,
             email: 'superadmin@edu.az',
             first_name: 'Super',
             last_name: 'Admin',
             role_id: roleId,
             is_active: true
-          }
-        ]);
-      
-      if (userError) throw userError;
-      
-      // Step 5: Try to auto-confirm the email 
-      try {
-        const { error: confirmError } = await supabase.auth.admin.updateUserById(
-          data.user.id,
-          { email_confirm: true }
-        );
+          }]);
         
-        if (confirmError) {
-          console.log('Could not auto-confirm email:', confirmError);
-          return { 
-            success: true, 
-            message: 'Superadmin created! Check your email to verify the account before logging in with superadmin@edu.az / Admin123!' 
+        if (insertError) {
+          console.error('Failed to insert user record:', insertError);
+          return {
+            success: false,
+            message: 'Failed to insert user record: ' + insertError.message
           };
         }
-      } catch (confirmError) {
-        console.log('Could not access admin API, user may need email confirmation');
-        return { 
-          success: true, 
-          message: 'Superadmin created! Check your email to verify the account before logging in with superadmin@edu.az / Admin123!' 
-        };
       }
       
       return { 
         success: true, 
-        message: 'Superadmin created successfully! You can now log in with superadmin@edu.az / Admin123!' 
+        message: 'Superadmin created or updated successfully! You can now log in with superadmin@edu.az / Admin123!' 
       };
     } catch (error) {
       console.error('Failed to create superadmin:', error);

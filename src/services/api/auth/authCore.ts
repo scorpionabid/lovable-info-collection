@@ -24,6 +24,7 @@ const authCore = {
     try {
       console.log('Attempting login with:', credentials.email);
       
+      // First, try to authenticate the user
       const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password,
@@ -49,11 +50,59 @@ const authCore = {
           )
         `)
         .eq('email', credentials.email)
-        .single();
+        .maybeSingle();
       
       if (userError) {
         console.error('User data fetch error:', userError);
         throw userError;
+      }
+      
+      // If no user record found in the users table but auth was successful
+      if (!userData) {
+        console.log('Auth user exists but no corresponding record in users table, creating one...');
+        
+        // Get default role (superadmin)
+        const { data: roleData, error: roleError } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', 'superadmin')
+          .single();
+          
+        if (roleError) {
+          console.error('Role fetch error:', roleError);
+          throw roleError;
+        }
+        
+        // Create user record
+        const { data: newUserData, error: createError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: data.user?.id,
+              email: credentials.email,
+              first_name: data.user?.user_metadata?.first_name || 'Super',
+              last_name: data.user?.user_metadata?.last_name || 'Admin',
+              role_id: roleData.id,
+              is_active: true
+            }
+          ])
+          .select(`
+            *,
+            roles(
+              id,
+              name,
+              description,
+              permissions
+            )
+          `)
+          .single();
+          
+        if (createError) {
+          console.error('User creation error:', createError);
+          throw createError;
+        }
+        
+        userData = newUserData;
       }
       
       console.log('User data fetched successfully');

@@ -35,11 +35,23 @@ const userProfileService = {
           )
         `)
         .eq('email', user.email)
-        .single();
+        .maybeSingle();
       
       if (userError) {
         console.error('User profile fetch error:', userError);
         return null;
+      }
+      
+      // If no user record found but auth user exists, return basic info
+      if (!userData && user) {
+        console.log('Auth user exists but no corresponding record in users table');
+        return {
+          id: user.id,
+          email: user.email,
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          roles: null
+        };
       }
       
       return userData;
@@ -65,10 +77,16 @@ const userProfileService = {
           )
         `)
         .eq('email', user.email)
-        .single();
+        .maybeSingle();
       
       if (userError) {
         console.error('User permissions fetch error:', userError);
+        return [];
+      }
+      
+      // User record doesn't exist in the users table
+      if (!userData) {
+        console.warn('No user record found for permissions check');
         return [];
       }
       
