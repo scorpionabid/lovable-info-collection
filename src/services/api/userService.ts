@@ -1,5 +1,5 @@
 
-import supabaseUserService, { User, UserFilters } from '../supabase/userService';
+import supabaseUserService, { User, UserFilters } from '../supabase/user';
 
 const userService = {
   getUsers: (filters?: UserFilters) => supabaseUserService.getUsers(filters),
