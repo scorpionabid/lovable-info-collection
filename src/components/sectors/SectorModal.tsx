@@ -15,7 +15,7 @@ import {
 import { X } from "lucide-react";
 import { ModalHeader } from '../regions/modals/ModalHeader';
 import { ModalFooter } from '../regions/modals/ModalFooter';
-import { SectorWithStats } from '@/services/supabase/sectorService';
+import { SectorWithStats } from '@/services/supabase/sector/types';
 import sectorService from '@/services/supabase/sectorService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -189,32 +189,32 @@ export const SectorModal = ({ isOpen, onClose, mode, sector, onSuccess }: Sector
                   </Select>
                 </div>
                 
-                {formData.adminId === 'new' && (
-                  <div className="space-y-4 border p-4 rounded-md border-infoline-light-gray mt-4">
-                    <h3 className="font-medium text-infoline-dark-blue">Yeni Admin Yarat</h3>
+                {/* {formData.adminId === 'new' && ( */}
+                {/*  <div className="space-y-4 border p-4 rounded-md border-infoline-light-gray mt-4"> */}
+                {/*    <h3 className="font-medium text-infoline-dark-blue">Yeni Admin Yarat</h3> */}
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="adminName">Ad</Label>
-                        <Input id="adminName" placeholder="Adı daxil edin" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="adminSurname">Soyad</Label>
-                        <Input id="adminSurname" placeholder="Soyadı daxil edin" />
-                      </div>
-                    </div>
+                {/*    <div className="grid grid-cols-2 gap-4"> */}
+                {/*      <div className="space-y-2"> */}
+                {/*        <Label htmlFor="adminName">Ad</Label> */}
+                {/*        <Input id="adminName" placeholder="Adı daxil edin" /> */}
+                {/*      </div> */}
+                {/*      <div className="space-y-2"> */}
+                {/*        <Label htmlFor="adminSurname">Soyad</Label> */}
+                {/*        <Input id="adminSurname" placeholder="Soyadı daxil edin" /> */}
+                {/*      </div> */}
+                {/*    </div> */}
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="adminEmail">Email</Label>
-                      <Input id="adminEmail" type="email" placeholder="Email ünvanını daxil edin" />
-                    </div>
+                {/*    <div className="space-y-2"> */}
+                {/*      <Label htmlFor="adminEmail">Email</Label> */}
+                {/*      <Input id="adminEmail" type="email" placeholder="Email ünvanını daxil edin" /> */}
+                {/*    </div> */}
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="adminPhone">Telefon</Label>
-                      <Input id="adminPhone" placeholder="Telefon nömrəsini daxil edin" />
-                    </div>
-                  </div>
-                )}
+                {/*    <div className="space-y-2"> */}
+                {/*      <Label htmlFor="adminPhone">Telefon</Label> */}
+                {/*      <Input id="adminPhone" placeholder="Telefon nömrəsini daxil edin" /> */}
+                {/*    </div> */}
+                {/*  </div> */}
+                {/* )} */}
               </TabsContent>
               
               <TabsContent value="config" className="space-y-4">

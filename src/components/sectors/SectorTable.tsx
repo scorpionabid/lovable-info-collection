@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SectorModal } from './SectorModal';
 import { Eye, Edit, Archive, MoreHorizontal, Download, ArrowUpDown } from "lucide-react";
-import { SectorWithStats } from '@/services/supabase/sectorService';
+import { SectorWithStats } from '@/services/supabase/sector/types';
 import { useToast } from "@/hooks/use-toast";
 import sectorService from '@/services/supabase/sectorService';
 import { Pagination } from "@/components/ui/pagination";
