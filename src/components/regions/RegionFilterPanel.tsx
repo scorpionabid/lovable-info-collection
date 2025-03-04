@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { X } from "lucide-react";
 import { FilterParams } from "@/services/supabase/regionService";
+import { useToast } from "@/hooks/use-toast";
 
 interface RegionFilterPanelProps {
   onClose: () => void;
@@ -19,7 +20,12 @@ interface RegionFilterPanelProps {
 }
 
 export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: RegionFilterPanelProps) => {
+  const { toast } = useToast();
   const [filters, setFilters] = useState<FilterParams>(initialFilters);
+  const [isValidDate, setIsValidDate] = useState({
+    from: true,
+    to: true
+  });
 
   // Initialize filter values from props
   useEffect(() => {
@@ -30,6 +36,35 @@ export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: R
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
+    
+    // Validate dates
+    if (name === 'dateFrom' || name === 'dateTo') {
+      validateDates(name, value);
+    }
+  };
+
+  // Validate date ranges
+  const validateDates = (fieldName: string, value: string) => {
+    if (!value) {
+      setIsValidDate(prev => ({ ...prev, [fieldName === 'dateFrom' ? 'from' : 'to']: true }));
+      return;
+    }
+    
+    const dateFrom = fieldName === 'dateFrom' ? value : filters.dateFrom;
+    const dateTo = fieldName === 'dateTo' ? value : filters.dateTo;
+    
+    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
+      setIsValidDate({
+        from: fieldName === 'dateTo',
+        to: fieldName === 'dateFrom'
+      });
+      return;
+    }
+    
+    setIsValidDate(prev => ({ 
+      ...prev, 
+      [fieldName === 'dateFrom' ? 'from' : 'to']: true 
+    }));
   };
 
   // Handle select changes
@@ -45,10 +80,21 @@ export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: R
       dateTo: '',
       completionRate: 'all'
     });
+    setIsValidDate({ from: true, to: true });
   };
 
   // Apply filters
   const handleApply = () => {
+    // Check date validity
+    if (!isValidDate.from || !isValidDate.to) {
+      toast({
+        title: "Tarix xətası",
+        description: "Başlanğıc tarixi son tarixdən böyük ola bilməz",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     onApplyFilters(filters);
   };
 
@@ -84,8 +130,12 @@ export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: R
             name="dateFrom"
             value={filters.dateFrom || ''}
             onChange={handleInputChange}
-            type="date" 
+            type="date"
+            className={!isValidDate.from ? "border-red-500" : ""}
           />
+          {!isValidDate.from && (
+            <p className="text-xs text-red-500">Başlanğıc tarixi son tarixdən böyük ola bilməz</p>
+          )}
         </div>
         
         <div className="space-y-2">
@@ -97,8 +147,12 @@ export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: R
             name="dateTo"
             value={filters.dateTo || ''}
             onChange={handleInputChange}
-            type="date" 
+            type="date"
+            className={!isValidDate.to ? "border-red-500" : ""}
           />
+          {!isValidDate.to && (
+            <p className="text-xs text-red-500">Son tarix başlanğıc tarixindən kiçik ola bilməz</p>
+          )}
         </div>
         
         <div className="space-y-2">
@@ -125,7 +179,13 @@ export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: R
       <div className="flex justify-end gap-2 mt-4">
         <Button variant="outline" onClick={handleReset}>Sıfırla</Button>
         <Button variant="outline" onClick={onClose}>Ləğv et</Button>
-        <Button className="bg-infoline-blue hover:bg-infoline-dark-blue" onClick={handleApply}>Tətbiq et</Button>
+        <Button 
+          className="bg-infoline-blue hover:bg-infoline-dark-blue" 
+          onClick={handleApply}
+          disabled={!isValidDate.from || !isValidDate.to}
+        >
+          Tətbiq et
+        </Button>
       </div>
     </div>
   );

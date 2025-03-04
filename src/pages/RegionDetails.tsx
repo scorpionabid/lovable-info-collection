@@ -5,24 +5,43 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from "@/components/layout/Layout";
 import { RegionDetailView } from "@/components/regions/RegionDetailView";
 import regionService from '@/services/supabase/regionService';
+import { useToast } from "@/hooks/use-toast";
 
 const RegionDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Query to fetch region details
   const { data: region, isLoading, isError, error } = useQuery({
     queryKey: ['region', id],
     queryFn: () => regionService.getRegionById(id!),
     enabled: !!id, // Only run query if id exists
+    retry: 1,
+    onError: (error) => {
+      console.error('Error fetching region details:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Region məlumatları yüklənərkən xəta baş verdi.",
+        variant: "destructive",
+      });
+    }
   });
   
   // Query to fetch region sectors
-  const { data: sectors } = useQuery({
+  const { data: sectors, isLoading: isLoadingSectors } = useQuery({
     queryKey: ['regionSectors', id],
     queryFn: () => regionService.getRegionSectors(id!),
     enabled: !!id, // Only run query if id exists
+    onError: (error) => {
+      console.error('Error fetching region sectors:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Region sektorları yüklənərkən xəta baş verdi.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Handle error - navigate back to regions list
@@ -41,7 +60,7 @@ const RegionDetails = () => {
     );
   }
   
-  if (isLoading) {
+  if (isLoading || isLoadingSectors) {
     return (
       <Layout userRole="super-admin">
         <div className="flex items-center justify-center h-96">
@@ -56,7 +75,10 @@ const RegionDetails = () => {
       <RegionDetailView 
         region={region!} 
         sectors={sectors || []}
-        onRegionUpdated={() => queryClient.invalidateQueries({ queryKey: ['region', id] })}
+        onRegionUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ['region', id] });
+          queryClient.invalidateQueries({ queryKey: ['regionSectors', id] });
+        }}
       />
     </Layout>
   );

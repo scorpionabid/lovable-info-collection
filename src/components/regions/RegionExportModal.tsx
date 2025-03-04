@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -44,40 +43,66 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
     );
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
       setIsExporting(true);
       
-      // Prepare export data based on selected fields
-      const exportData: Record<string, any> = {};
+      const exportData: Record<string, any>[] = [];
+      const dataObj: Record<string, any> = {};
       
       if (selectedFields.includes('name')) {
-        exportData['Ad'] = region.name;
+        dataObj['Ad'] = region.name;
       }
       
       if (selectedFields.includes('description')) {
-        exportData['Təsvir'] = region.description || '';
+        dataObj['Təsvir'] = region.description || '';
+      }
+
+      if (selectedFields.includes('code')) {
+        dataObj['Kod'] = region.code || '';
       }
       
       if (selectedFields.includes('sectorCount')) {
-        exportData['Sektor sayı'] = region.sectorCount;
+        dataObj['Sektor sayı'] = region.sectorCount;
       }
       
       if (selectedFields.includes('schoolCount')) {
-        exportData['Məktəb sayı'] = region.schoolCount;
+        dataObj['Məktəb sayı'] = region.schoolCount;
       }
       
       if (selectedFields.includes('completionRate')) {
-        exportData['Doldurma faizi'] = `${region.completionRate}%`;
+        dataObj['Doldurma faizi'] = `${region.completionRate}%`;
       }
       
       if (selectedFields.includes('createdAt')) {
-        exportData['Yaradılma tarixi'] = new Date(region.created_at).toLocaleDateString('az-AZ');
+        dataObj['Yaradılma tarixi'] = new Date(region.created_at).toLocaleDateString('az-AZ');
+      }
+
+      if (selectedFields.includes('updatedAt') && region.updated_at) {
+        dataObj['Yenilənmə tarixi'] = new Date(region.updated_at).toLocaleDateString('az-AZ');
       }
       
-      // Export the data using the fileExport utility
-      fileExport({
-        data: [exportData], // Wrap in array as fileExport expects an array of objects
+      exportData.push(dataObj);
+      
+      if (dateRange.from && dateRange.to) {
+        const fromDate = new Date(dateRange.from);
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999); // Set to end of day
+        
+        const createdAt = new Date(region.created_at);
+        if (createdAt < fromDate || createdAt > toDate) {
+          setIsExporting(false);
+          toast({
+            title: "Tarix xətası",
+            description: "Seçilmiş tarix aralığında məlumat tapılmadı",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      await fileExport({
+        data: exportData,
         fileName: `Region-${region.name.replace(/\s+/g, '-')}`,
         fileType: exportFormat as 'xlsx' | 'csv' | 'pdf'
       });
@@ -180,6 +205,20 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
                     Təsvir
                   </label>
                 </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="field-code" 
+                    checked={selectedFields.includes("code")}
+                    onCheckedChange={() => handleFieldToggle("code")}
+                  />
+                  <label
+                    htmlFor="field-code"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Kod
+                  </label>
+                </div>
                 
                 <div className="flex items-center space-x-2">
                   <Checkbox 
@@ -234,6 +273,20 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     Yaradılma tarixi
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="field-updatedAt" 
+                    checked={selectedFields.includes("updatedAt")}
+                    onCheckedChange={() => handleFieldToggle("updatedAt")}
+                  />
+                  <label
+                    htmlFor="field-updatedAt"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Yenilənmə tarixi
                   </label>
                 </div>
               </div>
