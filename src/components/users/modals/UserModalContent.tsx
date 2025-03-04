@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import userService, { User } from "@/services/api/userService";
 import { UserProfileTab } from "./UserProfileTab";
-import { RoleTab } from "./RoleTab";
+import { RoleTab } from "./role/RoleTab";
 import { userFormSchema, UserFormValues } from "./UserFormSchema";
 import { useUserFormSubmit } from "../hooks/useUserFormSubmit";
 

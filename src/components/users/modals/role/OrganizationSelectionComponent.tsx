@@ -1,11 +1,11 @@
 
 import React from "react";
+import { RoleSelection } from "../RoleSelection";
+import { OrganizationSelect } from "../OrganizationSelect";
 import { Separator } from "@/components/ui/separator";
-import { RoleSelection } from "./RoleSelection";
-import { OrganizationSelect } from "./OrganizationSelect";
-import { AccountSettings } from "./AccountSettings";
+import { AccountSettings } from "../AccountSettings";
 import { UseFormReturn } from "react-hook-form";
-import { UserFormValues } from "./UserFormSchema";
+import { UserFormValues } from "../UserFormSchema";
 import { User } from "@/services/api/userService";
 
 interface Role {
@@ -29,7 +29,7 @@ interface School {
   name: string;
 }
 
-interface RoleTabProps {
+interface OrganizationSelectionComponentProps {
   form: UseFormReturn<UserFormValues>;
   roles: Role[];
   regions: Region[];
@@ -47,7 +47,7 @@ interface RoleTabProps {
   currentUserRole?: string;
 }
 
-export const RoleTab = ({ 
+export const OrganizationSelectionComponent = ({
   form,
   roles,
   regions,
@@ -63,7 +63,7 @@ export const RoleTab = ({
   user,
   getRoleById,
   currentUserRole
-}: RoleTabProps) => {
+}: OrganizationSelectionComponentProps) => {
   const selectedRoleInfo = getRoleById(selectedRole);
   const roleType = selectedRoleInfo?.name || "";
   
