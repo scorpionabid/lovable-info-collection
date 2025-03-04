@@ -37,6 +37,9 @@ const authCore = {
       
       console.log('Auth successful, fetching user data');
       
+      // Use let instead of const to allow reassignment
+      let userRecord;
+      
       // Get user profile with proper join on role_id
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -102,17 +105,21 @@ const authCore = {
           throw createError;
         }
         
-        userData = newUserData;
+        // Assign the newly created user data to our variable
+        userRecord = newUserData;
+      } else {
+        // Use the existing user data
+        userRecord = userData;
       }
       
       console.log('User data fetched successfully');
       
       localStorage.setItem('token', data.session?.access_token || '');
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(userRecord));
       
       return {
         token: data.session?.access_token,
-        user: userData
+        user: userRecord
       };
     } catch (error) {
       console.error('Login error:', error);
