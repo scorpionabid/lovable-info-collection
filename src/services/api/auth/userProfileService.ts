@@ -11,7 +11,7 @@ interface Role {
 interface UserData {
   id: string;
   email: string;
-  roles: Role;
+  roles: Role | Role[];
 }
 
 const userProfileService = {
@@ -73,8 +73,20 @@ const userProfileService = {
       }
       
       // Return permissions if they exist
-      if (userData?.roles && userData.roles.permissions) {
-        return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
+      // Handle the case where roles might be an array
+      if (userData?.roles) {
+        // Check if roles is an array
+        if (Array.isArray(userData.roles)) {
+          // If it's an array, get the first item's permissions
+          if (userData.roles.length > 0 && userData.roles[0].permissions) {
+            return Array.isArray(userData.roles[0].permissions) ? userData.roles[0].permissions : [];
+          }
+        } else {
+          // If it's a single object, get its permissions directly
+          if (userData.roles.permissions) {
+            return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
+          }
+        }
       }
       
       return [];
