@@ -73,19 +73,18 @@ const userProfileService = {
       }
       
       // Return permissions if they exist
-      // Handle the case where roles might be an array
       if (userData?.roles) {
-        // Check if roles is an array
+        // Handle both array and single object scenarios
         if (Array.isArray(userData.roles)) {
-          // If it's an array, get the first item's permissions
-          if (userData.roles.length > 0 && userData.roles[0].permissions) {
-            return Array.isArray(userData.roles[0].permissions) ? userData.roles[0].permissions : [];
+          // For array of roles
+          if (userData.roles.length > 0) {
+            const firstRole = userData.roles[0] as Role;
+            return Array.isArray(firstRole.permissions) ? firstRole.permissions : [];
           }
         } else {
-          // If it's a single object, get its permissions directly
-          if (userData.roles.permissions) {
-            return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
-          }
+          // For single role object
+          const singleRole = userData.roles as Role;
+          return Array.isArray(singleRole.permissions) ? singleRole.permissions : [];
         }
       }
       
