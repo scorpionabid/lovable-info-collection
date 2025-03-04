@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,31 +12,48 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
-
-interface Region {
-  id: string;
-  name: string;
-  description: string;
-  sectorCount: number;
-  schoolCount: number;
-  completionRate: number;
-  createdAt: string;
-}
+import { RegionWithStats } from "@/services/supabase/regionService";
+import regionService from "@/services/supabase/regionService";
+import { useToast } from "@/hooks/use-toast";
 
 interface RegionModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  region?: Region;
+  region?: RegionWithStats;
+  onSuccess?: () => void;
 }
 
-export const RegionModal = ({ isOpen, onClose, mode, region }: RegionModalProps) => {
+export const RegionModal = ({ isOpen, onClose, mode, region, onSuccess }: RegionModalProps) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("basic");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: region?.name || '',
-    description: region?.description || '',
+    name: '',
+    code: '',
+    description: '',
     adminId: '',
   });
+
+  // Initialize form data when modal opens or region changes
+  useEffect(() => {
+    if (mode === 'edit' && region) {
+      setFormData({
+        name: region.name || '',
+        code: region.code || '',
+        description: region.description || '',
+        adminId: '',
+      });
+    } else {
+      // Reset form for create mode
+      setFormData({
+        name: '',
+        code: '',
+        description: '',
+        adminId: '',
+      });
+    }
+  }, [mode, region, isOpen]);
 
   if (!isOpen) return null;
 
@@ -49,11 +66,53 @@ export const RegionModal = ({ isOpen, onClose, mode, region }: RegionModalProps)
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // This would typically send an API request to create/update the region
-    console.log("Submitting region data:", formData);
-    onClose();
+    
+    try {
+      setIsSubmitting(true);
+      
+      if (mode === 'create') {
+        await regionService.createRegion({
+          name: formData.name,
+          code: formData.code,
+          description: formData.description,
+        });
+        
+        toast({
+          title: "Region yaradıldı",
+          description: "Yeni region uğurla yaradıldı",
+        });
+      } else if (mode === 'edit' && region) {
+        await regionService.updateRegion(region.id, {
+          name: formData.name,
+          code: formData.code,
+          description: formData.description,
+        });
+        
+        toast({
+          title: "Region yeniləndi",
+          description: "Region məlumatları uğurla yeniləndi",
+        });
+      }
+      
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      // Close the modal
+      onClose();
+    } catch (error) {
+      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} region:`, error);
+      toast({
+        title: "Xəta",
+        description: `Region ${mode === 'create' ? 'yaradılarkən' : 'yenilənərkən'} xəta baş verdi`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -87,6 +146,17 @@ export const RegionModal = ({ isOpen, onClose, mode, region }: RegionModalProps)
                     onChange={handleChange}
                     placeholder="Region adını daxil edin"
                     required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="code">Region kodu</Label>
+                  <Input
+                    id="code"
+                    name="code"
+                    value={formData.code}
+                    onChange={handleChange}
+                    placeholder="Region kodunu daxil edin"
                   />
                 </div>
                 
@@ -171,11 +241,15 @@ export const RegionModal = ({ isOpen, onClose, mode, region }: RegionModalProps)
               </TabsContent>
               
               <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-infoline-light-gray">
-                <Button type="button" variant="outline" onClick={onClose}>
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                   Ləğv et
                 </Button>
-                <Button type="submit" className="bg-infoline-blue hover:bg-infoline-dark-blue">
-                  {mode === 'create' ? 'Yarat' : 'Yadda saxla'}
+                <Button 
+                  type="submit" 
+                  className="bg-infoline-blue hover:bg-infoline-dark-blue"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Yüklənir...' : mode === 'create' ? 'Yarat' : 'Yadda saxla'}
                 </Button>
               </div>
             </form>

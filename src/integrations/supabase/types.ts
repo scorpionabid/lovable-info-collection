@@ -212,6 +212,13 @@ export type Database = {
             foreignKeyName: "categories_region_id_fkey"
             columns: ["region_id"]
             isOneToOne: false
+            referencedRelation: "region_statistics"
+            referencedColumns: ["region_id"]
+          },
+          {
+            foreignKeyName: "categories_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
             referencedRelation: "regions"
             referencedColumns: ["id"]
           },
@@ -890,6 +897,13 @@ export type Database = {
             foreignKeyName: "profiles_region_id_fkey"
             columns: ["region_id"]
             isOneToOne: false
+            referencedRelation: "region_statistics"
+            referencedColumns: ["region_id"]
+          },
+          {
+            foreignKeyName: "profiles_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
             referencedRelation: "regions"
             referencedColumns: ["id"]
           },
@@ -974,19 +988,28 @@ export type Database = {
       }
       regions: {
         Row: {
+          code: string | null
           created_at: string | null
+          description: string | null
           id: string
           name: string
+          updated_at: string | null
         }
         Insert: {
+          code?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           name: string
+          updated_at?: string | null
         }
         Update: {
+          code?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1230,6 +1253,13 @@ export type Database = {
             foreignKeyName: "sectors_region_id_fkey"
             columns: ["region_id"]
             isOneToOne: false
+            referencedRelation: "region_statistics"
+            referencedColumns: ["region_id"]
+          },
+          {
+            foreignKeyName: "sectors_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
             referencedRelation: "regions"
             referencedColumns: ["id"]
           },
@@ -1309,6 +1339,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "templates_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "region_statistics"
+            referencedColumns: ["region_id"]
+          },
           {
             foreignKeyName: "templates_region_id_fkey"
             columns: ["region_id"]
@@ -1560,7 +1597,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      region_statistics: {
+        Row: {
+          completion_rate: number | null
+          region_id: string | null
+          region_name: string | null
+          school_count: number | null
+          sector_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       mark_all_notifications_read: {

@@ -12,32 +12,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, FileText, Download } from "lucide-react";
-
-interface Region {
-  id: string;
-  name: string;
-  description: string;
-  sectorCount: number;
-  schoolCount: number;
-  completionRate: number;
-  createdAt: string;
-}
+import { RegionWithStats } from '@/services/supabase/regionService';
+import { fileExport } from '@/utils/fileExport';
+import { useToast } from '@/hooks/use-toast';
 
 interface RegionExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  region: Region;
+  region: RegionWithStats;
 }
 
 export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModalProps) => {
+  const { toast } = useToast();
   const [exportFormat, setExportFormat] = useState("excel");
   const [dateRange, setDateRange] = useState({
     from: '',
     to: ''
   });
   const [selectedFields, setSelectedFields] = useState<string[]>([
-    "name", "description", "sectorCount", "schoolCount", "completionRate"
+    "name", "description", "sectorCount", "schoolCount", "completionRate", "createdAt"
   ]);
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -50,12 +45,59 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
   };
 
   const handleExport = () => {
-    // This would typically generate and download the export file
-    console.log("Exporting region:", region.name);
-    console.log("Format:", exportFormat);
-    console.log("Date range:", dateRange);
-    console.log("Selected fields:", selectedFields);
-    onClose();
+    try {
+      setIsExporting(true);
+      
+      // Prepare export data based on selected fields
+      const exportData: Record<string, any> = {};
+      
+      if (selectedFields.includes('name')) {
+        exportData['Ad'] = region.name;
+      }
+      
+      if (selectedFields.includes('description')) {
+        exportData['Təsvir'] = region.description || '';
+      }
+      
+      if (selectedFields.includes('sectorCount')) {
+        exportData['Sektor sayı'] = region.sectorCount;
+      }
+      
+      if (selectedFields.includes('schoolCount')) {
+        exportData['Məktəb sayı'] = region.schoolCount;
+      }
+      
+      if (selectedFields.includes('completionRate')) {
+        exportData['Doldurma faizi'] = `${region.completionRate}%`;
+      }
+      
+      if (selectedFields.includes('createdAt')) {
+        exportData['Yaradılma tarixi'] = new Date(region.created_at).toLocaleDateString('az-AZ');
+      }
+      
+      // Export the data using the fileExport utility
+      fileExport({
+        data: [exportData], // Wrap in array as fileExport expects an array of objects
+        fileName: `Region-${region.name.replace(/\s+/g, '-')}`,
+        fileType: exportFormat as 'xlsx' | 'csv' | 'pdf'
+      });
+      
+      toast({
+        title: "İxrac əməliyyatı uğurla tamamlandı",
+        description: `${region.name} regionu ${exportFormat} formatında ixrac edildi`,
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "İxrac xətası",
+        description: "Məlumatları ixrac edərkən xəta baş verdi",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -79,7 +121,7 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
                   <SelectValue placeholder="Format seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="excel">Excel (.xlsx)</SelectItem>
+                  <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
                   <SelectItem value="pdf">PDF (.pdf)</SelectItem>
                   <SelectItem value="csv">CSV (.csv)</SelectItem>
                 </SelectContent>
@@ -217,6 +259,7 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
               variant="outline" 
               className="flex items-center gap-2"
               onClick={onClose}
+              disabled={isExporting}
             >
               <X className="h-4 w-4" />
               Ləğv et
@@ -224,9 +267,10 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
             <Button 
               className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2"
               onClick={handleExport}
+              disabled={isExporting || selectedFields.length === 0}
             >
               <Download className="h-4 w-4" />
-              İxrac et
+              {isExporting ? 'İxrac edilir...' : 'İxrac et'}
             </Button>
           </div>
         </div>

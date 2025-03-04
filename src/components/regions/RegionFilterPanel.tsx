@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,12 +10,48 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
+import { FilterParams } from "@/services/supabase/regionService";
 
 interface RegionFilterPanelProps {
   onClose: () => void;
+  onApplyFilters: (filters: FilterParams) => void;
+  initialFilters: FilterParams;
 }
 
-export const RegionFilterPanel = ({ onClose }: RegionFilterPanelProps) => {
+export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: RegionFilterPanelProps) => {
+  const [filters, setFilters] = useState<FilterParams>(initialFilters);
+
+  // Initialize filter values from props
+  useEffect(() => {
+    setFilters(initialFilters);
+  }, [initialFilters]);
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle select changes
+  const handleSelectChange = (name: string, value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Reset filters
+  const handleReset = () => {
+    setFilters({
+      searchQuery: '',
+      dateFrom: '',
+      dateTo: '',
+      completionRate: 'all'
+    });
+  };
+
+  // Apply filters
+  const handleApply = () => {
+    onApplyFilters(filters);
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm animate-scale-in">
       <div className="flex items-center justify-between mb-4">
@@ -26,32 +63,53 @@ export const RegionFilterPanel = ({ onClose }: RegionFilterPanelProps) => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium text-infoline-dark-gray">
+          <label htmlFor="searchQuery" className="text-sm font-medium text-infoline-dark-gray">
             Region adı
           </label>
-          <Input id="name" placeholder="Region adı axtar..." />
+          <Input 
+            id="searchQuery" 
+            name="searchQuery"
+            value={filters.searchQuery || ''}
+            onChange={handleInputChange}
+            placeholder="Region adı axtar..." 
+          />
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="date-from" className="text-sm font-medium text-infoline-dark-gray">
+          <label htmlFor="dateFrom" className="text-sm font-medium text-infoline-dark-gray">
             Tarixdən
           </label>
-          <Input id="date-from" type="date" />
+          <Input 
+            id="dateFrom" 
+            name="dateFrom"
+            value={filters.dateFrom || ''}
+            onChange={handleInputChange}
+            type="date" 
+          />
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="date-to" className="text-sm font-medium text-infoline-dark-gray">
+          <label htmlFor="dateTo" className="text-sm font-medium text-infoline-dark-gray">
             Tarixə qədər
           </label>
-          <Input id="date-to" type="date" />
+          <Input 
+            id="dateTo" 
+            name="dateTo"
+            value={filters.dateTo || ''}
+            onChange={handleInputChange}
+            type="date" 
+          />
         </div>
         
         <div className="space-y-2">
-          <label htmlFor="completion" className="text-sm font-medium text-infoline-dark-gray">
+          <label htmlFor="completionRate" className="text-sm font-medium text-infoline-dark-gray">
             Doldurma faizi
           </label>
-          <Select>
-            <SelectTrigger id="completion">
+          <Select 
+            value={filters.completionRate || 'all'} 
+            onValueChange={(value) => handleSelectChange('completionRate', value)}
+          >
+            <SelectTrigger id="completionRate">
               <SelectValue placeholder="Bütün faizlər" />
             </SelectTrigger>
             <SelectContent>
@@ -65,8 +123,9 @@ export const RegionFilterPanel = ({ onClose }: RegionFilterPanelProps) => {
       </div>
       
       <div className="flex justify-end gap-2 mt-4">
+        <Button variant="outline" onClick={handleReset}>Sıfırla</Button>
         <Button variant="outline" onClick={onClose}>Ləğv et</Button>
-        <Button className="bg-infoline-blue hover:bg-infoline-dark-blue">Tətbiq et</Button>
+        <Button className="bg-infoline-blue hover:bg-infoline-dark-blue" onClick={handleApply}>Tətbiq et</Button>
       </div>
     </div>
   );

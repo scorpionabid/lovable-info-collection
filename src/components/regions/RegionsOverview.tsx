@@ -1,70 +1,122 @@
 
 import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RegionTable } from './RegionTable';
 import { RegionFilterPanel } from './RegionFilterPanel';
 import { RegionModal } from './RegionModal';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
+import regionService, { FilterParams } from "@/services/supabase/regionService";
+import { useToast } from "@/hooks/use-toast";
+import { fileExport } from "@/utils/fileExport";
 
 export const RegionsOverview = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // State for UI controls
   const [showFilters, setShowFilters] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [sortColumn, setSortColumn] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState<FilterParams>({
+    searchQuery: '',
+    dateFrom: '',
+    dateTo: '',
+    completionRate: 'all'
+  });
 
-  // Mock data for regions
-  const regions = [
-    {
-      id: '1',
-      name: 'Bakı şəhəri',
-      description: 'Azərbaycanın paytaxtı və ən böyük şəhəri',
-      sectorCount: 5,
-      schoolCount: 134,
-      completionRate: 87,
-      createdAt: '2023-05-15'
-    },
-    {
-      id: '2',
-      name: 'Gəncə şəhəri',
-      description: 'Azərbaycanın ikinci ən böyük şəhəri',
-      sectorCount: 3,
-      schoolCount: 48,
-      completionRate: 92,
-      createdAt: '2023-05-20'
-    },
-    {
-      id: '3',
-      name: 'Sumqayıt şəhəri',
-      description: 'Xəzər dənizi sahilində yerləşən sənaye şəhəri',
-      sectorCount: 2,
-      schoolCount: 36,
-      completionRate: 78,
-      createdAt: '2023-05-25'
-    },
-    {
-      id: '4',
-      name: 'Şəki rayonu',
-      description: 'Tarixi və mədəni əhəmiyyətə malik şəhər',
-      sectorCount: 1,
-      schoolCount: 22,
-      completionRate: 65,
-      createdAt: '2023-06-05'
-    },
-    {
-      id: '5',
-      name: 'Quba rayonu',
-      description: 'Şimal bölgəsində yerləşən rayon',
-      sectorCount: 1,
-      schoolCount: 18,
-      completionRate: 73,
-      createdAt: '2023-06-10'
+  // Query to fetch regions with filters
+  const { data: regionsData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['regions', currentPage, pageSize, sortColumn, sortDirection, filters],
+    queryFn: () => regionService.getRegions(
+      { page: currentPage, pageSize },
+      { column: sortColumn, direction: sortDirection },
+      { ...filters, searchQuery }
+    ),
+  });
+
+  // Handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Debounce filter application
+    const timeoutId = setTimeout(() => {
+      setFilters(prev => ({ ...prev, searchQuery: e.target.value }));
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  };
+
+  // Handle filter application
+  const handleApplyFilters = (newFilters: FilterParams) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+    setShowFilters(false);
+  };
+
+  // Handle sorting change
+  const handleSortChange = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
-  ];
+  };
 
-  const filteredRegions = regions.filter(region => 
-    region.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    region.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Handle refresh
+  const handleRefresh = () => {
+    refetch();
+    toast({
+      title: "Məlumatlar yeniləndi",
+      description: "Region siyahısı yeniləndi",
+    });
+  };
+
+  // Handle export
+  const handleExport = () => {
+    if (!regionsData || regionsData.data.length === 0) {
+      toast({
+        title: "İxrac ediləcək məlumat yoxdur",
+        description: "Region siyahısında məlumat tapılmadı",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const exportData = regionsData.data.map(region => ({
+      'Ad': region.name,
+      'Kod': region.code || '',
+      'Təsvir': region.description || '',
+      'Sektor sayı': region.sectorCount,
+      'Məktəb sayı': region.schoolCount,
+      'Doldurma faizi': `${region.completionRate}%`,
+      'Yaradılma tarixi': new Date(region.created_at).toLocaleDateString('az-AZ')
+    }));
+
+    fileExport({
+      data: exportData,
+      fileName: 'Regionlar',
+      fileType: 'xlsx'
+    });
+
+    toast({
+      title: "İxrac əməliyyatı uğurla tamamlandı",
+      description: "Məlumatlar Excel formatında ixrac edildi",
+    });
+  };
+
+  // Handle import (placeholder for now)
+  const handleImport = () => {
+    toast({
+      title: "İdxal funksiyası",
+      description: "Bu funksiya hazırda işləmə mərhələsindədir",
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -73,7 +125,7 @@ export const RegionsOverview = () => {
           <Input
             placeholder="Axtarış..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-10"
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-infoline-dark-gray">
@@ -98,6 +150,7 @@ export const RegionsOverview = () => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
+            onClick={handleRefresh}
           >
             <RefreshCcw size={16} />
             Yenilə
@@ -106,6 +159,7 @@ export const RegionsOverview = () => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
+            onClick={handleExport}
           >
             <Download size={16} />
             İxrac et
@@ -114,6 +168,7 @@ export const RegionsOverview = () => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
+            onClick={handleImport}
           >
             <Upload size={16} />
             İdxal et
@@ -130,15 +185,38 @@ export const RegionsOverview = () => {
       </div>
       
       {showFilters && (
-        <RegionFilterPanel onClose={() => setShowFilters(false)} />
+        <RegionFilterPanel 
+          onClose={() => setShowFilters(false)} 
+          onApplyFilters={handleApplyFilters}
+          initialFilters={filters}
+        />
       )}
       
-      <RegionTable regions={filteredRegions} />
+      <RegionTable 
+        regions={regionsData?.data || []}
+        isLoading={isLoading}
+        isError={isError}
+        totalCount={regionsData?.count || 0}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        setCurrentPage={setCurrentPage}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
+        onRefresh={refetch}
+      />
       
       <RegionModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
         mode="create"
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['regions'] });
+          toast({
+            title: "Region uğurla yaradıldı",
+            description: "Yeni region məlumatları sistemə əlavə edildi",
+          });
+        }}
       />
     </div>
   );

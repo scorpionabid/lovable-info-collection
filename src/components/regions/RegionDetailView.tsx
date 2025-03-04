@@ -18,53 +18,54 @@ import {
 import { RegionSectorTable } from './RegionSectorTable';
 import { RegionModal } from './RegionModal';
 import { RegionExportModal } from './RegionExportModal';
+import { RegionWithStats } from '@/services/supabase/regionService';
+import { useToast } from '@/hooks/use-toast';
 
-interface Region {
+interface Sector {
   id: string;
   name: string;
-  description: string;
-  createdAt: string;
-  sectors: number;
-  schools: number;
-  users: number;
-  completionRate: number;
-  sectorCount: number;
+  description?: string;
   schoolCount: number;
+  completionRate: number;
 }
 
 interface RegionDetailProps {
-  region: Region;
+  region: RegionWithStats;
+  sectors: Sector[];
+  onRegionUpdated: () => void;
 }
 
-export const RegionDetailView = ({ region }: RegionDetailProps) => {
+export const RegionDetailView = ({ region, sectors, onRegionUpdated }: RegionDetailProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   
-  // Mock data for the charts
+  // Mock data for the charts - in a real scenario, you would probably get this from an API
   const completionData = [
-    { name: 'Yan', value: 65 },
-    { name: 'Fev', value: 72 },
-    { name: 'Mar', value: 76 },
-    { name: 'Apr', value: 81 },
-    { name: 'May', value: 85 },
-    { name: 'İyn', value: 87 },
+    { name: 'Yan', value: Math.floor(Math.random() * 35) + 65 },
+    { name: 'Fev', value: Math.floor(Math.random() * 35) + 65 },
+    { name: 'Mar', value: Math.floor(Math.random() * 35) + 65 },
+    { name: 'Apr', value: Math.floor(Math.random() * 35) + 65 },
+    { name: 'May', value: Math.floor(Math.random() * 35) + 65 },
+    { name: 'İyn', value: region.completionRate },
   ];
   
   const distributionData = [
-    { name: 'Məktəblər', value: region.schools },
-    { name: 'Sektorlar', value: region.sectors },
-    { name: 'İstifadəçilər', value: region.users },
+    { name: 'Məktəblər', value: region.schoolCount },
+    { name: 'Sektorlar', value: region.sectorCount },
+    { name: 'İstifadəçilər', value: region.users || 0 },
   ];
-  
-  // Mock data for sectors
-  const sectors = [
-    { id: '1', name: 'Yasamal rayonu', description: 'Yasamal rayonu təsviri', schoolCount: 28, completionRate: 92 },
-    { id: '2', name: 'Nəsimi rayonu', description: 'Nəsimi rayonu təsviri', schoolCount: 22, completionRate: 85 },
-    { id: '3', name: 'Nərimanov rayonu', description: 'Nərimanov rayonu təsviri', schoolCount: 18, completionRate: 78 },
-    { id: '4', name: 'Xətai rayonu', description: 'Xətai rayonu təsviri', schoolCount: 26, completionRate: 89 },
-    { id: '5', name: 'Sabunçu rayonu', description: 'Sabunçu rayonu təsviri', schoolCount: 20, completionRate: 72 },
-  ];
+
+  // Handle edit success
+  const handleEditSuccess = () => {
+    onRegionUpdated();
+    setIsEditModalOpen(false);
+    toast({
+      title: "Region yeniləndi",
+      description: "Region məlumatları uğurla yeniləndi",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -106,19 +107,19 @@ export const RegionDetailView = ({ region }: RegionDetailProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Sektorlar" 
-          value={region.sectors} 
+          value={region.sectorCount} 
           icon={<Layers className="h-5 w-5" />}
           color="blue"
         />
         <StatCard 
           title="Məktəblər" 
-          value={region.schools} 
+          value={region.schoolCount} 
           icon={<School className="h-5 w-5" />}
           color="green"
         />
         <StatCard 
           title="İstifadəçilər" 
-          value={region.users} 
+          value={region.users || 0} 
           icon={<Users className="h-5 w-5" />}
           color="purple"
         />
@@ -187,6 +188,7 @@ export const RegionDetailView = ({ region }: RegionDetailProps) => {
         onClose={() => setIsEditModalOpen(false)} 
         mode="edit"
         region={region}
+        onSuccess={handleEditSuccess}
       />
       
       <RegionExportModal 

@@ -1,23 +1,45 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from "@/components/layout/Layout";
 import { RegionDetailView } from "@/components/regions/RegionDetailView";
+import regionService from '@/services/supabase/regionService';
 
 const RegionDetails = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   
-  // This would typically fetch data from an API
-  useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+  // Query to fetch region details
+  const { data: region, isLoading, isError, error } = useQuery({
+    queryKey: ['region', id],
+    queryFn: () => regionService.getRegionById(id!),
+    enabled: !!id, // Only run query if id exists
+  });
+  
+  // Query to fetch region sectors
+  const { data: sectors } = useQuery({
+    queryKey: ['regionSectors', id],
+    queryFn: () => regionService.getRegionSectors(id!),
+    enabled: !!id, // Only run query if id exists
+  });
+
+  // Handle error - navigate back to regions list
+  if (isError) {
+    console.error('Error fetching region details:', error);
+    setTimeout(() => navigate('/regions'), 3000);
     
-    return () => clearTimeout(timer);
-  }, [id]);
+    return (
+      <Layout userRole="super-admin">
+        <div className="flex flex-col items-center justify-center h-96">
+          <div className="text-red-500 text-xl mb-4">Xəta baş verdi</div>
+          <p className="text-infoline-dark-gray mb-4">Region məlumatları yüklənərkən xəta baş verdi.</p>
+          <p className="text-infoline-dark-gray">Regionlar siyahısına yönləndirilirsiniz...</p>
+        </div>
+      </Layout>
+    );
+  }
   
   if (isLoading) {
     return (
@@ -29,24 +51,13 @@ const RegionDetails = () => {
     );
   }
   
-  // This is placeholder mock data
-  const regionData = {
-    id: id || '1',
-    name: 'Bakı şəhəri',
-    description: 'Azərbaycanın paytaxtı və ən böyük şəhəri',
-    createdAt: '2023-05-15',
-    sectors: 5,
-    schools: 134,
-    users: 24,
-    completionRate: 87,
-    // Add these properties for compatibility with RegionTable
-    sectorCount: 5,
-    schoolCount: 134
-  };
-  
   return (
     <Layout userRole="super-admin">
-      <RegionDetailView region={regionData} />
+      <RegionDetailView 
+        region={region!} 
+        sectors={sectors || []}
+        onRegionUpdated={() => queryClient.invalidateQueries({ queryKey: ['region', id] })}
+      />
     </Layout>
   );
 };
