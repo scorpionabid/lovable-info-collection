@@ -1,10 +1,9 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService, { LoginCredentials } from '@/services/api/authService';
 import { toast } from 'sonner';
 
-// Define UserRole type - add "superadmin" to match what's in the database
+// Define UserRole type - include both "superadmin" and "super-admin" to match what's in the database and UI
 export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin' | 'superadmin';
 
 interface User {
@@ -17,6 +16,12 @@ interface User {
   region_id?: string;
   sector_id?: string;
   school_id?: string;
+  roles?: {
+    id: string;
+    name: string;
+    description?: string;
+    permissions: string[];
+  };
 }
 
 interface AuthContextType {
@@ -42,6 +47,13 @@ export const useAuth = () => useContext(AuthContext);
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+// Helper function to normalize role names between DB and UI
+const normalizeRoleName = (roleName: string): UserRole => {
+  // Map database role names to UI role names
+  if (roleName === 'superadmin') return 'super-admin';
+  return roleName as UserRole;
+};
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
@@ -75,12 +87,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Verify token is still valid by calling getCurrentUser
           const userData = await authService.getCurrentUser();
           if (userData) {
-            // Map role value to appropriate UserRole type - handle "superadmin" case
-            let userRole: UserRole = userData.roles?.name || userData.role_id;
+            // Get role from either the roles object or role_id
+            let userRole: UserRole;
             
-            // If role is superadmin but we need super-admin in the UI, convert it
-            if (userRole === 'superadmin') {
-              console.log('Converting superadmin role for UI compatibility');
+            if (userData.roles?.name) {
+              // If roles data is available, use that
+              userRole = normalizeRoleName(userData.roles.name);
+              console.log(`Role from database (${userData.roles.name}) normalized to: ${userRole}`);
+            } else if (userData.role_id) {
+              // Otherwise fall back to role_id
+              userRole = normalizeRoleName(userData.role_id);
+              console.log(`Role from role_id (${userData.role_id}) normalized to: ${userRole}`);
+            } else {
+              // Default fallback
+              userRole = 'school-admin';
+              console.warn('No role information found, defaulting to school-admin');
             }
             
             setUser({
@@ -93,6 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               region_id: userData.region_id,
               sector_id: userData.sector_id,
               school_id: userData.school_id,
+              roles: userData.roles,
             });
             
             // Get permissions
@@ -133,11 +155,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         let userRole: UserRole;
         
         if (userData.roles?.name) {
-          userRole = userData.roles.name as UserRole;
+          userRole = normalizeRoleName(userData.roles.name);
+          console.log(`Login: Role from database (${userData.roles.name}) normalized to: ${userRole}`);
         } else if (typeof userData.role_id === 'string') {
-          userRole = userData.role_id as UserRole;
+          userRole = normalizeRoleName(userData.role_id);
+          console.log(`Login: Role from role_id (${userData.role_id}) normalized to: ${userRole}`);
         } else {
           userRole = 'school-admin'; // Default fallback
+          console.warn('Login: No role information found, defaulting to school-admin');
         }
         
         setUser({
@@ -150,6 +175,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           region_id: userData.region_id,
           sector_id: userData.sector_id,
           school_id: userData.school_id,
+          roles: userData.roles,
         });
         
         // Get permissions
