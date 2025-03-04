@@ -1,6 +1,6 @@
 
 import { supabase } from './baseClient';
-import { School, SchoolFilter } from './types';
+import { School, SchoolFilter, SchoolStats } from './types';
 
 /**
  * Get all schools with optional filtering
@@ -13,16 +13,18 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         id,
         name,
         address,
-        email as contactEmail,
-        phone as contactPhone,
-        regions!inner(id, name),
-        sectors!inner(id, name),
-        school_types(id, name),
+        email,
+        phone,
+        region_id,
+        sector_id,
         student_count,
         teacher_count,
         status,
         director,
-        created_at
+        created_at,
+        school_types (id, name),
+        regions (id, name),
+        sectors (id, name)
       `);
 
     // Apply filters if provided
@@ -31,7 +33,7 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         query = query.or(`name.ilike.%${filters.search}%,director.ilike.%${filters.search}%`);
       }
       if (filters.regionId) {
-        query = query.eq('regions.id', filters.regionId);
+        query = query.eq('region_id', filters.regionId);
       }
       if (filters.sectorId) {
         query = query.eq('sector_id', filters.sectorId);
@@ -55,24 +57,31 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
     if (error) throw error;
 
     // Transform the data to match our expected School interface
-    return data.map(item => ({
-      id: item.id,
-      name: item.name,
-      type: item.school_types?.name || 'N/A',
-      region: item.regions.name,
-      region_id: item.regions.id,
-      sector: item.sectors.name,
-      sector_id: item.sectors.id,
-      studentCount: item.student_count || 0,
-      teacherCount: item.teacher_count || 0,
-      completionRate: calculateCompletionRate(item.id), // This would be calculated from the categories data
-      status: item.status || 'Aktiv',
-      director: item.director || 'N/A',
-      contactEmail: item.contactEmail || 'N/A',
-      contactPhone: item.contactPhone || 'N/A',
-      createdAt: item.created_at,
-      address: item.address
+    const schools = await Promise.all(data.map(async (item: any) => {
+      // Get completion rate for this school
+      const completionRate = await calculateCompletionRate(item.id);
+
+      return {
+        id: item.id,
+        name: item.name,
+        type: item.school_types?.name || 'N/A',
+        region: item.regions?.name || 'N/A',
+        region_id: item.region_id,
+        sector: item.sectors?.name || 'N/A',
+        sector_id: item.sector_id,
+        studentCount: item.student_count || 0,
+        teacherCount: item.teacher_count || 0,
+        completionRate,
+        status: item.status || 'Aktiv',
+        director: item.director || 'N/A',
+        contactEmail: item.email || 'N/A',
+        contactPhone: item.phone || 'N/A',
+        createdAt: item.created_at,
+        address: item.address
+      };
     }));
+
+    return schools;
   } catch (error) {
     console.error('Error fetching schools:', error);
     throw error;
@@ -90,16 +99,18 @@ export const getSchoolById = async (id: string): Promise<School> => {
         id,
         name,
         address,
-        email as contactEmail,
-        phone as contactPhone,
-        regions!inner(id, name),
-        sectors!inner(id, name),
-        school_types(id, name),
+        email,
+        phone,
+        region_id,
+        sector_id,
         student_count,
         teacher_count,
         status,
         director,
-        created_at
+        created_at,
+        school_types (id, name),
+        regions (id, name),
+        sectors (id, name)
       `)
       .eq('id', id)
       .single();
@@ -113,17 +124,17 @@ export const getSchoolById = async (id: string): Promise<School> => {
       id: data.id,
       name: data.name,
       type: data.school_types?.name || 'N/A',
-      region: data.regions.name,
-      region_id: data.regions.id,
-      sector: data.sectors.name,
-      sector_id: data.sectors.id,
+      region: data.regions?.name || 'N/A',
+      region_id: data.region_id,
+      sector: data.sectors?.name || 'N/A',
+      sector_id: data.sector_id,
       studentCount: data.student_count || 0,
       teacherCount: data.teacher_count || 0,
       completionRate,
       status: data.status || 'Aktiv',
       director: data.director || 'N/A',
-      contactEmail: data.contactEmail || 'N/A',
-      contactPhone: data.contactPhone || 'N/A',
+      contactEmail: data.email || 'N/A',
+      contactPhone: data.phone || 'N/A',
       createdAt: data.created_at,
       address: data.address
     };

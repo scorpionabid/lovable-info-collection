@@ -42,3 +42,23 @@ export interface SchoolStats {
   categories: Category[];
   completionHistory: CompletionHistory[];
 }
+
+// Interface for creating a new school
+export interface CreateSchoolDto {
+  name: string;
+  type: string;
+  region_id: string;
+  sector_id: string;
+  region?: string;
+  sector?: string;
+  studentCount: number;
+  teacherCount: number;
+  address?: string;
+  contactEmail: string;
+  contactPhone: string;
+  status: string;
+  director: string;
+}
+
+// Interface for updating an existing school
+export interface UpdateSchoolDto extends Partial<CreateSchoolDto> {}

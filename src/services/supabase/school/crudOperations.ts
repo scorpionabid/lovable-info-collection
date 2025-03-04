@@ -1,31 +1,31 @@
 
 import { supabase } from './baseClient';
-import { School } from './types';
+import { CreateSchoolDto, UpdateSchoolDto } from './types';
 
 /**
- * Create a new school
+ * Create a new school 
  */
-export const createSchool = async (schoolData: Omit<School, 'id' | 'createdAt' | 'completionRate'>) => {
+export const createSchool = async (schoolData: CreateSchoolDto) => {
   try {
-    // Transform the school data to match the database schema
-    const dbSchool = {
+    // Convert from our DTO format to the database schema format
+    const dbData = {
       name: schoolData.name,
-      address: schoolData.address,
+      type_id: schoolData.type, // This might need adjustment based on how types are stored
       region_id: schoolData.region_id,
       sector_id: schoolData.sector_id,
-      school_type_id: getSchoolTypeId(schoolData.type), // This would be a lookup function
       student_count: schoolData.studentCount,
       teacher_count: schoolData.teacherCount,
-      status: schoolData.status,
-      director: schoolData.director,
+      address: schoolData.address,
       email: schoolData.contactEmail,
-      phone: schoolData.contactPhone
+      phone: schoolData.contactPhone,
+      status: schoolData.status,
+      director: schoolData.director
     };
 
     const { data, error } = await supabase
       .from('schools')
-      .insert([dbSchool])
-      .select()
+      .insert(dbData)
+      .select('id')
       .single();
 
     if (error) throw error;
@@ -39,29 +39,26 @@ export const createSchool = async (schoolData: Omit<School, 'id' | 'createdAt' |
 /**
  * Update an existing school
  */
-export const updateSchool = async (
-  id: string, 
-  schoolData: Partial<Omit<School, 'id' | 'createdAt' | 'completionRate'>>
-) => {
+export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
   try {
-    // Transform the school data to match the database schema
-    const dbSchool: any = {};
+    // Convert from our DTO format to the database schema format
+    const dbData: any = {};
     
-    if (schoolData.name) dbSchool.name = schoolData.name;
-    if (schoolData.address) dbSchool.address = schoolData.address;
-    if (schoolData.region_id) dbSchool.region_id = schoolData.region_id;
-    if (schoolData.sector_id) dbSchool.sector_id = schoolData.sector_id;
-    if (schoolData.type) dbSchool.school_type_id = getSchoolTypeId(schoolData.type);
-    if (schoolData.studentCount !== undefined) dbSchool.student_count = schoolData.studentCount;
-    if (schoolData.teacherCount !== undefined) dbSchool.teacher_count = schoolData.teacherCount;
-    if (schoolData.status) dbSchool.status = schoolData.status;
-    if (schoolData.director) dbSchool.director = schoolData.director;
-    if (schoolData.contactEmail) dbSchool.email = schoolData.contactEmail;
-    if (schoolData.contactPhone) dbSchool.phone = schoolData.contactPhone;
+    if (schoolData.name) dbData.name = schoolData.name;
+    if (schoolData.type) dbData.type_id = schoolData.type;
+    if (schoolData.region_id) dbData.region_id = schoolData.region_id;
+    if (schoolData.sector_id) dbData.sector_id = schoolData.sector_id;
+    if (schoolData.studentCount !== undefined) dbData.student_count = schoolData.studentCount;
+    if (schoolData.teacherCount !== undefined) dbData.teacher_count = schoolData.teacherCount;
+    if (schoolData.address !== undefined) dbData.address = schoolData.address;
+    if (schoolData.contactEmail) dbData.email = schoolData.contactEmail;
+    if (schoolData.contactPhone) dbData.phone = schoolData.contactPhone;
+    if (schoolData.status) dbData.status = schoolData.status;
+    if (schoolData.director) dbData.director = schoolData.director;
 
     const { data, error } = await supabase
       .from('schools')
-      .update(dbSchool)
+      .update(dbData)
       .eq('id', id)
       .select()
       .single();
@@ -75,13 +72,31 @@ export const updateSchool = async (
 };
 
 /**
- * Archive a school (soft delete)
+ * Delete a school by ID
+ */
+export const deleteSchool = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('schools')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting school:', error);
+    throw error;
+  }
+};
+
+/**
+ * Archive a school (set status to inactive)
  */
 export const archiveSchool = async (id: string) => {
   try {
     const { data, error } = await supabase
       .from('schools')
-      .update({ status: 'Arxivləşdirilmiş' })
+      .update({ status: 'Deaktiv' })
       .eq('id', id)
       .select()
       .single();
@@ -92,59 +107,4 @@ export const archiveSchool = async (id: string) => {
     console.error('Error archiving school:', error);
     throw error;
   }
-};
-
-/**
- * Assign an admin to a school
- */
-export const assignSchoolAdmin = async (schoolId: string, userId: string) => {
-  try {
-    // This would update the user record in the users table
-    const { data, error } = await supabase
-      .from('users')
-      .update({ 
-        school_id: schoolId,
-        role_id: getRoleIdByName('school-admin') // This would be a lookup function
-      })
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error assigning school admin:', error);
-    throw error;
-  }
-};
-
-/**
- * Get school type ID from name (helper function)
- */
-const getSchoolTypeId = (typeName: string): string => {
-  // This would normally query the database to get the ID
-  // For now, returning a placeholder
-  const typeMap: {[key: string]: string} = {
-    'Orta məktəb': '1',
-    'Tam orta məktəb': '2',
-    'İbtidai məktəb': '3'
-  };
-  
-  return typeMap[typeName] || '1';
-};
-
-/**
- * Get role ID from name (helper function)
- */
-const getRoleIdByName = (roleName: string): string => {
-  // This would normally query the database to get the ID
-  // For now, returning a placeholder
-  const roleMap: {[key: string]: string} = {
-    'super-admin': '1',
-    'region-admin': '2',
-    'sector-admin': '3',
-    'school-admin': '4'
-  };
-  
-  return roleMap[roleName] || '4';
 };

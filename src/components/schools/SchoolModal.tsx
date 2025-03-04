@@ -160,11 +160,14 @@ export const SchoolModal = ({
       const directorName = `${data.directorFirstName} ${data.directorLastName}`;
       
       if (mode === 'create') {
+        // Create the school with properly formatted data
         await createSchool({
           name: data.name,
           type: data.type,
           region_id: data.regionId,
           sector_id: data.sectorId,
+          region: '', // These will be filled by the backend
+          sector: '', // These will be filled by the backend
           studentCount: data.studentCount,
           teacherCount: data.teacherCount,
           address: data.address,
@@ -179,6 +182,7 @@ export const SchoolModal = ({
         }
       } else {
         if (school?.id) {
+          // Update the school with properly formatted data
           await updateSchool(school.id, {
             name: data.name,
             type: data.type,
