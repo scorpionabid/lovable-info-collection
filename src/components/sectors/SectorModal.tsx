@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -39,7 +40,7 @@ export const SectorModal = ({ isOpen, onClose, mode, sector, onSuccess }: Sector
   const [activeTab, setActiveTab] = useState("basic");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<SectorFormData>({
+  const { register, handleSubmit, setValue, reset, formState: { errors }, watch } = useForm<SectorFormData>({
     defaultValues: {
       name: sector?.name || '',
       description: sector?.description || '',
@@ -47,6 +48,9 @@ export const SectorModal = ({ isOpen, onClose, mode, sector, onSuccess }: Sector
       adminId: '',
     }
   });
+
+  // Add this line to watch the form data
+  const watchedFormData = watch();
 
   // Fetch regions for dropdown
   const { data: regions = [] } = useQuery({
@@ -189,32 +193,32 @@ export const SectorModal = ({ isOpen, onClose, mode, sector, onSuccess }: Sector
                   </Select>
                 </div>
                 
-                {/* {formData.adminId === 'new' && ( */}
-                {/*  <div className="space-y-4 border p-4 rounded-md border-infoline-light-gray mt-4"> */}
-                {/*    <h3 className="font-medium text-infoline-dark-blue">Yeni Admin Yarat</h3> */}
-                    
-                {/*    <div className="grid grid-cols-2 gap-4"> */}
-                {/*      <div className="space-y-2"> */}
-                {/*        <Label htmlFor="adminName">Ad</Label> */}
-                {/*        <Input id="adminName" placeholder="Adı daxil edin" /> */}
-                {/*      </div> */}
-                {/*      <div className="space-y-2"> */}
-                {/*        <Label htmlFor="adminSurname">Soyad</Label> */}
-                {/*        <Input id="adminSurname" placeholder="Soyadı daxil edin" /> */}
-                {/*      </div> */}
-                {/*    </div> */}
-                    
-                {/*    <div className="space-y-2"> */}
-                {/*      <Label htmlFor="adminEmail">Email</Label> */}
-                {/*      <Input id="adminEmail" type="email" placeholder="Email ünvanını daxil edin" /> */}
-                {/*    </div> */}
-                    
-                {/*    <div className="space-y-2"> */}
-                {/*      <Label htmlFor="adminPhone">Telefon</Label> */}
-                {/*      <Input id="adminPhone" placeholder="Telefon nömrəsini daxil edin" /> */}
-                {/*    </div> */}
-                {/*  </div> */}
-                {/* )} */}
+                {watchedFormData.adminId === 'new' && (
+                 <div className="space-y-4 border p-4 rounded-md border-infoline-light-gray mt-4">
+                   <h3 className="font-medium text-infoline-dark-blue">Yeni Admin Yarat</h3>
+                   
+                   <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                       <Label htmlFor="adminName">Ad</Label>
+                       <Input id="adminName" placeholder="Adı daxil edin" />
+                     </div>
+                     <div className="space-y-2">
+                       <Label htmlFor="adminSurname">Soyad</Label>
+                       <Input id="adminSurname" placeholder="Soyadı daxil edin" />
+                     </div>
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <Label htmlFor="adminEmail">Email</Label>
+                     <Input id="adminEmail" type="email" placeholder="Email ünvanını daxil edin" />
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <Label htmlFor="adminPhone">Telefon</Label>
+                     <Input id="adminPhone" placeholder="Telefon nömrəsini daxil edin" />
+                   </div>
+                 </div>
+                )}
               </TabsContent>
               
               <TabsContent value="config" className="space-y-4">
