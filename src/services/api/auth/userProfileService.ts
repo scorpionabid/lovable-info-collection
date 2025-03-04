@@ -60,8 +60,9 @@ const userProfileService = {
       }
       
       // Return permissions if they exist
-      // Fix: Check if userData.roles exists and access permissions correctly
-      if (userData?.roles && userData.roles.permissions) {
+      // Fixed: Correctly access permissions from the roles object
+      if (userData?.roles) {
+        // Check if roles has a permissions property (which could be an array)
         return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
       }
       
