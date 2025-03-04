@@ -1,5 +1,17 @@
-
 import { supabase } from '../../supabase/supabaseClient';
+
+interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+interface UserData {
+  id: string;
+  email: string;
+  roles: Role;
+}
 
 const userProfileService = {
   getCurrentUser: async () => {
@@ -60,9 +72,7 @@ const userProfileService = {
       }
       
       // Return permissions if they exist
-      // Fixed: Correctly access permissions from the roles object
-      if (userData?.roles) {
-        // Check if roles has a permissions property (which could be an array)
+      if (userData?.roles?.permissions) {
         return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
       }
       
