@@ -1,4 +1,3 @@
-
 import { supabase } from './supabaseClient';
 import { UserRole } from '@/contexts/AuthContext';
 
@@ -12,6 +11,7 @@ export interface User {
   region_id?: string;
   sector_id?: string;
   school_id?: string;
+  phone?: string;
   is_active?: boolean;
   last_login?: string;
   roles?: {
@@ -259,6 +259,30 @@ const userService = {
       return data;
     } catch (error) {
       console.error('Error fetching roles:', error);
+      throw error;
+    }
+  },
+  
+  resetPassword: async (id: string) => {
+    try {
+      // Get the user's email
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', id)
+        .single();
+        
+      if (userError) throw userError;
+      if (!user || !user.email) throw new Error('User not found or has no email');
+      
+      // Use Supabase's auth API to send a password reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error(`Error resetting password for user with ID ${id}:`, error);
       throw error;
     }
   }
