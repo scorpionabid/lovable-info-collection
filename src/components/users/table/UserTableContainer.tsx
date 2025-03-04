@@ -1,14 +1,12 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { User } from "@/services/api/userService";
 import { UserTableHeader } from "./UserTableHeader";
 import { UserTableRow } from "./UserTableRow";
-import { UserViewModal } from "../UserViewModal";
-import { UserModal } from "../UserModal";
-import { User } from "@/services/api/userService";
-import userService from "@/services/api/userService";
 import { sortUsers } from "../utils/userUtils";
+import { useToast } from "@/hooks/use-toast";
+import userService from "@/services/api/userService";
 
 interface UserTableContainerProps {
   users: User[];
@@ -20,27 +18,44 @@ interface UserTableContainerProps {
 export const UserTableContainer = ({ 
   users, 
   selectedRows, 
-  onSelectedRowsChange, 
-  onRefetch 
+  onSelectedRowsChange,
+  onRefetch
 }: UserTableContainerProps) => {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [viewUser, setViewUser] = useState<User | null>(null);
-  const [editUser, setEditUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
-  // Mutations
+  // Table actions
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => userService.deleteUser(userId),
+    onSuccess: () => {
+      toast({
+        title: "İstifadəçi silindi",
+        description: "İstifadəçi uğurla silindi",
+      });
+      onRefetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Xəta baş verdi",
+        description: `Silinmə xətası: ${(error as Error).message}`
+      });
+    }
+  });
+
   const blockUserMutation = useMutation({
     mutationFn: (userId: string) => userService.blockUser(userId),
     onSuccess: () => {
-      toast("İstifadəçi bloklandı", {
+      toast({
+        title: "İstifadəçi bloklandı",
         description: "İstifadəçi uğurla bloklandı",
       });
       onRefetch();
     },
     onError: (error) => {
-      toast("Xəta baş verdi", {
-        description: `İstifadəçini bloklamaq mümkün olmadı: ${(error as Error).message}`,
-        variant: "destructive",
+      toast({
+        title: "Xəta baş verdi",
+        description: `Bloklama xətası: ${(error as Error).message}`
       });
     }
   });
@@ -48,36 +63,37 @@ export const UserTableContainer = ({
   const activateUserMutation = useMutation({
     mutationFn: (userId: string) => userService.activateUser(userId),
     onSuccess: () => {
-      toast("İstifadəçi aktivləşdirildi", {
+      toast({
+        title: "İstifadəçi aktivləşdirildi",
         description: "İstifadəçi uğurla aktivləşdirildi",
       });
       onRefetch();
     },
     onError: (error) => {
-      toast("Xəta baş verdi", {
-        description: `İstifadəçini aktivləşdirmək mümkün olmadı: ${(error as Error).message}`,
-        variant: "destructive",
+      toast({
+        title: "Xəta baş verdi",
+        description: `Aktivləşdirmə xətası: ${(error as Error).message}`
       });
     }
   });
 
-  const deleteUserMutation = useMutation({
-    mutationFn: (userId: string) => userService.deleteUser(userId),
+  const resetPasswordMutation = useMutation({
+    mutationFn: (userId: string) => userService.resetPassword(userId),
     onSuccess: () => {
-      toast("İstifadəçi silindi", {
-        description: "İstifadəçi uğurla silindi",
-        variant: "destructive",
+      toast({
+        title: "Şifrə sıfırlandı",
+        description: "Şifrə sıfırlama linki göndərildi",
       });
-      onRefetch();
     },
     onError: (error) => {
-      toast("Xəta baş verdi", {
-        description: `İstifadəçini silmək mümkün olmadı: ${(error as Error).message}`,
-        variant: "destructive",
+      toast({
+        title: "Xəta baş verdi",
+        description: `Şifrə sıfırlama xətası: ${(error as Error).message}`
       });
     }
   });
 
+  // Sorting logic
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -87,6 +103,9 @@ export const UserTableContainer = ({
     }
   };
 
+  const sortedUsers = sortUsers(users, sortField, sortDirection);
+
+  // Select/deselect all rows
   const handleSelectAll = () => {
     if (selectedRows.length === users.length) {
       onSelectedRowsChange([]);
@@ -95,87 +114,42 @@ export const UserTableContainer = ({
     }
   };
 
-  const handleSelectRow = (id: string) => {
-    if (selectedRows.includes(id)) {
-      onSelectedRowsChange(selectedRows.filter(rowId => rowId !== id));
+  // Handle individual row selection
+  const handleSelectRow = (userId: string) => {
+    if (selectedRows.includes(userId)) {
+      onSelectedRowsChange(selectedRows.filter(id => id !== userId));
     } else {
-      onSelectedRowsChange([...selectedRows, id]);
+      onSelectedRowsChange([...selectedRows, userId]);
     }
   };
-
-  const handleAction = (action: string, user: User) => {
-    switch (action) {
-      case 'view':
-        setViewUser(user);
-        break;
-      case 'edit':
-        setEditUser(user);
-        break;
-      case 'block':
-        blockUserMutation.mutate(user.id);
-        break;
-      case 'activate':
-        activateUserMutation.mutate(user.id);
-        break;
-      case 'reset':
-        // This would typically call a password reset function
-        toast("Şifrə sıfırlandı", {
-          description: `${user.first_name} ${user.last_name} üçün şifrə sıfırlama e-poçtu göndərildi`,
-        });
-        break;
-      case 'delete':
-        if (window.confirm(`${user.first_name} ${user.last_name} istifadəçisini silmək istədiyinizə əminsinizmi?`)) {
-          deleteUserMutation.mutate(user.id);
-        }
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Sort users based on current sort settings
-  const sortedUsers = sortUsers(users, sortField, sortDirection);
 
   return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <UserTableHeader
-            onSelectAll={handleSelectAll}
-            allSelected={selectedRows.length === users.length}
-            hasUsers={users.length > 0}
-            onSort={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-          />
-          <tbody className="divide-y divide-infoline-light-gray">
-            {sortedUsers.map(user => (
-              <UserTableRow
-                key={user.id}
-                user={user}
-                isSelected={selectedRows.includes(user.id)}
-                onSelectRow={handleSelectRow}
-                onAction={handleAction}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {viewUser && (
-        <UserViewModal user={viewUser} onClose={() => setViewUser(null)} />
-      )}
-
-      {editUser && (
-        <UserModal 
-          user={editUser} 
-          onClose={() => setEditUser(null)} 
-          onSuccess={() => {
-            onRefetch();
-            setEditUser(null);
-          }}
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <UserTableHeader 
+          onSelectAll={handleSelectAll}
+          allSelected={selectedRows.length === users.length && users.length > 0}
+          hasUsers={users.length > 0}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
         />
-      )}
-    </>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {sortedUsers.map((user) => (
+            <UserTableRow 
+              key={user.id} 
+              user={user}
+              isSelected={selectedRows.includes(user.id)}
+              onSelectRow={handleSelectRow}
+              onDelete={deleteUserMutation.mutate}
+              onBlock={blockUserMutation.mutate}
+              onActivate={activateUserMutation.mutate}
+              onResetPassword={resetPasswordMutation.mutate}
+              onRefetch={onRefetch}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 };

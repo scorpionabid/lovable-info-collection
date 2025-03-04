@@ -9,6 +9,7 @@ const userService = {
   deleteUser: (id: string) => supabaseUserService.deleteUser(id),
   blockUser: (id: string) => supabaseUserService.blockUser(id),
   activateUser: (id: string) => supabaseUserService.activateUser(id),
+  resetPassword: (id: string) => supabaseUserService.resetPassword(id),
   
   // Entity information
   getRegions: () => supabaseUserService.getRegions(),
