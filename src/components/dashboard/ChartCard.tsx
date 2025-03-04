@@ -20,6 +20,7 @@ interface ChartCardProps {
   height?: number;
   colors?: string[];
   children?: ReactNode;
+  isLoading?: boolean;
 }
 
 export const ChartCard = ({
@@ -29,11 +30,20 @@ export const ChartCard = ({
   data,
   height = 300,
   colors = ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA'],
-  children
+  children,
+  isLoading = false
 }: ChartCardProps) => {
   const [selectedInterval, setSelectedInterval] = useState('month');
   
   const renderChart = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-full">
+          <div className="animate-spin h-8 w-8 border-4 border-infoline-blue border-opacity-50 border-t-infoline-blue rounded-full"></div>
+        </div>
+      );
+    }
+    
     switch (type) {
       case 'bar':
         return (

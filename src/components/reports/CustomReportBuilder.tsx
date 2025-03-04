@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Plus, ArrowRight, Save, FileText, BarChart, PieChart, LineChart, Table, Download, Eye } from "lucide-react";
 import * as reportService from '@/services/supabase/reportService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const CustomReportBuilder = () => {
@@ -36,7 +36,7 @@ export const CustomReportBuilder = () => {
   const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await reportService.supabase
+      const { data, error } = await supabase
         .from('categories')
         .select('id, name');
       
@@ -51,7 +51,7 @@ export const CustomReportBuilder = () => {
     queryFn: async () => {
       if (!formData.category) return [];
       
-      const { data, error } = await reportService.supabase
+      const { data, error } = await supabase
         .from('columns')
         .select('id, name, category_id')
         .eq('category_id', formData.category);
