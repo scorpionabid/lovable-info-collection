@@ -1,3 +1,4 @@
+
 import { supabase } from '../../supabase/supabaseClient';
 
 interface Role {
@@ -72,8 +73,9 @@ const userProfileService = {
       }
       
       // Return permissions if they exist
-      if (userData?.roles?.permissions) {
-        return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
+      if (userData?.roles && 'permissions' in userData.roles) {
+        const { permissions } = userData.roles as { permissions: string[] };
+        return Array.isArray(permissions) ? permissions : [];
       }
       
       return [];
