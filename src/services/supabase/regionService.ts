@@ -169,7 +169,7 @@ const regionService = {
           .from('schools')
           .select('sector_id, count(*)')
           .in('sector_id', sectorIds)
-          .groupBy('sector_id');
+          .group('sector_id');
 
         if (schoolError) throw schoolError;
         schoolCounts = schoolCountsData;
