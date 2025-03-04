@@ -21,10 +21,24 @@ interface UserTableRowProps {
   user: User;
   isSelected: boolean;
   onSelectRow: (id: string) => void;
-  onAction: (action: string, user: User) => void;
+  onDelete: (id: string) => void;
+  onBlock: (id: string) => void;
+  onActivate: (id: string) => void;
+  onResetPassword: (id: string) => void;
+  onRefetch: () => void;
 }
 
-export const UserTableRow = ({ user, isSelected, onSelectRow, onAction }: UserTableRowProps) => {
+export const UserTableRow = ({ 
+  user, 
+  isSelected, 
+  onSelectRow, 
+  onDelete,
+  onBlock,
+  onActivate,
+  onResetPassword,
+  onRefetch 
+}: UserTableRowProps) => {
+  
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "Heç vaxt";
     try {
@@ -104,6 +118,29 @@ export const UserTableRow = ({ user, isSelected, onSelectRow, onAction }: UserTa
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`;
+  };
+
+  const onAction = (action: string, user: User) => {
+    switch(action) {
+      case 'delete':
+        onDelete(user.id);
+        break;
+      case 'block':
+        onBlock(user.id);
+        break;
+      case 'activate':
+        onActivate(user.id);
+        break;
+      case 'reset':
+        onResetPassword(user.id);
+        break;
+      case 'view':
+      case 'edit':
+        // These are handled in the parent component
+        break;
+      default:
+        console.error("Unknown action:", action);
+    }
   };
 
   return (

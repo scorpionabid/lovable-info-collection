@@ -141,10 +141,10 @@ export const UserTableContainer = ({
               user={user}
               isSelected={selectedRows.includes(user.id)}
               onSelectRow={handleSelectRow}
-              onDelete={deleteUserMutation.mutate}
-              onBlock={blockUserMutation.mutate}
-              onActivate={activateUserMutation.mutate}
-              onResetPassword={resetPasswordMutation.mutate}
+              onDelete={(id) => deleteUserMutation.mutate(id)}
+              onBlock={(id) => blockUserMutation.mutate(id)}
+              onActivate={(id) => activateUserMutation.mutate(id)}
+              onResetPassword={(id) => resetPasswordMutation.mutate(id)}
               onRefetch={onRefetch}
             />
           ))}
