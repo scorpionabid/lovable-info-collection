@@ -1,41 +1,55 @@
 
-export const downloadFile = (blob: Blob, filename: string) => {
-  // Create a temporary URL to the file
-  const url = window.URL.createObjectURL(blob);
+import * as XLSX from 'xlsx';
+import * as FileSaver from 'file-saver';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+
+interface ExportOptions {
+  data: Record<string, any>[];
+  fileName: string;
+  fileType: 'xlsx' | 'csv' | 'pdf';
+}
+
+export const fileExport = async ({ data, fileName, fileType }: ExportOptions) => {
+  if (fileType === 'xlsx' || fileType === 'csv') {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: fileType, type: 'array' });
+    const fileData = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    
+    FileSaver.saveAs(fileData, `${fileName}.${fileType}`);
+    return true;
+  } else if (fileType === 'pdf') {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text(fileName, 14, 15);
+    
+    // Prepare data for table
+    const headers = Object.keys(data[0]);
+    const rows = data.map(item => Object.values(item));
+    
+    // Add table
+    (doc as any).autoTable({
+      head: [headers],
+      body: rows,
+      startY: 25,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [66, 139, 202] }
+    });
+    
+    // Save PDF
+    doc.save(`${fileName}.pdf`);
+    return true;
+  }
   
-  // Create a link element
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  
-  // Append the link to body, click it, and then remove it
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  // Clean up
-  window.URL.revokeObjectURL(url);
+  return false;
 };
 
-export const exportAsCsv = (data: any[], filename: string = 'export.csv') => {
-  // Convert data to CSV
-  const headers = Object.keys(data[0]);
-  const csvRows = [
-    headers.join(','),
-    ...data.map(row => 
-      headers.map(header => {
-        const value = row[header];
-        // Handle commas and quotes in the value
-        const escaped = value !== null && value !== undefined 
-          ? String(value).replace(/"/g, '""') 
-          : '';
-        return `"${escaped}"`;
-      }).join(',')
-    )
-  ];
-  
-  const csvContent = csvRows.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  
-  downloadFile(blob, filename);
+export default {
+  fileExport
 };

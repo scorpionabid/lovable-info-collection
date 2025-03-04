@@ -1,12 +1,11 @@
-
 import { supabase, Region } from './supabaseClient';
-import { useToast } from '@/hooks/use-toast';
 
 // Extended Region type to include statistics
 export interface RegionWithStats extends Region {
   sectorCount: number;
   schoolCount: number;
   completionRate: number;
+  userCount?: number;
 }
 
 // Pagination parameters
@@ -136,12 +135,12 @@ const regionService = {
 
       if (adminsError) throw adminsError;
 
-      const regionWithStats: RegionWithStats & { users?: number } = {
+      const regionWithStats: RegionWithStats = {
         ...data,
         sectorCount: statsData?.sector_count || 0,
         schoolCount: statsData?.school_count || 0,
         completionRate: Math.round(statsData?.completion_rate || 0),
-        users: adminsData.length
+        userCount: adminsData.length
       };
 
       return regionWithStats;
@@ -163,14 +162,17 @@ const regionService = {
 
       // Get school counts for each sector
       const sectorIds = data.map(sector => sector.id);
-      const { data: schoolCounts, error: schoolError } = await supabase
-        .from('schools')
-        .select('sector_id, count')
-        .in('sector_id', sectorIds)
-        .group('sector_id');
+      
+      let schoolCounts = [];
+      if (sectorIds.length > 0) {
+        const { data: schoolCountsData, error: schoolError } = await supabase
+          .from('schools')
+          .select('sector_id, count(*)')
+          .in('sector_id', sectorIds)
+          .groupBy('sector_id');
 
-      if (schoolError && schoolError.code !== 'PGRST116') { // Ignore "no rows returned" error
-        throw schoolError;
+        if (schoolError) throw schoolError;
+        schoolCounts = schoolCountsData;
       }
       
       // Map school counts to sectors and add mock completion rates for now

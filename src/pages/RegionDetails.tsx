@@ -19,13 +19,15 @@ const RegionDetails = () => {
     queryFn: () => regionService.getRegionById(id!),
     enabled: !!id, // Only run query if id exists
     retry: 1,
-    onError: (error) => {
-      console.error('Error fetching region details:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Region məlumatları yüklənərkən xəta baş verdi.",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching region details:', error);
+        toast({
+          title: "Xəta baş verdi",
+          description: "Region məlumatları yüklənərkən xəta baş verdi.",
+          variant: "destructive",
+        });
+      }
     }
   });
   
@@ -34,13 +36,15 @@ const RegionDetails = () => {
     queryKey: ['regionSectors', id],
     queryFn: () => regionService.getRegionSectors(id!),
     enabled: !!id, // Only run query if id exists
-    onError: (error) => {
-      console.error('Error fetching region sectors:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Region sektorları yüklənərkən xəta baş verdi.",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching region sectors:', error);
+        toast({
+          title: "Xəta baş verdi",
+          description: "Region sektorları yüklənərkən xəta baş verdi.",
+          variant: "destructive",
+        });
+      }
     }
   });
 
