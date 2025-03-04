@@ -153,6 +153,7 @@ const regionService = {
   // Get sectors by region ID
   getRegionSectors: async (regionId: string) => {
     try {
+      // First, fetch all sectors in this region
       const { data, error } = await supabase
         .from('sectors')
         .select('*')
@@ -165,14 +166,27 @@ const regionService = {
       
       let schoolCounts = [];
       if (sectorIds.length > 0) {
-        const { data: schoolCountsData, error: schoolError } = await supabase
+        // Instead of using group(), we'll use a different approach
+        // that's supported by the Supabase PostgrestFilterBuilder
+        const { data: schoolsData, error: schoolsError } = await supabase
           .from('schools')
-          .select('sector_id, count(*)')
-          .in('sector_id', sectorIds)
-          .group('sector_id');
-
-        if (schoolError) throw schoolError;
-        schoolCounts = schoolCountsData;
+          .select('sector_id, id')
+          .in('sector_id', sectorIds);
+        
+        if (schoolsError) throw schoolsError;
+        
+        // Manually count schools per sector
+        const countMap = new Map();
+        schoolsData.forEach(school => {
+          const currentCount = countMap.get(school.sector_id) || 0;
+          countMap.set(school.sector_id, currentCount + 1);
+        });
+        
+        // Format the counts like the original function expected
+        schoolCounts = Array.from(countMap.entries()).map(([sector_id, count]) => ({
+          sector_id,
+          count
+        }));
       }
       
       // Map school counts to sectors and add mock completion rates for now
