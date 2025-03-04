@@ -9,34 +9,27 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return null;
       
-      // First fetch user data without joining roles to avoid foreign key error
-      const { data: userData, error: profileError } = await supabase
+      // Get user profile with role
+      const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          roles:role_id (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `)
         .eq('email', user.email)
         .single();
       
-      if (profileError) throw profileError;
-      
-      // If role_id exists, fetch the role separately
-      let roleData = null;
-      if (userData && userData.role_id) {
-        const { data: roleResult, error: roleError } = await supabase
-          .from('roles')
-          .select('*')
-          .eq('id', userData.role_id)
-          .maybeSingle();
-          
-        if (!roleError && roleResult) {
-          roleData = roleResult;
-        }
+      if (userError) {
+        console.error('User profile fetch error:', userError);
+        return null;
       }
       
-      // Combine user and role data
-      return {
-        ...userData,
-        roles: roleData
-      };
+      return userData;
     } catch (error) {
       console.error('Get current user error:', error);
       return null;
@@ -50,29 +43,25 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return [];
       
-      // Get the user's role_id first
+      // Get user's role and permissions
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role_id')
+        .select(`
+          roles:role_id (
+            permissions
+          )
+        `)
         .eq('email', user.email)
         .single();
       
-      if (userError) throw userError;
-      
-      if (!userData || !userData.role_id) return [];
-      
-      // Then fetch permissions from the roles table
-      const { data: roleData, error: roleError } = await supabase
-        .from('roles')
-        .select('permissions')
-        .eq('id', userData.role_id)
-        .maybeSingle();
-      
-      if (roleError) throw roleError;
+      if (userError) {
+        console.error('User permissions fetch error:', userError);
+        return [];
+      }
       
       // Return permissions if they exist
-      if (roleData && roleData.permissions) {
-        return Array.isArray(roleData.permissions) ? roleData.permissions : [];
+      if (userData?.roles?.permissions) {
+        return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
       }
       
       return [];

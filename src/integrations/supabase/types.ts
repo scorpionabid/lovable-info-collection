@@ -1073,6 +1073,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          permissions: string[] | null
           updated_at: string
         }
         Insert: {
@@ -1080,6 +1081,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          permissions?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -1087,6 +1089,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          permissions?: string[] | null
           updated_at?: string
         }
         Relationships: []
@@ -1391,6 +1394,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_login: string | null
+          last_name: string
+          phone: string | null
+          region_id: string | null
+          role_id: string
+          school_id: string | null
+          sector_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name: string
+          id: string
+          is_active?: boolean | null
+          last_login?: string | null
+          last_name: string
+          phone?: string | null
+          region_id?: string | null
+          role_id: string
+          school_id?: string | null
+          sector_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_login?: string | null
+          last_name?: string
+          phone?: string | null
+          region_id?: string | null
+          role_id?: string
+          school_id?: string | null
+          sector_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       validation_errors: {
         Row: {

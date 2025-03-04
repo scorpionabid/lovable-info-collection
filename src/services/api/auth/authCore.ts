@@ -36,11 +36,18 @@ const authCore = {
       
       console.log('Auth successful, fetching user data');
       
-      // First, fetch the user data without joining roles
-      // This avoids the foreign key relationship error
+      // Get user profile with role
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          roles:role_id (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `)
         .eq('email', credentials.email)
         .single();
       
@@ -49,34 +56,14 @@ const authCore = {
         throw userError;
       }
       
-      // If role_id exists, fetch the role separately
-      let roleData = null;
-      if (userData && userData.role_id) {
-        const { data: roleResult, error: roleError } = await supabase
-          .from('roles')
-          .select('*')
-          .eq('id', userData.role_id)
-          .maybeSingle(); // Use maybeSingle instead of single to avoid errors if no role is found
-          
-        if (!roleError && roleResult) {
-          roleData = roleResult;
-        }
-      }
-      
-      // Combine user and role data
-      const combinedUserData = {
-        ...userData,
-        roles: roleData
-      };
-      
       console.log('User data fetched successfully');
       
       localStorage.setItem('token', data.session?.access_token || '');
-      localStorage.setItem('user', JSON.stringify(combinedUserData));
+      localStorage.setItem('user', JSON.stringify(userData));
       
       return {
         token: data.session?.access_token,
-        user: combinedUserData
+        user: userData
       };
     } catch (error) {
       console.error('Login error:', error);
@@ -99,14 +86,16 @@ const authCore = {
       
       if (error) throw error;
       
+      // Create user profile with role
       const { error: userError } = await supabase
         .from('users')
         .insert([
           { 
+            id: data.user?.id,
             email: credentials.email,
             first_name: credentials.firstName,
             last_name: credentials.lastName,
-            role_id: credentials.role || 'user',
+            role_id: credentials.role || 'superadmin', // Default to superadmin for development
             is_active: true
           }
         ]);
