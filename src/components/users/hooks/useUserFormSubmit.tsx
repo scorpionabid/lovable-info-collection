@@ -9,8 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 
 export const useUserFormSubmit = (
   user: User | undefined,
-  onSuccess?: () => void,
-  onClose: () => void
+  onClose: () => void,
+  onSuccess?: () => void
 ) => {
   const [isCreatingAuth, setIsCreatingAuth] = useState(false);
   const { toast } = useToast();
