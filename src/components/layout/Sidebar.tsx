@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -14,6 +13,7 @@ import {
   Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UserRole } from '@/contexts/AuthContext';
 
 type SidebarLinkProps = {
   to: string;
@@ -59,7 +59,7 @@ const SidebarLink = ({
 };
 
 interface SidebarProps {
-  userRole?: 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';
+  userRole?: UserRole;
 }
 
 export const Sidebar = ({ userRole = 'super-admin' }: SidebarProps) => {
@@ -71,6 +71,8 @@ export const Sidebar = ({ userRole = 'super-admin' }: SidebarProps) => {
   const commonLinks = [
     { to: '/', icon: <Home size={18} />, label: 'Dashboard' },
   ];
+
+  const effectiveRole = userRole === 'superadmin' ? 'super-admin' : userRole;
 
   const roleBasedLinks = {
     'super-admin': [
@@ -97,7 +99,7 @@ export const Sidebar = ({ userRole = 'super-admin' }: SidebarProps) => {
     ],
   };
 
-  const links = [...commonLinks, ...roleBasedLinks[userRole]];
+  const links = [...commonLinks, ...(roleBasedLinks[effectiveRole as keyof typeof roleBasedLinks] || roleBasedLinks['school-admin'])];
 
   return (
     <aside 
