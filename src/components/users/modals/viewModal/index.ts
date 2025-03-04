@@ -1,0 +1,2 @@
+
+export { UserViewModal } from './UserViewModal';
