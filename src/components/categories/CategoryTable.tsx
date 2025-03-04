@@ -1,5 +1,8 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,15 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { CategoryModal } from './CategoryModal';
 import { CategoryColumnsModal } from './CategoryColumnsModal';
-import { Eye, Edit, Archive, MoreHorizontal, Download, Table2, ArrowUp, ArrowDown } from "lucide-react";
+import { Eye, Edit, Archive, MoreHorizontal, Download, Table2, ArrowUp, ArrowDown, Trash } from "lucide-react";
 import { CategoryType } from './CategoryDetailView';
+import * as categoryService from '@/services/supabase/categoryService';
 
 interface CategoryTableProps {
   categories: CategoryType[];
+  onDelete: (category: CategoryType) => void;
+  onUpdatePriority: (id: string, newPriority: number) => void;
 }
 
-export const CategoryTable = ({ categories }: CategoryTableProps) => {
+export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: CategoryTableProps) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
@@ -31,8 +38,20 @@ export const CategoryTable = ({ categories }: CategoryTableProps) => {
     setIsEditModalOpen(true);
   };
 
-  const handleArchive = (category: CategoryType) => {
-    console.log(`Archiving category: ${category.name}`);
+  const handleArchive = async (category: CategoryType) => {
+    try {
+      await categoryService.updateCategory(category.id, {
+        status: category.status === 'Active' ? 'Inactive' : 'Active'
+      });
+      
+      // Invalidate the categories query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      
+      toast.success(`Kateqoriya uğurla ${category.status === 'Active' ? 'arxivləşdirildi' : 'aktivləşdirildi'}`);
+    } catch (error) {
+      toast.error('Əməliyyat zamanı xəta baş verdi');
+      console.error(error);
+    }
   };
 
   const handleManageColumns = (category: CategoryType) => {
@@ -40,8 +59,47 @@ export const CategoryTable = ({ categories }: CategoryTableProps) => {
     setIsColumnsModalOpen(true);
   };
 
+  const handleDownloadTemplate = async (category: CategoryType) => {
+    try {
+      const blob = await categoryService.exportCategoryTemplate(category.id);
+      
+      // Create a URL for the blob and trigger download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${category.name}_template.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Excel şablonu hazırlandı');
+    } catch (error) {
+      toast.error('Şablon yaradılarkən xəta baş verdi');
+      console.error(error);
+    }
+  };
+
   const handlePriorityChange = (category: CategoryType, direction: 'up' | 'down') => {
-    console.log(`Moving ${category.name} ${direction}`);
+    // Find the category's index in the sorted list
+    const sortedCategories = [...categories].sort((a, b) => a.priority - b.priority);
+    const index = sortedCategories.findIndex(c => c.id === category.id);
+    
+    if (direction === 'up' && index > 0) {
+      // Swap with the category above (lower priority number)
+      const newPriority = sortedCategories[index - 1].priority;
+      onUpdatePriority(category.id, newPriority);
+    } else if (direction === 'down' && index < sortedCategories.length - 1) {
+      // Swap with the category below (higher priority number)
+      const newPriority = sortedCategories[index + 1].priority;
+      onUpdatePriority(category.id, newPriority);
+    }
+  };
+
+  const handleModalSuccess = () => {
+    setIsEditModalOpen(false);
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    toast.success('Kateqoriya uğurla yeniləndi');
   };
 
   return (
@@ -73,10 +131,22 @@ export const CategoryTable = ({ categories }: CategoryTableProps) => {
                       {category.priority}
                     </span>
                     <div className="flex flex-col">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePriorityChange(category, 'up')}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6" 
+                        onClick={() => handlePriorityChange(category, 'up')}
+                        disabled={category.priority === Math.min(...categories.map(c => c.priority))}
+                      >
                         <ArrowUp className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePriorityChange(category, 'down')}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6" 
+                        onClick={() => handlePriorityChange(category, 'down')}
+                        disabled={category.priority === Math.max(...categories.map(c => c.priority))}
+                      >
                         <ArrowDown className="h-3 w-3" />
                       </Button>
                     </div>
@@ -133,11 +203,15 @@ export const CategoryTable = ({ categories }: CategoryTableProps) => {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleArchive(category)}>
                         <Archive className="mr-2 h-4 w-4" />
-                        <span>Arxivləşdir</span>
+                        <span>{category.status === 'Active' ? 'Arxivləşdir' : 'Aktivləşdir'}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {}}>
+                      <DropdownMenuItem onClick={() => handleDownloadTemplate(category)}>
                         <Download className="mr-2 h-4 w-4" />
                         <span>Excel şablonu</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDelete(category)} className="text-red-600">
+                        <Trash className="mr-2 h-4 w-4" />
+                        <span>Sil</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -161,6 +235,7 @@ export const CategoryTable = ({ categories }: CategoryTableProps) => {
             onClose={() => setIsEditModalOpen(false)} 
             mode="edit"
             category={selectedCategory}
+            onSuccess={handleModalSuccess}
           />
           
           <CategoryColumnsModal 

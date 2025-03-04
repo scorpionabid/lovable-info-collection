@@ -1,4 +1,7 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
+import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,8 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, GripVertical, AlignJustify, Edit, Trash2 } from "lucide-react";
+import { X, Plus, GripVertical, Edit, Trash2 } from "lucide-react";
 import { CategoryType, CategoryColumn } from "./CategoryDetailView";
+import * as categoryService from '@/services/supabase/categoryService';
 
 interface CategoryColumnsModalProps {
   isOpen: boolean;
@@ -21,55 +25,94 @@ interface CategoryColumnsModalProps {
 }
 
 export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColumnsModalProps) => {
-  // Mock columns data
-  const [columns, setColumns] = useState<CategoryColumn[]>([
-    {
-      id: '1',
-      name: 'Ad',
-      type: 'text',
-      required: true,
-      description: 'Müəllimin adı',
-      order: 1
-    },
-    {
-      id: '2',
-      name: 'Soyad',
-      type: 'text',
-      required: true,
-      description: 'Müəllimin soyadı',
-      order: 2
-    },
-    {
-      id: '3',
-      name: 'Doğum tarixi',
-      type: 'date',
-      required: true,
-      description: 'Müəllimin doğum tarixi',
-      order: 3
-    },
-    {
-      id: '4',
-      name: 'Cinsi',
-      type: 'select',
-      required: true,
-      description: 'Müəllimin cinsi',
-      options: ['Kişi', 'Qadın'],
-      order: 4
-    },
-    {
-      id: '5',
-      name: 'Təhsil səviyyəsi',
-      type: 'select',
-      required: true,
-      description: 'Müəllimin təhsil səviyyəsi',
-      options: ['Bakalavr', 'Magistr', 'Doktorantura'],
-      order: 5
-    }
-  ]);
-
+  const queryClient = useQueryClient();
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState<CategoryColumn | null>(null);
   const [columnFormMode, setColumnFormMode] = useState<'create' | 'edit'>('create');
+  const [columnFormData, setColumnFormData] = useState<Partial<CategoryColumn>>({
+    name: '',
+    type: 'text',
+    required: true,
+    description: '',
+    options: []
+  });
+  const [columnFormErrors, setColumnFormErrors] = useState<Record<string, string>>({});
+  
+  // Get columns for this category
+  const { 
+    data: columns = [], 
+    isLoading, 
+    isError,
+    refetch 
+  } = useQuery({
+    queryKey: ['category-columns', category.id],
+    queryFn: () => categoryService.getCategoryColumns(category.id),
+    enabled: isOpen
+  });
+
+  // Sort columns by order property
+  const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
+
+  // Mutations
+  const createColumnMutation = useMutation({
+    mutationFn: (data: categoryService.CreateColumnDto) => 
+      categoryService.createColumn(category.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['category-columns', category.id] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setIsColumnModalOpen(false);
+      toast.success('Sütun uğurla əlavə edildi');
+    },
+    onError: (error) => {
+      toast.error(`Sütun əlavə edilərkən xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
+
+  const updateColumnMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: categoryService.UpdateColumnDto }) => 
+      categoryService.updateColumn(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['category-columns', category.id] });
+      setIsColumnModalOpen(false);
+      toast.success('Sütun uğurla yeniləndi');
+    },
+    onError: (error) => {
+      toast.error(`Sütun yenilənərkən xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
+
+  const deleteColumnMutation = useMutation({
+    mutationFn: (id: string) => categoryService.deleteColumn(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['category-columns', category.id] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast.success('Sütun uğurla silindi');
+    },
+    onError: (error) => {
+      toast.error(`Sütun silinərkən xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
+
+  useEffect(() => {
+    if (selectedColumn && columnFormMode === 'edit') {
+      setColumnFormData({
+        name: selectedColumn.name,
+        type: selectedColumn.type,
+        required: selectedColumn.required,
+        description: selectedColumn.description,
+        options: selectedColumn.options
+      });
+    } else {
+      setColumnFormData({
+        name: '',
+        type: 'text',
+        required: true,
+        description: '',
+        options: []
+      });
+    }
+    setColumnFormErrors({});
+  }, [selectedColumn, columnFormMode, isColumnModalOpen]);
 
   const handleAddColumn = () => {
     setSelectedColumn(null);
@@ -83,31 +126,88 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     setIsColumnModalOpen(true);
   };
 
-  const handleDeleteColumn = (columnId: string) => {
-    setColumns(columns.filter(column => column.id !== columnId));
-  };
-
-  const handleSaveColumn = (column: CategoryColumn) => {
-    if (columnFormMode === 'create') {
-      // Generate a new ID and add the column
-      const newColumn = {
-        ...column,
-        id: Date.now().toString(),
-        order: columns.length + 1
-      };
-      setColumns([...columns, newColumn]);
-    } else {
-      // Update the existing column
-      setColumns(columns.map(c => c.id === column.id ? column : c));
+  const handleDeleteColumn = async (columnId: string) => {
+    if (window.confirm('Bu sütunu silmək istədiyinizə əminsiniz?')) {
+      deleteColumnMutation.mutate(columnId);
     }
-    setIsColumnModalOpen(false);
   };
 
-  // Sort columns by order property
-  const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
+  const handleColumnFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setColumnFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear the error for this field
+    if (columnFormErrors[name]) {
+      setColumnFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleColumnTypeChange = (value: string) => {
+    setColumnFormData(prev => ({ ...prev, type: value }));
+    
+    // Clear the type error if it exists
+    if (columnFormErrors.type) {
+      setColumnFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.type;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleRequiredChange = (checked: boolean) => {
+    setColumnFormData(prev => ({ ...prev, required: checked }));
+  };
+
+  const validateColumnForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!columnFormData.name?.trim()) {
+      errors.name = 'Sütun adı tələb olunur';
+    }
+    
+    if (!columnFormData.type) {
+      errors.type = 'Sütun tipi seçilməlidir';
+    }
+    
+    setColumnFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveColumn = () => {
+    if (!validateColumnForm()) {
+      toast.error('Zəhmət olmasa bütün tələb olunan sahələri doldurun');
+      return;
+    }
+
+    const columnData = {
+      name: columnFormData.name!,
+      type: columnFormData.type!,
+      required: columnFormData.required || false,
+      description: columnFormData.description,
+      options: columnFormData.options
+    };
+
+    if (columnFormMode === 'create') {
+      createColumnMutation.mutate(columnData as categoryService.CreateColumnDto);
+    } else if (columnFormMode === 'edit' && selectedColumn) {
+      updateColumnMutation.mutate({ 
+        id: selectedColumn.id, 
+        data: columnData 
+      });
+    }
+  };
+
+  const isSubmitting = createColumnMutation.isPending || updateColumnMutation.isPending;
+
+  if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 ${isOpen ? 'block' : 'hidden'}`}>
+    <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
       
       <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -124,7 +224,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
             <div className="flex justify-between items-center mb-4">
               <p className="text-infoline-dark-gray">
-                Bu kateqoriya üçün məlumat sütunlarını idarə edin. Sütunları <span className="font-medium">sürükləyib buraxmaqla</span> prioritetlərini dəyişdirə bilərsiniz.
+                Bu kateqoriya üçün məlumat sütunlarını idarə edin. Sütunların nizamlanması funksiyası tezliklə əlavə olunacaq.
               </p>
               <Button 
                 onClick={handleAddColumn}
@@ -135,59 +235,90 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
               </Button>
             </div>
             
-            <div className="bg-infoline-lightest-gray rounded-lg border border-infoline-light-gray overflow-hidden mt-4">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-infoline-light-gray border-b border-infoline-gray">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue w-10">#</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Sütun adı</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Tip</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">Məcburilik</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Təsvir</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-infoline-dark-blue">Əməliyyatlar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedColumns.map((column, index) => (
-                    <tr key={column.id} className="border-b border-infoline-light-gray hover:bg-white transition-colors">
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center">
-                          <GripVertical className="h-4 w-4 text-infoline-dark-gray cursor-move mr-2" />
-                          <span className="text-sm text-infoline-dark-gray">{index + 1}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{column.name}</td>
-                      <td className="px-4 py-3 text-sm text-infoline-dark-gray capitalize">{column.type}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <span className={`h-2.5 w-2.5 rounded-full ${column.required ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-infoline-dark-gray truncate max-w-[200px]">
-                        {column.description}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end space-x-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditColumn(column)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteColumn(column.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+              </div>
+            ) : isError ? (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-center">
+                <p>Sütunları yükləyərkən xəta baş verdi. Zəhmət olmasa bir daha cəhd edin.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-2"
+                  onClick={() => refetch()}
+                >
+                  Yenidən cəhd et
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-infoline-lightest-gray rounded-lg border border-infoline-light-gray overflow-hidden mt-4">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-infoline-light-gray border-b border-infoline-gray">
+                      <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue w-10">#</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Sütun adı</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Tip</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">Məcburilik</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Təsvir</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-infoline-dark-blue">Əməliyyatlar</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {sortedColumns.length > 0 ? (
+                      sortedColumns.map((column, index) => (
+                        <tr key={column.id} className="border-b border-infoline-light-gray hover:bg-white transition-colors">
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center">
+                              <GripVertical className="h-4 w-4 text-infoline-dark-gray cursor-move mr-2" />
+                              <span className="text-sm text-infoline-dark-gray">{index + 1}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{column.name}</td>
+                          <td className="px-4 py-3 text-sm text-infoline-dark-gray capitalize">{column.type}</td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center">
+                              <span className={`h-2.5 w-2.5 rounded-full ${column.required ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-infoline-dark-gray truncate max-w-[200px]">
+                            {column.description}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end space-x-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => handleEditColumn(column)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => handleDeleteColumn(column.id)}
+                                disabled={deleteColumnMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-infoline-dark-gray">
+                          Bu kateqoriya üçün hələ sütun əlavə edilməyib.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
             
             <div className="mt-6 flex justify-end gap-2">
               <Button variant="outline" onClick={onClose}>
                 Bağla
-              </Button>
-              <Button className="bg-infoline-blue hover:bg-infoline-dark-blue">
-                Yadda saxla
               </Button>
             </div>
           </div>
@@ -205,18 +336,33 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
           
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="column-name">Sütun adı *</Label>
+              <Label htmlFor="column-name" className={columnFormErrors.name ? 'text-red-500' : ''}>
+                Sütun adı *
+              </Label>
               <Input
                 id="column-name"
+                name="name"
                 placeholder="Sütun adını daxil edin"
-                defaultValue={selectedColumn?.name}
+                value={columnFormData.name || ''}
+                onChange={handleColumnFormChange}
+                className={columnFormErrors.name ? 'border-red-500' : ''}
+                disabled={isSubmitting}
               />
+              {columnFormErrors.name && (
+                <p className="text-xs text-red-500">{columnFormErrors.name}</p>
+              )}
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="column-type">Sütun tipi *</Label>
-              <Select defaultValue={selectedColumn?.type || 'text'}>
-                <SelectTrigger id="column-type">
+              <Label htmlFor="column-type" className={columnFormErrors.type ? 'text-red-500' : ''}>
+                Sütun tipi *
+              </Label>
+              <Select 
+                value={columnFormData.type} 
+                onValueChange={handleColumnTypeChange}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="column-type" className={columnFormErrors.type ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Tip seçin" />
                 </SelectTrigger>
                 <SelectContent>
@@ -229,14 +375,20 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
                   <SelectItem value="file">Fayl (File)</SelectItem>
                 </SelectContent>
               </Select>
+              {columnFormErrors.type && (
+                <p className="text-xs text-red-500">{columnFormErrors.type}</p>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="column-description">Təsvir</Label>
               <Input
                 id="column-description"
+                name="description"
                 placeholder="Sütun təsvirini daxil edin"
-                defaultValue={selectedColumn?.description}
+                value={columnFormData.description || ''}
+                onChange={handleColumnFormChange}
+                disabled={isSubmitting}
               />
             </div>
             
@@ -245,7 +397,9 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
               <div className="flex items-center space-x-2">
                 <Switch
                   id="column-required"
-                  defaultChecked={selectedColumn?.required}
+                  checked={columnFormData.required}
+                  onCheckedChange={handleRequiredChange}
+                  disabled={isSubmitting}
                 />
                 <span className="text-sm text-infoline-dark-gray">Məcburi sahə</span>
               </div>
@@ -253,21 +407,23 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsColumnModalOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsColumnModalOpen(false)}
+              disabled={isSubmitting}
+            >
               Ləğv et
             </Button>
-            <Button onClick={() => {
-              // Dummy implementation - in a real app, collect the form values
-              const updatedColumn = {
-                ...(selectedColumn || { id: '', order: 0 }),
-                name: 'Yeni sütun', // This would be from form value
-                type: 'text',        // This would be from form value
-                required: true,      // This would be from form value
-                description: 'Sütun təsviri' // This would be from form value
-              };
-              handleSaveColumn(updatedColumn);
-            }}>
-              {columnFormMode === 'create' ? 'Əlavə et' : 'Yadda saxla'}
+            <Button 
+              onClick={handleSaveColumn}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <span className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></span>
+                  Gözləyin...
+                </span>
+              ) : columnFormMode === 'create' ? 'Əlavə et' : 'Yadda saxla'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,7 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
+import { toast } from "sonner";
+import { useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,25 +17,82 @@ import {
 } from "@/components/ui/select";
 import { X } from "lucide-react";
 import { CategoryType } from './CategoryDetailView';
+import * as categoryService from '@/services/supabase/categoryService';
 
 interface CategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
   category?: CategoryType;
+  onSuccess?: () => void;
 }
 
-export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModalProps) => {
+export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: CategoryModalProps) => {
   const [activeTab, setActiveTab] = useState("basic");
   const [formData, setFormData] = useState({
-    name: category?.name || '',
-    description: category?.description || '',
-    assignment: category?.assignment || 'All',
-    priority: category?.priority || 1,
-    deadline: category?.deadline ? new Date(category.deadline).toISOString().split('T')[0] : '',
-    status: category?.status === 'Active',
+    name: '',
+    description: '',
+    assignment: 'All' as 'All' | 'Sectors',
+    priority: 1,
+    deadline: '',
+    status: true,
     notificationEnabled: true,
     reminderDays: 7,
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  // Initialize form data when modal opens or category changes
+  useEffect(() => {
+    if (category && mode === 'edit') {
+      setFormData({
+        name: category.name,
+        description: category.description || '',
+        assignment: category.assignment as 'All' | 'Sectors',
+        priority: category.priority,
+        deadline: category.deadline ? new Date(category.deadline).toISOString().split('T')[0] : '',
+        status: category.status === 'Active',
+        notificationEnabled: true, // These would come from the category in a real app
+        reminderDays: 7,
+      });
+    } else {
+      // Set defaults for create mode
+      setFormData({
+        name: '',
+        description: '',
+        assignment: 'All',
+        priority: 1,
+        deadline: '',
+        status: true,
+        notificationEnabled: true,
+        reminderDays: 7,
+      });
+    }
+    setFormErrors({});
+  }, [category, mode, isOpen]);
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (data: categoryService.CreateCategoryDto) => categoryService.createCategory(data),
+    onSuccess: () => {
+      if (onSuccess) onSuccess();
+      onClose();
+    },
+    onError: (error) => {
+      toast.error(`Kateqoriya yaradılarkən xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: categoryService.UpdateCategoryDto }) => 
+      categoryService.updateCategory(id, data),
+    onSuccess: () => {
+      if (onSuccess) onSuccess();
+      onClose();
+    },
+    onError: (error) => {
+      toast.error(`Kateqoriya yenilənərkən xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
   });
 
   if (!isOpen) return null;
@@ -40,22 +100,81 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear the error for this field
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear the error for this field
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSwitchChange = (name: string, checked: boolean) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Kateqoriya adı tələb olunur';
+    }
+    
+    if (!formData.assignment) {
+      errors.assignment = 'Təyinat seçilməlidir';
+    }
+    
+    if (!formData.deadline) {
+      errors.deadline = 'Son tarix tələb olunur';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // This would typically send an API request to create/update the category
-    console.log("Submitting category data:", formData);
-    onClose();
+    
+    if (!validateForm()) {
+      toast.error('Zəhmət olmasa bütün tələb olunan sahələri doldurun');
+      return;
+    }
+
+    const categoryData = {
+      name: formData.name,
+      description: formData.description,
+      assignment: formData.assignment,
+      priority: formData.priority,
+      deadline: formData.deadline,
+      status: formData.status ? 'Active' : 'Inactive'
+    };
+
+    if (mode === 'create') {
+      createMutation.mutate(categoryData as categoryService.CreateCategoryDto);
+    } else if (mode === 'edit' && category) {
+      updateMutation.mutate({ 
+        id: category.id, 
+        data: categoryData 
+      });
+    }
   };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in">
@@ -64,7 +183,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
           <h2 className="text-xl font-semibold text-infoline-dark-blue">
             {mode === 'create' ? 'Yeni Kateqoriya Yarat' : 'Kateqoriyanı Redaktə Et'}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} disabled={isSubmitting}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -80,15 +199,21 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
             <form onSubmit={handleSubmit}>
               <TabsContent value="basic" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Kateqoriya adı *</Label>
+                  <Label htmlFor="name" className={formErrors.name ? 'text-red-500' : ''}>
+                    Kateqoriya adı *
+                  </Label>
                   <Input
                     id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Kateqoriya adını daxil edin"
-                    required
+                    className={formErrors.name ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
                   />
+                  {formErrors.name && (
+                    <p className="text-xs text-red-500">{formErrors.name}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -100,16 +225,20 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                     onChange={handleChange}
                     placeholder="Kateqoriya haqqında qısa məlumat"
                     rows={3}
+                    disabled={isSubmitting}
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="assignment">Təyinat *</Label>
+                  <Label htmlFor="assignment" className={formErrors.assignment ? 'text-red-500' : ''}>
+                    Təyinat *
+                  </Label>
                   <Select
-                    onValueChange={(value) => handleSelectChange('assignment', value)}
                     value={formData.assignment}
+                    onValueChange={(value) => handleSelectChange('assignment', value)}
+                    disabled={isSubmitting}
                   >
-                    <SelectTrigger id="assignment">
+                    <SelectTrigger id="assignment" className={formErrors.assignment ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Təyinat seçin" />
                     </SelectTrigger>
                     <SelectContent>
@@ -117,6 +246,9 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                       <SelectItem value="Sectors">Yalnız sektorlar (Sectors)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formErrors.assignment && (
+                    <p className="text-xs text-red-500">{formErrors.assignment}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -129,7 +261,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                     value={formData.priority}
                     onChange={handleChange}
                     placeholder="Prioritet daxil edin"
-                    required
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -140,6 +272,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                       id="status"
                       checked={formData.status}
                       onCheckedChange={(checked) => handleSwitchChange('status', checked)}
+                      disabled={isSubmitting}
                     />
                     <Label htmlFor="status" className="text-sm">
                       {formData.status ? 'Aktiv' : 'Deaktiv'}
@@ -150,20 +283,26 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
               
               <TabsContent value="deadline" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Son tarix *</Label>
+                  <Label htmlFor="deadline" className={formErrors.deadline ? 'text-red-500' : ''}>
+                    Son tarix *
+                  </Label>
                   <Input
                     id="deadline"
                     name="deadline"
                     type="date"
                     value={formData.deadline}
                     onChange={handleChange}
-                    required
+                    className={formErrors.deadline ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
                   />
+                  {formErrors.deadline && (
+                    <p className="text-xs text-red-500">{formErrors.deadline}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="latePolicy">Gecikməyə dair siyasət</Label>
-                  <Select>
+                  <Select disabled={isSubmitting}>
                     <SelectTrigger id="latePolicy">
                       <SelectValue placeholder="Gecikməyə dair siyasət seçin" />
                     </SelectTrigger>
@@ -177,7 +316,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                 
                 <div className="space-y-2">
                   <Label htmlFor="extensionPolicy">Uzadılma siyasəti</Label>
-                  <Select>
+                  <Select disabled={isSubmitting}>
                     <SelectTrigger id="extensionPolicy">
                       <SelectValue placeholder="Uzadılma siyasəti seçin" />
                     </SelectTrigger>
@@ -198,6 +337,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                       id="notificationEnabled"
                       checked={formData.notificationEnabled}
                       onCheckedChange={(checked) => handleSwitchChange('notificationEnabled', checked)}
+                      disabled={isSubmitting}
                     />
                     <Label htmlFor="notificationEnabled" className="text-sm">
                       {formData.notificationEnabled ? 'Aktiv' : 'Deaktiv'}
@@ -217,12 +357,13 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                         value={formData.reminderDays}
                         onChange={handleChange}
                         placeholder="Gün sayını daxil edin"
+                        disabled={isSubmitting}
                       />
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="notificationType">Bildiriş növü</Label>
-                      <Select>
+                      <Select disabled={isSubmitting}>
                         <SelectTrigger id="notificationType">
                           <SelectValue placeholder="Bildiriş növünü seçin" />
                         </SelectTrigger>
@@ -236,7 +377,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
                     
                     <div className="space-y-2">
                       <Label htmlFor="notificationRecipients">Bildiriş alıcıları</Label>
-                      <Select>
+                      <Select disabled={isSubmitting}>
                         <SelectTrigger id="notificationRecipients">
                           <SelectValue placeholder="Bildiriş alıcılarını seçin" />
                         </SelectTrigger>
@@ -253,11 +394,20 @@ export const CategoryModal = ({ isOpen, onClose, mode, category }: CategoryModal
               </TabsContent>
               
               <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-infoline-light-gray">
-                <Button type="button" variant="outline" onClick={onClose}>
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                   Ləğv et
                 </Button>
-                <Button type="submit" className="bg-infoline-blue hover:bg-infoline-dark-blue">
-                  {mode === 'create' ? 'Yarat' : 'Yadda saxla'}
+                <Button 
+                  type="submit" 
+                  className="bg-infoline-blue hover:bg-infoline-dark-blue"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <span className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></span>
+                      Gözləyin...
+                    </span>
+                  ) : mode === 'create' ? 'Yarat' : 'Yadda saxla'}
                 </Button>
               </div>
             </form>
