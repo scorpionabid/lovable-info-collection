@@ -44,6 +44,7 @@ interface RoleTabProps {
   isEditing: boolean;
   user?: User;
   getRoleById: (roleId: string) => Role | undefined;
+  currentUserRole?: string;
 }
 
 export const RoleTab = ({ 
@@ -60,17 +61,39 @@ export const RoleTab = ({
   onSectorChange,
   isEditing,
   user,
-  getRoleById
+  getRoleById,
+  currentUserRole
 }: RoleTabProps) => {
   const selectedRoleInfo = getRoleById(selectedRole);
   const roleType = selectedRoleInfo?.name || "";
+  
+  // Filter roles based on current user's role
+  const filteredRoles = roles.filter(role => {
+    // If current user is superadmin, they can assign any role
+    if (currentUserRole && currentUserRole.includes('super')) {
+      return true;
+    }
+    
+    // If current user is region admin, they can only assign sector admin or school admin
+    if (currentUserRole && currentUserRole.includes('region')) {
+      return role.name.includes('sector') || role.name.includes('school');
+    }
+    
+    // If current user is sector admin, they can only assign school admin
+    if (currentUserRole && currentUserRole.includes('sector')) {
+      return role.name.includes('school');
+    }
+    
+    // By default, show all roles
+    return true;
+  });
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <h4 className="font-medium text-infoline-dark-blue">İstifadəçi Rolu</h4>
         <RoleSelection
-          roles={roles}
+          roles={filteredRoles}
           selectedRole={selectedRole}
           onRoleSelect={onRoleSelect}
         />

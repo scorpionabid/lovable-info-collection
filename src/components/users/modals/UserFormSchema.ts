@@ -7,6 +7,9 @@ export const userFormSchema = z.object({
   first_name: z.string().min(2, { message: "Ad ən azı 2 simvol olmalıdır" }),
   last_name: z.string().min(2, { message: "Soyad ən azı 2 simvol olmalıdır" }),
   phone: z.string().optional(),
+  utis_code: z.string().min(5, { message: "UTIS kodu ən azı 5 simvol olmalıdır" })
+    .max(20, { message: "UTIS kodu çox uzundur" })
+    .regex(/^[A-Za-z0-9]+$/, { message: "UTIS kodu yalnız hərf və rəqəmlərdən ibarət olmalıdır" }),
   role_id: z.string({ required_error: "Rol seçin" }),
   region_id: z.string().optional(),
   sector_id: z.string().optional(),

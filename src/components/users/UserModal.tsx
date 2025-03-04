@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +20,7 @@ import { Form } from "@/components/ui/form";
 import { UserProfileTab } from "./modals/UserProfileTab";
 import { RoleTab } from "./modals/RoleTab";
 import { userFormSchema, UserFormValues } from "./modals/UserFormSchema";
+import { AuthContext } from "@/contexts/AuthContext";
 
 interface UserModalProps {
   user?: User;
@@ -32,8 +33,12 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
   const [selectedRegion, setSelectedRegion] = useState(user?.region_id || "");
   const [selectedSector, setSelectedSector] = useState(user?.sector_id || "");
   const [isCreatingAuth, setIsCreatingAuth] = useState(false);
+  const [isCheckingUtisCode, setIsCheckingUtisCode] = useState(false);
   const { toast } = useToast();
   const isEditing = !!user;
+  const { session } = useContext(AuthContext);
+  const currentUserId = session?.user?.id;
+  const currentUserRole = session?.user?.role;
 
   // Set up form with validation
   const form = useForm<UserFormValues>({
@@ -43,6 +48,7 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
       first_name: user?.first_name || "",
       last_name: user?.last_name || "",
       phone: user?.phone || "",
+      utis_code: user?.utis_code || "",
       role_id: user?.role_id || "",
       region_id: user?.region_id || "",
       sector_id: user?.sector_id || "",
@@ -52,6 +58,9 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
     },
   });
 
+  // Get the current UTIS code value
+  const utisCode = form.watch("utis_code");
+
   // Fetch data for dropdowns
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['roles'],
@@ -59,21 +68,51 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
   });
 
   const { data: regions = [], isLoading: isLoadingRegions } = useQuery({
-    queryKey: ['regions'],
-    queryFn: () => userService.getRegions(),
+    queryKey: ['regions', currentUserId, currentUserRole],
+    queryFn: () => userService.getRegions(currentUserId, currentUserRole),
   });
   
   const { data: sectors = [], isLoading: isLoadingSectors } = useQuery({
-    queryKey: ['sectors', selectedRegion],
-    queryFn: () => userService.getSectors(selectedRegion),
-    enabled: !!selectedRegion,
+    queryKey: ['sectors', selectedRegion, currentUserId, currentUserRole],
+    queryFn: () => userService.getSectors(selectedRegion, currentUserId, currentUserRole),
+    enabled: !!selectedRegion || !!currentUserId,
   });
 
   const { data: schools = [], isLoading: isLoadingSchools } = useQuery({
-    queryKey: ['schools', selectedSector],
-    queryFn: () => userService.getSchools(selectedSector),
-    enabled: !!selectedSector,
+    queryKey: ['schools', selectedSector, currentUserId, currentUserRole],
+    queryFn: () => userService.getSchools(selectedSector, currentUserId, currentUserRole),
+    enabled: !!selectedSector || !!currentUserId,
   });
+
+  // UTIS code uniqueness check
+  useEffect(() => {
+    const checkUtisCodeUniqueness = async () => {
+      if (utisCode && utisCode.length >= 5) {
+        setIsCheckingUtisCode(true);
+        try {
+          const exists = await userService.checkUtisCodeExists(utisCode, isEditing ? user?.id : undefined);
+          if (exists) {
+            form.setError("utis_code", { 
+              type: "manual", 
+              message: "Bu UTIS kodu artıq istifadə olunur" 
+            });
+          } else {
+            form.clearErrors("utis_code");
+          }
+        } catch (error) {
+          console.error("UTIS code check error:", error);
+        } finally {
+          setIsCheckingUtisCode(false);
+        }
+      }
+    };
+
+    const debounceCheck = setTimeout(() => {
+      checkUtisCodeUniqueness();
+    }, 500);
+
+    return () => clearTimeout(debounceCheck);
+  }, [utisCode, form, isEditing, user?.id]);
 
   // Create user mutation
   const createUserMutation = useMutation({
@@ -81,6 +120,17 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
       setIsCreatingAuth(true);
       
       try {
+        // Check UTIS code uniqueness one more time before submission
+        if (values.utis_code) {
+          const exists = await userService.checkUtisCodeExists(
+            values.utis_code, 
+            isEditing ? user?.id : undefined
+          );
+          if (exists) {
+            throw new Error("Bu UTIS kodu artıq istifadə olunur");
+          }
+        }
+        
         // First create auth user if it's a new user
         if (!isEditing && values.password) {
           await authService.register({
@@ -100,6 +150,7 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
           first_name: values.first_name,
           last_name: values.last_name,
           role_id: values.role_id,
+          utis_code: values.utis_code,
           is_active: values.is_active
         };
         
@@ -137,6 +188,23 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
     const role = roles.find(r => r.id === selectedRole);
     if (role) {
       form.setValue("role_id", role.id);
+      
+      // Clear irrelevant fields based on role
+      const roleName = role.name || "";
+      
+      if (roleName.includes("super")) {
+        // Super admin doesn't need region, sector, or school
+        form.setValue("region_id", "");
+        form.setValue("sector_id", "");
+        form.setValue("school_id", "");
+      } else if (roleName.includes("region")) {
+        // Region admin needs region but not sector or school
+        form.setValue("sector_id", "");
+        form.setValue("school_id", "");
+      } else if (roleName.includes("sector")) {
+        // Sector admin needs region and sector but not school
+        form.setValue("school_id", "");
+      }
     }
   }, [selectedRole, roles, form]);
 
@@ -207,6 +275,7 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
                     form={form} 
                     isEditing={isEditing} 
                     user={user}
+                    isCheckingUtisCode={isCheckingUtisCode}
                   />
                 </TabsContent>
                 
@@ -226,6 +295,7 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
                     isEditing={isEditing}
                     user={user}
                     getRoleById={getRoleById}
+                    currentUserRole={currentUserRole}
                   />
                 </TabsContent>
               </Tabs>
@@ -242,7 +312,7 @@ export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
                 <Button 
                   type="submit" 
                   className="bg-infoline-blue hover:bg-infoline-dark-blue"
-                  disabled={createUserMutation.isPending || isCreatingAuth}
+                  disabled={createUserMutation.isPending || isCreatingAuth || isCheckingUtisCode}
                 >
                   {(createUserMutation.isPending || isCreatingAuth) ? (
                     <>

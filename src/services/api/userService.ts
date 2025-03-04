@@ -10,11 +10,12 @@ const userService = {
   blockUser: (id: string) => supabaseUserService.blockUser(id),
   activateUser: (id: string) => supabaseUserService.activateUser(id),
   resetPassword: (id: string) => supabaseUserService.resetPassword(id),
+  checkUtisCodeExists: (utisCode: string, userId?: string) => supabaseUserService.checkUtisCodeExists(utisCode, userId),
   
   // Entity information
-  getRegions: () => supabaseUserService.getRegions(),
-  getSectors: (regionId?: string) => supabaseUserService.getSectors(regionId),
-  getSchools: (sectorId?: string) => supabaseUserService.getSchools(sectorId),
+  getRegions: (userId?: string, userRole?: string) => supabaseUserService.getRegions(userId, userRole),
+  getSectors: (regionId?: string, userId?: string, userRole?: string) => supabaseUserService.getSectors(regionId, userId, userRole),
+  getSchools: (sectorId?: string, userId?: string, userRole?: string) => supabaseUserService.getSchools(sectorId, userId, userRole),
   getRoles: () => supabaseUserService.getRoles(),
 };
 

@@ -1,57 +1,30 @@
 
 import React from "react";
-import { Upload, Info, Mail, Phone } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
-import { 
-  Avatar, 
-  AvatarFallback, 
-  AvatarImage 
-} from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormMessage 
+import { Loader2 } from "lucide-react";
+import { User } from "@/services/api/userService";
+import { UserFormValues } from "./UserFormSchema";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserFormValues } from "./UserFormSchema";
-import { User } from "@/services/api/userService";
+import { Separator } from "@/components/ui/separator";
 
 interface UserProfileTabProps {
   form: UseFormReturn<UserFormValues>;
   isEditing: boolean;
   user?: User;
+  isCheckingUtisCode?: boolean;
 }
 
-export const UserProfileTab = ({ form, isEditing, user }: UserProfileTabProps) => {
-  const getInitials = (name: string, surname: string) => {
-    return `${name?.charAt(0) || ""}${surname?.charAt(0) || ""}`;
-  };
-
+export const UserProfileTab = ({ form, isEditing, user, isCheckingUtisCode }: UserProfileTabProps) => {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-center gap-4 mb-6">
-        <Avatar className="h-24 w-24">
-          <AvatarImage src="" />
-          <AvatarFallback className="bg-infoline-light-blue text-white text-xl">
-            {isEditing 
-              ? getInitials(user?.first_name || "", user?.last_name || "") 
-              : form.getValues().first_name && form.getValues().last_name 
-                ? getInitials(form.getValues().first_name, form.getValues().last_name)
-                : "YI"
-            }
-          </AvatarFallback>
-        </Avatar>
-        
-        <Button variant="outline" size="sm" className="flex items-center gap-1" type="button">
-          <Upload className="h-4 w-4" />
-          <span>Profil şəkli yüklə</span>
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormField
           control={form.control}
           name="first_name"
@@ -59,7 +32,7 @@ export const UserProfileTab = ({ form, isEditing, user }: UserProfileTabProps) =
             <FormItem>
               <FormLabel>Ad</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="Ad daxil edin" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -73,7 +46,7 @@ export const UserProfileTab = ({ form, isEditing, user }: UserProfileTabProps) =
             <FormItem>
               <FormLabel>Soyad</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="Soyad daxil edin" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -81,18 +54,20 @@ export const UserProfileTab = ({ form, isEditing, user }: UserProfileTabProps) =
         />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>E-mail</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <div className="relative">
-                  <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-infoline-dark-gray" />
-                  <Input {...field} className="pl-9" type="email" />
-                </div>
+                <Input 
+                  type="email" 
+                  placeholder="Email daxil edin" 
+                  {...field} 
+                  disabled={isEditing}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -106,10 +81,7 @@ export const UserProfileTab = ({ form, isEditing, user }: UserProfileTabProps) =
             <FormItem>
               <FormLabel>Telefon</FormLabel>
               <FormControl>
-                <div className="relative">
-                  <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-infoline-dark-gray" />
-                  <Input {...field} className="pl-9" type="tel" />
-                </div>
+                <Input placeholder="Telefon nömrəsi daxil edin" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -117,31 +89,54 @@ export const UserProfileTab = ({ form, isEditing, user }: UserProfileTabProps) =
         />
       </div>
       
-      {!isEditing && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormField
           control={form.control}
-          name="password"
+          name="utis_code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Şifrə</FormLabel>
+              <FormLabel>UTIS Kodu</FormLabel>
               <FormControl>
-                <Input {...field} type="password" />
+                <div className="relative">
+                  <Input 
+                    placeholder="UTIS kodunu daxil edin" 
+                    {...field} 
+                    disabled={isEditing} 
+                  />
+                  {isCheckingUtisCode && (
+                    <div className="absolute right-3 top-2">
+                      <Loader2 className="h-5 w-5 animate-spin text-infoline-blue" />
+                    </div>
+                  )}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-      )}
+        
+        {!isEditing && (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Şifrə</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="password" 
+                    placeholder="Şifrə daxil edin" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </div>
       
-      {!isEditing && (
-        <div className="bg-blue-50 p-3 rounded-md flex items-start gap-2">
-          <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-blue-700">
-            <p className="font-medium">Şifrə haqqında qeyd</p>
-            <p>İstifadəçi yaradıldıqdan sonra, ona təyin olunan şifrəni email vasitəsilə bildirmək lazımdır.</p>
-          </div>
-        </div>
-      )}
+      <Separator />
     </div>
   );
 };
