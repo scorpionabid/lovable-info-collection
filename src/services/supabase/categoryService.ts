@@ -1,8 +1,21 @@
 
 import { supabase } from './supabaseClient';
-import { Category, CategoryColumn } from '@/components/categories/CategoryDetailView';
+import { CategoryColumn } from '@/components/categories/CategoryDetailView';
 
 // Interfaces for the service
+export interface Category {
+  id: string;
+  name: string;
+  description: string;
+  assignment: 'All' | 'Sectors';
+  columns: number | CategoryColumn[];
+  deadline: string;
+  completionRate: number;
+  status: 'Active' | 'Inactive';
+  priority: number;
+  createdAt: string;
+}
+
 export interface CategoryFilter {
   search?: string;
   assignment?: 'All' | 'Sectors';

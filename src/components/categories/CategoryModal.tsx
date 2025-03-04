@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useMutation } from '@tanstack/react-query';
@@ -41,7 +40,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
-  // Initialize form data when modal opens or category changes
   useEffect(() => {
     if (category && mode === 'edit') {
       setFormData({
@@ -51,11 +49,10 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
         priority: category.priority,
         deadline: category.deadline ? new Date(category.deadline).toISOString().split('T')[0] : '',
         status: category.status === 'Active',
-        notificationEnabled: true, // These would come from the category in a real app
+        notificationEnabled: true,
         reminderDays: 7,
       });
     } else {
-      // Set defaults for create mode
       setFormData({
         name: '',
         description: '',
@@ -70,7 +67,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
     setFormErrors({});
   }, [category, mode, isOpen]);
 
-  // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: categoryService.CreateCategoryDto) => categoryService.createCategory(data),
     onSuccess: () => {
@@ -82,7 +78,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
     }
   });
 
-  // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: categoryService.UpdateCategoryDto }) => 
       categoryService.updateCategory(id, data),
@@ -101,7 +96,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear the error for this field
     if (formErrors[name]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -114,7 +108,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear the error for this field
     if (formErrors[name]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -161,7 +154,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
       assignment: formData.assignment,
       priority: formData.priority,
       deadline: formData.deadline,
-      status: formData.status ? 'Active' : 'Inactive'
+      status: formData.status ? 'Active' : 'Inactive' as 'Active' | 'Inactive'
     };
 
     if (mode === 'create') {
