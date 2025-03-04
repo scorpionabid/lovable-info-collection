@@ -1,5 +1,6 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,63 +13,110 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
-
-interface Sector {
-  id: string;
-  name: string;
-  description: string;
-  regionId: string;
-  regionName: string;
-  schoolCount: number;
-  completionRate: number;
-  createdAt: string;
-}
+import { ModalHeader } from '../regions/modals/ModalHeader';
+import { ModalFooter } from '../regions/modals/ModalFooter';
+import { SectorWithStats } from '@/services/supabase/sectorService';
+import sectorService from '@/services/supabase/sectorService';
+import { useToast } from '@/hooks/use-toast';
 
 interface SectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  sector?: Sector;
+  sector?: SectorWithStats;
+  onSuccess?: () => void;
 }
 
-export const SectorModal = ({ isOpen, onClose, mode, sector }: SectorModalProps) => {
+interface SectorFormData {
+  name: string;
+  description: string;
+  regionId: string;
+  adminId: string;
+}
+
+export const SectorModal = ({ isOpen, onClose, mode, sector, onSuccess }: SectorModalProps) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("basic");
-  const [formData, setFormData] = useState({
-    name: sector?.name || '',
-    description: sector?.description || '',
-    regionId: sector?.regionId || '',
-    adminId: '',
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<SectorFormData>({
+    defaultValues: {
+      name: sector?.name || '',
+      description: sector?.description || '',
+      regionId: sector?.region_id || '',
+      adminId: '',
+    }
   });
+
+  // Fetch regions for dropdown
+  const { data: regions = [] } = useQuery({
+    queryKey: ['regions-dropdown'],
+    queryFn: () => sectorService.getRegionsForDropdown(),
+    enabled: isOpen,
+  });
+
+  // Reset form when modal opens with sector data
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && sector) {
+      reset({
+        name: sector.name,
+        description: sector.description || '',
+        regionId: sector.region_id,
+        adminId: '',
+      });
+    } else if (isOpen && mode === 'create') {
+      reset({
+        name: '',
+        description: '',
+        regionId: '',
+        adminId: '',
+      });
+    }
+  }, [isOpen, mode, sector, reset]);
 
   if (!isOpen) return null;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // This would typically send an API request to create/update the sector
-    console.log("Submitting sector data:", formData);
-    onClose();
+  const onSubmit = async (data: SectorFormData) => {
+    try {
+      setIsSubmitting(true);
+      
+      if (mode === 'create') {
+        await sectorService.createSector({
+          name: data.name,
+          description: data.description,
+          region_id: data.regionId,
+        });
+      } else if (mode === 'edit' && sector) {
+        await sectorService.updateSector(sector.id, {
+          name: data.name,
+          description: data.description,
+          region_id: data.regionId,
+        });
+      }
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Xəta baş verdi",
+        description: error.message || "Sektor məlumatları saxlanıla bilmədi",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden animate-scale-in">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-infoline-light-gray">
-          <h2 className="text-xl font-semibold text-infoline-dark-blue">
-            {mode === 'create' ? 'Yeni Sektor Yarat' : 'Sektoru Redaktə Et'}
-          </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+        <ModalHeader 
+          title={mode === 'create' ? 'Yeni Sektor Yarat' : 'Sektoru Redaktə Et'} 
+          onClose={onClose} 
+        />
         
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -78,27 +126,26 @@ export const SectorModal = ({ isOpen, onClose, mode, sector }: SectorModalProps)
               <TabsTrigger value="config">Konfiqurasiya</TabsTrigger>
             </TabsList>
             
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit(onSubmit)}>
               <TabsContent value="basic" className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Sektor adı *</Label>
                   <Input
                     id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
+                    {...register("name", { required: "Sektor adı tələb olunur" })}
                     placeholder="Sektor adını daxil edin"
-                    required
+                    className={errors.name ? "border-red-500" : ""}
                   />
+                  {errors.name && (
+                    <p className="text-red-500 text-sm">{errors.name.message}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="description">Təsvir</Label>
                   <Input
                     id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
+                    {...register("description")}
                     placeholder="Sektor haqqında qısa məlumat"
                   />
                 </div>
@@ -106,21 +153,21 @@ export const SectorModal = ({ isOpen, onClose, mode, sector }: SectorModalProps)
                 <div className="space-y-2">
                   <Label htmlFor="regionSelect">Region *</Label>
                   <Select
-                    value={formData.regionId}
-                    onValueChange={(value) => handleSelectChange('regionId', value)}
-                    required
+                    defaultValue={sector?.region_id}
+                    onValueChange={(value) => setValue("regionId", value)}
                   >
-                    <SelectTrigger id="regionSelect">
+                    <SelectTrigger id="regionSelect" className={errors.regionId ? "border-red-500" : ""}>
                       <SelectValue placeholder="Region seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Bakı şəhəri</SelectItem>
-                      <SelectItem value="2">Gəncə şəhəri</SelectItem>
-                      <SelectItem value="3">Sumqayıt şəhəri</SelectItem>
-                      <SelectItem value="4">Şəki rayonu</SelectItem>
-                      <SelectItem value="5">Quba rayonu</SelectItem>
+                      {regions.map((region) => (
+                        <SelectItem key={region.id} value={region.id}>{region.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {errors.regionId && (
+                    <p className="text-red-500 text-sm">{errors.regionId.message}</p>
+                  )}
                 </div>
               </TabsContent>
               
@@ -128,8 +175,7 @@ export const SectorModal = ({ isOpen, onClose, mode, sector }: SectorModalProps)
                 <div className="space-y-2">
                   <Label htmlFor="adminSelect">Sektor Admini</Label>
                   <Select
-                    onValueChange={(value) => handleSelectChange('adminId', value)}
-                    value={formData.adminId}
+                    onValueChange={(value) => setValue("adminId", value)}
                   >
                     <SelectTrigger id="adminSelect">
                       <SelectValue placeholder="Sektor Admini seçin" />
@@ -192,14 +238,11 @@ export const SectorModal = ({ isOpen, onClose, mode, sector }: SectorModalProps)
                 </div>
               </TabsContent>
               
-              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-infoline-light-gray">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Ləğv et
-                </Button>
-                <Button type="submit" className="bg-infoline-blue hover:bg-infoline-dark-blue">
-                  {mode === 'create' ? 'Yarat' : 'Yadda saxla'}
-                </Button>
-              </div>
+              <ModalFooter 
+                onClose={onClose} 
+                isSubmitting={isSubmitting} 
+                mode={mode} 
+              />
             </form>
           </Tabs>
         </div>

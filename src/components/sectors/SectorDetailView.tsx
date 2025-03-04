@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ChartCard } from "@/components/dashboard/ChartCard";
@@ -17,51 +18,65 @@ import {
 } from "lucide-react";
 import { SectorSchoolTable } from './SectorSchoolTable';
 import { SectorModal } from './SectorModal';
+import { useToast } from "@/hooks/use-toast";
+import { SectorWithStats } from '@/services/supabase/sectorService';
 
 interface SectorDetailProps {
-  sector: {
-    id: string;
-    name: string;
-    description: string;
-    regionId: string;
-    regionName: string;
-    createdAt: string;
-    schools: number;
-    users: number;
-    completionRate: number;
-  };
+  sector: SectorWithStats & { userCount?: number; regionName?: string };
+  schools: any[]; // Type should match what comes from sectorService.getSectorSchools
+  isLoadingSchools: boolean;
+  isEditModalOpen: boolean;
+  setIsEditModalOpen: (value: boolean) => void;
+  onRefresh: () => void;
 }
 
-export const SectorDetailView = ({ sector }: SectorDetailProps) => {
+export const SectorDetailView = ({ 
+  sector, 
+  schools, 
+  isLoadingSchools,
+  isEditModalOpen,
+  setIsEditModalOpen,
+  onRefresh
+}: SectorDetailProps) => {
   const navigate = useNavigate();
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Mock data for the charts
+  // In a real app, this would come from the API
   const completionData = [
     { name: 'Yan', value: 65 },
     { name: 'Fev', value: 72 },
     { name: 'Mar', value: 76 },
     { name: 'Apr', value: 81 },
     { name: 'May', value: 85 },
-    { name: 'İyn', value: 92 },
+    { name: 'İyn', value: sector.completionRate },
   ];
   
   const compareData = [
-    { name: 'Yasamal', value: 92 },
+    { name: sector.name, value: sector.completionRate },
     { name: 'Nəsimi', value: 85 },
     { name: 'Nərimanov', value: 78 },
     { name: 'Xətai', value: 89 },
     { name: 'Sabunçu', value: 72 },
   ];
-  
-  // Mock data for schools
-  const schools = [
-    { id: '1', name: '45 nömrəli məktəb', address: 'Yasamal rayonu, Ş.Mehdiyev küç. 20', studentCount: 850, completionRate: 95 },
-    { id: '2', name: '47 nömrəli məktəb', address: 'Yasamal rayonu, M.Müşfiq küç. 12', studentCount: 720, completionRate: 88 },
-    { id: '3', name: '52 nömrəli məktəb', address: 'Yasamal rayonu, Z.Əhmədbəyli küç. 5', studentCount: 680, completionRate: 92 },
-    { id: '4', name: '60 nömrəli məktəb', address: 'Yasamal rayonu, H.Zərdabi küç. 71', studentCount: 790, completionRate: 90 },
-    { id: '5', name: '173 nömrəli məktəb', address: 'Yasamal rayonu, İnşaatçılar pr. 23', studentCount: 910, completionRate: 87 },
-  ];
+
+  const handleExport = () => {
+    toast({
+      title: "İxrac funksiyası",
+      description: "Sektor məlumatları ixrac edilir",
+    });
+  };
+
+  const handleEditSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['sector', sector.id] });
+    setIsEditModalOpen(false);
+    toast({
+      title: "Sektor yeniləndi",
+      description: "Sektor məlumatları uğurla yeniləndi",
+    });
+    onRefresh();
+  };
 
   return (
     <div className="space-y-6">
@@ -81,7 +96,7 @@ export const SectorDetailView = ({ sector }: SectorDetailProps) => {
           <p className="text-infoline-dark-gray mt-1 ml-10">{sector.description}</p>
           <div className="flex items-center gap-1 ml-10 mt-2 text-sm text-infoline-dark-gray">
             <MapPin className="h-3.5 w-3.5" />
-            <Link to={`/regions/${sector.regionId}`} className="hover:text-infoline-blue">
+            <Link to={`/regions/${sector.region_id}`} className="hover:text-infoline-blue">
               {sector.regionName}
             </Link>
           </div>
@@ -91,6 +106,7 @@ export const SectorDetailView = ({ sector }: SectorDetailProps) => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
+            onClick={handleExport}
           >
             <Download className="h-4 w-4" />
             İxrac et
@@ -108,13 +124,13 @@ export const SectorDetailView = ({ sector }: SectorDetailProps) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard 
           title="Məktəblər" 
-          value={sector.schools} 
+          value={sector.schoolCount} 
           icon={<School className="h-5 w-5" />}
           color="green"
         />
         <StatCard 
           title="İstifadəçilər" 
-          value={sector.users} 
+          value={sector.userCount || 0} 
           icon={<Users className="h-5 w-5" />}
           color="purple"
         />
@@ -149,7 +165,7 @@ export const SectorDetailView = ({ sector }: SectorDetailProps) => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-infoline-dark-blue">Sektor Məktəbləri</h2>
-          <Link to="/schools">
+          <Link to={`/schools?sectorId=${sector.id}`}>
             <Button className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Yeni Məktəb
@@ -157,13 +173,17 @@ export const SectorDetailView = ({ sector }: SectorDetailProps) => {
           </Link>
         </div>
         
-        <SectorSchoolTable schools={schools} sectorId={sector.id} />
+        <SectorSchoolTable 
+          schools={schools} 
+          sectorId={sector.id} 
+          isLoading={isLoadingSchools} 
+        />
       </div>
       
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-infoline-dark-blue">Sektor Adminləri</h2>
-          <Link to="/users">
+          <Link to={`/users?sectorId=${sector.id}&role=sector-admin`}>
             <Button className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Admin Əlavə Et
@@ -171,27 +191,31 @@ export const SectorDetailView = ({ sector }: SectorDetailProps) => {
           </Link>
         </div>
         
-        <div className="bg-infoline-lightest-gray rounded-lg p-6 text-center">
-          <BarChart4 className="mx-auto h-16 w-16 text-infoline-gray mb-4" />
-          <p className="text-infoline-dark-gray">Bu sektor üçün təyin edilmiş admin yoxdur</p>
-          <Button className="mt-4">Admin Təyin Et</Button>
-        </div>
+        {(sector.userCount || 0) === 0 ? (
+          <div className="bg-infoline-lightest-gray rounded-lg p-6 text-center">
+            <BarChart4 className="mx-auto h-16 w-16 text-infoline-gray mb-4" />
+            <p className="text-infoline-dark-gray">Bu sektor üçün təyin edilmiş admin yoxdur</p>
+            <Button 
+              className="mt-4"
+              onClick={() => navigate(`/users?sectorId=${sector.id}&role=sector-admin`)}
+            >
+              Admin Təyin Et
+            </Button>
+          </div>
+        ) : (
+          <div className="p-4">
+            {/* Admin siyahısı gələcəkdə əlavə ediləcək */}
+            <p className="text-infoline-dark-gray">Bu sektor üçün {sector.userCount} admin təyin edilib</p>
+          </div>
+        )}
       </div>
       
       <SectorModal 
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)} 
         mode="edit"
-        sector={{
-          id: sector.id,
-          name: sector.name,
-          description: sector.description,
-          regionId: sector.regionId,
-          regionName: sector.regionName,
-          createdAt: sector.createdAt,
-          schoolCount: sector.schools,
-          completionRate: sector.completionRate
-        }}
+        sector={sector}
+        onSuccess={handleEditSuccess}
       />
     </div>
   );

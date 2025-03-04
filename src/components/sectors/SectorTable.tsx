@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,46 +10,108 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { SectorModal } from './SectorModal';
-import { Eye, Edit, Archive, MoreHorizontal, Download } from "lucide-react";
-
-interface Sector {
-  id: string;
-  name: string;
-  description: string;
-  regionId: string;
-  regionName: string;
-  schoolCount: number;
-  completionRate: number;
-  createdAt: string;
-}
+import { Eye, Edit, Archive, MoreHorizontal, Download, ArrowUpDown } from "lucide-react";
+import { SectorWithStats } from '@/services/supabase/sectorService';
+import { useToast } from "@/hooks/use-toast";
+import sectorService from '@/services/supabase/sectorService';
+import { Pagination } from "@/components/ui/pagination";
 
 interface SectorTableProps {
-  sectors: Sector[];
+  sectors: SectorWithStats[];
+  isLoading: boolean;
+  isError: boolean;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  setCurrentPage: (page: number) => void;
+  sortColumn: string;
+  sortDirection: 'asc' | 'desc';
+  onSortChange: (column: string) => void;
+  onRefresh: () => void;
 }
 
-export const SectorTable = ({ sectors }: SectorTableProps) => {
+export const SectorTable = ({ 
+  sectors, 
+  isLoading,
+  isError,
+  totalCount,
+  currentPage,
+  pageSize,
+  setCurrentPage,
+  sortColumn,
+  sortDirection,
+  onSortChange,
+  onRefresh
+}: SectorTableProps) => {
   const navigate = useNavigate();
-  const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedSector, setSelectedSector] = useState<SectorWithStats | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const handleView = (sector: Sector) => {
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const handleView = (sector: SectorWithStats) => {
     navigate(`/sectors/${sector.id}`);
   };
 
-  const handleEdit = (sector: Sector) => {
+  const handleEdit = (sector: SectorWithStats, event: React.MouseEvent) => {
+    event.stopPropagation();
     setSelectedSector(sector);
     setIsEditModalOpen(true);
   };
 
-  const handleArchive = (sector: Sector) => {
-    // This would typically send an API request to archive the sector
-    console.log(`Archiving sector: ${sector.name}`);
+  const handleArchive = async (sector: SectorWithStats, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await sectorService.archiveSector(sector.id);
+      toast({
+        title: "Sektor arxivləşdirildi",
+        description: `${sector.name} uğurla arxivləşdirildi`,
+      });
+      onRefresh();
+    } catch (error) {
+      toast({
+        title: "Xəta baş verdi",
+        description: "Sektor arxivləşdirilə bilmədi",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleExport = (sector: Sector) => {
+  const handleExport = (sector: SectorWithStats, event: React.MouseEvent) => {
+    event.stopPropagation();
     // This would typically generate and download an export file
-    console.log(`Exporting sector: ${sector.name}`);
+    toast({
+      title: "Sektor ixrac edilir",
+      description: `${sector.name} məlumatları ixrac edilir`,
+    });
   };
+
+  const renderSortIcon = (column: string) => {
+    if (sortColumn !== column) return <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />;
+    return (
+      <ArrowUpDown className={`ml-1 h-4 w-4 ${sortColumn === column ? 'opacity-100' : 'opacity-50'}`} />
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-infoline-blue mx-auto mb-4"></div>
+        <p className="text-infoline-dark-gray">Sektorlar yüklənir...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+        <p className="text-red-500 mb-2">Məlumatlar yüklənərkən xəta baş verdi</p>
+        <Button onClick={onRefresh}>Yenidən cəhd edin</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -56,12 +119,54 @@ export const SectorTable = ({ sectors }: SectorTableProps) => {
         <table className="w-full">
           <thead>
             <tr className="bg-infoline-lightest-gray border-b border-infoline-light-gray">
-              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Ad</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Təsvir</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">Region</th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">Məktəb sayı</th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">Doldurma faizi</th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">Yaradılma tarixi</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">
+                <button 
+                  onClick={() => onSortChange('name')}
+                  className="flex items-center focus:outline-none"
+                >
+                  Ad {renderSortIcon('name')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">
+                <button 
+                  onClick={() => onSortChange('description')}
+                  className="flex items-center focus:outline-none"
+                >
+                  Təsvir {renderSortIcon('description')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">
+                <button 
+                  onClick={() => onSortChange('regionName')}
+                  className="flex items-center focus:outline-none"
+                >
+                  Region {renderSortIcon('regionName')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">
+                <button 
+                  onClick={() => onSortChange('schoolCount')}
+                  className="flex items-center justify-center focus:outline-none"
+                >
+                  Məktəb sayı {renderSortIcon('schoolCount')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">
+                <button 
+                  onClick={() => onSortChange('completionRate')}
+                  className="flex items-center justify-center focus:outline-none"
+                >
+                  Doldurma faizi {renderSortIcon('completionRate')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">
+                <button 
+                  onClick={() => onSortChange('created_at')}
+                  className="flex items-center justify-center focus:outline-none"
+                >
+                  Yaradılma tarixi {renderSortIcon('created_at')}
+                </button>
+              </th>
               <th className="px-4 py-3 text-right text-sm font-medium text-infoline-dark-blue">Əməliyyatlar</th>
             </tr>
           </thead>
@@ -73,7 +178,7 @@ export const SectorTable = ({ sectors }: SectorTableProps) => {
                 onClick={() => handleView(sector)}
               >
                 <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{sector.name}</td>
-                <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.description}</td>
+                <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.description || '-'}</td>
                 <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.regionName}</td>
                 <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{sector.schoolCount}</td>
                 <td className="px-4 py-3 text-center">
@@ -91,7 +196,7 @@ export const SectorTable = ({ sectors }: SectorTableProps) => {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">
-                  {new Date(sector.createdAt).toLocaleDateString('az-AZ')}
+                  {new Date(sector.created_at).toLocaleDateString('az-AZ')}
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
@@ -105,15 +210,15 @@ export const SectorTable = ({ sectors }: SectorTableProps) => {
                         <Eye className="mr-2 h-4 w-4" />
                         <span>Baxış</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(sector)}>
+                      <DropdownMenuItem onClick={(e) => handleEdit(sector, e)}>
                         <Edit className="mr-2 h-4 w-4" />
                         <span>Redaktə et</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(sector)}>
+                      <DropdownMenuItem onClick={(e) => handleArchive(sector, e)}>
                         <Archive className="mr-2 h-4 w-4" />
                         <span>Arxivləşdir</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExport(sector)}>
+                      <DropdownMenuItem onClick={(e) => handleExport(sector, e)}>
                         <Download className="mr-2 h-4 w-4" />
                         <span>İxrac et</span>
                       </DropdownMenuItem>
@@ -126,9 +231,19 @@ export const SectorTable = ({ sectors }: SectorTableProps) => {
         </table>
       </div>
       
-      {sectors.length === 0 && (
+      {sectors.length === 0 && !isLoading && (
         <div className="py-12 text-center">
           <p className="text-infoline-dark-gray">Nəticə tapılmadı</p>
+        </div>
+      )}
+      
+      {totalPages > 1 && (
+        <div className="flex justify-center p-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
       
@@ -138,6 +253,14 @@ export const SectorTable = ({ sectors }: SectorTableProps) => {
           onClose={() => setIsEditModalOpen(false)} 
           mode="edit"
           sector={selectedSector}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['sectors'] });
+            setIsEditModalOpen(false);
+            toast({
+              title: "Sektor yeniləndi",
+              description: "Sektor məlumatları uğurla yeniləndi",
+            });
+          }}
         />
       )}
     </div>

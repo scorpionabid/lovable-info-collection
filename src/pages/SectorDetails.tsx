@@ -1,24 +1,66 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Layout } from "@/components/layout/Layout";
 import { SectorDetailView } from "@/components/sectors/SectorDetailView";
+import sectorService from '@/services/supabase/sectorService';
+import { useToast } from '@/hooks/use-toast';
 
 const SectorDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // This would typically fetch data from an API
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(searchParams.get('edit') === 'true');
+
+  // Fetch sector data with React Query
+  const { 
+    data: sector, 
+    isLoading, 
+    isError, 
+    error,
+    refetch 
+  } = useQuery({
+    queryKey: ['sector', id],
+    queryFn: () => sectorService.getSectorById(id as string),
+    enabled: !!id,
+    retry: 1,
+  });
+
+  // Fetch schools for this sector
+  const { 
+    data: schools = [], 
+    isLoading: isLoadingSchools 
+  } = useQuery({
+    queryKey: ['sector-schools', id],
+    queryFn: () => sectorService.getSectorSchools(id as string),
+    enabled: !!id,
+  });
+
+  // Handle errors
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [id]);
-  
+    if (isError) {
+      toast({
+        title: "Xəta baş verdi",
+        description: "Sektor məlumatları yüklənərkən xəta baş verdi",
+        variant: "destructive",
+      });
+    }
+  }, [isError, toast]);
+
+  // If we get a 404 error, redirect to sectors page
+  useEffect(() => {
+    if (error && (error as any).code === 'PGRST116') {
+      toast({
+        title: "Sektor tapılmadı",
+        description: "İstədiyiniz sektor məlumatları tapılmadı",
+        variant: "destructive",
+      });
+      navigate('/sectors');
+    }
+  }, [error, navigate, toast]);
+
   if (isLoading) {
     return (
       <Layout userRole="super-admin">
@@ -29,22 +71,18 @@ const SectorDetails = () => {
     );
   }
   
-  // This is placeholder mock data
-  const sectorData = {
-    id: id || '1',
-    name: 'Yasamal rayonu',
-    description: 'Bakı şəhərinin mərkəzi rayonlarından biri',
-    regionId: '1',
-    regionName: 'Bakı şəhəri',
-    createdAt: '2023-06-10',
-    schools: 24,
-    users: 12,
-    completionRate: 92
-  };
-  
   return (
     <Layout userRole="super-admin">
-      <SectorDetailView sector={sectorData} />
+      {sector && (
+        <SectorDetailView 
+          sector={sector} 
+          schools={schools}
+          isLoadingSchools={isLoadingSchools}
+          isEditModalOpen={isEditModalOpen}
+          setIsEditModalOpen={setIsEditModalOpen}
+          onRefresh={refetch}
+        />
+      )}
     </Layout>
   );
 };
