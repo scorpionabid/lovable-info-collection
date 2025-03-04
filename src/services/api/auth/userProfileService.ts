@@ -22,12 +22,12 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return null;
       
-      // Get user profile with role
+      // Get user profile with role - fixed join syntax
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
           *,
-          roles (
+          roles:role_id (
             id,
             name,
             description,
@@ -56,11 +56,11 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return [];
       
-      // Get user's role and permissions
+      // Get user's role and permissions - fixed join syntax
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
-          roles (
+          roles:role_id (
             permissions
           )
         `)

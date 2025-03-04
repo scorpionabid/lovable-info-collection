@@ -36,12 +36,12 @@ const authCore = {
       
       console.log('Auth successful, fetching user data');
       
-      // Get user profile with role
+      // Get user profile with role - fixed join syntax
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
           *,
-          roles (
+          roles:role_id (
             id,
             name,
             description,
