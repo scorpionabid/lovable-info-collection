@@ -1,65 +1,21 @@
 
-import api from './index';
-
-export interface UserData {
-  id?: string;
-  email: string;
-  name: string;
-  surname: string;
-  role: string;
-  entityId?: string;
-  entityName?: string;
-  password?: string;
-}
-
-export interface UserFilter {
-  role?: string;
-  entityId?: string;
-  search?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}
+import supabaseUserService, { User, UserFilters } from '../supabase/userService';
 
 const userService = {
-  getUsers: async (filters: UserFilter = {}) => {
-    const response = await api.get('/users', { params: filters });
-    return response.data;
-  },
+  getUsers: (filters?: UserFilters) => supabaseUserService.getUsers(filters),
+  getUserById: (id: string) => supabaseUserService.getUserById(id),
+  createUser: (userData: Omit<User, 'id'>) => supabaseUserService.createUser(userData),
+  updateUser: (id: string, userData: Partial<User>) => supabaseUserService.updateUser(id, userData),
+  deleteUser: (id: string) => supabaseUserService.deleteUser(id),
+  blockUser: (id: string) => supabaseUserService.blockUser(id),
+  activateUser: (id: string) => supabaseUserService.activateUser(id),
   
-  createUser: async (userData: UserData) => {
-    const response = await api.post('/users', userData);
-    return response.data;
-  },
-  
-  getUser: async (id: string) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
-  },
-  
-  updateUser: async (id: string, userData: Partial<UserData>) => {
-    const response = await api.put(`/users/${id}`, userData);
-    return response.data;
-  },
-  
-  deleteUser: async (id: string) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
-  
-  importUsers: async (fileData: FormData) => {
-    // Fix: Removed the third argument, using object format instead
-    const response = await api.post('/users/import', fileData);
-    return response.data;
-  },
-  
-  exportUsers: async (filters: UserFilter = {}) => {
-    const response = await api.get('/users/export', { 
-      params: filters,
-      responseType: 'blob'
-    });
-    return response.data;
-  }
+  // Entity information
+  getRegions: () => supabaseUserService.getRegions(),
+  getSectors: (regionId?: string) => supabaseUserService.getSectors(regionId),
+  getSchools: (sectorId?: string) => supabaseUserService.getSchools(sectorId),
+  getRoles: () => supabaseUserService.getRoles(),
 };
 
+export type { User, UserFilters };
 export default userService;

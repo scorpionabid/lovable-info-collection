@@ -1,145 +1,266 @@
 
-import { supabase, User } from './supabaseClient';
+import { supabase } from './supabaseClient';
+import { UserRole } from '@/contexts/AuthContext';
+
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role_id?: string;
+  role?: UserRole;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  is_active?: boolean;
+  last_login?: string;
+  roles?: {
+    id: string;
+    name: string;
+    description?: string;
+    permissions: string[];
+  };
+}
+
+export interface UserFilters {
+  role?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  status?: 'active' | 'inactive' | 'blocked';
+  search?: string;
+}
 
 const userService = {
-  getUsers: async (filters?: { roleId?: string; regionId?: string; sectorId?: string; schoolId?: string; isActive?: boolean }) => {
-    let query = supabase
-      .from('users')
-      .select('*, roles(name)') // Join with roles to get role name
-      .order('last_name');
-    
-    if (filters?.roleId) {
-      query = query.eq('role_id', filters.roleId);
+  getUsers: async (filters?: UserFilters) => {
+    try {
+      let query = supabase
+        .from('users')
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `);
+
+      // Apply filters
+      if (filters) {
+        if (filters.role) {
+          // For role, we need to check the role_id by first querying the roles table
+          const { data: roleData } = await supabase
+            .from('roles')
+            .select('id')
+            .eq('name', filters.role)
+            .single();
+            
+          if (roleData) {
+            query = query.eq('role_id', roleData.id);
+          }
+        }
+        
+        if (filters.region_id) query = query.eq('region_id', filters.region_id);
+        if (filters.sector_id) query = query.eq('sector_id', filters.sector_id);
+        if (filters.school_id) query = query.eq('school_id', filters.school_id);
+        
+        if (filters.status === 'active') query = query.eq('is_active', true);
+        if (filters.status === 'inactive' || filters.status === 'blocked') query = query.eq('is_active', false);
+        
+        if (filters.search) {
+          query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+        }
+      }
+
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return data as User[];
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
     }
-    
-    if (filters?.regionId) {
-      query = query.eq('region_id', filters.regionId);
-    }
-    
-    if (filters?.sectorId) {
-      query = query.eq('sector_id', filters.sectorId);
-    }
-    
-    if (filters?.schoolId) {
-      query = query.eq('school_id', filters.schoolId);
-    }
-    
-    if (filters?.isActive !== undefined) {
-      query = query.eq('is_active', filters.isActive);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    return data;
   },
   
   getUserById: async (id: string) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*, roles(name)')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `)
+        .eq('id', id)
+        .single();
+        
+      if (error) throw error;
+      
+      return data as User;
+    } catch (error) {
+      console.error(`Error fetching user with ID ${id}:`, error);
+      throw error;
+    }
   },
   
-  createUser: async (user: Omit<User, 'id' | 'created_at'>) => {
-    // First create Supabase auth user with email and random password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: user.email,
-      password: tempPassword,
-      email_confirm: true
-    });
-    
-    if (authError) throw authError;
-    
-    // Then create the user profile
-    const { data, error } = await supabase
-      .from('users')
-      .insert([{ 
-        ...user, 
-        id: authData.user?.id, // Use the Supabase auth user id
-        created_at: new Date().toISOString() 
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // Generate password reset link for the user to set their password
-    await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/password-reset`,
-    });
-    
-    return data;
+  createUser: async (userData: Omit<User, 'id'>) => {
+    try {
+      // First, create the user in auth.users via Supabase Auth API
+      // This is typically handled through the auth service, not here
+      
+      // Then, create the user record in the public.users table
+      const { data, error } = await supabase
+        .from('users')
+        .insert([userData])
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `)
+        .single();
+        
+      if (error) throw error;
+      
+      return data as User;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   },
   
-  updateUser: async (id: string, user: Partial<Omit<User, 'id' | 'created_at'>>) => {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ ...user, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  updateUser: async (id: string, userData: Partial<User>) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update(userData)
+        .eq('id', id)
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `)
+        .single();
+        
+      if (error) throw error;
+      
+      return data as User;
+    } catch (error) {
+      console.error(`Error updating user with ID ${id}:`, error);
+      throw error;
+    }
   },
   
   deleteUser: async (id: string) => {
-    // In a real app, consider deactivating instead of deleting
-    const { error } = await supabase
-      .from('users')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    
-    if (error) throw error;
-    return true;
+    try {
+      // Note: Deleting a user should typically be handled with care
+      // You might want to deactivate the user instead of deleting
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting user with ID ${id}:`, error);
+      throw error;
+    }
   },
   
-  importUsers: async (users: Omit<User, 'id' | 'created_at'>[]) => {
-    // This would be a more complex operation requiring batch processing
-    // and handling of Supabase Auth operations for each user
-    // For simplicity, this is a placeholder
-    const importedUsers = [];
-    for (const user of users) {
-      const tempPassword = Math.random().toString(36).slice(-8);
-      
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: user.email,
-        password: tempPassword,
-        email_confirm: true
-      });
-      
-      if (authError) continue; // Skip this user if there's an error
-      
-      // Create user profile
+  blockUser: async (id: string) => {
+    return userService.updateUser(id, { is_active: false });
+  },
+  
+  activateUser: async (id: string) => {
+    return userService.updateUser(id, { is_active: true });
+  },
+  
+  // Get entity information (region, sector, school)
+  getRegions: async () => {
+    try {
       const { data, error } = await supabase
-        .from('users')
-        .insert([{ 
-          ...user, 
-          id: authData.user?.id,
-          created_at: new Date().toISOString() 
-        }])
-        .select()
-        .single();
-      
-      if (!error && data) {
-        importedUsers.push(data);
+        .from('regions')
+        .select('*');
         
-        // Send password reset email
-        await supabase.auth.resetPasswordForEmail(user.email, {
-          redirectTo: `${window.location.origin}/password-reset`,
-        });
-      }
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching regions:', error);
+      throw error;
     }
-    
-    return importedUsers;
+  },
+  
+  getSectors: async (regionId?: string) => {
+    try {
+      let query = supabase
+        .from('sectors')
+        .select('*');
+        
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching sectors:', error);
+      throw error;
+    }
+  },
+  
+  getSchools: async (sectorId?: string) => {
+    try {
+      let query = supabase
+        .from('schools')
+        .select('*');
+        
+      if (sectorId) {
+        query = query.eq('sector_id', sectorId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching schools:', error);
+      throw error;
+    }
+  },
+  
+  getRoles: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*');
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      throw error;
+    }
   }
 };
 

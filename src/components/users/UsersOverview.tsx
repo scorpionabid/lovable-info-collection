@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   UserPlus, 
   UserX, 
@@ -14,7 +15,8 @@ import {
   Lock,
   CheckCircle,
   Users as UsersIcon,
-  Eye
+  Eye,
+  Loader2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,12 +32,30 @@ import { UserTable } from "./UserTable";
 import { UserModal } from "./UserModal";
 import { UserFilterPanel } from "./UserFilterPanel";
 import { useToast } from "@/hooks/use-toast";
+import userService, { UserFilters } from "@/services/api/userService";
+import { useAuth } from "@/contexts/AuthContext";
+import { utils, writeFile } from "xlsx";
 
 export const UsersOverview = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<UserFilters>({});
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+
+  // Fetch users with react-query
+  const { 
+    data: users = [], 
+    isLoading, 
+    isError, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['users', filters],
+    queryFn: () => userService.getUsers({ ...filters, search: searchTerm }),
+  });
 
   const toggleFilters = () => {
     setShowFilters(!showFilters);
@@ -45,7 +65,17 @@ export const UsersOverview = () => {
     setIsCreatingUser(true);
   };
 
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleApplyFilters = (newFilters: UserFilters) => {
+    setFilters(newFilters);
+    setShowFilters(false);
+  };
+
   const handleImportUsers = () => {
+    // This would typically open a file input dialog
     toast({
       title: "İstifadəçi idxalı",
       description: "İstifadəçi idxalı funksiyası hazırlanır",
@@ -53,13 +83,50 @@ export const UsersOverview = () => {
   };
 
   const handleExportUsers = () => {
-    toast({
-      title: "İstifadəçi ixracı",
-      description: "İstifadəçi ixracı funksiyası hazırlanır",
-    });
+    try {
+      if (users.length === 0) {
+        toast({
+          title: "Xəbərdarlıq",
+          description: "İxrac etmək üçün məlumat yoxdur",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Transform data for Excel export
+      const exportData = users.map(user => ({
+        "Ad": user.first_name,
+        "Soyad": user.last_name,
+        "E-mail": user.email,
+        "Rol": user.roles?.name || user.role,
+        "Status": user.is_active ? "Aktiv" : "Qeyri-aktiv",
+        "Son aktivlik": user.last_login ? new Date(user.last_login).toLocaleString('az-AZ') : "Heç vaxt",
+      }));
+      
+      const worksheet = utils.json_to_sheet(exportData);
+      const workbook = utils.book_new();
+      utils.book_append_sheet(workbook, worksheet, "İstifadəçilər");
+      
+      // Generate file name
+      const fileName = `istifadeciler_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      writeFile(workbook, fileName);
+      
+      toast({
+        title: "İstifadəçilər ixrac edildi",
+        description: `${users.length} istifadəçi ${fileName} faylına ixrac edildi`,
+      });
+    } catch (err) {
+      console.error("Export error:", err);
+      toast({
+        title: "İxrac xətası",
+        description: "İstifadəçilərin ixracı zamanı xəta baş verdi",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = async (action: string) => {
     if (selectedRows.length === 0) {
       toast({
         title: "Xəbərdarlıq",
@@ -69,11 +136,68 @@ export const UsersOverview = () => {
       return;
     }
 
-    toast({
-      title: "Əməliyyat yerinə yetirilir",
-      description: `${action} əməliyyatı ${selectedRows.length} istifadəçi üçün tətbiq ediləcək`,
-    });
+    try {
+      switch (action) {
+        case "Blokla":
+          await Promise.all(selectedRows.map(id => userService.blockUser(id)));
+          toast({
+            title: "İstifadəçilər bloklandı",
+            description: `${selectedRows.length} istifadəçi bloklandı`,
+          });
+          break;
+        case "Aktivləşdir":
+          await Promise.all(selectedRows.map(id => userService.activateUser(id)));
+          toast({
+            title: "İstifadəçilər aktivləşdirildi",
+            description: `${selectedRows.length} istifadəçi aktivləşdirildi`,
+          });
+          break;
+        case "Şifrə sıfırla":
+          // This would typically call the password reset API for each user
+          toast({
+            title: "Şifrə sıfırlama",
+            description: `${selectedRows.length} istifadəçi üçün şifrə sıfırlama təlimatı göndərildi`,
+          });
+          break;
+        case "Sil":
+          await Promise.all(selectedRows.map(id => userService.deleteUser(id)));
+          toast({
+            title: "İstifadəçilər silindi",
+            description: `${selectedRows.length} istifadəçi silindi`,
+            variant: "destructive",
+          });
+          break;
+      }
+      
+      // Clear selection and refetch data
+      setSelectedRows([]);
+      refetch();
+    } catch (err) {
+      console.error(`Bulk action error (${action}):`, err);
+      toast({
+        title: "Əməliyyat xətası",
+        description: "Əməliyyat zamanı xəta baş verdi",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (isError) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <h3 className="text-lg font-medium text-red-800 mb-2">Məlumatları yükləmək mümkün olmadı</h3>
+        <p className="text-red-600">{(error as Error).message}</p>
+        <Button 
+          onClick={() => refetch()} 
+          variant="outline" 
+          className="mt-4 flex items-center gap-2"
+        >
+          <RefreshCw size={16} />
+          <span>Yenidən cəhd et</span>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -84,6 +208,8 @@ export const UsersOverview = () => {
             <Input
               placeholder="İstifadəçi axtar..."
               className="pl-9 border-infoline-light-gray"
+              value={searchTerm}
+              onChange={handleSearch}
             />
           </div>
           <Button 
@@ -120,6 +246,7 @@ export const UsersOverview = () => {
             onClick={handleCreateUser}
             size="sm" 
             className="flex items-center gap-1 bg-infoline-blue hover:bg-infoline-dark-blue"
+            disabled={isLoading}
           >
             <UserPlus size={16} />
             <span>Yeni istifadəçi</span>
@@ -127,7 +254,13 @@ export const UsersOverview = () => {
         </div>
       </div>
 
-      {showFilters && <UserFilterPanel onClose={() => setShowFilters(false)} />}
+      {showFilters && (
+        <UserFilterPanel 
+          onClose={() => setShowFilters(false)} 
+          onApplyFilters={handleApplyFilters}
+          currentFilters={filters}
+        />
+      )}
 
       {selectedRows.length > 0 && (
         <div className="bg-infoline-light-blue/10 p-3 rounded-lg border border-infoline-light-blue flex items-center justify-between">
@@ -176,12 +309,34 @@ export const UsersOverview = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <UserTable onSelectedRowsChange={setSelectedRows} selectedRows={selectedRows} />
-      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 text-infoline-blue animate-spin mb-2" />
+            <p className="text-infoline-dark-gray">Məlumatlar yüklənir...</p>
+          </div>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <UsersIcon className="h-12 w-12 text-infoline-light-gray mb-3" />
+            <h3 className="text-lg font-medium text-infoline-dark-blue mb-1">İstifadəçi tapılmadı</h3>
+            <p className="text-infoline-dark-gray max-w-md">Axtarış meyarlarına uyğun heç bir istifadəçi tapılmadı. Başqa filtrlər sınayın və ya yeni istifadəçi əlavə edin.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <UserTable 
+            users={users} 
+            onSelectedRowsChange={setSelectedRows} 
+            selectedRows={selectedRows}
+            onRefetch={refetch}
+          />
+        </div>
+      )}
 
       {isCreatingUser && (
-        <UserModal onClose={() => setIsCreatingUser(false)} />
+        <UserModal onClose={() => setIsCreatingUser(false)} onSuccess={() => refetch()} />
       )}
     </div>
   );

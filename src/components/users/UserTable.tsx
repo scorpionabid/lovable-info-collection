@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -28,110 +29,81 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserViewModal } from "./UserViewModal";
 import { UserModal } from "./UserModal";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock data for demonstration
-const mockUsers = [
-  {
-    id: "1",
-    name: "Əli",
-    surname: "Məmmədov",
-    email: "ali.mammadov@example.com",
-    role: "super-admin",
-    entity: "Bütün sistem",
-    lastActive: "2023-06-12T09:30:00",
-    status: "active",
-    avatarUrl: "",
-  },
-  {
-    id: "2",
-    name: "Aygün",
-    surname: "Əliyeva",
-    email: "aygun.aliyeva@example.com",
-    role: "region-admin",
-    entity: "Bakı regionu",
-    lastActive: "2023-06-11T14:45:00",
-    status: "active",
-    avatarUrl: "",
-  },
-  {
-    id: "3",
-    name: "Orxan",
-    surname: "Həsənli",
-    email: "orxan.hasanli@example.com",
-    role: "sector-admin",
-    entity: "Yasamal sektoru",
-    lastActive: "2023-06-10T11:20:00",
-    status: "inactive",
-    avatarUrl: "",
-  },
-  {
-    id: "4",
-    name: "Leyla",
-    surname: "Quliyeva",
-    email: "leyla.guliyeva@example.com",
-    role: "school-admin",
-    entity: "134 nömrəli məktəb",
-    lastActive: "2023-06-09T16:15:00",
-    status: "active",
-    avatarUrl: "",
-  },
-  {
-    id: "5",
-    name: "Rəşad",
-    surname: "Məlikzadə",
-    email: "rashad.malikzade@example.com",
-    role: "sector-admin",
-    entity: "Nəsimi sektoru",
-    lastActive: "2023-06-08T10:05:00",
-    status: "active",
-    avatarUrl: "",
-  },
-  {
-    id: "6",
-    name: "Nərgiz",
-    surname: "Əhmədova",
-    email: "nargiz.ahmadova@example.com",
-    role: "school-admin",
-    entity: "220 nömrəli məktəb",
-    lastActive: "2023-06-07T13:40:00",
-    status: "blocked",
-    avatarUrl: "",
-  },
-  {
-    id: "7",
-    name: "Elçin",
-    surname: "Hüseynzadə",
-    email: "elchin.huseynzade@example.com",
-    role: "region-admin",
-    entity: "Gəncə regionu",
-    lastActive: "2023-06-06T09:15:00",
-    status: "active",
-    avatarUrl: "",
-  },
-  {
-    id: "8",
-    name: "Sevda",
-    surname: "Kərimova",
-    email: "sevda.kerimova@example.com",
-    role: "school-admin",
-    entity: "45 nömrəli məktəb",
-    lastActive: "2023-06-05T15:30:00",
-    status: "inactive",
-    avatarUrl: "",
-  },
-];
+import { User } from "@/services/api/userService";
+import userService from "@/services/api/userService";
+import { UserRole } from "@/contexts/AuthContext";
+import { format, parseISO } from "date-fns";
+import { az } from "date-fns/locale";
 
 interface UserTableProps {
+  users: User[];
   selectedRows: string[];
   onSelectedRowsChange: (rows: string[]) => void;
+  onRefetch: () => void;
 }
 
-export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps) => {
+export const UserTable = ({ users, selectedRows, onSelectedRowsChange, onRefetch }: UserTableProps) => {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [viewUser, setViewUser] = useState<typeof mockUsers[0] | null>(null);
-  const [editUser, setEditUser] = useState<typeof mockUsers[0] | null>(null);
+  const [viewUser, setViewUser] = useState<User | null>(null);
+  const [editUser, setEditUser] = useState<User | null>(null);
   const { toast } = useToast();
+
+  // Mutations
+  const blockUserMutation = useMutation({
+    mutationFn: (userId: string) => userService.blockUser(userId),
+    onSuccess: () => {
+      toast({
+        title: "İstifadəçi bloklandı",
+        description: "İstifadəçi uğurla bloklandı",
+      });
+      onRefetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Xəta baş verdi",
+        description: `İstifadəçini bloklamaq mümkün olmadı: ${(error as Error).message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const activateUserMutation = useMutation({
+    mutationFn: (userId: string) => userService.activateUser(userId),
+    onSuccess: () => {
+      toast({
+        title: "İstifadəçi aktivləşdirildi",
+        description: "İstifadəçi uğurla aktivləşdirildi",
+      });
+      onRefetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Xəta baş verdi",
+        description: `İstifadəçini aktivləşdirmək mümkün olmadı: ${(error as Error).message}`,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => userService.deleteUser(userId),
+    onSuccess: () => {
+      toast({
+        title: "İstifadəçi silindi",
+        description: "İstifadəçi uğurla silindi",
+        variant: "destructive",
+      });
+      onRefetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Xəta baş verdi",
+        description: `İstifadəçini silmək mümkün olmadı: ${(error as Error).message}`,
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -143,10 +115,10 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
   };
 
   const handleSelectAll = () => {
-    if (selectedRows.length === mockUsers.length) {
+    if (selectedRows.length === users.length) {
       onSelectedRowsChange([]);
     } else {
-      onSelectedRowsChange(mockUsers.map(user => user.id));
+      onSelectedRowsChange(users.map(user => user.id));
     }
   };
 
@@ -158,7 +130,7 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
     }
   };
 
-  const handleAction = (action: string, user: typeof mockUsers[0]) => {
+  const handleAction = (action: string, user: User) => {
     switch (action) {
       case 'view':
         setViewUser(user);
@@ -167,49 +139,44 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
         setEditUser(user);
         break;
       case 'block':
-        toast({
-          title: "İstifadəçi bloklandı",
-          description: `${user.name} ${user.surname} bloklandı`,
-        });
+        blockUserMutation.mutate(user.id);
         break;
       case 'activate':
-        toast({
-          title: "İstifadəçi aktivləşdirildi",
-          description: `${user.name} ${user.surname} aktivləşdirildi`,
-        });
+        activateUserMutation.mutate(user.id);
         break;
       case 'reset':
+        // This would typically call a password reset function
         toast({
           title: "Şifrə sıfırlandı",
-          description: `${user.name} ${user.surname} üçün şifrə sıfırlama e-poçtu göndərildi`,
+          description: `${user.first_name} ${user.last_name} üçün şifrə sıfırlama e-poçtu göndərildi`,
         });
         break;
       case 'delete':
-        toast({
-          title: "İstifadəçi silindi",
-          description: `${user.name} ${user.surname} silindi`,
-          variant: "destructive",
-        });
+        if (window.confirm(`${user.first_name} ${user.last_name} istifadəçisini silmək istədiyinizə əminsinizmi?`)) {
+          deleteUserMutation.mutate(user.id);
+        }
         break;
       default:
         break;
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('az-AZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "Heç vaxt";
+    try {
+      return format(parseISO(dateString), "dd.MM.yyyy HH:mm", { locale: az });
+    } catch (error) {
+      console.error("Date format error:", error);
+      return "Tarix xətası";
+    }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
+  const getRoleColor = (role: string | undefined) => {
+    // Normalize role name
+    const normalizedRole = getNormalizedRole(role);
+    switch (normalizedRole) {
       case 'super-admin':
+      case 'superadmin':
         return 'bg-red-100 text-red-800';
       case 'region-admin':
         return 'bg-blue-100 text-blue-800';
@@ -222,9 +189,23 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
     }
   };
 
-  const getRoleName = (role: string) => {
-    switch (role) {
+  const getNormalizedRole = (role: string | undefined): UserRole | undefined => {
+    if (!role) return undefined;
+    
+    if (role === 'superadmin') return 'super-admin';
+    if (role === 'super-admin') return 'super-admin';
+    
+    return role as UserRole;
+  };
+
+  const getRoleName = (user: User) => {
+    // Try to get role from roles relationship first
+    const roleName = user.roles?.name || user.role;
+    if (!roleName) return 'Rol təyin edilməyib';
+    
+    switch (roleName) {
       case 'super-admin':
+      case 'superadmin':
         return 'SuperAdmin';
       case 'region-admin':
         return 'Region Admin';
@@ -233,39 +214,76 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
       case 'school-admin':
         return 'Məktəb Admin';
       default:
-        return role;
+        return roleName;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'blocked':
-        return 'bg-red-100 text-red-800';
+  const getStatusColor = (isActive: boolean | undefined) => {
+    if (isActive === undefined) return 'bg-gray-100 text-gray-800';
+    return isActive 
+      ? 'bg-green-100 text-green-800' 
+      : 'bg-red-100 text-red-800';
+  };
+
+  const getStatusName = (isActive: boolean | undefined) => {
+    if (isActive === undefined) return 'Naməlum';
+    return isActive ? 'Aktiv' : 'Bloklanmış';
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`;
+  };
+
+  const getEntityName = (user: User) => {
+    // This would typically fetch the actual name based on the ID
+    // For now, a placeholder
+    if (user.school_id) return "Məktəb";
+    if (user.sector_id) return "Sektor";
+    if (user.region_id) return "Region";
+    if (getRoleName(user).includes("Super")) return "Bütün sistem";
+    return "Təyin edilməyib";
+  };
+
+  // Sort users if a sort field is specified
+  const sortedUsers = [...users].sort((a, b) => {
+    if (!sortField) return 0;
+    
+    let valueA: any;
+    let valueB: any;
+    
+    switch (sortField) {
+      case 'name':
+        valueA = a.first_name + a.last_name;
+        valueB = b.first_name + b.last_name;
+        break;
+      case 'email':
+        valueA = a.email;
+        valueB = b.email;
+        break;
+      case 'role':
+        valueA = getRoleName(a);
+        valueB = getRoleName(b);
+        break;
+      case 'entity':
+        valueA = getEntityName(a);
+        valueB = getEntityName(b);
+        break;
+      case 'lastActive':
+        valueA = a.last_login || '';
+        valueB = b.last_login || '';
+        break;
+      case 'status':
+        valueA = a.is_active ? 1 : 0;
+        valueB = b.is_active ? 1 : 0;
+        break;
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 0;
     }
-  };
-
-  const getStatusName = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'Aktiv';
-      case 'inactive':
-        return 'Qeyri-aktiv';
-      case 'blocked':
-        return 'Bloklanmış';
-      default:
-        return status;
-    }
-  };
-
-  const getInitials = (name: string, surname: string) => {
-    return `${name.charAt(0)}${surname.charAt(0)}`;
-  };
+    
+    if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+    if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   return (
     <>
@@ -275,7 +293,7 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
             <tr>
               <th className="px-4 py-3 text-left">
                 <Checkbox 
-                  checked={selectedRows.length === mockUsers.length && mockUsers.length > 0} 
+                  checked={selectedRows.length === users.length && users.length > 0} 
                   onCheckedChange={handleSelectAll}
                 />
               </th>
@@ -351,7 +369,7 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
             </tr>
           </thead>
           <tbody className="divide-y divide-infoline-light-gray">
-            {mockUsers.map(user => (
+            {sortedUsers.map(user => (
               <tr key={user.id} className="hover:bg-infoline-lightest-gray transition-colors">
                 <td className="px-4 py-3">
                   <Checkbox 
@@ -362,14 +380,14 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatarUrl} />
+                      <AvatarImage src="" />
                       <AvatarFallback className="bg-infoline-light-blue text-white">
-                        {getInitials(user.name, user.surname)}
+                        {getInitials(user.first_name, user.last_name)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium text-infoline-dark-blue">
-                        {user.name} {user.surname}
+                        {user.first_name} {user.last_name}
                       </div>
                     </div>
                   </div>
@@ -378,20 +396,20 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
                   {user.email}
                 </td>
                 <td className="px-4 py-3">
-                  <Badge className={`${getRoleColor(user.role)} font-normal`}>
-                    {getRoleName(user.role)}
+                  <Badge className={`${getRoleColor(user.roles?.name || user.role)} font-normal`}>
+                    {getRoleName(user)}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 text-infoline-dark-gray">{user.entity}</td>
+                <td className="px-4 py-3 text-infoline-dark-gray">{getEntityName(user)}</td>
                 <td className="px-4 py-3 text-infoline-dark-gray">
                   <div className="flex items-center gap-1">
                     <Calendar size={14} />
-                    <span>{formatDate(user.lastActive)}</span>
+                    <span>{formatDate(user.last_login)}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge className={`${getStatusColor(user.status)} font-normal`}>
-                    {getStatusName(user.status)}
+                  <Badge className={`${getStatusColor(user.is_active)} font-normal`}>
+                    {getStatusName(user.is_active)}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -412,7 +430,7 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
                         <Edit className="mr-2 h-4 w-4" />
                         <span>Redaktə et</span>
                       </DropdownMenuItem>
-                      {user.status === 'active' ? (
+                      {user.is_active ? (
                         <DropdownMenuItem onClick={() => handleAction('block', user)}>
                           <XCircle className="mr-2 h-4 w-4" />
                           <span>Blokla</span>
@@ -449,7 +467,14 @@ export const UserTable = ({ selectedRows, onSelectedRowsChange }: UserTableProps
       )}
 
       {editUser && (
-        <UserModal user={editUser} onClose={() => setEditUser(null)} />
+        <UserModal 
+          user={editUser} 
+          onClose={() => setEditUser(null)} 
+          onSuccess={() => {
+            onRefetch();
+            setEditUser(null);
+          }}
+        />
       )}
     </>
   );

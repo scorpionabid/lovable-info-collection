@@ -1,55 +1,68 @@
 
-import { X, Calendar, Mail, Phone, User, MapPin, Shield, CheckCircle, Clock, Building } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  X, 
+  Mail, 
+  User as UserIcon, 
+  Phone, 
+  UserCheck, 
+  MapPin, 
+  Building, 
+  School, 
+  Calendar, 
+  Shield,
+  Map
+} from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { az } from "date-fns/locale";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { User } from "@/services/api/userService";
 
 interface UserViewModalProps {
-  user: {
-    id: string;
-    name: string;
-    surname: string;
-    email: string;
-    role: string;
-    entity: string;
-    lastActive: string;
-    status: string;
-    avatarUrl: string;
-  };
+  user: User;
   onClose: () => void;
 }
 
 export const UserViewModal = ({ user, onClose }: UserViewModalProps) => {
   const getInitials = (name: string, surname: string) => {
-    return `${name.charAt(0)}${surname.charAt(0)}`;
+    return `${name?.charAt(0) || ""}${surname?.charAt(0) || ""}`;
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'super-admin':
-        return 'bg-red-100 text-red-800';
-      case 'region-admin':
-        return 'bg-blue-100 text-blue-800';
-      case 'sector-admin':
-        return 'bg-green-100 text-green-800';
-      case 'school-admin':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "Heç vaxt";
+    try {
+      return format(parseISO(dateString), "dd MMMM yyyy, HH:mm", { locale: az });
+    } catch (error) {
+      return "Tarix xətası";
     }
   };
 
-  const getRoleName = (role: string) => {
-    switch (role) {
+  const getRoleIcon = (role: string | undefined) => {
+    if (!role) return UserCheck;
+    
+    if (role.includes("super")) return Shield;
+    if (role.includes("region")) return Map;
+    if (role.includes("sector")) return Building;
+    return School;
+  };
+
+  const getRoleName = (user: User) => {
+    // Try to get role from roles relationship first
+    const roleName = user.roles?.name || user.role;
+    if (!roleName) return 'Rol təyin edilməyib';
+    
+    switch (roleName) {
       case 'super-admin':
+      case 'superadmin':
         return 'SuperAdmin';
       case 'region-admin':
         return 'Region Admin';
@@ -58,215 +71,140 @@ export const UserViewModal = ({ user, onClose }: UserViewModalProps) => {
       case 'school-admin':
         return 'Məktəb Admin';
       default:
-        return role;
+        return roleName;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'blocked':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const getRoleColor = (role: string | undefined) => {
+    if (!role) return 'bg-gray-100 text-gray-800';
+    
+    if (role.includes("super")) return 'bg-red-100 text-red-800';
+    if (role.includes("region")) return 'bg-blue-100 text-blue-800';
+    if (role.includes("sector")) return 'bg-green-100 text-green-800';
+    return 'bg-purple-100 text-purple-800';
   };
 
-  const getStatusName = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'Aktiv';
-      case 'inactive':
-        return 'Qeyri-aktiv';
-      case 'blocked':
-        return 'Bloklanmış';
-      default:
-        return status;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('az-AZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  };
-
-  // Mock data for user activity
-  const userActivity = [
-    { date: "2023-06-12T09:30:00", action: "Sistemə daxil oldu", ip: "192.168.1.1" },
-    { date: "2023-06-12T10:15:00", action: "Məktəb məlumatlarını yenilədi", ip: "192.168.1.1" },
-    { date: "2023-06-11T14:45:00", action: "Yeni hesabat yaratdı", ip: "192.168.1.1" },
-    { date: "2023-06-10T11:20:00", action: "İstifadəçi məlumatlarını dəyişdi", ip: "192.168.1.2" },
-    { date: "2023-06-09T16:15:00", action: "Şifrəsini dəyişdi", ip: "192.168.1.3" },
-  ];
-
-  // Mock data for permissions
-  const permissions = [
-    { category: "İstifadəçilər", actions: ["Görmə", "Yaratma", "Redaktə", "Silmə"] },
-    { category: "Məktəblər", actions: ["Görmə", "Yaratma", "Redaktə", "Silmə"] },
-    { category: "Regionlar", actions: ["Görmə", "Yaratma", "Redaktə", "Silmə"] },
-    { category: "Sektorlar", actions: ["Görmə", "Yaratma", "Redaktə", "Silmə"] },
-    { category: "Hesabatlar", actions: ["Görmə", "Yaratma", "Redaktə", "İxrac"] },
-  ];
-
-  // Mock data for related entities
-  const relatedEntities = [
-    { type: "Region", name: "Bakı regionu" },
-    { type: "Sektor", name: "Yasamal sektoru" },
-    { type: "Sektor", name: "Nəsimi sektoru" },
-    { type: "Məktəb", name: "134 nömrəli məktəb" },
-    { type: "Məktəb", name: "220 nömrəli məktəb" },
-  ];
+  const RoleIcon = getRoleIcon(user.roles?.name || user.role);
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>İstifadəçi Təfərrüatları</DialogTitle>
+          <DialogTitle>İstifadəçi Məlumatları</DialogTitle>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
-        
-        <div className="flex flex-col md:flex-row gap-6 mt-4">
-          <div className="flex flex-col items-center space-y-3 md:w-1/3">
-            <Avatar className="h-28 w-28">
-              <AvatarImage src={user.avatarUrl} />
-              <AvatarFallback className="bg-infoline-light-blue text-white text-2xl">
-                {getInitials(user.name, user.surname)}
+
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col items-center">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src="" />
+              <AvatarFallback className="bg-infoline-light-blue text-white text-xl">
+                {getInitials(user.first_name, user.last_name)}
               </AvatarFallback>
             </Avatar>
-            
-            <h3 className="text-xl font-semibold text-infoline-dark-blue">
-              {user.name} {user.surname}
-            </h3>
-            
-            <Badge className={`${getRoleColor(user.role)} font-normal`}>
-              {getRoleName(user.role)}
-            </Badge>
-            
-            <Badge className={`${getStatusColor(user.status)} font-normal`}>
-              {getStatusName(user.status)}
-            </Badge>
 
-            <Separator className="my-2" />
-            
-            <div className="w-full space-y-3">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-infoline-dark-gray" />
-                <span className="text-sm text-infoline-dark-gray">{user.email}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-infoline-dark-gray" />
-                <span className="text-sm text-infoline-dark-gray">+994 50 123 45 67</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-infoline-dark-gray" />
-                <span className="text-sm text-infoline-dark-gray">{user.entity}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-infoline-dark-gray" />
-                <span className="text-sm text-infoline-dark-gray">Qeydiyyat: 01.01.2023</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-infoline-dark-gray" />
-                <span className="text-sm text-infoline-dark-gray">
-                  Son aktivlik: {formatDate(user.lastActive)}
-                </span>
-              </div>
+            <div className="mt-4 text-center">
+              <Badge className={`${getRoleColor(user.roles?.name || user.role)} font-normal`}>
+                {getRoleName(user)}
+              </Badge>
             </div>
           </div>
           
-          <div className="md:w-2/3">
-            <Tabs defaultValue="activity">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="activity">Aktivlik</TabsTrigger>
-                <TabsTrigger value="permissions">İcazələr</TabsTrigger>
-                <TabsTrigger value="related">Əlaqəli Entitiylər</TabsTrigger>
-              </TabsList>
+          <div className="flex-1 space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-infoline-dark-blue">
+                {user.first_name} {user.last_name}
+              </h2>
+              <div className="flex items-center gap-1 text-infoline-dark-gray mt-1">
+                <Mail className="h-4 w-4" />
+                <span>{user.email}</span>
+              </div>
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <RoleIcon className="h-5 w-5 text-infoline-blue" />
+                <div>
+                  <p className="text-sm text-infoline-dark-gray">İstifadəçi rolu</p>
+                  <p className="font-medium text-infoline-dark-blue">{getRoleName(user)}</p>
+                </div>
+              </div>
               
-              <TabsContent value="activity" className="mt-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-infoline-dark-blue">Aktivlik Tarixçəsi</h4>
-                  
-                  <div className="space-y-3">
-                    {userActivity.map((activity, index) => (
-                      <div key={index} className="bg-infoline-lightest-gray p-3 rounded-md">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-infoline-dark-blue">
-                            {activity.action}
-                          </span>
-                          <span className="text-xs text-infoline-dark-gray">
-                            IP: {activity.ip}
-                          </span>
-                        </div>
-                        <div className="text-xs text-infoline-dark-gray">
-                          {formatDate(activity.date)}
-                        </div>
-                      </div>
+              {user.region_id && (
+                <div className="flex items-center gap-2">
+                  <Map className="h-5 w-5 text-infoline-blue" />
+                  <div>
+                    <p className="text-sm text-infoline-dark-gray">Region</p>
+                    <p className="font-medium text-infoline-dark-blue">Region ID: {user.region_id}</p>
+                  </div>
+                </div>
+              )}
+              
+              {user.sector_id && (
+                <div className="flex items-center gap-2">
+                  <Building className="h-5 w-5 text-infoline-blue" />
+                  <div>
+                    <p className="text-sm text-infoline-dark-gray">Sektor</p>
+                    <p className="font-medium text-infoline-dark-blue">Sektor ID: {user.sector_id}</p>
+                  </div>
+                </div>
+              )}
+              
+              {user.school_id && (
+                <div className="flex items-center gap-2">
+                  <School className="h-5 w-5 text-infoline-blue" />
+                  <div>
+                    <p className="text-sm text-infoline-dark-gray">Məktəb</p>
+                    <p className="font-medium text-infoline-dark-blue">Məktəb ID: {user.school_id}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-infoline-blue" />
+                <div>
+                  <p className="text-sm text-infoline-dark-gray">Son aktivlik</p>
+                  <p className="font-medium text-infoline-dark-blue">{formatDate(user.last_login)}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-infoline-blue" />
+                <div>
+                  <p className="text-sm text-infoline-dark-gray">Status</p>
+                  <p className="font-medium text-infoline-dark-blue">
+                    {user.is_active ? "Aktiv" : "Qeyri-aktiv"}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {user.roles?.permissions && user.roles.permissions.length > 0 && (
+              <>
+                <Separator />
+                
+                <div>
+                  <h3 className="font-medium text-infoline-dark-blue mb-2">İcazələr</h3>
+                  <div className="flex flex-wrap gap-1">
+                    {user.roles.permissions.map((permission, index) => (
+                      <Badge key={index} variant="outline" className="bg-infoline-lightest-gray">
+                        {permission}
+                      </Badge>
                     ))}
                   </div>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="permissions" className="mt-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-infoline-dark-blue">İcazələr və Səlahiyyətlər</h4>
-                  
-                  <div className="border rounded-md divide-y">
-                    {permissions.map((permission, index) => (
-                      <div key={index} className="p-3">
-                        <h5 className="font-medium text-infoline-dark-blue mb-2">
-                          {permission.category}
-                        </h5>
-                        <div className="flex flex-wrap gap-2">
-                          {permission.actions.map((action, i) => (
-                            <div key={i} className="flex items-center gap-1 bg-infoline-lightest-gray px-2 py-1 rounded-md">
-                              <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                              <span className="text-xs">{action}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="related" className="mt-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-infoline-dark-blue">Əlaqəli Entitiylər</h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {relatedEntities.map((entity, index) => (
-                      <div key={index} className="flex items-center gap-3 bg-infoline-lightest-gray p-3 rounded-md">
-                        <div className="bg-infoline-light-blue/20 p-2 rounded-full">
-                          <Building className="h-4 w-4 text-infoline-light-blue" />
-                        </div>
-                        <div>
-                          <div className="text-xs text-infoline-dark-gray">{entity.type}</div>
-                          <div className="text-sm font-medium text-infoline-dark-blue">{entity.name}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+              </>
+            )}
           </div>
         </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Bağla</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
