@@ -9,7 +9,7 @@ const userProfileService = {
       if (error) throw error;
       if (!user) return null;
       
-      // First fetch user data without joining roles
+      // First fetch user data without joining roles to avoid foreign key error
       const { data: userData, error: profileError } = await supabase
         .from('users')
         .select('*')

@@ -1,23 +1,23 @@
 
 import { supabase } from '../../supabase/supabaseClient';
 
-export interface LoginCredentials {
+export type LoginCredentials = {
   email: string;
   password: string;
-}
+};
 
-export interface RegisterCredentials {
+export type RegisterCredentials = {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
   role?: string;
-}
+};
 
-export interface ResetPasswordData {
+export type ResetPasswordData = {
   token: string;
   newPassword: string;
-}
+};
 
 const authCore = {
   login: async (credentials: LoginCredentials) => {
@@ -36,7 +36,8 @@ const authCore = {
       
       console.log('Auth successful, fetching user data');
       
-      // Modified query: First fetch the user without joining roles
+      // First, fetch the user data without joining roles
+      // This avoids the foreign key relationship error
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
@@ -55,7 +56,7 @@ const authCore = {
           .from('roles')
           .select('*')
           .eq('id', userData.role_id)
-          .maybeSingle();
+          .maybeSingle(); // Use maybeSingle instead of single to avoid errors if no role is found
           
         if (!roleError && roleResult) {
           roleData = roleResult;

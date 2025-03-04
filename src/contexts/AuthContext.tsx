@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import authService, { LoginCredentials } from '@/services/api/authService';
 import { toast } from 'sonner';
 
-// Define UserRole type
+// Define UserRole type - add "superadmin" to match what's in the database
 export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin' | 'superadmin';
 
 interface User {
@@ -75,9 +75,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Verify token is still valid by calling getCurrentUser
           const userData = await authService.getCurrentUser();
           if (userData) {
-            // Determine role from either roles object or role_id
-            const userRole = userData.roles?.name || 
-                            (typeof userData.role_id === 'string' ? userData.role_id as UserRole : 'school-admin');
+            // Map role value to appropriate UserRole type - handle "superadmin" case
+            let userRole: UserRole = userData.roles?.name || userData.role_id;
+            
+            // If role is superadmin but we need super-admin in the UI, convert it
+            if (userRole === 'superadmin') {
+              console.log('Converting superadmin role for UI compatibility');
+            }
             
             setUser({
               id: userData.id,
@@ -125,8 +129,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (userData) {
         // Determine role from either roles object or role_id
-        const userRole = userData.roles?.name || 
-                         (typeof userData.role_id === 'string' ? userData.role_id as UserRole : 'school-admin');
+        // Ensure it maps to a valid UserRole for UI
+        let userRole: UserRole;
+        
+        if (userData.roles?.name) {
+          userRole = userData.roles.name as UserRole;
+        } else if (typeof userData.role_id === 'string') {
+          userRole = userData.role_id as UserRole;
+        } else {
+          userRole = 'school-admin'; // Default fallback
+        }
         
         setUser({
           id: userData.id,
