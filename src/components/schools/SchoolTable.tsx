@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,30 +10,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Archive, MoreHorizontal, Download } from "lucide-react";
-
-interface School {
-  id: string;
-  name: string;
-  type: string;
-  region: string;
-  sector: string;
-  studentCount: number;
-  teacherCount: number;
-  completionRate: number;
-  status: string;
-  director: string;
-  contactEmail: string;
-  contactPhone: string;
-  createdAt: string;
-}
+import { School, archiveSchool, exportSchoolData } from "@/services/supabase/schoolService";
 
 interface SchoolTableProps {
   schools: School[];
+  isLoading?: boolean;
+  onSchoolUpdated?: () => void;
 }
 
-export const SchoolTable = ({ schools }: SchoolTableProps) => {
+export const SchoolTable = ({ schools, isLoading = false, onSchoolUpdated }: SchoolTableProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  const [archivingSchool, setArchivingSchool] = useState<string | null>(null);
 
   const handleView = (school: School) => {
     navigate(`/schools/${school.id}`);
@@ -41,17 +31,61 @@ export const SchoolTable = ({ schools }: SchoolTableProps) => {
   const handleEdit = (school: School) => {
     // This would typically open an edit modal
     console.log(`Editing school: ${school.name}`);
+    toast({
+      title: "Redaktə rejimi",
+      description: `${school.name} redaktə olunur.`
+    });
   };
 
-  const handleArchive = (school: School) => {
-    // This would typically send an API request to archive the school
-    console.log(`Archiving school: ${school.name}`);
+  const handleArchive = async (school: School) => {
+    try {
+      setArchivingSchool(school.id);
+      await archiveSchool(school.id);
+      toast({
+        title: "Məktəb arxivləşdirildi",
+        description: `${school.name} uğurla arxivləşdirildi.`
+      });
+      if (onSchoolUpdated) {
+        onSchoolUpdated();
+      }
+    } catch (error) {
+      console.error('Error archiving school:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Məktəb arxivləşdirilmədi.",
+        variant: "destructive"
+      });
+    } finally {
+      setArchivingSchool(null);
+    }
   };
 
-  const handleExport = (school: School) => {
-    // This would typically trigger an export functionality
-    console.log(`Exporting school data: ${school.name}`);
+  const handleExport = async (school: School) => {
+    try {
+      await exportSchoolData(school.id);
+      toast({
+        title: "Məlumatlar ixrac edildi",
+        description: `${school.name} məlumatları uğurla ixrac edildi.`
+      });
+    } catch (error) {
+      console.error('Error exporting school data:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Məlumatlar ixrac edilmədi.",
+        variant: "destructive"
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -120,9 +154,12 @@ export const SchoolTable = ({ schools }: SchoolTableProps) => {
                         <Edit className="mr-2 h-4 w-4" />
                         <span>Redaktə et</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(school)}>
+                      <DropdownMenuItem 
+                        onClick={() => handleArchive(school)}
+                        disabled={archivingSchool === school.id}
+                      >
                         <Archive className="mr-2 h-4 w-4" />
-                        <span>Arxivləşdir</span>
+                        <span>{archivingSchool === school.id ? 'Arxivləşdirilir...' : 'Arxivləşdir'}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleExport(school)}>
                         <Download className="mr-2 h-4 w-4" />
@@ -137,7 +174,7 @@ export const SchoolTable = ({ schools }: SchoolTableProps) => {
         </table>
       </div>
       
-      {schools.length === 0 && (
+      {schools.length === 0 && !isLoading && (
         <div className="py-12 text-center">
           <p className="text-infoline-dark-gray">Nəticə tapılmadı</p>
         </div>

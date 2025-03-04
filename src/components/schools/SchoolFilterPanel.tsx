@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -10,32 +10,99 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { SchoolFilter } from "@/services/supabase/schoolService";
+import { getRegionsForDropdown } from "@/services/supabase/sector/helperFunctions";
 
 interface SchoolFilterPanelProps {
   isVisible: boolean;
   onToggleVisibility: () => void;
+  onApplyFilters: (filters: SchoolFilter) => void;
 }
 
-export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilterPanelProps) => {
+export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilters }: SchoolFilterPanelProps) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRegionId, setSelectedRegionId] = useState<string>('');
+  const [selectedSectorId, setSelectedSectorId] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [minRate, setMinRate] = useState<string>('');
+  const [maxRate, setMaxRate] = useState<string>('');
   
-  // These would typically be fetched from an API
-  const regions = [
-    { id: '1', name: 'Bakı şəhəri' },
-    { id: '2', name: 'Sumqayıt şəhəri' },
-    { id: '3', name: 'Gəncə şəhəri' },
-  ];
+  const [regions, setRegions] = useState<Array<{id: string, name: string}>>([]);
+  const [sectors, setSectors] = useState<Array<{id: string, name: string}>>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const sectors = [
-    { id: '1', name: 'Nəsimi rayonu' },
-    { id: '2', name: 'Yasamal rayonu' },
-    { id: '3', name: 'Sabunçu rayonu' },
-    { id: '4', name: 'Mərkəz' },
-  ];
+  // Load regions when component mounts
+  useEffect(() => {
+    const loadRegions = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getRegionsForDropdown();
+        setRegions(data);
+      } catch (error) {
+        console.error('Error loading regions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadRegions();
+  }, []);
+  
+  // Load sectors when a region is selected
+  useEffect(() => {
+    const loadSectors = async () => {
+      if (!selectedRegionId) {
+        setSectors([]);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        // This would be replaced with a call to get sectors by region ID
+        // For now, using the mock data
+        const sectorsMock = [
+          { id: '1', name: 'Nəsimi rayonu' },
+          { id: '2', name: 'Yasamal rayonu' },
+          { id: '3', name: 'Sabunçu rayonu' },
+          { id: '4', name: 'Mərkəz' },
+        ];
+        setSectors(sectorsMock);
+      } catch (error) {
+        console.error('Error loading sectors:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadSectors();
+  }, [selectedRegionId]);
   
   const handleReset = () => {
     setSearchTerm('');
-    // Reset other filter values
+    setSelectedRegionId('');
+    setSelectedSectorId('');
+    setSelectedType('');
+    setSelectedStatus('');
+    setMinRate('');
+    setMaxRate('');
+    
+    // Apply empty filters to reset the results
+    onApplyFilters({});
+  };
+  
+  const handleApplyFilters = () => {
+    const filters: SchoolFilter = {};
+    
+    if (searchTerm) filters.search = searchTerm;
+    if (selectedRegionId) filters.regionId = selectedRegionId;
+    if (selectedSectorId) filters.sectorId = selectedSectorId;
+    if (selectedType) filters.type = selectedType;
+    if (selectedStatus) filters.status = selectedStatus;
+    if (minRate) filters.minCompletionRate = parseInt(minRate);
+    if (maxRate) filters.maxCompletionRate = parseInt(maxRate);
+    
+    onApplyFilters(filters);
   };
   
   if (!isVisible) {
@@ -98,7 +165,7 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
           <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
             Region
           </label>
-          <Select>
+          <Select value={selectedRegionId} onValueChange={setSelectedRegionId}>
             <SelectTrigger>
               <SelectValue placeholder="Bütün regionlar" />
             </SelectTrigger>
@@ -116,7 +183,11 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
           <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
             Sektor
           </label>
-          <Select>
+          <Select 
+            value={selectedSectorId} 
+            onValueChange={setSelectedSectorId}
+            disabled={!selectedRegionId || sectors.length === 0}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Bütün sektorlar" />
             </SelectTrigger>
@@ -134,14 +205,14 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
           <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
             Məktəb növü
           </label>
-          <Select>
+          <Select value={selectedType} onValueChange={setSelectedType}>
             <SelectTrigger>
               <SelectValue placeholder="Bütün növlər" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="middle">Orta məktəb</SelectItem>
-              <SelectItem value="high">Tam orta məktəb</SelectItem>
-              <SelectItem value="primary">İbtidai məktəb</SelectItem>
+              <SelectItem value="Orta məktəb">Orta məktəb</SelectItem>
+              <SelectItem value="Tam orta məktəb">Tam orta məktəb</SelectItem>
+              <SelectItem value="İbtidai məktəb">İbtidai məktəb</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -150,14 +221,14 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
           <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
             Status
           </label>
-          <Select>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger>
               <SelectValue placeholder="Bütün statuslar" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Aktiv</SelectItem>
-              <SelectItem value="inactive">Deaktiv</SelectItem>
-              <SelectItem value="archived">Arxivləşdirilmiş</SelectItem>
+              <SelectItem value="Aktiv">Aktiv</SelectItem>
+              <SelectItem value="Deaktiv">Deaktiv</SelectItem>
+              <SelectItem value="Arxivləşdirilmiş">Arxivləşdirilmiş</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -167,7 +238,7 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
             Doldurma faizi
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <Select>
+            <Select value={minRate} onValueChange={setMinRate}>
               <SelectTrigger>
                 <SelectValue placeholder="Min" />
               </SelectTrigger>
@@ -178,7 +249,7 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
                 <SelectItem value="75">75%</SelectItem>
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={maxRate} onValueChange={setMaxRate}>
               <SelectTrigger>
                 <SelectValue placeholder="Max" />
               </SelectTrigger>
@@ -193,7 +264,10 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility }: SchoolFilte
         </div>
         
         <div className="pt-2">
-          <Button className="w-full bg-infoline-blue hover:bg-infoline-dark-blue">
+          <Button 
+            className="w-full bg-infoline-blue hover:bg-infoline-dark-blue"
+            onClick={handleApplyFilters}
+          >
             Tətbiq et
           </Button>
         </div>

@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ChartCard } from "@/components/dashboard/ChartCard";
@@ -18,55 +19,69 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SchoolModal } from './SchoolModal';
+import { School, SchoolStats, assignSchoolAdmin, exportSchoolData } from "@/services/supabase/schoolService";
 
 interface SchoolDetailProps {
-  school: {
-    id: string;
-    name: string;
-    type: string;
-    region: string;
-    sector: string;
-    studentCount: number;
-    teacherCount: number;
-    completionRate: number;
-    status: string;
-    director: string;
-    contactEmail: string;
-    contactPhone: string;
-    createdAt: string;
-    address?: string;
+  school: School;
+  stats?: {
+    categories: Array<{name: string, value: number}>;
+    completionHistory: Array<{name: string, value: number}>;
   };
+  activities?: Array<{id: number, action: string, user: string, time: string}>;
 }
 
-export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
+export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetailProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAssigningAdmin, setIsAssigningAdmin] = useState(false);
   
-  // Mock data for the charts
-  const completionData = [
-    { name: 'Yan', value: 65 },
-    { name: 'Fev', value: 72 },
-    { name: 'Mar', value: 76 },
-    { name: 'Apr', value: 81 },
-    { name: 'May', value: 85 },
-    { name: 'İyn', value: 87 },
-  ];
+  const handleSchoolUpdated = () => {
+    toast({
+      title: "Məktəb yeniləndi",
+      description: "Məktəb məlumatları uğurla yeniləndi."
+    });
+    setIsEditModalOpen(false);
+    // Ideally, we would refresh the data here
+  };
   
-  const categoryData = [
-    { name: 'Müəllimlər', value: 95 },
-    { name: 'Maddi Texniki Baza', value: 82 },
-    { name: 'Maliyyə', value: 78 },
-    { name: 'Tədris Planı', value: 90 },
-    { name: 'Şagirdlər', value: 88 },
-  ];
+  const handleExport = async () => {
+    try {
+      await exportSchoolData(school.id);
+      toast({
+        title: "Məlumatlar ixrac edildi",
+        description: "Məktəb məlumatları uğurla ixrac edildi."
+      });
+    } catch (error) {
+      console.error('Error exporting school data:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Məlumatlar ixrac edilmədi.",
+        variant: "destructive"
+      });
+    }
+  };
   
-  // Mock data for recent activities
-  const recentActivities = [
-    { id: 1, action: 'Müəllimlər kateqoriyası doldurulub', user: 'Əliyev Vüqar', time: '14:25, 12 May 2024' },
-    { id: 2, action: 'Maddi Texniki Baza yenilənib', user: 'Əliyev Vüqar', time: '10:15, 10 May 2024' },
-    { id: 3, action: 'Maliyyə hesabatı təsdiqlənib', user: 'Məmmədov Elnur', time: '16:40, 5 May 2024' },
-    { id: 4, action: 'Şagird siyahısı yenilənib', user: 'Hüseynova Aysel', time: '09:30, 3 May 2024' },
-  ];
+  const handleAssignAdmin = async (userId: string) => {
+    try {
+      setIsAssigningAdmin(true);
+      await assignSchoolAdmin(school.id, userId);
+      toast({
+        title: "Admin təyin edildi",
+        description: "Məktəb admini uğurla təyin edildi."
+      });
+      // Ideally, we would refresh the data here
+    } catch (error) {
+      console.error('Error assigning school admin:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Admin təyin edilmədi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAssigningAdmin(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -92,6 +107,7 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
+            onClick={handleExport}
           >
             <Download className="h-4 w-4" />
             İxrac et
@@ -121,7 +137,7 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
         />
         <StatCard 
           title="Kateqoriya sayı" 
-          value={5} 
+          value={stats?.categories?.length || 5} 
           icon={<FileText className="h-5 w-5" />}
           color="purple"
         />
@@ -136,21 +152,25 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard 
-          title="Doldurulma Tendensiyası" 
-          subtitle="Son 6 ay"
-          type="bar"
-          data={completionData}
-          colors={['#60A5FA']}
-        />
-        
-        <ChartCard 
-          title="Kateqoriyalar üzrə doldurulma" 
-          subtitle="Faiz göstəriciləri"
-          type="bar"
-          data={categoryData}
-          colors={['#10B981']}
-        />
+        {stats && (
+          <>
+            <ChartCard 
+              title="Doldurulma Tendensiyası" 
+              subtitle="Son 6 ay"
+              type="bar"
+              data={stats.completionHistory}
+              colors={['#60A5FA']}
+            />
+            
+            <ChartCard 
+              title="Kateqoriyalar üzrə doldurulma" 
+              subtitle="Faiz göstəriciləri"
+              type="bar"
+              data={stats.categories}
+              colors={['#10B981']}
+            />
+          </>
+        )}
       </div>
       
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -226,7 +246,13 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
                 <div className="bg-infoline-lightest-gray rounded-lg p-6 text-center">
                   <BarChart4 className="mx-auto h-16 w-16 text-infoline-gray mb-4" />
                   <p className="text-infoline-dark-gray">Bu məktəb üçün təyin edilmiş admin yoxdur</p>
-                  <Button className="mt-4">Admin Təyin Et</Button>
+                  <Button 
+                    className="mt-4"
+                    onClick={() => handleAssignAdmin('placeholder-user-id')}
+                    disabled={isAssigningAdmin}
+                  >
+                    {isAssigningAdmin ? 'Gözləyin...' : 'Admin Təyin Et'}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -235,19 +261,25 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
           <TabsContent value="activities" className="p-6">
             <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Son Aktivliklər</h3>
             <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3 border-b border-infoline-light-gray pb-4">
-                  <div className="bg-blue-100 text-blue-700 rounded-full p-2 mt-1">
-                    <Clock className="h-4 w-4" />
+              {activities.length > 0 ? (
+                activities.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3 border-b border-infoline-light-gray pb-4">
+                    <div className="bg-blue-100 text-blue-700 rounded-full p-2 mt-1">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-infoline-dark-blue">{activity.action}</p>
+                      <p className="text-xs text-infoline-dark-gray mt-1">
+                        {activity.user} tərəfindən, {activity.time}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-infoline-dark-blue">{activity.action}</p>
-                    <p className="text-xs text-infoline-dark-gray mt-1">
-                      {activity.user} tərəfindən, {activity.time}
-                    </p>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-infoline-dark-gray">
+                  <p>Heç bir aktivlik tapılmadı</p>
                 </div>
-              ))}
+              )}
             </div>
           </TabsContent>
           
@@ -263,20 +295,26 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
             </div>
             
             <div className="space-y-4">
-              {categoryData.map((category) => (
-                <div key={category.name} className="bg-white border border-infoline-light-gray rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-sm font-medium text-infoline-dark-blue">{category.name}</h4>
-                    <span className="text-sm font-medium text-infoline-dark-blue">{category.value}%</span>
+              {stats && stats.categories.length > 0 ? (
+                stats.categories.map((category) => (
+                  <div key={category.name} className="bg-white border border-infoline-light-gray rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-medium text-infoline-dark-blue">{category.name}</h4>
+                      <span className="text-sm font-medium text-infoline-dark-blue">{category.value}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="h-2.5 rounded-full bg-infoline-blue" 
+                        style={{ width: `${category.value}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="h-2.5 rounded-full bg-infoline-blue" 
-                      style={{ width: `${category.value}%` }}
-                    ></div>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-infoline-dark-gray">
+                  <p>Heç bir kateqoriya tapılmadı</p>
                 </div>
-              ))}
+              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -287,6 +325,7 @@ export const SchoolDetailView = ({ school }: SchoolDetailProps) => {
         onClose={() => setIsEditModalOpen(false)} 
         mode="edit"
         school={school}
+        onSchoolUpdated={handleSchoolUpdated}
       />
     </div>
   );

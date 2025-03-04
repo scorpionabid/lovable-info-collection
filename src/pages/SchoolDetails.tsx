@@ -1,23 +1,58 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
 import { Layout } from "@/components/layout/Layout";
 import { SchoolDetailView } from "@/components/schools/SchoolDetailView";
+import { Toaster } from "@/components/ui/toaster";
+import { getSchoolById, getSchoolStats, getSchoolActivities } from "@/services/supabase/schoolService";
 
 const SchoolDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [school, setSchool] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [activities, setActivities] = useState([]);
   
-  // This would typically fetch data from an API
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    if (!id) {
+      navigate('/schools');
+      return;
+    }
     
-    return () => clearTimeout(timer);
-  }, [id]);
+    const loadSchoolData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load school details
+        const schoolData = await getSchoolById(id);
+        setSchool(schoolData);
+        
+        // Load school statistics
+        const statsData = await getSchoolStats(id);
+        setStats(statsData);
+        
+        // Load recent activities
+        const activitiesData = await getSchoolActivities(id);
+        setActivities(activitiesData);
+        
+      } catch (error) {
+        console.error('Error loading school details:', error);
+        toast({
+          title: "Xəta baş verdi",
+          description: "Məktəb məlumatları yüklənmədi",
+          variant: "destructive"
+        });
+        navigate('/schools');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadSchoolData();
+  }, [id, navigate]);
   
   if (isLoading) {
     return (
@@ -25,31 +60,21 @@ const SchoolDetails = () => {
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
         </div>
+        <Toaster />
       </Layout>
     );
   }
   
-  // This is placeholder mock data
-  const schoolData = {
-    id: id || '1',
-    name: 'Bakı şəhəri 20 nömrəli məktəb',
-    type: 'Orta məktəb',
-    region: 'Bakı şəhəri',
-    sector: 'Nəsimi rayonu',
-    studentCount: 1250,
-    teacherCount: 87,
-    completionRate: 92,
-    status: 'Aktiv',
-    director: 'Əliyev Vüqar',
-    contactEmail: 'mekteb20@edu.az',
-    contactPhone: '+994 12 555 20 20',
-    createdAt: '2023-05-10',
-    address: 'Nəsimi rayonu, Nizami küçəsi 20'
-  };
-  
   return (
     <Layout userRole="super-admin">
-      <SchoolDetailView school={schoolData} />
+      {school && (
+        <SchoolDetailView 
+          school={school} 
+          stats={stats}
+          activities={activities}
+        />
+      )}
+      <Toaster />
     </Layout>
   );
 };

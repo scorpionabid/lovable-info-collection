@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { 
   Plus, 
@@ -9,90 +10,51 @@ import {
 import { SchoolTable } from "./SchoolTable";
 import { SchoolFilterPanel } from "./SchoolFilterPanel";
 import { SchoolModal } from "./SchoolModal";
+import { School as SchoolType, SchoolFilter, getSchools } from "@/services/supabase/schoolService";
 
 export const SchoolsOverview = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [filterVisible, setFilterVisible] = useState(true);
+  const [schools, setSchools] = useState<SchoolType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState<SchoolFilter>({});
+  const { toast } = useToast();
   
-  // Mock data for schools
-  const schools = [
-    { 
-      id: '1', 
-      name: 'Bakı şəhəri 20 nömrəli məktəb', 
-      type: 'Orta məktəb', 
-      region: 'Bakı şəhəri', 
-      sector: 'Nəsimi rayonu', 
-      studentCount: 1250, 
-      teacherCount: 87, 
-      completionRate: 92, 
-      status: 'Aktiv',
-      director: 'Əliyev Vüqar',
-      contactEmail: 'mekteb20@edu.az',
-      contactPhone: '+994 12 555 20 20',
-      createdAt: '2023-05-10'
-    },
-    { 
-      id: '2', 
-      name: 'Bakı şəhəri 45 nömrəli məktəb', 
-      type: 'Orta məktəb', 
-      region: 'Bakı şəhəri', 
-      sector: 'Yasamal rayonu', 
-      studentCount: 980, 
-      teacherCount: 63, 
-      completionRate: 85, 
-      status: 'Aktiv',
-      director: 'Məmmədov Elnur',
-      contactEmail: 'mekteb45@edu.az',
-      contactPhone: '+994 12 555 45 45',
-      createdAt: '2023-05-12'
-    },
-    { 
-      id: '3', 
-      name: 'Bakı şəhəri 189 nömrəli məktəb', 
-      type: 'Orta məktəb', 
-      region: 'Bakı şəhəri', 
-      sector: 'Sabunçu rayonu', 
-      studentCount: 750, 
-      teacherCount: 52, 
-      completionRate: 78, 
-      status: 'Aktiv',
-      director: 'Hüseynova Aysel',
-      contactEmail: 'mekteb189@edu.az',
-      contactPhone: '+994 12 555 18 89',
-      createdAt: '2023-05-15'
-    },
-    { 
-      id: '4', 
-      name: 'Sumqayıt şəhəri 12 nömrəli məktəb', 
-      type: 'Orta məktəb', 
-      region: 'Sumqayıt şəhəri', 
-      sector: 'Mərkəz', 
-      studentCount: 620, 
-      teacherCount: 48, 
-      completionRate: 88, 
-      status: 'Aktiv',
-      director: 'Quliyev Rauf',
-      contactEmail: 'sumqayit12@edu.az',
-      contactPhone: '+994 18 555 12 12',
-      createdAt: '2023-05-20'
-    },
-    { 
-      id: '5', 
-      name: 'Gəncə şəhəri 8 nömrəli məktəb', 
-      type: 'Orta məktəb', 
-      region: 'Gəncə şəhəri', 
-      sector: 'Mərkəz', 
-      studentCount: 580, 
-      teacherCount: 45, 
-      completionRate: 82, 
-      status: 'Aktiv',
-      director: 'İsmayılov Orxan',
-      contactEmail: 'gence8@edu.az',
-      contactPhone: '+994 22 555 08 08',
-      createdAt: '2023-05-25'
-    },
-  ];
+  // Load schools from API
+  useEffect(() => {
+    loadSchools();
+  }, [filters]);
+  
+  const loadSchools = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getSchools(filters);
+      setSchools(data);
+    } catch (error) {
+      console.error('Error loading schools:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Məktəb məlumatları yüklənərkən xəta baş verdi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleFiltersChange = (newFilters: SchoolFilter) => {
+    setFilters(newFilters);
+  };
+  
+  const handleSchoolCreated = () => {
+    loadSchools();
+    setIsCreateModalOpen(false);
+    toast({
+      title: "Məktəb yaradıldı",
+      description: "Yeni məktəb uğurla yaradıldı."
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -124,11 +86,16 @@ export const SchoolsOverview = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <SchoolFilterPanel 
           isVisible={filterVisible} 
-          onToggleVisibility={() => setFilterVisible(!filterVisible)} 
+          onToggleVisibility={() => setFilterVisible(!filterVisible)}
+          onApplyFilters={handleFiltersChange}
         />
         
         <div className={`${filterVisible ? 'lg:col-span-9' : 'lg:col-span-12'}`}>
-          <SchoolTable schools={schools} />
+          <SchoolTable 
+            schools={schools} 
+            isLoading={isLoading}
+            onSchoolUpdated={loadSchools}
+          />
         </div>
       </div>
       
@@ -136,6 +103,7 @@ export const SchoolsOverview = () => {
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
         mode="create"
+        onSchoolCreated={handleSchoolCreated}
       />
     </div>
   );
