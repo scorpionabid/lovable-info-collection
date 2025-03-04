@@ -60,7 +60,7 @@ export const UserModalContent = ({
   });
 
   // Use hooks for functionality
-  const { createUserMutation, isCreatingAuth } = useUserFormSubmit(user, onSuccess, onClose);
+  const { createUserMutation, isCreatingAuth } = useUserFormSubmit(user, onClose, onSuccess);
   const { isCheckingUtisCode } = useUtisCodeValidation(form, isEditing, user);
   const { roles, regions, sectors, schools, isLoading, getRoleById } = useOrganizationData(
     currentUserId,

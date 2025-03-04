@@ -1410,6 +1410,7 @@ export type Database = {
           school_id: string | null
           sector_id: string | null
           updated_at: string | null
+          utis_code: string | null
         }
         Insert: {
           created_at?: string
@@ -1425,6 +1426,7 @@ export type Database = {
           school_id?: string | null
           sector_id?: string | null
           updated_at?: string | null
+          utis_code?: string | null
         }
         Update: {
           created_at?: string
@@ -1440,6 +1442,7 @@ export type Database = {
           school_id?: string | null
           sector_id?: string | null
           updated_at?: string | null
+          utis_code?: string | null
         }
         Relationships: [
           {
