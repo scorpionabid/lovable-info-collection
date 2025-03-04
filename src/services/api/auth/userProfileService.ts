@@ -27,7 +27,7 @@ const userProfileService = {
         .from('users')
         .select(`
           *,
-          roles:role_id (
+          roles (
             id,
             name,
             description,
@@ -60,7 +60,7 @@ const userProfileService = {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
-          roles:role_id (
+          roles (
             permissions
           )
         `)
@@ -73,9 +73,8 @@ const userProfileService = {
       }
       
       // Return permissions if they exist
-      if (userData?.roles && 'permissions' in userData.roles) {
-        const { permissions } = userData.roles as { permissions: string[] };
-        return Array.isArray(permissions) ? permissions : [];
+      if (userData?.roles && userData.roles.permissions) {
+        return Array.isArray(userData.roles.permissions) ? userData.roles.permissions : [];
       }
       
       return [];

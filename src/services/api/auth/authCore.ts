@@ -41,7 +41,7 @@ const authCore = {
         .from('users')
         .select(`
           *,
-          roles:role_id (
+          roles (
             id,
             name,
             description,
