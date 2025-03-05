@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -96,6 +97,7 @@ const CustomReportBuilder = () => {
     setError(null);
 
     try {
+      // Pass only the categoryId parameter to match the function signature
       const data = await reportService.generateCustomReport(selectedCategory);
       
       setReportData(data);

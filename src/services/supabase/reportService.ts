@@ -590,42 +590,44 @@ export const getCustomReports = async (): Promise<CustomReportDefinition[]> => {
 };
 
 // Update the function signature to match our usage
-export const generateCustomReport = async (reportId: string): Promise<any> => {
+export const generateCustomReport = async (categoryId: string): Promise<any> => {
   try {
-    // First, get the report definition
-    const { data: reportData, error: reportError } = await supabase
-      .from('custom_reports')
-      .select('*')
-      .eq('id', reportId)
+    // First, check if the category exists
+    const { data: categoryData, error: categoryError } = await supabase
+      .from('categories')
+      .select('id, name, assignment')
+      .eq('id', categoryId)
       .single();
     
-    if (reportError) throw reportError;
-    
-    // Then generate the report based on the definition
-    // This would involve complex queries based on the report parameters
-    // For now, we'll return a simplistic result
-    
-    const result = {
-      reportName: reportData.name,
+    if (categoryError) {
+      console.error('Error fetching category details:', categoryError);
+      throw new Error(`Kateqoriya tapılmadı: ${categoryError.message}`);
+    }
+
+    // Generate report data based on the category
+    let result = {
+      reportName: categoryData.name,
       generatedAt: new Date().toISOString(),
+      categoryId: categoryId,
+      categoryName: categoryData.name,
+      assignment: categoryData.assignment,
       data: [] as any[]
     };
     
-    // Generate some sample data based on the report type
-    if (reportData.report_type === 'completion') {
+    // Generate some sample data based on the category assignment type
+    if (categoryData.assignment === 'All') {
       result.data = await getRegionCompletionStats();
-    } else if (reportData.report_type === 'performance') {
+    } else if (categoryData.assignment === 'Regions') {
       result.data = await getRegionPerformanceRanking();
-    } else if (reportData.report_type === 'trends') {
-      result.data = await getQuarterlyTrends();
+    } else if (categoryData.assignment === 'Sectors') {
+      const sectorsData = await getRegionSectorPerformance();
+      result.data = sectorsData.map(item => ({
+        name: `${item.region} - ${item.sector}`,
+        value: item.performance
+      }));
     } else {
-      // For custom reports, generate based on parameters
-      // This would be more complex in a real application
-      result.data = [
-        { name: 'Sample Item 1', value: 75 },
-        { name: 'Sample Item 2', value: 82 },
-        { name: 'Sample Item 3', value: 64 }
-      ];
+      // For other assignment types, use quarterly trends
+      result.data = await getQuarterlyTrends();
     }
     
     return result;
