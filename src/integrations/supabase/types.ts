@@ -172,6 +172,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          assignment: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -184,6 +185,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assignment?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -196,6 +198,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assignment?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1200,6 +1203,7 @@ export type Database = {
           name: string
           phone: string | null
           sector_id: string | null
+          type_id: string | null
         }
         Insert: {
           address?: string | null
@@ -1209,6 +1213,7 @@ export type Database = {
           name: string
           phone?: string | null
           sector_id?: string | null
+          type_id?: string | null
         }
         Update: {
           address?: string | null
@@ -1218,6 +1223,7 @@ export type Database = {
           name?: string
           phone?: string | null
           sector_id?: string | null
+          type_id?: string | null
         }
         Relationships: [
           {
@@ -1225,6 +1231,13 @@ export type Database = {
             columns: ["sector_id"]
             isOneToOne: false
             referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schools_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "school_types"
             referencedColumns: ["id"]
           },
         ]
@@ -1609,6 +1622,12 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_role: {
+        Args: {
+          user_id: string
+        }
+        Returns: string
+      }
       mark_all_notifications_read: {
         Args: Record<PropertyKey, never>
         Returns: number

@@ -1,4 +1,3 @@
-
 import { supabase } from './supabaseClient';
 import { CategoryColumn } from '@/components/categories/CategoryDetailView';
 
@@ -7,7 +6,7 @@ export interface Category {
   id: string;
   name: string;
   description: string;
-  assignment: 'All' | 'Sectors';
+  assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
   columns: number | CategoryColumn[];
   deadline: string;
   completionRate: number;
@@ -18,7 +17,7 @@ export interface Category {
 
 export interface CategoryFilter {
   search?: string;
-  assignment?: 'All' | 'Sectors';
+  assignment?: 'All' | 'Regions' | 'Sectors' | 'Schools';
   status?: 'Active' | 'Inactive';
   deadlineBefore?: string;
   deadlineAfter?: string;
@@ -29,7 +28,7 @@ export interface CategoryFilter {
 export interface CreateCategoryDto {
   name: string;
   description?: string;
-  assignment: 'All' | 'Sectors';
+  assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
   priority: number;
   deadline: string;
   status: 'Active' | 'Inactive';
@@ -93,6 +92,11 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
 
     if (error) throw error;
 
+    // If no data is returned, return an empty array
+    if (!data || data.length === 0) {
+      return [];
+    }
+
     // Calculate completion rates (this would be more complex in a real app)
     const categoriesWithCompletionRates = await Promise.all(
       data.map(async (item) => {
@@ -103,7 +107,7 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
           id: item.id,
           name: item.name,
           description: item.description || '',
-          assignment: item.assignment,
+          assignment: item.assignment || 'All',
           columns: columnsCount,
           deadline: item.deadline,
           completionRate,
@@ -164,6 +168,12 @@ export const getCategoryById = async (id: string): Promise<Category> => {
 
 export const createCategory = async (category: CreateCategoryDto): Promise<Category> => {
   try {
+    // Validate assignment type
+    const validAssignments = ['All', 'Regions', 'Sectors', 'Schools'];
+    if (!validAssignments.includes(category.assignment)) {
+      throw new Error(`Invalid assignment value. Must be one of: ${validAssignments.join(', ')}`);
+    }
+    
     const { data, error } = await supabase
       .from('categories')
       .insert({
@@ -199,6 +209,14 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
 
 export const updateCategory = async (id: string, category: UpdateCategoryDto): Promise<Category> => {
   try {
+    // Validate assignment type if provided
+    if (category.assignment) {
+      const validAssignments = ['All', 'Regions', 'Sectors', 'Schools'];
+      if (!validAssignments.includes(category.assignment)) {
+        throw new Error(`Invalid assignment value. Must be one of: ${validAssignments.join(', ')}`);
+      }
+    }
+    
     const { data, error } = await supabase
       .from('categories')
       .update({
@@ -223,7 +241,7 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
       id: data.id,
       name: data.name,
       description: data.description || '',
-      assignment: data.assignment,
+      assignment: data.assignment || 'All',
       columns: columnsCount,
       deadline: data.deadline,
       completionRate,

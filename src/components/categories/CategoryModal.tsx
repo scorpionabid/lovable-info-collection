@@ -31,7 +31,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    assignment: 'All' as 'All' | 'Sectors',
+    assignment: 'All' as 'All' | 'Sectors' | 'Regions' | 'Schools',
     priority: 1,
     deadline: '',
     status: true,
@@ -45,7 +45,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
       setFormData({
         name: category.name,
         description: category.description || '',
-        assignment: category.assignment as 'All' | 'Sectors',
+        assignment: category.assignment as 'All' | 'Sectors' | 'Regions' | 'Schools',
         priority: category.priority,
         deadline: category.deadline ? new Date(category.deadline).toISOString().split('T')[0] : '',
         status: category.status === 'Active',
@@ -236,7 +236,9 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">Bütün məktəblər (All)</SelectItem>
-                      <SelectItem value="Sectors">Yalnız sektorlar (Sectors)</SelectItem>
+                      <SelectItem value="Regions">Regionlar (Regions)</SelectItem>
+                      <SelectItem value="Sectors">Sektorlar (Sectors)</SelectItem>
+                      <SelectItem value="Schools">Məktəblər (Schools)</SelectItem>
                     </SelectContent>
                   </Select>
                   {formErrors.assignment && (

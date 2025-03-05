@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,14 +16,12 @@ export const CategoriesOverview = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // UI state
   const [showFilters, setShowFilters] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   
-  // Get filters from URL params
-  const assignment = searchParams.get('assignment') as 'All' | 'Sectors' | undefined;
+  const assignment = searchParams.get('assignment') as 'All' | 'Regions' | 'Sectors' | 'Schools' | undefined;
   const status = searchParams.get('status') as 'Active' | 'Inactive' | undefined;
   const deadlineBefore = searchParams.get('deadlineBefore') || undefined;
   const deadlineAfter = searchParams.get('deadlineAfter') || undefined;
@@ -35,21 +32,27 @@ export const CategoriesOverview = () => {
     ? parseInt(searchParams.get('maxCompletionRate')!)
     : undefined;
 
-  // Get categories data
-  const { data: categories = [], isLoading, isError, refetch } = useQuery({
+  const { data: categories = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['categories', searchQuery, assignment, status, deadlineBefore, deadlineAfter, minCompletionRate, maxCompletionRate],
-    queryFn: () => categoryService.getCategories({
-      search: searchQuery,
-      assignment,
-      status,
-      deadlineBefore,
-      deadlineAfter,
-      minCompletionRate,
-      maxCompletionRate
-    })
+    queryFn: async () => {
+      try {
+        return await categoryService.getCategories({
+          search: searchQuery,
+          assignment,
+          status,
+          deadlineBefore,
+          deadlineAfter,
+          minCompletionRate,
+          maxCompletionRate
+        });
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        toast.error('Kateqoriyaları yükləyərkən xəta baş verdi');
+        throw err;
+      }
+    }
   });
 
-  // Set up mutations
   const deleteMutation = useMutation({
     mutationFn: (id: string) => categoryService.deleteCategory(id),
     onSuccess: () => {
@@ -61,7 +64,6 @@ export const CategoriesOverview = () => {
     }
   });
 
-  // Handle search with debounce
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setSearchQuery(localSearchQuery);
@@ -70,7 +72,6 @@ export const CategoriesOverview = () => {
     return () => clearTimeout(timeoutId);
   }, [localSearchQuery]);
 
-  // Handle filter changes
   const handleFilterChange = (filters: categoryService.CategoryFilter) => {
     const newParams = new URLSearchParams();
     
@@ -86,16 +87,13 @@ export const CategoriesOverview = () => {
     setShowFilters(false);
   };
 
-  // Handle refresh
   const handleRefresh = () => {
     refetch();
     toast.info('Məlumatlar yeniləndi');
   };
 
-  // Export/Import handlers
   const handleExport = async () => {
     try {
-      // In a real app, this would involve more complex logic to export categories to Excel
       toast.success('Kateqoriyalar ixrac edildi');
     } catch (error) {
       toast.error('İxrac zamanı xəta baş verdi');
@@ -103,18 +101,15 @@ export const CategoriesOverview = () => {
   };
 
   const handleImport = async () => {
-    // This would involve more complex logic with file upload and processing
     toast.info('Kateqoriyaların idxalı funksiyası hazırlanma mərhələsindədir');
   };
 
-  // Handle category creation success
   const handleCategoryCreated = () => {
     setIsCreateModalOpen(false);
     queryClient.invalidateQueries({ queryKey: ['categories'] });
     toast.success('Kateqoriya uğurla yaradıldı');
   };
 
-  // Handle category deletion
   const handleDeleteCategory = async (category: CategoryType) => {
     if (window.confirm(`"${category.name}" kateqoriyasını silmək istədiyinizə əminsiniz?`)) {
       deleteMutation.mutate(category.id);
@@ -222,10 +217,8 @@ export const CategoriesOverview = () => {
           categories={categories} 
           onDelete={handleDeleteCategory}
           onUpdatePriority={(id, newPriority) => {
-            // Optimistic update
             const previousCategories = queryClient.getQueryData<CategoryType[]>(['categories']);
             
-            // Apply the change optimistically to the UI
             if (previousCategories) {
               queryClient.setQueryData(['categories'], 
                 previousCategories.map(cat => 
@@ -234,14 +227,11 @@ export const CategoriesOverview = () => {
               );
             }
             
-            // Make the actual API call
             categoryService.updateCategoryPriority(id, newPriority)
               .then(() => {
-                // On success, refetch to make sure we have the latest data
                 queryClient.invalidateQueries({ queryKey: ['categories'] });
               })
               .catch(error => {
-                // On failure, revert to previous state
                 if (previousCategories) {
                   queryClient.setQueryData(['categories'], previousCategories);
                 }
