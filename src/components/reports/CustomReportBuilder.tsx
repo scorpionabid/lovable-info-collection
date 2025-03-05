@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,8 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import reportService from "@/services/supabase/reportService";
-import { supabase } from "@/integrations/supabase/client"; // Correct import for supabase
+import * as reportService from "@/services/supabase/reportService"; // Changed from default to named import
+import { supabase } from "@/integrations/supabase/client";
+import { ChartLoading } from "@/components/dashboard/charts/ChartLoading";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Category {
   id: string;
@@ -95,14 +99,17 @@ const CustomReportBuilder = () => {
     setError(null);
 
     try {
+      // Call the named export instead of the default export
       const data = await reportService.generateCustomReport(
         selectedCategory,
         selectedRegions
       );
       setReportData(data);
+      toast.success("Hesabat uğurla yaradıldı");
     } catch (err) {
       console.error("Hesabat yaradilarkən xəta baş verdi:", err);
       setError("Hesabat yaradilarkən xəta baş verdi");
+      toast.error("Hesabat yaradilarkən xəta baş verdi");
     } finally {
       setIsLoading(false);
     }
@@ -112,8 +119,23 @@ const CustomReportBuilder = () => {
     setSelectedCategory(categoryId);
   };
 
+  // Updated to accept string[] instead of string
   const handleRegionChange = (regionIds: string[]) => {
     setSelectedRegions(regionIds);
+  };
+
+  // Toggle a single region selection
+  const toggleRegion = (regionId: string) => {
+    setSelectedRegions(prev => {
+      if (prev.includes(regionId)) {
+        return prev.filter(id => id !== regionId);
+      } else {
+        return [...prev, regionId];
+      }
+    });
+    
+    // Update the form value
+    form.setValue('regions', selectedRegions);
   };
 
   return (
@@ -151,35 +173,34 @@ const CustomReportBuilder = () => {
                   </FormItem>
                 )}
               />
+              
               <FormField
                 control={form.control}
                 name="regions"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Regionları seçin</FormLabel>
-                    <Select
-                      multiple
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleRegionChange(value);
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Regionları seçin" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {regions.map((region) => (
-                          <SelectItem key={region.id} value={region.id}>
+                    <div className="space-y-2 border rounded-md p-4">
+                      {regions.map((region) => (
+                        <div key={region.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`region-${region.id}`} 
+                            checked={selectedRegions.includes(region.id)}
+                            onCheckedChange={() => toggleRegion(region.id)}
+                          />
+                          <label 
+                            htmlFor={`region-${region.id}`}
+                            className="text-sm cursor-pointer"
+                          >
                             {region.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </FormItem>
                 )}
               />
+              
               <Button onClick={generateReport} disabled={isLoading}>
                 {isLoading ? "Yüklənir..." : "Hesabat yarat"}
               </Button>
@@ -189,10 +210,12 @@ const CustomReportBuilder = () => {
         </CardContent>
       </Card>
 
-      {reportData && (
+      {isLoading && <ChartLoading />}
+
+      {reportData && !isLoading && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Hesabat nəticələri:</h2>
-          <pre>{JSON.stringify(reportData, null, 2)}</pre>
+          <pre className="bg-gray-100 p-4 rounded-md overflow-auto">{JSON.stringify(reportData, null, 2)}</pre>
         </div>
       )}
     </div>

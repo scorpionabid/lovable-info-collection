@@ -6,7 +6,7 @@ import { ReportConfigPanel } from "./ReportConfigPanel";
 import { CompletionStatisticsReport } from "./CompletionStatisticsReport";
 import { PerformanceAnalysisReport } from "./PerformanceAnalysisReport";
 import { ComparativeTrendsReport } from "./ComparativeTrendsReport";
-import { CustomReportBuilder } from "./CustomReportBuilder";
+import CustomReportBuilder from "./CustomReportBuilder"; // Fixed import statement
 import { PlusCircle, FileText, BarChart, LineChart, PieChart } from "lucide-react";
 
 export const ReportsOverview = () => {
