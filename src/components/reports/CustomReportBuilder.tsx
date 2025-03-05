@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -17,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as reportService from "@/services/supabase/reportService"; // Changed from default to named import
+import * as reportService from "@/services/supabase/reportService";
 import { supabase } from "@/integrations/supabase/client";
 import { ChartLoading } from "@/components/dashboard/charts/ChartLoading";
 import { toast } from "sonner";
@@ -54,7 +53,6 @@ const CustomReportBuilder = () => {
     loadRegions();
   }, []);
 
-  // Load categories with correct Supabase reference
   const loadCategories = async () => {
     try {
       setIsLoading(true);
@@ -73,7 +71,6 @@ const CustomReportBuilder = () => {
     }
   };
 
-  // Load regions with correct Supabase reference
   const loadRegions = async () => {
     try {
       const { data, error } = await supabase
@@ -85,7 +82,7 @@ const CustomReportBuilder = () => {
       setRegions(data || []);
     } catch (err) {
       console.error('Error loading regions:', err);
-      // Don't set error here to avoid overriding category error
+      setError('Regionlar yüklənərkən xəta baş verdi');
     }
   };
 
@@ -99,11 +96,8 @@ const CustomReportBuilder = () => {
     setError(null);
 
     try {
-      // Call the named export instead of the default export
-      const data = await reportService.generateCustomReport(
-        selectedCategory,
-        selectedRegions
-      );
+      const data = await reportService.generateCustomReport(selectedCategory);
+      
       setReportData(data);
       toast.success("Hesabat uğurla yaradıldı");
     } catch (err) {
@@ -119,12 +113,10 @@ const CustomReportBuilder = () => {
     setSelectedCategory(categoryId);
   };
 
-  // Updated to accept string[] instead of string
   const handleRegionChange = (regionIds: string[]) => {
     setSelectedRegions(regionIds);
   };
 
-  // Toggle a single region selection
   const toggleRegion = (regionId: string) => {
     setSelectedRegions(prev => {
       if (prev.includes(regionId)) {
@@ -134,7 +126,6 @@ const CustomReportBuilder = () => {
       }
     });
     
-    // Update the form value
     form.setValue('regions', selectedRegions);
   };
 

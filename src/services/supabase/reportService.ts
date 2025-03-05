@@ -1,4 +1,3 @@
-
 import { supabase } from './supabaseClient';
 import { fileExport } from '@/utils/fileExport';
 
@@ -590,6 +589,7 @@ export const getCustomReports = async (): Promise<CustomReportDefinition[]> => {
   }
 };
 
+// Update the function signature to match our usage
 export const generateCustomReport = async (reportId: string): Promise<any> => {
   try {
     // First, get the report definition
