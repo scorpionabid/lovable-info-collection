@@ -50,7 +50,7 @@ export const useSchoolForm = (
         setRegions(data);
       } catch (error) {
         console.error('Error loading regions:', error);
-        toast("Regionlar yüklənərkən xəta baş verdi", {
+        toast.error("Regionlar yüklənərkən xəta baş verdi", {
           description: "Zəhmət olmasa yenidən cəhd edin"
         });
       }
@@ -79,7 +79,7 @@ export const useSchoolForm = (
         setSectors(sectorsMock);
       } catch (error) {
         console.error('Error loading sectors:', error);
-        toast("Sektorlar yüklənərkən xəta baş verdi", {
+        toast.error("Sektorlar yüklənərkən xəta baş verdi", {
           description: "Zəhmət olmasa yenidən cəhd edin"
         });
       }
@@ -145,7 +145,7 @@ export const useSchoolForm = (
       
     } catch (error) {
       console.error('Error submitting school:', error);
-      toast("Məktəb məlumatları yadda saxlanılmadı", {
+      toast.error("Məktəb məlumatları yadda saxlanılmadı", {
         description: "Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin."
       });
     } finally {
