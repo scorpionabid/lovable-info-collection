@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RegionTable } from './RegionTable';
+import { RegionTable } from './table/RegionTable';
 import { RegionFilterPanel } from './RegionFilterPanel';
 import { RegionModal } from './RegionModal';
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ export const RegionsOverview = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // State for UI controls
   const [showFilters, setShowFilters] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +28,6 @@ export const RegionsOverview = () => {
     completionRate: 'all'
   });
 
-  // Query to fetch regions with filters
   const { data: regionsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['regions', currentPage, pageSize, sortColumn, sortDirection, filters],
     queryFn: () => regionService.getRegions(
@@ -40,25 +37,21 @@ export const RegionsOverview = () => {
     ),
   });
 
-  // Handle search input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-    // Debounce filter application
     const timeoutId = setTimeout(() => {
       setFilters(prev => ({ ...prev, searchQuery: e.target.value }));
-      setCurrentPage(1); // Reset to first page when search changes
+      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(timeoutId);
   };
 
-  // Handle filter application
   const handleApplyFilters = (newFilters: FilterParams) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
     setShowFilters(false);
   };
 
-  // Handle sorting change
   const handleSortChange = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -68,7 +61,6 @@ export const RegionsOverview = () => {
     }
   };
 
-  // Handle refresh
   const handleRefresh = () => {
     refetch();
     toast({
@@ -77,7 +69,6 @@ export const RegionsOverview = () => {
     });
   };
 
-  // Handle export
   const handleExport = () => {
     if (!regionsData || regionsData.data.length === 0) {
       toast({
@@ -110,7 +101,6 @@ export const RegionsOverview = () => {
     });
   };
 
-  // Handle import (placeholder for now)
   const handleImport = () => {
     toast({
       title: "İdxal funksiyası",
