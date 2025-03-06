@@ -1,8 +1,7 @@
-
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Download } from "lucide-react";
-import { RegionWithStats } from '@/services/supabase/regionService';
+import { RegionWithStats } from '@/services/supabase/region';
 
 interface RegionHeaderProps {
   region: RegionWithStats;

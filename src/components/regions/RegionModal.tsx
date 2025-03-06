@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RegionWithStats } from "@/services/supabase/regionService";
-import regionService from "@/services/supabase/regionService";
+import { RegionWithStats } from "@/services/supabase/region";
+import regionService from "@/services/supabase/region";
 import { useToast } from "@/hooks/use-toast";
 import { BasicInfoTab } from './modals/BasicInfoTab';
 import { AdminTab } from './modals/AdminTab';

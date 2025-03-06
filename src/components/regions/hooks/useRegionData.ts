@@ -1,7 +1,6 @@
-
 import { useQuery } from '@tanstack/react-query';
-import { FilterParams } from "@/services/supabase/regionService";
-import regionService from "@/services/supabase/regionService";
+import { FilterParams } from "@/services/supabase/region";
+import regionService from "@/services/supabase/region";
 
 interface UseRegionDataProps {
   currentPage: number;

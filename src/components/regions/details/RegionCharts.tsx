@@ -1,6 +1,5 @@
-
 import { ChartCard } from "@/components/dashboard/ChartCard";
-import { RegionWithStats } from '@/services/supabase/regionService';
+import { RegionWithStats } from '@/services/supabase/region';
 
 interface RegionChartsProps {
   region: RegionWithStats;

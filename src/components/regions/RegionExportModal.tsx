@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, FileText, Download } from "lucide-react";
-import { RegionWithStats } from '@/services/supabase/regionService';
+import { RegionWithStats } from '@/services/supabase/region';
 import { fileExport } from '@/utils/fileExport';
 import { useToast } from '@/hooks/use-toast';
 

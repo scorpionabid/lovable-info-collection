@@ -1,7 +1,6 @@
-
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Layers, School, Users, PieChart } from "lucide-react";
-import { RegionWithStats } from '@/services/supabase/regionService';
+import { RegionWithStats } from '@/services/supabase/region';
 
 interface RegionStatsProps {
   region: RegionWithStats & { userCount?: number };

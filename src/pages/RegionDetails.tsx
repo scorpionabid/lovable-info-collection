@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layout } from "@/components/layout/Layout";
 import { RegionDetailView } from "@/components/regions/RegionDetailView";
-import regionService from '@/services/supabase/regionService';
+import regionService from '@/services/supabase/region';
 import { useToast } from "@/hooks/use-toast";
 
 const RegionDetails = () => {
