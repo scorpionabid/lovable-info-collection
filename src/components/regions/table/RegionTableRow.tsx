@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -8,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Archive, MoreHorizontal, Download } from "lucide-react";
-import { RegionWithStats } from "@/services/supabase/regionService";
+import { RegionWithStats } from "@/services/supabase/region";
 
 interface RegionTableRowProps {
   region: RegionWithStats;

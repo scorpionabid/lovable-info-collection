@@ -61,22 +61,22 @@ export const RegionsOverview = () => {
         <RegionFilterPanel 
           filters={filters}
           onApplyFilters={handleApplyFilters}
-          onClose={() => toggleFilters()}
+          onClose={toggleFilters}
         />
       )}
       
       <RegionTable 
-        data={regionsData?.data || []}
-        totalRegions={regionsData?.count || 0}
+        regions={regionsData?.data || []}
+        totalCount={regionsData?.count || 0}
         currentPage={currentPage}
         pageSize={pageSize}
         setCurrentPage={setCurrentPage}
-        setPageSize={setPageSize}
         sortColumn={sortColumn}
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
         isLoading={isLoading}
         isError={isError}
+        onRefresh={handleRefresh}
       />
       
       <RegionModal 

@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { RegionWithStats } from "@/services/supabase/regionService";
+import { RegionWithStats } from "@/services/supabase/region";
 import { RegionModal } from '../RegionModal';
 import { RegionExportModal } from '../RegionExportModal';
 import { useQueryClient } from '@tanstack/react-query';

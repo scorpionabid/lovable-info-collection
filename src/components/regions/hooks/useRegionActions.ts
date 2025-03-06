@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from '@tanstack/react-query';
 import { fileExport } from "@/utils/fileExport";
-import { RegionWithStats } from "@/services/supabase/regionService";
+import { RegionWithStats } from "@/services/supabase/region";
 
 export const useRegionActions = (refetch: () => void) => {
   const { toast } = useToast();

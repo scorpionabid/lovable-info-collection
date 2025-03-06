@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
-import { RegionWithStats } from "@/services/supabase/regionService";
-import regionService from "@/services/supabase/regionService";
+import { RegionWithStats } from "@/services/supabase/region";
+import regionService from "@/services/supabase/region";
 
 export const useRegionTableActions = (onRefresh: () => void) => {
   const navigate = useNavigate();

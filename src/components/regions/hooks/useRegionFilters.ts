@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { FilterParams } from "@/services/supabase/regionService";
+import { FilterParams } from "@/services/supabase/region";
 
 export const useRegionFilters = () => {
   const [showFilters, setShowFilters] = useState(false);

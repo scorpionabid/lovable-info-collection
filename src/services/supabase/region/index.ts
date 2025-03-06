@@ -15,4 +15,4 @@ const regionService = {
 };
 
 export default regionService;
-export { RegionWithStats, PaginationParams, SortParams, FilterParams };
+export type { RegionWithStats, PaginationParams, SortParams, FilterParams };

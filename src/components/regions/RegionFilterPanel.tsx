@@ -10,16 +10,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
-import { FilterParams } from "@/services/supabase/regionService";
+import { FilterParams } from "@/services/supabase/region";
 import { useToast } from "@/hooks/use-toast";
 
 interface RegionFilterPanelProps {
-  onClose: () => void;
+  filters: FilterParams;
   onApplyFilters: (filters: FilterParams) => void;
-  initialFilters: FilterParams;
+  onClose: () => void;
 }
 
-export const RegionFilterPanel = ({ onClose, onApplyFilters, initialFilters }: RegionFilterPanelProps) => {
+export const RegionFilterPanel = ({ onClose, onApplyFilters, filters: initialFilters }: RegionFilterPanelProps) => {
   const { toast } = useToast();
   const [filters, setFilters] = useState<FilterParams>(initialFilters);
   const [isValidDate, setIsValidDate] = useState({
