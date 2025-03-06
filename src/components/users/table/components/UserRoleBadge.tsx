@@ -9,8 +9,8 @@ interface UserRoleBadgeProps {
 
 export const UserRoleBadge = ({ user }: UserRoleBadgeProps) => {
   const getRoleName = (user: User) => {
-    // Try to get role from roles relationship first
-    const roleName = user.roles?.name || user.role;
+    // Try to get role name from roles relationship first
+    const roleName = user.roles?.name || '';
     if (!roleName) return 'Rol təyin edilməyib';
     
     switch (roleName) {
@@ -28,10 +28,10 @@ export const UserRoleBadge = ({ user }: UserRoleBadgeProps) => {
     }
   };
   
-  const getRoleColor = (role: string | undefined) => {
-    // Normalize role name
-    const normalizedRole = getNormalizedRole(role);
-    switch (normalizedRole) {
+  const getRoleColor = (roleName: string | undefined) => {
+    if (!roleName) return 'bg-gray-100 text-gray-800';
+    
+    switch (roleName) {
       case 'super-admin':
       case 'superadmin':
         return 'bg-red-100 text-red-800';
@@ -45,18 +45,9 @@ export const UserRoleBadge = ({ user }: UserRoleBadgeProps) => {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  
-  const getNormalizedRole = (role: string | undefined): UserRole | undefined => {
-    if (!role) return undefined;
-    
-    if (role === 'superadmin') return 'super-admin';
-    if (role === 'super-admin') return 'super-admin';
-    
-    return role as UserRole;
-  };
 
   return (
-    <Badge className={`${getRoleColor(user.roles?.name || user.role)} font-normal`}>
+    <Badge className={`${getRoleColor(user.roles?.name)} font-normal`}>
       {getRoleName(user)}
     </Badge>
   );

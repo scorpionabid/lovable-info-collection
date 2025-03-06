@@ -89,25 +89,27 @@ export const useOrganizationSelection = ({
 
   // Update form values when role selection changes
   useEffect(() => {
-    const role = roles.find(r => r.id === selectedRole);
-    if (role) {
-      form.setValue("role_id", role.id);
+    if (selectedRole) {
+      form.setValue("role_id", selectedRole);
       
       // Clear irrelevant fields based on role
-      const roleName = role.name || "";
-      
-      if (roleName.includes("super")) {
-        // Super admin doesn't need region, sector, or school
-        form.setValue("region_id", "");
-        form.setValue("sector_id", "");
-        form.setValue("school_id", "");
-      } else if (roleName.includes("region")) {
-        // Region admin needs region but not sector or school
-        form.setValue("sector_id", "");
-        form.setValue("school_id", "");
-      } else if (roleName.includes("sector")) {
-        // Sector admin needs region and sector but not school
-        form.setValue("school_id", "");
+      const role = roles.find(r => r.id === selectedRole);
+      if (role) {
+        const roleName = role.name || "";
+        
+        if (roleName.includes("super")) {
+          // Super admin doesn't need region, sector, or school
+          form.setValue("region_id", "");
+          form.setValue("sector_id", "");
+          form.setValue("school_id", "");
+        } else if (roleName.includes("region")) {
+          // Region admin needs region but not sector or school
+          form.setValue("sector_id", "");
+          form.setValue("school_id", "");
+        } else if (roleName.includes("sector")) {
+          // Sector admin needs region and sector but not school
+          form.setValue("school_id", "");
+        }
       }
     }
   }, [selectedRole, roles, form]);

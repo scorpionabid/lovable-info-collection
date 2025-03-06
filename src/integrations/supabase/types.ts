@@ -1261,19 +1261,25 @@ export type Database = {
       }
       sectors: {
         Row: {
+          archived: boolean | null
           created_at: string | null
+          description: string | null
           id: string
           name: string
           region_id: string | null
         }
         Insert: {
+          archived?: boolean | null
           created_at?: string | null
+          description?: string | null
           id?: string
           name: string
           region_id?: string | null
         }
         Update: {
+          archived?: boolean | null
           created_at?: string | null
+          description?: string | null
           id?: string
           name?: string
           region_id?: string | null

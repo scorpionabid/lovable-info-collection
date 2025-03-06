@@ -151,7 +151,7 @@ const authCore = {
             email: credentials.email,
             first_name: credentials.firstName,
             last_name: credentials.lastName,
-            role_id: credentials.role || 'superadmin', // Default to superadmin for development
+            role_id: credentials.role, // This should be a valid UUID
             is_active: true
           }
         ]);

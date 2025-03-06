@@ -49,7 +49,7 @@ export const RoleFilter = ({ roles, selectedRole, onChange, isLoading }: RoleFil
         <SelectContent>
           <SelectItem value="all">Bütün rollar</SelectItem>
           {roles.map((role) => (
-            <SelectItem key={role.id} value={role.name}>
+            <SelectItem key={role.id} value={role.id}>
               {formatRoleName(role.name)}
             </SelectItem>
           ))}

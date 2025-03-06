@@ -39,7 +39,7 @@ export const useUserFormSubmit = (
             password: values.password,
             firstName: values.first_name,
             lastName: values.last_name,
-            role: values.role_id
+            role: values.role_id // Make sure this is UUID
           });
         }
         
@@ -50,7 +50,7 @@ export const useUserFormSubmit = (
           email: values.email,
           first_name: values.first_name,
           last_name: values.last_name,
-          role_id: values.role_id,
+          role_id: values.role_id, // This should be UUID
           utis_code: values.utis_code,
           is_active: values.is_active
         };
