@@ -51,8 +51,7 @@ export const useSchoolForm = (
       } catch (error) {
         console.error('Error loading regions:', error);
         toast("Regionlar yüklənərkən xəta baş verdi", {
-          description: "Zəhmət olmasa yenidən cəhd edin",
-          variant: "destructive"
+          description: "Zəhmət olmasa yenidən cəhd edin"
         });
       }
     };
@@ -81,8 +80,7 @@ export const useSchoolForm = (
       } catch (error) {
         console.error('Error loading sectors:', error);
         toast("Sektorlar yüklənərkən xəta baş verdi", {
-          description: "Zəhmət olmasa yenidən cəhd edin",
-          variant: "destructive"
+          description: "Zəhmət olmasa yenidən cəhd edin"
         });
       }
     };
@@ -148,8 +146,7 @@ export const useSchoolForm = (
     } catch (error) {
       console.error('Error submitting school:', error);
       toast("Məktəb məlumatları yadda saxlanılmadı", {
-        description: "Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.",
-        variant: "destructive"
+        description: "Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin."
       });
     } finally {
       setIsSubmitting(false);
