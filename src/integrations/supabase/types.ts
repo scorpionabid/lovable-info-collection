@@ -1202,6 +1202,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          region_id: string | null
           sector_id: string | null
           type_id: string | null
         }
@@ -1212,6 +1213,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          region_id?: string | null
           sector_id?: string | null
           type_id?: string | null
         }
@@ -1222,10 +1224,25 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          region_id?: string | null
           sector_id?: string | null
           type_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "schools_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "region_statistics"
+            referencedColumns: ["region_id"]
+          },
+          {
+            foreignKeyName: "schools_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "schools_sector_id_fkey"
             columns: ["sector_id"]
@@ -1622,11 +1639,44 @@ export type Database = {
       }
     }
     Functions: {
-      get_user_role: {
-        Args: {
-          user_id: string
-        }
+      get_user_region_id: {
+        Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_role:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: string
+          }
+        | {
+            Args: {
+              user_id: string
+            }
+            Returns: string
+          }
+      get_user_school_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_sector_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      is_region_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_school_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_sector_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       mark_all_notifications_read: {
         Args: Record<PropertyKey, never>
