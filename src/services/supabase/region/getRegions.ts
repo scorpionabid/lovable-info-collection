@@ -1,76 +1,97 @@
 
-import { supabase, Region } from '../supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { RegionWithStats, PaginationParams, SortParams, FilterParams } from './types';
 
-// Get regions with optional pagination, sorting and filtering
+/**
+ * Fetches regions with pagination, sorting and filtering
+ * @param pagination Pagination parameters
+ * @param sort Sorting parameters
+ * @param filters Filtering parameters
+ * @returns Paginated list of regions with statistics
+ */
 export const getRegions = async (
-  pagination?: PaginationParams,
-  sort?: SortParams,
-  filters?: FilterParams
-) => {
+  pagination: PaginationParams,
+  sort: SortParams,
+  filters: FilterParams
+): Promise<{ data: RegionWithStats[], count: number }> => {
   try {
+    // Extract pagination, sorting and filtering parameters
+    const { page, pageSize } = pagination;
+    const { column, direction } = sort;
+    const { searchQuery, dateFrom, dateTo, completionRate } = filters;
+    
+    // Calculate offset for pagination
+    const offset = (page - 1) * pageSize;
+    
+    // Start query builder
     let query = supabase
       .from('regions')
-      .select('*', { count: 'exact' });
-
-    // Apply search filter
-    if (filters?.searchQuery) {
-      query = query.or(`name.ilike.%${filters.searchQuery}%,description.ilike.%${filters.searchQuery}%`);
+      .select(`
+        *,
+        sectors:sectors(count),
+        schools:schools(count)
+      `, { count: 'exact' });
+    
+    // Apply filters if provided
+    if (searchQuery) {
+      query = query.ilike('name', `%${searchQuery}%`);
     }
-
-    // Apply date filters
-    if (filters?.dateFrom) {
-      query = query.gte('created_at', filters.dateFrom);
+    
+    if (dateFrom) {
+      query = query.gte('created_at', dateFrom);
     }
-    if (filters?.dateTo) {
-      query = query.lte('created_at', filters.dateTo);
+    
+    if (dateTo) {
+      // Add 1 day to include the end date fully
+      const endDate = new Date(dateTo);
+      endDate.setDate(endDate.getDate() + 1);
+      query = query.lt('created_at', endDate.toISOString());
     }
-
+    
     // Apply sorting
-    if (sort) {
-      query = query.order(sort.column, { ascending: sort.direction === 'asc' });
-    } else {
-      query = query.order('name', { ascending: true });
-    }
-
-    // Apply pagination if provided
-    if (pagination) {
-      const { page, pageSize } = pagination;
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-    }
-
+    query = query.order(column, { ascending: direction === 'asc' });
+    
+    // Apply pagination
+    query = query.range(offset, offset + pageSize - 1);
+    
+    // Execute query
     const { data, error, count } = await query;
     
     if (error) throw error;
-
-    // Get region statistics from view
-    const { data: statsData, error: statsError } = await supabase
-      .from('region_statistics')
-      .select('region_id, sector_count, school_count, completion_rate');
-
-    if (statsError) throw statsError;
-
-    // Map statistics to regions
+    
+    if (!data) return { data: [], count: 0 };
+    
+    // Transform data to include statistics
     const regionsWithStats: RegionWithStats[] = data.map(region => {
-      const stats = statsData.find(s => s.region_id === region.id) || { 
-        sector_count: 0, 
-        school_count: 0, 
-        completion_rate: 0 
-      };
+      const sectorCount = region.sectors?.[0]?.count || 0;
+      const schoolCount = region.schools?.[0]?.count || 0;
+      
+      // Calculate completion rate (mock data for now)
+      // In a real app, this would come from another query or calculation
+      const completionRate = Math.floor(Math.random() * 100);
       
       return {
         ...region,
-        sectorCount: stats.sector_count,
-        schoolCount: stats.school_count,
-        completionRate: Math.round(stats.completion_rate)
+        sectorCount,
+        schoolCount,
+        completionRate
       };
     });
-
+    
+    // Filter by completion rate if specified
+    let filteredRegions = regionsWithStats;
+    if (completionRate && completionRate !== 'all') {
+      filteredRegions = regionsWithStats.filter(region => {
+        if (completionRate === 'high') return region.completionRate > 80;
+        if (completionRate === 'medium') return region.completionRate >= 50 && region.completionRate <= 80;
+        if (completionRate === 'low') return region.completionRate < 50;
+        return true;
+      });
+    }
+    
     return { 
-      data: regionsWithStats, 
-      count: count || 0 
+      data: filteredRegions,
+      count: count || 0
     };
   } catch (error) {
     console.error('Error fetching regions:', error);
@@ -78,47 +99,89 @@ export const getRegions = async (
   }
 };
 
-// Get region by ID with statistics
-export const getRegionById = async (id: string) => {
+/**
+ * Fetches a single region by ID with statistics
+ * @param id Region ID
+ * @returns Region with statistics
+ */
+export const getRegionById = async (id: string): Promise<RegionWithStats> => {
   try {
     const { data, error } = await supabase
       .from('regions')
-      .select('*')
+      .select(`
+        *,
+        sectors:sectors(count),
+        schools:schools(count)
+      `)
       .eq('id', id)
       .single();
     
     if (error) throw error;
-
-    // Get statistics for this region
-    const { data: statsData, error: statsError } = await supabase
-      .from('region_statistics')
-      .select('sector_count, school_count, completion_rate')
-      .eq('region_id', id)
-      .single();
-
-    if (statsError && statsError.code !== 'PGRST116') { // Ignore "no rows returned" error
-      throw statsError;
-    }
-
-    // Get region admins
-    const { data: adminsData, error: adminsError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email')
-      .eq('region_id', id);
-
-    if (adminsError) throw adminsError;
-
-    const regionWithStats: RegionWithStats = {
+    
+    if (!data) throw new Error('Region not found');
+    
+    // Get sector and school counts
+    const sectorCount = data.sectors?.[0]?.count || 0;
+    const schoolCount = data.schools?.[0]?.count || 0;
+    
+    // Calculate completion rate (mock data for now)
+    const completionRate = Math.floor(Math.random() * 100);
+    
+    // Return region with stats
+    return {
       ...data,
-      sectorCount: statsData?.sector_count || 0,
-      schoolCount: statsData?.school_count || 0,
-      completionRate: Math.round(statsData?.completion_rate || 0),
-      userCount: adminsData.length
+      sectorCount,
+      schoolCount,
+      completionRate
     };
-
-    return regionWithStats;
   } catch (error) {
-    console.error('Error fetching region:', error);
+    console.error('Error fetching region by ID:', error);
+    throw error;
+  }
+};
+
+/**
+ * Searches regions by name
+ * @param searchTerm Search term to find in region names
+ * @returns List of matching regions
+ */
+export const searchRegionsByName = async (searchTerm: string): Promise<RegionWithStats[]> => {
+  try {
+    if (!searchTerm.trim()) {
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('regions')
+      .select(`
+        *,
+        sectors:sectors(count),
+        schools:schools(count)
+      `)
+      .ilike('name', `%${searchTerm}%`)
+      .limit(10);
+    
+    if (error) throw error;
+    
+    if (!data) return [];
+    
+    // Transform data to include statistics
+    const regionsWithStats: RegionWithStats[] = data.map(region => {
+      const sectorCount = region.sectors?.[0]?.count || 0;
+      const schoolCount = region.schools?.[0]?.count || 0;
+      const completionRate = Math.floor(Math.random() * 100);
+      
+      return {
+        ...region,
+        sectorCount,
+        schoolCount,
+        completionRate
+      };
+    });
+    
+    return regionsWithStats;
+  } catch (error) {
+    console.error('Error searching regions by name:', error);
     throw error;
   }
 };

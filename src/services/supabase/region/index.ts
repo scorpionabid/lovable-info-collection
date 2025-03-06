@@ -1,5 +1,5 @@
 
-import { getRegions, getRegionById } from './getRegions';
+import { getRegions, getRegionById, searchRegionsByName } from './getRegions';
 import { getRegionSectors } from './getRegionSectors';
 import { createRegion, updateRegion, deleteRegion, archiveRegion } from './crudOperations';
 import { RegionWithStats, PaginationParams, SortParams, FilterParams } from './types';
@@ -11,7 +11,8 @@ const regionService = {
   createRegion,
   updateRegion,
   deleteRegion,
-  archiveRegion
+  archiveRegion,
+  searchRegionsByName
 };
 
 export default regionService;
