@@ -1,18 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import userService from "@/services/api/userService";
+import userService, { User } from "@/services/api/userService";
+import authService from "@/services/api/authService";
 
 interface AdminTabProps {
   schoolId?: string;
 }
 
 export const AdminTab = ({ schoolId }: AdminTabProps) => {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [isAssigning, setIsAssigning] = useState(false);
@@ -29,13 +29,14 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
       try {
         setIsLoading(true);
         // Get users that are not assigned to a school but have school-admin role
-        const { data: roleData } = await userService.getRoles();
-        const schoolAdminRole = roleData.find(role => role.name === 'school-admin');
+        const rolesResponse = await userService.getRoles();
+        const schoolAdminRole = rolesResponse.find(role => role.name === 'school-admin');
         
         if (schoolAdminRole) {
           const filters = {
-            roleId: schoolAdminRole.id,
-            unassignedOnly: true
+            role_id: schoolAdminRole.id,
+            school_id: undefined,
+            status: 'active'
           };
           const unassignedUsers = await userService.getUsers(filters);
           setUsers(unassignedUsers);
@@ -97,8 +98,8 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
     try {
       setIsAssigning(true);
       // First, get the school-admin role ID
-      const { data: roleData } = await userService.getRoles();
-      const schoolAdminRole = roleData.find(role => role.name === 'school-admin');
+      const rolesResponse = await userService.getRoles();
+      const schoolAdminRole = rolesResponse.find(role => role.name === 'school-admin');
       
       if (!schoolAdminRole) {
         throw new Error('School admin role not found');
@@ -108,7 +109,7 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
       const tempPassword = Math.random().toString(36).slice(-8);
       
       // Create the user with school-admin role and assign to this school
-      const newUser = await userService.createUser({
+      const userData: Omit<User, 'id'> = {
         email: newAdmin.email,
         first_name: newAdmin.firstName,
         last_name: newAdmin.lastName,
@@ -116,7 +117,19 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
         role_id: schoolAdminRole.id,
         school_id: schoolId,
         is_active: true,
-        password: tempPassword
+        utis_code: `SC${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`
+      };
+      
+      // Create the user in the database
+      await userService.createUser(userData);
+      
+      // Also create auth user with password
+      await authService.register({
+        email: newAdmin.email,
+        password: tempPassword,
+        firstName: newAdmin.firstName,
+        lastName: newAdmin.lastName,
+        role: schoolAdminRole.id
       });
       
       toast({
