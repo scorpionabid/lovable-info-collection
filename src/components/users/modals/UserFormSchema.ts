@@ -6,7 +6,7 @@ export const userFormSchema = z.object({
   email: z.string().email({ message: "Düzgün email daxil edin" }),
   first_name: z.string().min(2, { message: "Ad ən azı 2 simvol olmalıdır" }),
   last_name: z.string().min(2, { message: "Soyad ən azı 2 simvol olmalıdır" }),
-  phone: z.string().optional(),
+  phone: z.string().min(5, { message: "Telefon nömrəsi ən azı 5 simvol olmalıdır" }).optional().or(z.literal("")),
   utis_code: z.string().min(5, { message: "UTIS kodu ən azı 5 simvol olmalıdır" })
     .max(20, { message: "UTIS kodu çox uzundur" })
     .regex(/^[A-Za-z0-9]+$/, { message: "UTIS kodu yalnız hərf və rəqəmlərdən ibarət olmalıdır" }),

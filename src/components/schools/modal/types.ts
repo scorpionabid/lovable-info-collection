@@ -10,13 +10,13 @@ export const schoolSchema = z.object({
   studentCount: z.coerce.number().min(0, { message: "Şagird sayı mənfi ola bilməz" }),
   teacherCount: z.coerce.number().min(0, { message: "Müəllim sayı mənfi ola bilməz" }),
   address: z.string().min(5, { message: "Ünvan ən azı 5 simvol olmalıdır" }),
-  contactEmail: z.string().email({ message: "Düzgün email formatı daxil edin" }),
-  contactPhone: z.string().min(5, { message: "Telefon nömrəsi ən azı 5 simvol olmalıdır" }),
+  contactEmail: z.string().email({ message: "Düzgün email formatı daxil edin" }).optional().or(z.literal("")),
+  contactPhone: z.string().min(5, { message: "Telefon nömrəsi ən azı 5 simvol olmalıdır" }).optional().or(z.literal("")),
   status: z.string().default("Aktiv"),
-  directorFirstName: z.string().min(2, { message: "Ad ən azı 2 simvol olmalıdır" }),
-  directorLastName: z.string().min(2, { message: "Soyad ən azı 2 simvol olmalıdır" }),
-  directorEmail: z.string().email({ message: "Düzgün email formatı daxil edin" }),
-  directorPhone: z.string().min(5, { message: "Telefon nömrəsi ən azı 5 simvol olmalıdır" }),
+  directorFirstName: z.string().min(2, { message: "Ad ən azı 2 simvol olmalıdır" }).optional().or(z.literal("")),
+  directorLastName: z.string().min(2, { message: "Soyad ən azı 2 simvol olmalıdır" }).optional().or(z.literal("")),
+  directorEmail: z.string().email({ message: "Düzgün email formatı daxil edin" }).optional().or(z.literal("")),
+  directorPhone: z.string().min(5, { message: "Telefon nömrəsi ən azı 5 simvol olmalıdır" }).optional().or(z.literal("")),
 });
 
 export type SchoolFormValues = z.infer<typeof schoolSchema>;

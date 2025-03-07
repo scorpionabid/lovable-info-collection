@@ -11,13 +11,17 @@ interface DirectorTabProps {
 export const DirectorTab = ({ form }: DirectorTabProps) => {
   return (
     <div className="space-y-4">
+      <div className="text-sm text-infoline-dark-gray mb-4">
+        Bu bölmə isteğe bağlıdır. Məktəb direktoru haqqında məlumat varsa, daxil edin.
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="directorFirstName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Direktorun adı <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Direktorun adı</FormLabel>
               <FormControl>
                 <Input placeholder="Adı daxil edin" {...field} />
               </FormControl>
@@ -31,7 +35,7 @@ export const DirectorTab = ({ form }: DirectorTabProps) => {
           name="directorLastName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Direktorun soyadı <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Direktorun soyadı</FormLabel>
               <FormControl>
                 <Input placeholder="Soyadı daxil edin" {...field} />
               </FormControl>
@@ -47,7 +51,7 @@ export const DirectorTab = ({ form }: DirectorTabProps) => {
           name="directorEmail"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>E-poçt <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>E-poçt</FormLabel>
               <FormControl>
                 <Input 
                   type="email" 
@@ -65,7 +69,7 @@ export const DirectorTab = ({ form }: DirectorTabProps) => {
           name="directorPhone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Telefon <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Telefon</FormLabel>
               <FormControl>
                 <Input placeholder="Telefon nömrəsini daxil edin" {...field} />
               </FormControl>

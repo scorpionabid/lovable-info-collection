@@ -60,7 +60,7 @@ export const SchoolModalContent = ({
             </TabsContent>
             
             <TabsContent value="admin">
-              <AdminTab />
+              <AdminTab schoolId={school?.id} />
             </TabsContent>
           </Tabs>
           

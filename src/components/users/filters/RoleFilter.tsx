@@ -22,14 +22,13 @@ interface RoleFilterProps {
 
 export const RoleFilter = ({ roles, selectedRole, onChange, isLoading }: RoleFilterProps) => {
   const formatRoleName = (roleName: string) => {
-    if (roleName === 'superadmin' || roleName === 'super-admin') 
-      return 'SuperAdmin';
-    if (roleName === 'region-admin')
-      return 'Region Admin';
-    if (roleName === 'sector-admin')
-      return 'Sektor Admin';
-    if (roleName === 'school-admin')
-      return 'Məktəb Admin';
+    const normalizedRole = roleName.toLowerCase();
+    
+    if (normalizedRole.includes('super')) return 'SuperAdmin';
+    if (normalizedRole.includes('region')) return 'Region Admin';
+    if (normalizedRole.includes('sector')) return 'Sektor Admin';
+    if (normalizedRole.includes('school')) return 'Məktəb Admin';
+    
     return roleName;
   };
 

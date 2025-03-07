@@ -170,7 +170,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
           name="contactEmail"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Əlaqə e-poçtu <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Əlaqə e-poçtu</FormLabel>
               <FormControl>
                 <Input 
                   type="email" 
@@ -188,7 +188,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
           name="contactPhone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Əlaqə telefonu <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Əlaqə telefonu</FormLabel>
               <FormControl>
                 <Input placeholder="Telefon nömrəsini daxil edin" {...field} />
               </FormControl>

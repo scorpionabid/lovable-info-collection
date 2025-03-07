@@ -32,6 +32,10 @@ export const useUserFormSubmit = (
           }
         }
         
+        // Check if user is a school admin - used for role verification
+        const roles = await userService.getRoles();
+        const isSchoolAdmin = roles.find(r => r.id === values.role_id)?.name === 'school-admin';
+        
         // First create auth user if it's a new user
         if (!isEditing && values.password) {
           await authService.register({
@@ -54,6 +58,15 @@ export const useUserFormSubmit = (
           utis_code: values.utis_code,
           is_active: values.is_active
         };
+        
+        // Make sure school admin has a school
+        if (isSchoolAdmin && !values.school_id) {
+          toast({
+            title: "Xəbərdarlıq",
+            description: "Məktəb admini üçün məktəb təyin etmək tövsiyə olunur",
+            variant: "warning",
+          });
+        }
         
         if (isEditing && user) {
           return await userService.updateUser(user.id, userData);

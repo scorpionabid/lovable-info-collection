@@ -28,7 +28,25 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Handle case when student_count or teacher_count columns don't exist
+      if (error.message.includes('column') && error.message.includes('does not exist')) {
+        // Remove problematic fields and try again
+        const { student_count, teacher_count, ...cleanDbData } = dbData;
+        
+        const retryResult = await supabase
+          .from('schools')
+          .insert(cleanDbData)
+          .select('id')
+          .single();
+          
+        if (retryResult.error) throw retryResult.error;
+        return retryResult.data;
+      } else {
+        throw error;
+      }
+    }
+    
     return data;
   } catch (error) {
     console.error('Error creating school:', error);
@@ -63,7 +81,26 @@ export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Handle case when student_count or teacher_count columns don't exist
+      if (error.message.includes('column') && error.message.includes('does not exist')) {
+        // Remove problematic fields and try again
+        const { student_count, teacher_count, ...cleanDbData } = dbData;
+        
+        const retryResult = await supabase
+          .from('schools')
+          .update(cleanDbData)
+          .eq('id', id)
+          .select()
+          .single();
+          
+        if (retryResult.error) throw retryResult.error;
+        return retryResult.data;
+      } else {
+        throw error;
+      }
+    }
+
     return data;
   } catch (error) {
     console.error('Error updating school:', error);
