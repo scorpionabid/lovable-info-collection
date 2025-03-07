@@ -27,14 +27,40 @@ export const useAdminAssignment = (schoolId?: string) => {
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
+      
+      // First get the school admin role ID
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'school-admin')
+        .single();
+        
+      if (roleError) {
+        console.error('Error fetching role:', roleError);
+        toast.error('Rol məlumatları yüklənmədi');
+        return;
+      }
+      
+      if (!roleData || !roleData.id) {
+        console.error('Role ID not found');
+        toast.error('Rol ID tapılmadı');
+        return;
+      }
+      
+      const schoolAdminRoleId = roleData.id;
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('role_id', (await supabase.from('roles').select('id').eq('name', 'school-admin').single()).data?.id)
+        .eq('role_id', schoolAdminRoleId)
         .is('school_id', null)
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        toast.error('İstifadəçilər yüklənmədi');
+        return;
+      }
       
       setUsers(data || []);
     } catch (error) {
@@ -46,8 +72,10 @@ export const useAdminAssignment = (schoolId?: string) => {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (schoolId) {
+      fetchUsers();
+    }
+  }, [fetchUsers, schoolId]);
 
   // Assign an existing admin to the school
   const handleAssignAdmin = async () => {
@@ -65,7 +93,11 @@ export const useAdminAssignment = (schoolId?: string) => {
         .update({ school_id: schoolId })
         .eq('id', selectedUserId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error assigning admin:', error);
+        toast.error('Admin təyin edilmədi');
+        return;
+      }
       
       toast.success('Admin məktəbə təyin edildi');
       setSelectedUserId('');
@@ -112,7 +144,17 @@ export const useAdminAssignment = (schoolId?: string) => {
         .eq('name', 'school-admin')
         .single();
         
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Error fetching role:', roleError);
+        toast.error('Rol məlumatları yüklənmədi');
+        return;
+      }
+      
+      if (!roleData || !roleData.id) {
+        console.error('Role ID not found');
+        toast.error('Rol ID tapılmadı');
+        return;
+      }
 
       // Generate a UUID for the new user
       const userId = crypto.randomUUID();
@@ -126,15 +168,16 @@ export const useAdminAssignment = (schoolId?: string) => {
           last_name: newAdmin.lastName,
           email: newAdmin.email,
           phone: newAdmin.phone,
-          role_id: roleData?.id,
+          role_id: roleData.id,
           school_id: schoolId,
           is_active: true
         });
 
-      if (error) throw error;
-      
-      // Send invitation email (in a real app)
-      // For now we'll just show a success message
+      if (error) {
+        console.error('Error creating admin:', error);
+        toast.error('Admin yaradılmadı: ' + error.message);
+        return;
+      }
       
       toast.success('Yeni admin yaradıldı və məktəbə təyin edildi');
       
@@ -148,7 +191,7 @@ export const useAdminAssignment = (schoolId?: string) => {
       
     } catch (error) {
       console.error('Error creating admin:', error);
-      toast.error('Admin yaradılmadı');
+      toast.error('Admin yaradılmadı: ' + (error as Error).message);
     } finally {
       setIsAssigning(false);
     }

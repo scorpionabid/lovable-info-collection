@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
 import { SchoolFormValues } from "../types";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface GeneralInfoTabProps {
   form: UseFormReturn<SchoolFormValues>;
@@ -13,6 +15,32 @@ interface GeneralInfoTabProps {
 }
 
 export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: GeneralInfoTabProps) => {
+  const [schoolTypes, setSchoolTypes] = useState<Array<{id: string, name: string}>>([]);
+  
+  // Fetch school types when component mounts
+  useEffect(() => {
+    const fetchSchoolTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('school_types')
+          .select('id, name');
+        
+        if (error) {
+          console.error('Error fetching school types:', error);
+          return;
+        }
+        
+        if (data) {
+          setSchoolTypes(data);
+        }
+      } catch (error) {
+        console.error('Error in fetchSchoolTypes:', error);
+      }
+    };
+    
+    fetchSchoolTypes();
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -36,16 +64,18 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
           render={({ field }) => (
             <FormItem>
               <FormLabel>Məktəb növü <span className="text-red-500">*</span></FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Məktəb növünü seçin" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Orta məktəb">Orta məktəb</SelectItem>
-                  <SelectItem value="Tam orta məktəb">Tam orta məktəb</SelectItem>
-                  <SelectItem value="İbtidai məktəb">İbtidai məktəb</SelectItem>
+                  {schoolTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -61,7 +91,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
           render={({ field }) => (
             <FormItem>
               <FormLabel>Region <span className="text-red-500">*</span></FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Region seçin" />
@@ -204,7 +234,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
         render={({ field }) => (
           <FormItem>
             <FormLabel>Status <span className="text-red-500">*</span></FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Status seçin" />

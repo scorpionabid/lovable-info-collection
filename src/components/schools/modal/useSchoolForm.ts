@@ -89,22 +89,35 @@ export const useSchoolForm = (
     try {
       setIsSubmitting(true);
       
+      // Validate that we have valid UUIDs for required fields
+      if (!data.type || !data.regionId || !data.sectorId) {
+        toast.error("Məcburi sahələri doldurun", {
+          description: "Məktəb növü, region və sektor seçilməlidir"
+        });
+        return;
+      }
+      
+      // Log the form data for debugging
+      console.log('Form data before submission:', data);
+      
       if (mode === 'create') {
         // Create the school with properly formatted data
         await createSchool({
           name: data.name,
-          type: data.type,
+          type: data.type, // This should be a valid UUID now
           region_id: data.regionId,
           sector_id: data.sectorId,
           region: '', // These will be filled by the backend
           sector: '', // These will be filled by the backend
-          studentCount: data.studentCount,
-          teacherCount: data.teacherCount,
+          studentCount: data.studentCount || 0,
+          teacherCount: data.teacherCount || 0,
           address: data.address,
-          contactEmail: data.contactEmail,
-          contactPhone: data.contactPhone,
-          status: data.status
+          contactEmail: data.contactEmail || '',
+          contactPhone: data.contactPhone || '',
+          status: data.status || 'Aktiv'
         });
+        
+        toast.success("Məktəb uğurla yaradıldı");
         
         if (onSchoolCreated) {
           onSchoolCreated();
@@ -117,13 +130,15 @@ export const useSchoolForm = (
             type: data.type,
             region_id: data.regionId,
             sector_id: data.sectorId,
-            studentCount: data.studentCount,
-            teacherCount: data.teacherCount,
+            studentCount: data.studentCount || 0,
+            teacherCount: data.teacherCount || 0,
             address: data.address,
-            contactEmail: data.contactEmail,
-            contactPhone: data.contactPhone,
-            status: data.status
+            contactEmail: data.contactEmail || '',
+            contactPhone: data.contactPhone || '',
+            status: data.status || 'Aktiv'
           });
+          
+          toast.success("Məktəb uğurla yeniləndi");
           
           if (onSchoolUpdated) {
             onSchoolUpdated();

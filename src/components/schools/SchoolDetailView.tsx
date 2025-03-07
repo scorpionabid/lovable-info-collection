@@ -1,35 +1,35 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/dashboard/StatCard";
-import { ChartCard } from "@/components/dashboard/ChartCard";
-import { 
-  Users, 
-  GraduationCap, 
-  PieChart, 
-  ArrowLeft, 
-  Edit, 
-  Download,
-  Plus,
-  BarChart4,
-  Clock,
-  FileText
+import { Card } from "@/components/ui/card";
+import {
+  MoreHorizontal,
+  FileDown,
+  Pencil,
+  Trash,
+  User,
+  School,
+  MapPin,
+  Mail,
+  Phone,
+  BarChart
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SchoolModal } from './SchoolModal';
-import { School, SchoolStats, assignSchoolAdmin, exportSchoolData } from "@/services/supabase/schoolService";
+import { PieChartComponent } from '@/components/dashboard/charts/PieChartComponent';
+import { BarChartComponent } from '@/components/dashboard/charts/BarChartComponent';
+import { deleteSchool, assignSchoolAdmin } from '@/services/supabase/schoolService';
 
-interface SchoolDetailProps {
-  school: School;
-  stats?: {
-    categories: Array<{name: string, value: number}>;
-    completionHistory: Array<{name: string, value: number}>;
-  };
-  activities?: Array<{id: number, action: string, user: string, time: string}>;
-}
-
-export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetailProps) => {
+export const SchoolDetailView = ({ school, stats, activities }: any) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -44,23 +44,41 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
   };
   
   const handleExport = async () => {
+    // Export functionality would go here
+    toast({
+      title: "Eksport edilir",
+      description: "Məktəb məlumatları eksport edilir..."
+    });
+  };
+  
+  const handleDelete = async () => {
     try {
-      await exportSchoolData(school.id);
+      await deleteSchool(school.id);
       toast({
-        title: "Məlumatlar ixrac edildi",
-        description: "Məktəb məlumatları uğurla ixrac edildi."
+        title: "Məktəb silindi",
+        description: "Məktəb uğurla silindi."
       });
+      navigate('/schools');
     } catch (error) {
-      console.error('Error exporting school data:', error);
+      console.error('Error deleting school:', error);
       toast({
         title: "Xəta baş verdi",
-        description: "Məlumatlar ixrac edilmədi.",
+        description: "Məktəb silinmədi",
         variant: "destructive"
       });
     }
   };
   
   const handleAssignAdmin = async (userId: string) => {
+    if (!userId || !school?.id) {
+      toast({
+        title: "Xəta",
+        description: "İstifadəçi və ya məktəb ID-si yoxdur",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setIsAssigning(true);
       await assignSchoolAdmin(school.id, userId);
@@ -72,7 +90,7 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
       console.error('Error assigning school admin:', error);
       toast({
         title: "Xəta baş verdi",
-        description: "Admin təyin edilmədi.",
+        description: "Admin təyin edilmədi",
         variant: "destructive"
       });
     } finally {
@@ -80,171 +98,130 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
     }
   };
 
+  if (!school) {
+    return <div>Məlumat yüklənir...</div>;
+  }
+
+  // Prepare chart data
+  const categoryData = stats?.categories.map((cat: any) => ({
+    name: cat.name,
+    value: cat.value
+  })) || [];
+  
+  const completionData = stats?.completionHistory.map((hist: any) => ({
+    name: hist.name,
+    value: hist.value
+  })) || [];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/schools')}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-bold text-infoline-dark-blue">{school.name}</h1>
-          </div>
-          <p className="text-infoline-dark-gray mt-1 ml-10">
-            {school.region}, {school.sector} | {school.type}
-          </p>
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold text-infoline-dark-blue">{school.name}</h2>
+          <p className="text-sm text-infoline-dark-gray">{school.type}</p>
         </div>
         
-        <div className="flex gap-2 ml-10 sm:ml-0">
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            onClick={handleExport}
-          >
-            <Download className="h-4 w-4" />
-            İxrac et
-          </Button>
-          <Button 
-            className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2"
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
             onClick={() => setIsEditModalOpen(true)}
           >
-            <Edit className="h-4 w-4" />
+            <Pencil className="w-4 h-4 mr-2" />
             Redaktə et
           </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLabel>Əməliyyatlar</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExport}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Eksport et
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash className="w-4 h-4 mr-2" />
+                Sil
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Şagird sayı" 
-          value={school.studentCount} 
-          icon={<GraduationCap className="h-5 w-5" />}
-          color="blue"
-        />
-        <StatCard 
-          title="Müəllim sayı" 
-          value={school.teacherCount} 
-          icon={<Users className="h-5 w-5" />}
-          color="green"
-        />
-        <StatCard 
-          title="Kateqoriya sayı" 
-          value={stats?.categories?.length || 5} 
-          icon={<FileText className="h-5 w-5" />}
-          color="purple"
-        />
-        <StatCard 
-          title="Doldurulma faizi" 
-          value={`${school.completionRate}%`} 
-          icon={<PieChart className="h-5 w-5" />}
-          color="yellow"
-          change={5}
-          changeLabel="ötən aydan"
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {stats && (
-          <>
-            <ChartCard 
-              title="Doldurulma Tendensiyası" 
-              subtitle="Son 6 ay"
-              type="bar"
-              data={stats.completionHistory}
-              colors={['#60A5FA']}
-            />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6 col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Ümumi Məlumatlar</h3>
+              <dl className="space-y-3">
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Növ:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.type}</dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Region:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.region}</dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Sektor:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.sector}</dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Şagird sayı:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.studentCount}</dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Müəllim sayı:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.teacherCount}</dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Status:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      school.status === 'Aktiv' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {school.status}
+                    </span>
+                  </dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Ünvan:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.address}</dd>
+                </div>
+              </dl>
+            </div>
             
-            <ChartCard 
-              title="Kateqoriyalar üzrə doldurulma" 
-              subtitle="Faiz göstəriciləri"
-              type="bar"
-              data={stats.categories}
-              colors={['#10B981']}
-            />
-          </>
-        )}
-      </div>
-      
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <Tabs defaultValue="details" className="w-full">
-          <TabsList className="w-full justify-start border-b rounded-none px-4">
-            <TabsTrigger value="details">Məktəb Təfərrüatları</TabsTrigger>
-            <TabsTrigger value="activities">Son Aktivliklər</TabsTrigger>
-            <TabsTrigger value="categories">Kateqoriyalar</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="details" className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Ümumi Məlumatlar</h3>
-                <dl className="space-y-3">
+            <div>
+              <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Əlaqə Məlumatları</h3>
+              <dl className="space-y-3">
+                {school.director && (
                   <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Məktəb adı:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.name}</dd>
+                    <dt className="text-sm font-medium text-infoline-dark-gray">Direktor:</dt>
+                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.director}</dd>
                   </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Məktəb növü:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.type}</dd>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Region:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.region}</dd>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Sektor:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.sector}</dd>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Ünvan:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.address || 'N/A'}</dd>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Yaradılma tarixi:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">
-                      {new Date(school.createdAt).toLocaleDateString('az-AZ')}
-                    </dd>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Status:</dt>
-                    <dd className="text-sm col-span-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        school.status === 'Aktiv' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {school.status}
-                      </span>
-                    </dd>
-                  </div>
-                </dl>
-              </div>
+                )}
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">E-poçt:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.contactEmail}</dd>
+                </div>
+                <div className="grid grid-cols-3">
+                  <dt className="text-sm font-medium text-infoline-dark-gray">Telefon:</dt>
+                  <dd className="text-sm text-infoline-dark-blue col-span-2">{school.contactPhone}</dd>
+                </div>
+              </dl>
               
-              <div>
-                <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Əlaqə Məlumatları</h3>
-                <dl className="space-y-3">
-                  {school.director && (
-                    <div className="grid grid-cols-3">
-                      <dt className="text-sm font-medium text-infoline-dark-gray">Direktor:</dt>
-                      <dd className="text-sm text-infoline-dark-blue col-span-2">{school.director}</dd>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">E-poçt:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.contactEmail}</dd>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Telefon:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.contactPhone}</dd>
-                  </div>
-                </dl>
-                
-                <h3 className="text-lg font-semibold text-infoline-dark-blue mt-8 mb-4">Məktəb Admini</h3>
-                <div className="bg-infoline-lightest-gray rounded-lg p-6 text-center">
-                  <BarChart4 className="mx-auto h-16 w-16 text-infoline-gray mb-4" />
-                  <p className="text-infoline-dark-gray">Bu məktəb üçün təyin edilmiş admin yoxdur</p>
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-infoline-dark-blue mb-2">Admins</h3>
+                <p className="text-sm text-infoline-dark-gray mb-2">Məktəb adminlərini idarə edin</p>
+                <div className="flex flex-col">
                   <Button 
                     className="mt-4"
                     onClick={() => handleAssignAdmin('placeholder-user-id')}
@@ -255,77 +232,61 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
                 </div>
               </div>
             </div>
-          </TabsContent>
+          </div>
+        </Card>
+        
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Məlumat və Statistika</h3>
           
-          <TabsContent value="activities" className="p-6">
-            <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Son Aktivliklər</h3>
-            <div className="space-y-4">
-              {activities.length > 0 ? (
-                activities.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 border-b border-infoline-light-gray pb-4">
-                    <div className="bg-blue-100 text-blue-700 rounded-full p-2 mt-1">
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-infoline-dark-blue">{activity.action}</p>
-                      <p className="text-xs text-infoline-dark-gray mt-1">
-                        {activity.user} tərəfindən, {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-infoline-dark-gray">
-                  <p>Heç bir aktivlik tapılmadı</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="categories" className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-infoline-dark-blue">Kateqoriyalar</h3>
-              <Link to="/categories">
-                <Button className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Kateqoriyaları idarə et
-                </Button>
-              </Link>
+          <div className="space-y-8">
+            <div>
+              <h4 className="text-sm font-medium text-infoline-dark-gray mb-3">Kateqoriyalar üzrə göstəricilər</h4>
+              <div className="h-[200px]">
+                <PieChartComponent data={categoryData} />
+              </div>
             </div>
             
-            <div className="space-y-4">
-              {stats && stats.categories.length > 0 ? (
-                stats.categories.map((category) => (
-                  <div key={category.name} className="bg-white border border-infoline-light-gray rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-sm font-medium text-infoline-dark-blue">{category.name}</h4>
-                      <span className="text-sm font-medium text-infoline-dark-blue">{category.value}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="h-2.5 rounded-full bg-infoline-blue" 
-                        style={{ width: `${category.value}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-infoline-dark-gray">
-                  <p>Heç bir kateqoriya tapılmadı</p>
-                </div>
-              )}
+            <div>
+              <h4 className="text-sm font-medium text-infoline-dark-gray mb-3">Tamamlanma tarixçəsi</h4>
+              <div className="h-[200px]">
+                <BarChartComponent data={completionData} />
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </Card>
       </div>
       
-      <SchoolModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-        mode="edit"
-        school={school}
-        onSchoolUpdated={handleSchoolUpdated}
-      />
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Son Fəaliyyətlər</h3>
+        
+        <div className="space-y-4">
+          {activities && activities.length > 0 ? (
+            activities.map((activity: any, index: number) => (
+              <div key={index} className="flex items-start space-x-4 border-b border-gray-100 pb-4">
+                <div className="bg-infoline-lightest-blue p-2 rounded-full">
+                  <User className="w-5 h-5 text-infoline-blue" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-infoline-dark-gray">{activity.title}</p>
+                  <p className="text-xs text-infoline-light-gray">{activity.date}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-infoline-dark-gray">Fəaliyyət tapılmadı</p>
+          )}
+        </div>
+      </Card>
+      
+      {isEditModalOpen && (
+        <SchoolModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          mode="edit"
+          school={school}
+          onSchoolUpdated={handleSchoolUpdated}
+        />
+      )}
     </div>
   );
 };

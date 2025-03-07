@@ -1,3 +1,4 @@
+
 export interface School {
   id: string;
   name: string;
@@ -44,9 +45,9 @@ export interface SchoolStats {
 
 export interface CreateSchoolDto {
   name: string;
-  type: string;
-  region_id: string;
-  sector_id: string;
+  type: string; // This needs to be a valid UUID for type_id
+  region_id: string; // This must be a valid UUID
+  sector_id: string; // This must be a valid UUID
   region?: string;
   sector?: string;
   studentCount: number;

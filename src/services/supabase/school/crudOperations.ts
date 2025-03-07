@@ -7,10 +7,17 @@ import { CreateSchoolDto, UpdateSchoolDto } from './types';
  */
 export const createSchool = async (schoolData: CreateSchoolDto) => {
   try {
+    console.log('Creating school with data:', schoolData);
+    
+    // Ensure we have valid UUIDs for type, region_id, and sector_id
+    if (!schoolData.region_id || !schoolData.sector_id || !schoolData.type) {
+      throw new Error('Region, sector and type are required and must be valid UUIDs');
+    }
+    
     // Convert from our DTO format to the database schema format
     const dbData = {
       name: schoolData.name,
-      type_id: schoolData.type, // This might need adjustment based on how types are stored
+      type_id: schoolData.type, // This should be a UUID
       region_id: schoolData.region_id,
       sector_id: schoolData.sector_id,
       student_count: schoolData.studentCount,
@@ -18,8 +25,12 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       address: schoolData.address,
       email: schoolData.contactEmail,
       phone: schoolData.contactPhone,
-      status: schoolData.status
+      status: schoolData.status,
+      director: schoolData.director
     };
+
+    // Log the converted data to ensure it's correctly formatted
+    console.log('Submitting to database:', dbData);
 
     const { data, error } = await supabase
       .from('schools')
@@ -27,7 +38,10 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error creating school:', error);
+      throw error;
+    }
     
     return data;
   } catch (error) {
@@ -41,6 +55,8 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
  */
 export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
   try {
+    console.log('Updating school with data:', schoolData);
+    
     // Convert from our DTO format to the database schema format
     const dbData: any = {};
     
@@ -54,6 +70,10 @@ export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
     if (schoolData.contactEmail) dbData.email = schoolData.contactEmail;
     if (schoolData.contactPhone) dbData.phone = schoolData.contactPhone;
     if (schoolData.status) dbData.status = schoolData.status;
+    if (schoolData.director !== undefined) dbData.director = schoolData.director;
+
+    // Log the converted data to ensure it's correctly formatted
+    console.log('Submitting update to database:', dbData);
 
     const { data, error } = await supabase
       .from('schools')
@@ -62,7 +82,10 @@ export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error updating school:', error);
+      throw error;
+    }
 
     return data;
   } catch (error) {
