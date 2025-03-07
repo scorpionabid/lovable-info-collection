@@ -64,7 +64,7 @@ export const useUserFormSubmit = (
           toast({
             title: "Xəbərdarlıq",
             description: "Məktəb admini üçün məktəb təyin etmək tövsiyə olunur",
-            variant: "default",
+            variant: "default", // Changed from "warning" to "default" which is an allowed variant
           });
         }
         

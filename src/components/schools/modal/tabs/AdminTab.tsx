@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import userService, { User } from "@/services/api/userService";
+import userService, { User, UserFilters } from "@/services/api/userService";
 import authService from "@/services/api/authService";
 
 interface AdminTabProps {
@@ -33,10 +34,11 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
         const schoolAdminRole = rolesResponse.find(role => role.name === 'school-admin');
         
         if (schoolAdminRole) {
-          const filters = {
+          // Create a proper UserFilters object with the correct status type
+          const filters: UserFilters = {
             role_id: schoolAdminRole.id,
             school_id: undefined,
-            status: 'active'
+            status: 'active' // Now correctly typed as one of the allowed values
           };
           const unassignedUsers = await userService.getUsers(filters);
           setUsers(unassignedUsers);
