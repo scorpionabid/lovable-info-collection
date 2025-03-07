@@ -3,7 +3,6 @@ import { Form } from "@/components/ui/form";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ModalHeader } from "./ModalHeader";
 import { GeneralInfoTab } from "./tabs/GeneralInfoTab";
-import { DirectorTab } from "./tabs/DirectorTab";
 import { AdminTab } from "./tabs/AdminTab";
 import { ModalFooter } from "./ModalFooter";
 import { SchoolModalProps } from "./types";
@@ -40,9 +39,8 @@ export const SchoolModalContent = ({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-3 mb-4">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="general">Ümumi Məlumatlar</TabsTrigger>
-              <TabsTrigger value="director">Direktor Məlumatları</TabsTrigger>
               <TabsTrigger value="admin">Admin Təyini</TabsTrigger>
             </TabsList>
             
@@ -53,10 +51,6 @@ export const SchoolModalContent = ({
                 sectors={sectors}
                 watchedRegionId={watchedRegionId}
               />
-            </TabsContent>
-            
-            <TabsContent value="director">
-              <DirectorTab form={form} />
             </TabsContent>
             
             <TabsContent value="admin">

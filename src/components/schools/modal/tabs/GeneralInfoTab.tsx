@@ -88,7 +88,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
               <FormLabel>Sektor <span className="text-red-500">*</span></FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                defaultValue={field.value}
+                value={field.value}
                 disabled={!watchedRegionId || sectors.length === 0}
               >
                 <FormControl>
@@ -116,7 +116,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
           name="studentCount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Şagird sayı <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Şagird sayı</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -135,7 +135,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
           name="teacherCount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Müəllim sayı <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Müəllim sayı</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
@@ -155,7 +155,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
         name="address"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Ünvan <span className="text-red-500">*</span></FormLabel>
+            <FormLabel>Ünvan</FormLabel>
             <FormControl>
               <Input placeholder="Məktəbin ünvanını daxil edin" {...field} />
             </FormControl>

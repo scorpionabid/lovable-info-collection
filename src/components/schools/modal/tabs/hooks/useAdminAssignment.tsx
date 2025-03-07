@@ -1,145 +1,152 @@
 
-import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import userService, { User, UserFilters } from "@/services/api/userService";
-import authService from "@/services/api/authService";
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/services/api/userService';
+
+export interface NewAdminFormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
 
 export const useAdminAssignment = (schoolId?: string) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
-  const [newAdmin, setNewAdmin] = useState({
+  const [newAdmin, setNewAdmin] = useState<NewAdminFormState>({
     firstName: '',
     lastName: '',
     email: '',
     phone: ''
   });
-  const { toast } = useToast();
+
+  // Fetch unassigned users
+  const fetchUsers = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role_id', (await supabase.from('roles').select('id').eq('name', 'school-admin').single()).data?.id)
+        .is('school_id', null)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('İstifadəçilər yüklənmədi');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadUnassignedUsers = async () => {
-      try {
-        setIsLoading(true);
-        // Get users that are not assigned to a school but have school-admin role
-        const rolesResponse = await userService.getRoles();
-        const schoolAdminRole = rolesResponse.find(role => role.name === 'school-admin');
-        
-        if (schoolAdminRole) {
-          // Create a proper UserFilters object with the correct status type
-          const filters: UserFilters = {
-            role: 'school-admin',
-            school_id: undefined,
-            status: 'active' // Now correctly typed as one of the allowed values
-          };
-          const unassignedUsers = await userService.getUsers(filters);
-          setUsers(unassignedUsers);
-        }
-      } catch (error) {
-        console.error('Error loading unassigned users:', error);
-        toast({
-          title: 'Xəta',
-          description: 'İstifadəçilər yüklənərkən xəta baş verdi',
-          variant: 'destructive'
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    fetchUsers();
+  }, [fetchUsers]);
 
-    if (schoolId) {
-      loadUnassignedUsers();
-    }
-  }, [schoolId, toast]);
-
+  // Assign an existing admin to the school
   const handleAssignAdmin = async () => {
-    if (!selectedUserId || !schoolId) return;
-
-    try {
-      setIsAssigning(true);
-      await userService.updateUser(selectedUserId, { school_id: schoolId });
-      
-      toast({
-        title: 'Uğurlu əməliyyat',
-        description: 'Admin məktəbə təyin edildi',
-      });
-
-      // Refresh the list
-      setSelectedUserId('');
-      setUsers(users.filter(user => user.id !== selectedUserId));
-    } catch (error) {
-      console.error('Error assigning admin:', error);
-      toast({
-        title: 'Xəta',
-        description: 'Admin təyin edilərkən xəta baş verdi',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  const handleCreateAdmin = async () => {
-    if (!schoolId || !newAdmin.email || !newAdmin.firstName || !newAdmin.lastName) {
-      toast({
-        title: 'Xəta',
-        description: 'Zəhmət olmasa bütün məcburi sahələri doldurun',
-        variant: 'destructive'
-      });
+    if (!schoolId || !selectedUserId) {
+      toast.error('Məktəb və ya istifadəçi seçilməyib');
       return;
     }
 
     try {
       setIsAssigning(true);
-      // First, get the school-admin role ID
-      const rolesResponse = await userService.getRoles();
-      const schoolAdminRole = rolesResponse.find(role => role.name === 'school-admin');
       
-      if (!schoolAdminRole) {
-        throw new Error('School admin role not found');
-      }
+      // Update user record to assign them to this school
+      const { error } = await supabase
+        .from('users')
+        .update({ school_id: schoolId })
+        .eq('id', selectedUserId);
 
-      // Create a temporary password
-      const tempPassword = Math.random().toString(36).slice(-8);
+      if (error) throw error;
       
-      // Create the user with school-admin role and assign to this school
-      const userData: Omit<User, 'id'> = {
-        email: newAdmin.email,
-        first_name: newAdmin.firstName,
-        last_name: newAdmin.lastName,
-        phone: newAdmin.phone,
-        role_id: schoolAdminRole.id,
-        school_id: schoolId,
-        is_active: true,
-        utis_code: `SC${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`
-      };
+      toast.success('Admin məktəbə təyin edildi');
+      setSelectedUserId('');
+      await fetchUsers(); // Refresh user list
+    } catch (error) {
+      console.error('Error assigning admin:', error);
+      toast.error('Admin təyin edilmədi');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  // Create a new admin and assign to the school
+  const handleCreateAdmin = async () => {
+    if (!schoolId) {
+      toast.error('Məktəb seçilməyib');
+      return;
+    }
+
+    if (!newAdmin.firstName || !newAdmin.lastName || !newAdmin.email) {
+      toast.error('Zəhmət olmasa bütün məcburi sahələri doldurun');
+      return;
+    }
+
+    try {
+      setIsAssigning(true);
       
-      // Create the user in the database
-      await userService.createUser(userData);
+      // First check if user with this email already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', newAdmin.email)
+        .single();
+        
+      if (existingUser) {
+        toast.error('Bu email ilə istifadəçi artıq mövcuddur');
+        return;
+      }
       
-      // Also create auth user with password
-      await authService.register({
-        email: newAdmin.email,
-        password: tempPassword,
-        firstName: newAdmin.firstName,
-        lastName: newAdmin.lastName,
-        role: schoolAdminRole.id
-      });
+      // Get the school-admin role ID
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'school-admin')
+        .single();
+        
+      if (roleError) throw roleError;
       
-      toast({
-        title: 'Uğurlu əməliyyat',
-        description: 'Yeni admin yaradıldı və məktəbə təyin edildi',
-      });
+      // Create new user
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          first_name: newAdmin.firstName,
+          last_name: newAdmin.lastName,
+          email: newAdmin.email,
+          phone: newAdmin.phone,
+          role_id: roleData?.id,
+          school_id: schoolId,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Send invitation email (in a real app)
+      // For now we'll just show a success message
+      
+      toast.success('Yeni admin yaradıldı və məktəbə təyin edildi');
       
       // Reset form
-      setNewAdmin({ firstName: '', lastName: '', email: '', phone: '' });
+      setNewAdmin({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: ''
+      });
+      
     } catch (error) {
       console.error('Error creating admin:', error);
-      toast({
-        title: 'Xəta',
-        description: 'Admin yaradılarkən xəta baş verdi',
-        variant: 'destructive'
-      });
+      toast.error('Admin yaradılmadı');
     } finally {
       setIsAssigning(false);
     }

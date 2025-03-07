@@ -18,8 +18,7 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       address: schoolData.address,
       email: schoolData.contactEmail,
       phone: schoolData.contactPhone,
-      status: schoolData.status,
-      director: schoolData.director
+      status: schoolData.status
     };
 
     const { data, error } = await supabase
@@ -28,24 +27,7 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       .select('id')
       .single();
 
-    if (error) {
-      // Handle case when student_count or teacher_count columns don't exist
-      if (error.message.includes('column') && error.message.includes('does not exist')) {
-        // Remove problematic fields and try again
-        const { student_count, teacher_count, ...cleanDbData } = dbData;
-        
-        const retryResult = await supabase
-          .from('schools')
-          .insert(cleanDbData)
-          .select('id')
-          .single();
-          
-        if (retryResult.error) throw retryResult.error;
-        return retryResult.data;
-      } else {
-        throw error;
-      }
-    }
+    if (error) throw error;
     
     return data;
   } catch (error) {
@@ -72,7 +54,6 @@ export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
     if (schoolData.contactEmail) dbData.email = schoolData.contactEmail;
     if (schoolData.contactPhone) dbData.phone = schoolData.contactPhone;
     if (schoolData.status) dbData.status = schoolData.status;
-    if (schoolData.director) dbData.director = schoolData.director;
 
     const { data, error } = await supabase
       .from('schools')
@@ -81,25 +62,7 @@ export const updateSchool = async (id: string, schoolData: UpdateSchoolDto) => {
       .select()
       .single();
 
-    if (error) {
-      // Handle case when student_count or teacher_count columns don't exist
-      if (error.message.includes('column') && error.message.includes('does not exist')) {
-        // Remove problematic fields and try again
-        const { student_count, teacher_count, ...cleanDbData } = dbData;
-        
-        const retryResult = await supabase
-          .from('schools')
-          .update(cleanDbData)
-          .eq('id', id)
-          .select()
-          .single();
-          
-        if (retryResult.error) throw retryResult.error;
-        return retryResult.data;
-      } else {
-        throw error;
-      }
-    }
+    if (error) throw error;
 
     return data;
   } catch (error) {

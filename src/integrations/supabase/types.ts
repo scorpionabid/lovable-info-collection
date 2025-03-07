@@ -1198,34 +1198,46 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          director: string | null
           email: string | null
           id: string
           name: string
           phone: string | null
           region_id: string | null
           sector_id: string | null
+          status: string | null
+          student_count: number | null
+          teacher_count: number | null
           type_id: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
+          director?: string | null
           email?: string | null
           id?: string
           name: string
           phone?: string | null
           region_id?: string | null
           sector_id?: string | null
+          status?: string | null
+          student_count?: number | null
+          teacher_count?: number | null
           type_id?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
+          director?: string | null
           email?: string | null
           id?: string
           name?: string
           phone?: string | null
           region_id?: string | null
           sector_id?: string | null
+          status?: string | null
+          student_count?: number | null
+          teacher_count?: number | null
           type_id?: string | null
         }
         Relationships: [

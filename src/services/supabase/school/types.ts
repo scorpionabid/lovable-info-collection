@@ -11,7 +11,6 @@ export interface School {
   teacherCount: number;
   completionRate: number;
   status: string;
-  director: string;
   contactEmail: string;
   contactPhone: string;
   createdAt: string;
@@ -57,7 +56,6 @@ export interface CreateSchoolDto {
   contactEmail: string;
   contactPhone: string;
   status: string;
-  director: string;
 }
 
 // Interface for updating an existing school

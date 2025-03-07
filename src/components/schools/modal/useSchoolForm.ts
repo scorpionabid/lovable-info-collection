@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { schoolSchema, SchoolFormValues } from './types';
 import { createSchool, updateSchool } from "@/services/supabase/schoolService";
 import { getRegionsForDropdown } from "@/services/supabase/sector/helperFunctions";
+import { getSectorsByRegionId } from "@/services/supabase/sector/helperFunctions";
 
 export const useSchoolForm = (
   mode: 'create' | 'edit',
@@ -31,16 +32,19 @@ export const useSchoolForm = (
       address: school?.address || '',
       contactEmail: school?.contactEmail || '',
       contactPhone: school?.contactPhone || '',
-      status: school?.status || 'Aktiv',
-      directorFirstName: '',
-      directorLastName: '',
-      directorEmail: '',
-      directorPhone: '',
+      status: school?.status || 'Aktiv'
     }
   });
   
   // Watch for region changes to load sectors
   const watchedRegionId = form.watch('regionId');
+  
+  // Reset sector selection when region changes
+  useEffect(() => {
+    if (watchedRegionId) {
+      form.setValue('sectorId', '');
+    }
+  }, [watchedRegionId, form]);
   
   // Load regions when component mounts
   useEffect(() => {
@@ -68,15 +72,8 @@ export const useSchoolForm = (
       }
       
       try {
-        // This would be replaced with a call to get sectors by region ID
-        // For now, using mock data
-        const sectorsMock = [
-          { id: '1', name: 'Nəsimi rayonu' },
-          { id: '2', name: 'Yasamal rayonu' },
-          { id: '3', name: 'Sabunçu rayonu' },
-          { id: '4', name: 'Mərkəz' },
-        ];
-        setSectors(sectorsMock);
+        const sectorData = await getSectorsByRegionId(watchedRegionId);
+        setSectors(sectorData);
       } catch (error) {
         console.error('Error loading sectors:', error);
         toast.error("Sektorlar yüklənərkən xəta baş verdi", {
@@ -92,9 +89,6 @@ export const useSchoolForm = (
     try {
       setIsSubmitting(true);
       
-      // Combine director names for the API
-      const directorName = `${data.directorFirstName} ${data.directorLastName}`;
-      
       if (mode === 'create') {
         // Create the school with properly formatted data
         await createSchool({
@@ -109,8 +103,7 @@ export const useSchoolForm = (
           address: data.address,
           contactEmail: data.contactEmail,
           contactPhone: data.contactPhone,
-          status: data.status,
-          director: directorName
+          status: data.status
         });
         
         if (onSchoolCreated) {
@@ -129,8 +122,7 @@ export const useSchoolForm = (
             address: data.address,
             contactEmail: data.contactEmail,
             contactPhone: data.contactPhone,
-            status: data.status,
-            director: directorName
+            status: data.status
           });
           
           if (onSchoolUpdated) {
