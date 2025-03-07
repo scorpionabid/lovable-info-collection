@@ -1,4 +1,3 @@
-
 export interface School {
   id: string;
   name: string;
@@ -15,6 +14,7 @@ export interface School {
   contactPhone: string;
   createdAt: string;
   address?: string;
+  director?: string;
 }
 
 export interface SchoolFilter {
@@ -42,7 +42,6 @@ export interface SchoolStats {
   completionHistory: CompletionHistory[];
 }
 
-// Interface for creating a new school
 export interface CreateSchoolDto {
   name: string;
   type: string;
@@ -56,7 +55,7 @@ export interface CreateSchoolDto {
   contactEmail: string;
   contactPhone: string;
   status: string;
+  director?: string;
 }
 
-// Interface for updating an existing school
 export interface UpdateSchoolDto extends Partial<CreateSchoolDto> {}

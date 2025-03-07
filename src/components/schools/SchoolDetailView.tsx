@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +33,7 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAssigningAdmin, setIsAssigningAdmin] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   
   const handleSchoolUpdated = () => {
     toast({
@@ -42,7 +41,6 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
       description: "Məktəb məlumatları uğurla yeniləndi."
     });
     setIsEditModalOpen(false);
-    // Ideally, we would refresh the data here
   };
   
   const handleExport = async () => {
@@ -64,13 +62,12 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
   
   const handleAssignAdmin = async (userId: string) => {
     try {
-      setIsAssigningAdmin(true);
+      setIsAssigning(true);
       await assignSchoolAdmin(school.id, userId);
       toast({
         title: "Admin təyin edildi",
         description: "Məktəb admini uğurla təyin edildi."
       });
-      // Ideally, we would refresh the data here
     } catch (error) {
       console.error('Error assigning school admin:', error);
       toast({
@@ -79,7 +76,7 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
         variant: "destructive"
       });
     } finally {
-      setIsAssigningAdmin(false);
+      setIsAssigning(false);
     }
   };
 
@@ -228,10 +225,12 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
               <div>
                 <h3 className="text-lg font-semibold text-infoline-dark-blue mb-4">Əlaqə Məlumatları</h3>
                 <dl className="space-y-3">
-                  <div className="grid grid-cols-3">
-                    <dt className="text-sm font-medium text-infoline-dark-gray">Direktor:</dt>
-                    <dd className="text-sm text-infoline-dark-blue col-span-2">{school.director}</dd>
-                  </div>
+                  {school.director && (
+                    <div className="grid grid-cols-3">
+                      <dt className="text-sm font-medium text-infoline-dark-gray">Direktor:</dt>
+                      <dd className="text-sm text-infoline-dark-blue col-span-2">{school.director}</dd>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3">
                     <dt className="text-sm font-medium text-infoline-dark-gray">E-poçt:</dt>
                     <dd className="text-sm text-infoline-dark-blue col-span-2">{school.contactEmail}</dd>
@@ -249,9 +248,9 @@ export const SchoolDetailView = ({ school, stats, activities = [] }: SchoolDetai
                   <Button 
                     className="mt-4"
                     onClick={() => handleAssignAdmin('placeholder-user-id')}
-                    disabled={isAssigningAdmin}
+                    disabled={isAssigning}
                   >
-                    {isAssigningAdmin ? 'Gözləyin...' : 'Admin Təyin Et'}
+                    {isAssigning ? 'Gözləyin...' : 'Admin Təyin Et'}
                   </Button>
                 </div>
               </div>

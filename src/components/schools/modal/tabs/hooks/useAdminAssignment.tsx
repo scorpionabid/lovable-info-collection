@@ -113,11 +113,15 @@ export const useAdminAssignment = (schoolId?: string) => {
         .single();
         
       if (roleError) throw roleError;
+
+      // Generate a UUID for the new user
+      const userId = crypto.randomUUID();
       
       // Create new user
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('users')
         .insert({
+          id: userId,
           first_name: newAdmin.firstName,
           last_name: newAdmin.lastName,
           email: newAdmin.email,
@@ -125,9 +129,7 @@ export const useAdminAssignment = (schoolId?: string) => {
           role_id: roleData?.id,
           school_id: schoolId,
           is_active: true
-        })
-        .select()
-        .single();
+        });
 
       if (error) throw error;
       
