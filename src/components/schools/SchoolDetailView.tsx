@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +43,6 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
   };
   
   const handleExport = async () => {
-    // Export functionality would go here
     toast({
       title: "Eksport edilir",
       description: "Məktəb məlumatları eksport edilir..."
@@ -102,7 +100,6 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
     return <div>Məlumat yüklənir...</div>;
   }
 
-  // Prepare chart data
   const categoryData = stats?.categories.map((cat: any) => ({
     name: cat.name,
     value: cat.value
@@ -112,6 +109,8 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
     name: hist.name,
     value: hist.value
   })) || [];
+
+  const chartColors = ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA'];
 
   return (
     <div className="space-y-6">
@@ -242,14 +241,22 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
             <div>
               <h4 className="text-sm font-medium text-infoline-dark-gray mb-3">Kateqoriyalar üzrə göstəricilər</h4>
               <div className="h-[200px]">
-                <PieChartComponent data={categoryData} />
+                <PieChartComponent 
+                  data={categoryData} 
+                  height={200} 
+                  colors={chartColors} 
+                />
               </div>
             </div>
             
             <div>
               <h4 className="text-sm font-medium text-infoline-dark-gray mb-3">Tamamlanma tarixçəsi</h4>
               <div className="h-[200px]">
-                <BarChartComponent data={completionData} />
+                <BarChartComponent 
+                  data={completionData} 
+                  height={200} 
+                  colors={chartColors} 
+                />
               </div>
             </div>
           </div>
