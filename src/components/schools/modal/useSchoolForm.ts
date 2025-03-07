@@ -7,6 +7,7 @@ import { schoolSchema, SchoolFormValues } from './types';
 import { createSchool, updateSchool } from "@/services/supabase/schoolService";
 import { getRegionsForDropdown } from "@/services/supabase/sector/helperFunctions";
 import { getSectorsByRegionId } from "@/services/supabase/sector/helperFunctions";
+import { getSchoolTypes } from "@/services/supabase/school/helperFunctions";
 
 export const useSchoolForm = (
   mode: 'create' | 'edit',
@@ -19,6 +20,7 @@ export const useSchoolForm = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [regions, setRegions] = useState<Array<{id: string, name: string}>>([]);
   const [sectors, setSectors] = useState<Array<{id: string, name: string}>>([]);
+  const [schoolTypes, setSchoolTypes] = useState<Array<{id: string, name: string}>>([]);
   
   const form = useForm<SchoolFormValues>({
     resolver: zodResolver(schoolSchema),
@@ -45,6 +47,24 @@ export const useSchoolForm = (
       form.setValue('sectorId', '');
     }
   }, [watchedRegionId, form]);
+  
+  // Load school types when component mounts
+  useEffect(() => {
+    const loadSchoolTypes = async () => {
+      try {
+        const data = await getSchoolTypes();
+        console.log('Loaded school types:', data);
+        setSchoolTypes(data);
+      } catch (error) {
+        console.error('Error loading school types:', error);
+        toast.error("Məktəb növləri yüklənərkən xəta baş verdi", {
+          description: "Zəhmət olmasa yenidən cəhd edin"
+        });
+      }
+    };
+    
+    loadSchoolTypes();
+  }, []);
   
   // Load regions when component mounts
   useEffect(() => {
@@ -167,6 +187,7 @@ export const useSchoolForm = (
     isSubmitting,
     regions,
     sectors,
+    schoolTypes,
     watchedRegionId,
     onSubmit
   };

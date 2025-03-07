@@ -22,6 +22,7 @@ export const SchoolModalContent = ({
     isSubmitting,
     regions,
     sectors,
+    schoolTypes,
     watchedRegionId,
     onSubmit
   } = useSchoolForm(
@@ -49,6 +50,7 @@ export const SchoolModalContent = ({
                 form={form}
                 regions={regions}
                 sectors={sectors}
+                schoolTypes={schoolTypes}
                 watchedRegionId={watchedRegionId}
               />
             </TabsContent>

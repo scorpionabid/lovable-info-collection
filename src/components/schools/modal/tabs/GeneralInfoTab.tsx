@@ -4,43 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
 import { SchoolFormValues } from "../types";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface GeneralInfoTabProps {
   form: UseFormReturn<SchoolFormValues>;
   regions: Array<{id: string, name: string}>;
   sectors: Array<{id: string, name: string}>;
+  schoolTypes: Array<{id: string, name: string}>;
   watchedRegionId: string;
 }
 
-export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: GeneralInfoTabProps) => {
-  const [schoolTypes, setSchoolTypes] = useState<Array<{id: string, name: string}>>([]);
-  
-  // Fetch school types when component mounts
-  useEffect(() => {
-    const fetchSchoolTypes = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('school_types')
-          .select('id, name');
-        
-        if (error) {
-          console.error('Error fetching school types:', error);
-          return;
-        }
-        
-        if (data) {
-          setSchoolTypes(data);
-        }
-      } catch (error) {
-        console.error('Error in fetchSchoolTypes:', error);
-      }
-    };
-    
-    fetchSchoolTypes();
-  }, []);
-
+export const GeneralInfoTab = ({ form, regions, sectors, schoolTypes, watchedRegionId }: GeneralInfoTabProps) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -71,11 +44,17 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {schoolTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
+                  {schoolTypes.length > 0 ? (
+                    schoolTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="loading" disabled>
+                      Məlumat yüklənir...
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -98,11 +77,17 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {regions.map(region => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.name}
+                  {regions.length > 0 ? (
+                    regions.map(region => (
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="loading" disabled>
+                      Məlumat yüklənir...
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -127,11 +112,17 @@ export const GeneralInfoTab = ({ form, regions, sectors, watchedRegionId }: Gene
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {sectors.map(sector => (
-                    <SelectItem key={sector.id} value={sector.id}>
-                      {sector.name}
+                  {sectors.length > 0 ? (
+                    sectors.map(sector => (
+                      <SelectItem key={sector.id} value={sector.id}>
+                        {sector.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="loading" disabled>
+                      {watchedRegionId ? "Məlumat yüklənir..." : "Əvvəlcə region seçin"}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
