@@ -56,6 +56,18 @@ export const SchoolsOverview = () => {
     });
   };
 
+  const handleEditSchool = (school: SchoolType) => {
+    // This would typically open an edit modal
+    console.log('Edit school:', school);
+    // Add edit school functionality later
+  };
+  
+  const handleDeleteSchool = (school: SchoolType) => {
+    // This would typically show a confirmation dialog
+    console.log('Delete school:', school);
+    // Add delete school functionality later
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start gap-4">
@@ -94,7 +106,8 @@ export const SchoolsOverview = () => {
           <SchoolTable 
             schools={schools} 
             isLoading={isLoading}
-            onSchoolUpdated={loadSchools}
+            onEditSchool={handleEditSchool}
+            onDeleteSchool={handleDeleteSchool}
           />
         </div>
       </div>
