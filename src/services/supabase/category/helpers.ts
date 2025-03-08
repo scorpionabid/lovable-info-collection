@@ -15,6 +15,22 @@ export const calculateCategoryCompletionRate = async (categoryId: string): Promi
   }
 };
 
+export const getCategoryColumnsCount = async (categoryId: string): Promise<number> => {
+  try {
+    const { count, error } = await supabase
+      .from('columns')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', categoryId);
+
+    if (error) throw error;
+
+    return count || 0;
+  } catch (error) {
+    console.error('Error counting category columns:', error);
+    return 0;
+  }
+};
+
 export const getRegionCompletionData = async (categoryId: string): Promise<{ name: string; completion: number }[]> => {
   try {
     // Get all regions
