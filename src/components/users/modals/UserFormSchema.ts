@@ -15,7 +15,12 @@ export const userFormSchema = z.object({
   sector_id: z.string().uuid({ message: "Sektor ID UUID formatında olmalıdır" }).optional().or(z.literal("")),
   school_id: z.string().uuid({ message: "Məktəb ID UUID formatında olmalıdır" }).optional().or(z.literal("")),
   is_active: z.boolean().default(true),
-  password: z.string().min(6, { message: "Şifrə ən azı 6 simvol olmalıdır" }).optional(),
+  password: z.string()
+    .min(8, { message: "Şifrə ən azı 8 simvol olmalıdır" })
+    .regex(/[A-Z]/, { message: "Şifrədə ən azı bir böyük hərf olmalıdır" })
+    .regex(/[0-9]/, { message: "Şifrədə ən azı bir rəqəm olmalıdır" })
+    .optional()
+    .or(z.literal("")),
 });
 
 export type UserFormValues = z.infer<typeof userFormSchema>;

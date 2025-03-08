@@ -34,17 +34,23 @@ export const useUserFormSubmit = (
         
         // Check if user is a school admin - used for role verification
         const roles = await userService.getRoles();
-        const isSchoolAdmin = roles.find(r => r.id === values.role_id)?.name === 'school-admin';
+        const selectedRole = roles.find(r => r.id === values.role_id);
+        const isSchoolAdmin = selectedRole?.name === 'school-admin';
         
         // First create auth user if it's a new user
         if (!isEditing && values.password) {
-          await authService.register({
-            email: values.email,
-            password: values.password,
-            firstName: values.first_name,
-            lastName: values.last_name,
-            role: values.role_id // Make sure this is UUID
-          });
+          try {
+            await authService.register({
+              email: values.email,
+              password: values.password,
+              firstName: values.first_name,
+              lastName: values.last_name,
+              role: values.role_id
+            });
+          } catch (authError) {
+            console.error('Auth registration error:', authError);
+            throw new Error(`Autentifikasiya xətası: ${(authError as Error).message}`);
+          }
         }
         
         // Then create or update the user in the database
@@ -64,27 +70,60 @@ export const useUserFormSubmit = (
           toast({
             title: "Xəbərdarlıq",
             description: "Məktəb admini üçün məktəb təyin etmək tövsiyə olunur",
-            variant: "default", // Changed from "warning" to "default" which is an allowed variant
+            variant: "default",
           });
         }
         
+        // Show success information including login details for new users
+        const successMessage = isEditing 
+          ? `${values.first_name} ${values.last_name} məlumatları uğurla yeniləndi`
+          : `${values.first_name} ${values.last_name} uğurla yaradıldı.`;
+          
+        const showLoginDetails = !isEditing && values.password;
+        
         if (isEditing && user) {
-          return await userService.updateUser(user.id, userData);
+          const result = await userService.updateUser(user.id, userData);
+          
+          // Show simple toast for updates
+          toast({
+            title: "İstifadəçi yeniləndi",
+            description: successMessage,
+          });
+          
+          return result;
         } else {
-          return await userService.createUser(userData);
+          const result = await userService.createUser(userData);
+          
+          // Show detailed toast with login info for new users
+          if (showLoginDetails) {
+            toast({
+              title: "İstifadəçi yaradıldı",
+              description: (
+                <div>
+                  <p>{successMessage}</p>
+                  <div className="mt-2 p-2 bg-gray-100 rounded text-sm">
+                    <p><strong>Giriş məlumatları:</strong></p>
+                    <p>Email: {values.email}</p>
+                    <p>Şifrə: {values.password}</p>
+                  </div>
+                </div>
+              ),
+              duration: 5000,
+            });
+          } else {
+            toast({
+              title: "İstifadəçi yaradıldı",
+              description: successMessage,
+            });
+          }
+          
+          return result;
         }
       } finally {
         setIsCreatingAuth(false);
       }
     },
-    onSuccess: (data, values) => {
-      toast({
-        title: isEditing ? "İstifadəçi yeniləndi" : "İstifadəçi yaradıldı",
-        description: isEditing 
-          ? `${values.first_name} ${values.last_name} məlumatları uğurla yeniləndi` 
-          : `${values.first_name} ${values.last_name} uğurla yaradıldı`,
-      });
-      
+    onSuccess: () => {
       if (onSuccess) onSuccess();
       onClose();
     },

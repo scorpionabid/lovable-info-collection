@@ -1,4 +1,3 @@
-
 import { supabase } from './baseClient';
 import { School, SchoolFilter, SchoolStats } from './types';
 
@@ -24,7 +23,8 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         created_at,
         school_types (id, name),
         regions (id, name),
-        sectors (id, name)
+        sectors (id, name),
+        users!school_id(id, first_name, last_name)
       `);
 
     // Apply filters if provided
@@ -60,6 +60,11 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
     const schools = data.map((item: any) => {
       // For completion rate, use a calculation or default value
       const completionRate = Math.floor(Math.random() * 40) + 60; // Placeholder
+      
+      // Find assigned admin (if any)
+      const schoolAdmins = item.users || [];
+      const admin = schoolAdmins.length > 0 ? schoolAdmins[0] : null;
+      const adminName = admin ? `${admin.first_name} ${admin.last_name}` : null;
 
       return {
         id: item.id,
@@ -77,7 +82,9 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         contactEmail: item.email || 'N/A',
         contactPhone: item.phone || 'N/A',
         createdAt: item.created_at,
-        address: item.address
+        address: item.address,
+        adminName: adminName,
+        adminId: admin?.id
       };
     });
 
@@ -203,6 +210,72 @@ export const getSchoolActivities = async (schoolId: string) => {
     ];
   } catch (error) {
     console.error('Error fetching school activities:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get school by ID with admin details
+ */
+export const getSchoolWithAdmin = async (id: string): Promise<{school: School, admin: any}> => {
+  try {
+    const { data, error } = await supabase
+      .from('schools')
+      .select(`
+        id,
+        name,
+        address,
+        email,
+        phone,
+        region_id,
+        sector_id,
+        student_count,
+        teacher_count,
+        status,
+        director,
+        created_at,
+        school_types (id, name),
+        regions (id, name),
+        sectors (id, name),
+        users!school_id(id, first_name, last_name, email, phone, role_id)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    // Calculate completion rate - in a real app, this would be based on data
+    const completionRate = Math.floor(Math.random() * 40) + 60;
+    
+    // Find assigned admin (if any)
+    const schoolAdmins = data.users || [];
+    const admin = schoolAdmins.length > 0 ? schoolAdmins[0] : null;
+    const adminName = admin ? `${admin.first_name} ${admin.last_name}` : null;
+
+    const school = {
+      id: data.id,
+      name: data.name,
+      type: data.school_types?.[0]?.name || 'N/A',
+      region: data.regions?.[0]?.name || 'N/A',
+      region_id: data.region_id,
+      sector: data.sectors?.[0]?.name || 'N/A',
+      sector_id: data.sector_id,
+      studentCount: data.student_count || 0,
+      teacherCount: data.teacher_count || 0,
+      completionRate,
+      status: data.status || 'Aktiv',
+      director: data.director || 'N/A',
+      contactEmail: data.email || 'N/A',
+      contactPhone: data.phone || 'N/A',
+      createdAt: data.created_at,
+      address: data.address,
+      adminName: adminName,
+      adminId: admin?.id
+    };
+
+    return { school, admin };
+  } catch (error) {
+    console.error('Error fetching school with admin details:', error);
     throw error;
   }
 };

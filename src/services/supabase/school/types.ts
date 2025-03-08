@@ -1,4 +1,3 @@
-
 export interface School {
   id: string;
   name: string;
@@ -16,6 +15,8 @@ export interface School {
   createdAt: string;
   address?: string;
   director?: string;
+  adminName?: string | null;
+  adminId?: string | null;
 }
 
 export interface SchoolFilter {

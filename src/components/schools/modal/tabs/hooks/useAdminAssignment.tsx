@@ -3,12 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/services/api/userService';
+import userService from '@/services/api/userService';
+import authService from '@/services/api/authService';
 
 export interface NewAdminFormState {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
+  password?: string;
 }
 
 export const useAdminAssignment = (schoolId?: string) => {
@@ -20,8 +23,19 @@ export const useAdminAssignment = (schoolId?: string) => {
     firstName: '',
     lastName: '',
     email: '',
-    phone: ''
+    phone: '',
+    password: generateRandomPassword(), // Generate a default password
   });
+
+  // Generate a random password with letters, numbers, and special characters
+  function generateRandomPassword(length = 10) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
 
   // Fetch unassigned users
   const fetchUsers = useCallback(async () => {
@@ -99,7 +113,10 @@ export const useAdminAssignment = (schoolId?: string) => {
         return;
       }
       
-      toast.success('Admin məktəbə təyin edildi');
+      // Fetch the user's data to show in confirmation message
+      const assignedUser = await userService.getUserById(selectedUserId);
+      
+      toast.success(`${assignedUser.first_name} ${assignedUser.last_name} məktəbə admin olaraq təyin edildi`);
       setSelectedUserId('');
       await fetchUsers(); // Refresh user list
     } catch (error) {
@@ -119,6 +136,12 @@ export const useAdminAssignment = (schoolId?: string) => {
 
     if (!newAdmin.firstName || !newAdmin.lastName || !newAdmin.email) {
       toast.error('Zəhmət olmasa bütün məcburi sahələri doldurun');
+      return;
+    }
+
+    // Password validation
+    if (!newAdmin.password || newAdmin.password.length < 8) {
+      toast.error('Şifrə ən azı 8 simvol olmalıdır');
       return;
     }
 
@@ -156,19 +179,31 @@ export const useAdminAssignment = (schoolId?: string) => {
         return;
       }
 
-      // Generate a UUID for the new user
-      const userId = crypto.randomUUID();
-      
-      // Create new user
+      const schoolAdminRoleId = roleData.id;
+
+      // Create auth user first
+      const authResult = await authService.register({
+        email: newAdmin.email,
+        password: newAdmin.password,
+        firstName: newAdmin.firstName,
+        lastName: newAdmin.lastName,
+        role: schoolAdminRoleId
+      });
+
+      if (!authResult.user) {
+        throw new Error('İstifadəçi yaradılmadı');
+      }
+
+      // Create user in database with school_id already assigned
       const { error } = await supabase
         .from('users')
         .insert({
-          id: userId,
+          id: authResult.user.id,
           first_name: newAdmin.firstName,
           last_name: newAdmin.lastName,
           email: newAdmin.email,
           phone: newAdmin.phone,
-          role_id: roleData.id,
+          role_id: schoolAdminRoleId,
           school_id: schoolId,
           is_active: true
         });
@@ -179,15 +214,38 @@ export const useAdminAssignment = (schoolId?: string) => {
         return;
       }
       
-      toast.success('Yeni admin yaradıldı və məktəbə təyin edildi');
+      // Get school details for confirmation message
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('name')
+        .eq('id', schoolId)
+        .single();
+      
+      const schoolName = schoolData?.name || 'Seçilmiş məktəb';
+      
+      // Show success message with login details
+      toast.success(
+        <div>
+          <p><strong>Yeni admin yaradıldı və məktəbə təyin edildi</strong></p>
+          <p>Ad: {newAdmin.firstName} {newAdmin.lastName}</p>
+          <p>Email: {newAdmin.email}</p>
+          <p>Şifrə: {newAdmin.password}</p>
+          <p>Məktəb: {schoolName}</p>
+        </div>
+      );
       
       // Reset form
       setNewAdmin({
         firstName: '',
         lastName: '',
         email: '',
-        phone: ''
+        phone: '',
+        password: generateRandomPassword()
       });
+      
+      // Send notification email - this would be implemented in a real application
+      // We're just simulating this here since we don't have email integration set up
+      console.log('Sending notification email to:', newAdmin.email);
       
     } catch (error) {
       console.error('Error creating admin:', error);
