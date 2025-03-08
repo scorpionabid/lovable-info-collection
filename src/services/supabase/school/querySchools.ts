@@ -303,9 +303,10 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
     // Fix: Properly access the nested objects' properties
-    const schoolType = data.school_types ? data.school_types.name : 'N/A';
-    const regionName = data.regions ? data.regions.name : 'N/A';
-    const sectorName = data.sectors ? data.sectors.name : 'N/A';
+    // The issue is that these are returned as arrays from Supabase, need to access first element
+    const schoolType = data.school_types && data.school_types[0] ? data.school_types[0].name : 'N/A';
+    const regionName = data.regions && data.regions[0] ? data.regions[0].name : 'N/A';
+    const sectorName = data.sectors && data.sectors[0] ? data.sectors[0].name : 'N/A';
 
     const school = {
       id: data.id,
