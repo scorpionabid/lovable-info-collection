@@ -96,13 +96,18 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
       // Get admin information from our map
       const admin = schoolAdmins.get(item.id);
 
+      // Fix: Properly access the nested objects' properties
+      const schoolType = item.school_types ? item.school_types.name : 'N/A';
+      const regionName = item.regions ? item.regions.name : 'N/A';
+      const sectorName = item.sectors ? item.sectors.name : 'N/A';
+
       return {
         id: item.id,
         name: item.name,
-        type: item.school_types?.name || 'N/A',
-        region: item.regions?.name || 'N/A',
+        type: schoolType,
+        region: regionName,
         region_id: item.region_id,
-        sector: item.sectors?.name || 'N/A',
+        sector: sectorName,
         sector_id: item.sector_id,
         studentCount: item.student_count || 0,
         teacherCount: item.teacher_count || 0,
@@ -297,13 +302,18 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
+    // Fix: Properly access the nested objects' properties
+    const schoolType = data.school_types ? data.school_types.name : 'N/A';
+    const regionName = data.regions ? data.regions.name : 'N/A';
+    const sectorName = data.sectors ? data.sectors.name : 'N/A';
+
     const school = {
       id: data.id,
       name: data.name,
-      type: data.school_types?.name || 'N/A',
-      region: data.regions?.name || 'N/A',
+      type: schoolType,
+      region: regionName,
       region_id: data.region_id,
-      sector: data.sectors?.name || 'N/A',
+      sector: sectorName,
       sector_id: data.sector_id,
       studentCount: data.student_count || 0,
       teacherCount: data.teacher_count || 0,
