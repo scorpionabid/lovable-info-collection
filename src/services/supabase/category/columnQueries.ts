@@ -1,7 +1,7 @@
-
 import { supabase } from '../supabaseClient';
 import { CategoryColumn } from '@/components/categories/CategoryDetailView';
 import { CreateColumnDto, UpdateColumnDto } from './types';
+import { getCategoryColumnsCount } from './helpers';
 
 // Column CRUD functions
 export const getCategoryColumns = async (categoryId: string): Promise<CategoryColumn[]> => {
@@ -29,21 +29,8 @@ export const getCategoryColumns = async (categoryId: string): Promise<CategoryCo
   }
 };
 
-export const getCategoryColumnsCount = async (categoryId: string): Promise<number> => {
-  try {
-    const { count, error } = await supabase
-      .from('columns')
-      .select('id', { count: 'exact', head: true })
-      .eq('category_id', categoryId);
-
-    if (error) throw error;
-
-    return count || 0;
-  } catch (error) {
-    console.error('Error counting category columns:', error);
-    return 0;
-  }
-};
+// Re-export the getCategoryColumnsCount function from helpers
+export { getCategoryColumnsCount };
 
 export const createColumn = async (categoryId: string, column: CreateColumnDto): Promise<CategoryColumn> => {
   try {
