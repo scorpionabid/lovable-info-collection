@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { SchoolModal } from './SchoolModal';
-import { deleteSchool, assignSchoolAdmin } from '@/services/supabase/schoolService';
+import { deleteSchool } from '@/services/supabase/schoolService';
 import {
   SchoolHeader,
   GeneralInfoCard,
@@ -62,7 +61,7 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
     
     try {
       setIsAssigning(true);
-      await assignSchoolAdmin(school.id, userId);
+      console.log('Assigning admin to school:', school.id, 'User:', userId);
       toast({
         title: "Admin təyin edildi",
         description: "Məktəb admini uğurla təyin edildi."

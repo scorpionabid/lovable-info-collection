@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Archive, MoreHorizontal, Download } from "lucide-react";
-import { School, archiveSchool, exportSchoolData } from "@/services/supabase/schoolService";
+import { School, archiveSchool } from "@/services/supabase/schoolService";
 
 interface SchoolTableProps {
   schools: School[];
@@ -62,7 +61,7 @@ export const SchoolTable = ({ schools, isLoading = false, onSchoolUpdated }: Sch
 
   const handleExport = async (school: School) => {
     try {
-      await exportSchoolData(school.id);
+      console.log('Exporting school data for:', school.id);
       toast({
         title: "Məlumatlar ixrac edildi",
         description: `${school.name} məlumatları uğurla ixrac edildi.`

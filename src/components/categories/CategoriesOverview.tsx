@@ -9,7 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
 import * as categoryService from '@/services/supabase/categoryService';
+import { Category } from '@/services/supabase/categoryService';
 import { CategoryType } from './CategoryDetailView';
+
+const convertToCategory = (category: Category): CategoryType => {
+  return {
+    ...category,
+    deadline: '',
+    columns: typeof category.columns === 'number' ? [] : category.columns
+  };
+};
 
 export const CategoriesOverview = () => {
   const navigate = useNavigate();
@@ -32,7 +41,7 @@ export const CategoriesOverview = () => {
     ? parseInt(searchParams.get('maxCompletionRate')!)
     : undefined;
 
-  const { data: categories = [], isLoading, isError, error, refetch } = useQuery({
+  const { data: categoriesData = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['categories', searchQuery, assignment, status, deadlineBefore, deadlineAfter, minCompletionRate, maxCompletionRate],
     queryFn: async () => {
       try {
@@ -52,6 +61,8 @@ export const CategoriesOverview = () => {
       }
     }
   });
+
+  const categories = categoriesData.map(convertToCategory);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => categoryService.deleteCategory(id),
@@ -215,7 +226,7 @@ export const CategoriesOverview = () => {
       ) : (
         <CategoryTable 
           categories={categories} 
-          onDelete={handleDeleteCategory}
+          onDelete={(category) => handleDeleteCategory(category)}
           onUpdatePriority={(id, newPriority) => {
             const previousCategories = queryClient.getQueryData<CategoryType[]>(['categories']);
             

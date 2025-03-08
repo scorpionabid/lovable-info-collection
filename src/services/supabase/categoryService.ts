@@ -18,6 +18,10 @@ export interface CategoryFilter {
   search?: string;
   assignment?: 'All' | 'Regions' | 'Sectors' | 'Schools';
   status?: 'Active' | 'Inactive';
+  deadlineBefore?: string;
+  deadlineAfter?: string;
+  minCompletionRate?: number;
+  maxCompletionRate?: number;
 }
 
 export interface CreateCategoryDto {
@@ -67,6 +71,18 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
       }
       if (filters.status) {
         query = query.eq('status', filters.status);
+      }
+      if (filters.deadlineBefore) {
+        query = query.lte('created_at', filters.deadlineBefore);
+      }
+      if (filters.deadlineAfter) {
+        query = query.gte('created_at', filters.deadlineAfter);
+      }
+      if (filters.minCompletionRate !== undefined) {
+        query = query.gte('completion_rate', filters.minCompletionRate);
+      }
+      if (filters.maxCompletionRate !== undefined) {
+        query = query.lte('completion_rate', filters.maxCompletionRate);
       }
     }
 
