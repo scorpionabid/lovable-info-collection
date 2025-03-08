@@ -1,20 +1,13 @@
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useState } from "react";
-
-interface NewAdminFormState {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  password?: string;
-}
+import { validatePassword } from "@/utils/passwordUtils";
+import { NewAdminForm } from "@/services/admin/adminService";
 
 interface NewAdminCreatorProps {
-  newAdmin: NewAdminFormState;
-  onUpdateNewAdmin: (updatedAdmin: NewAdminFormState) => void;
+  newAdmin: NewAdminForm;
+  onUpdateNewAdmin: (updatedAdmin: NewAdminForm) => void;
   isAssigning: boolean;
   onCreate: () => void;
   onGenerateNewPassword?: () => string;
@@ -34,18 +27,6 @@ export const NewAdminCreator = ({
       const newPassword = onGenerateNewPassword();
       onUpdateNewAdmin({...newAdmin, password: newPassword});
     }
-  };
-  
-  // Password validation
-  const validatePassword = (password: string = '') => {
-    if (password.length < 8) return false;
-    
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*]/.test(password);
-    
-    return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
   };
   
   const isPasswordValid = validatePassword(newAdmin.password);
