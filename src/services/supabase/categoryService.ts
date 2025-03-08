@@ -8,7 +8,6 @@ export interface Category {
   description: string;
   assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
   columns: number | CategoryColumn[];
-  deadline: string;
   completionRate: number;
   status: 'Active' | 'Inactive';
   priority: number;
@@ -19,10 +18,6 @@ export interface CategoryFilter {
   search?: string;
   assignment?: 'All' | 'Regions' | 'Sectors' | 'Schools';
   status?: 'Active' | 'Inactive';
-  deadlineBefore?: string;
-  deadlineAfter?: string;
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
 }
 
 export interface CreateCategoryDto {
@@ -30,10 +25,7 @@ export interface CreateCategoryDto {
   description?: string;
   assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
   priority: number;
-  deadline: string;
   status: 'Active' | 'Inactive';
-  notificationEnabled?: boolean;
-  reminderDays?: number;
 }
 
 export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {}
@@ -60,7 +52,6 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
         name,
         description,
         assignment,
-        deadline,
         status,
         priority,
         created_at
@@ -76,12 +67,6 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
       }
       if (filters.status) {
         query = query.eq('status', filters.status);
-      }
-      if (filters.deadlineBefore) {
-        query = query.lte('deadline', filters.deadlineBefore);
-      }
-      if (filters.deadlineAfter) {
-        query = query.gte('deadline', filters.deadlineAfter);
       }
     }
 
@@ -109,7 +94,6 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
           description: item.description || '',
           assignment: item.assignment || 'All',
           columns: columnsCount,
-          deadline: item.deadline,
           completionRate,
           status: item.status,
           priority: item.priority,
@@ -134,7 +118,6 @@ export const getCategoryById = async (id: string): Promise<Category> => {
         name,
         description,
         assignment,
-        deadline,
         status,
         priority,
         created_at
@@ -154,7 +137,6 @@ export const getCategoryById = async (id: string): Promise<Category> => {
       description: data.description || '',
       assignment: data.assignment,
       columns: columns,
-      deadline: data.deadline,
       completionRate,
       status: data.status,
       priority: data.priority,
@@ -181,7 +163,6 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
         description: category.description,
         assignment: category.assignment,
         priority: category.priority,
-        deadline: category.deadline,
         status: category.status
       })
       .select()
@@ -195,7 +176,6 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
       description: data.description || '',
       assignment: data.assignment,
       columns: 0,
-      deadline: data.deadline,
       completionRate: 0,
       status: data.status,
       priority: data.priority,
@@ -224,7 +204,6 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
         description: category.description,
         assignment: category.assignment,
         priority: category.priority,
-        deadline: category.deadline,
         status: category.status
       })
       .eq('id', id)
@@ -243,7 +222,6 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
       description: data.description || '',
       assignment: data.assignment || 'All',
       columns: columnsCount,
-      deadline: data.deadline,
       completionRate,
       status: data.status,
       priority: data.priority,

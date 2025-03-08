@@ -1,10 +1,10 @@
 
 import { z } from "zod";
 
-// Define schema for form validation
+// Define schema for form validation - updating to make type and status optional
 export const schoolSchema = z.object({
   name: z.string().min(3, { message: "Məktəb adı ən azı 3 simvol olmalıdır" }),
-  type: z.string({ required_error: "Məktəb növü seçilməlidir" }),
+  type: z.string().optional(), // Made optional
   regionId: z.string({ required_error: "Region seçilməlidir" }),
   sectorId: z.string({ required_error: "Sektor seçilməlidir" }),
   studentCount: z.coerce.number().min(0, { message: "Şagird sayı mənfi ola bilməz" }).optional().default(0),
@@ -12,7 +12,7 @@ export const schoolSchema = z.object({
   address: z.string().optional().or(z.literal("")),
   contactEmail: z.string().email({ message: "Düzgün email formatı daxil edin" }).optional().or(z.literal("")),
   contactPhone: z.string().optional().or(z.literal("")),
-  status: z.string().default("Aktiv"),
+  status: z.string().optional().default("Aktiv"), // Made optional
 });
 
 export type SchoolFormValues = z.infer<typeof schoolSchema>;

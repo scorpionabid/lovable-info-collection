@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useMutation } from '@tanstack/react-query';
@@ -33,10 +34,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
     description: '',
     assignment: 'All' as 'All' | 'Sectors' | 'Regions' | 'Schools',
     priority: 1,
-    deadline: '',
     status: true,
-    notificationEnabled: true,
-    reminderDays: 7,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   
@@ -47,10 +45,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
         description: category.description || '',
         assignment: category.assignment as 'All' | 'Sectors' | 'Regions' | 'Schools',
         priority: category.priority,
-        deadline: category.deadline ? new Date(category.deadline).toISOString().split('T')[0] : '',
         status: category.status === 'Active',
-        notificationEnabled: true,
-        reminderDays: 7,
       });
     } else {
       setFormData({
@@ -58,10 +53,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
         description: '',
         assignment: 'All',
         priority: 1,
-        deadline: '',
         status: true,
-        notificationEnabled: true,
-        reminderDays: 7,
       });
     }
     setFormErrors({});
@@ -132,10 +124,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
       errors.assignment = 'Təyinat seçilməlidir';
     }
     
-    if (!formData.deadline) {
-      errors.deadline = 'Son tarix tələb olunur';
-    }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -153,7 +141,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
       description: formData.description,
       assignment: formData.assignment,
       priority: formData.priority,
-      deadline: formData.deadline,
       status: formData.status ? 'Active' : 'Inactive' as 'Active' | 'Inactive'
     };
 
@@ -185,8 +172,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="basic">Əsas Məlumatlar</TabsTrigger>
-              <TabsTrigger value="deadline">Son Tarix</TabsTrigger>
-              <TabsTrigger value="notifications">Bildirişlər</TabsTrigger>
             </TabsList>
             
             <form onSubmit={handleSubmit}>
@@ -274,118 +259,6 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
                     </Label>
                   </div>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="deadline" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deadline" className={formErrors.deadline ? 'text-red-500' : ''}>
-                    Son tarix *
-                  </Label>
-                  <Input
-                    id="deadline"
-                    name="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={handleChange}
-                    className={formErrors.deadline ? 'border-red-500' : ''}
-                    disabled={isSubmitting}
-                  />
-                  {formErrors.deadline && (
-                    <p className="text-xs text-red-500">{formErrors.deadline}</p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="latePolicy">Gecikməyə dair siyasət</Label>
-                  <Select disabled={isSubmitting}>
-                    <SelectTrigger id="latePolicy">
-                      <SelectValue placeholder="Gecikməyə dair siyasət seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="allow">Gecikməyə icazə ver</SelectItem>
-                      <SelectItem value="warning">Xəbərdarlıq göstər</SelectItem>
-                      <SelectItem value="block">Məlumat daxiletməni blokla</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="extensionPolicy">Uzadılma siyasəti</Label>
-                  <Select disabled={isSubmitting}>
-                    <SelectTrigger id="extensionPolicy">
-                      <SelectValue placeholder="Uzadılma siyasəti seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="auto">Avtomatik olaraq uzadıla bilər</SelectItem>
-                      <SelectItem value="request">Sorğu əsasında uzadıla bilər</SelectItem>
-                      <SelectItem value="none">Uzadılmaya icazə yoxdur</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="notifications" className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="notificationEnabled">Bildirişlər</Label>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="notificationEnabled"
-                      checked={formData.notificationEnabled}
-                      onCheckedChange={(checked) => handleSwitchChange('notificationEnabled', checked)}
-                      disabled={isSubmitting}
-                    />
-                    <Label htmlFor="notificationEnabled" className="text-sm">
-                      {formData.notificationEnabled ? 'Aktiv' : 'Deaktiv'}
-                    </Label>
-                  </div>
-                </div>
-                
-                {formData.notificationEnabled && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="reminderDays">Xatırlatma günləri (son tarixdən əvvəl)</Label>
-                      <Input
-                        id="reminderDays"
-                        name="reminderDays"
-                        type="number"
-                        min={1}
-                        value={formData.reminderDays}
-                        onChange={handleChange}
-                        placeholder="Gün sayını daxil edin"
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="notificationType">Bildiriş növü</Label>
-                      <Select disabled={isSubmitting}>
-                        <SelectTrigger id="notificationType">
-                          <SelectValue placeholder="Bildiriş növünü seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Bütün bildirişlər</SelectItem>
-                          <SelectItem value="email">Yalnız email</SelectItem>
-                          <SelectItem value="system">Yalnız sistem bildirişləri</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="notificationRecipients">Bildiriş alıcıları</Label>
-                      <Select disabled={isSubmitting}>
-                        <SelectTrigger id="notificationRecipients">
-                          <SelectValue placeholder="Bildiriş alıcılarını seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Bütün adminlər</SelectItem>
-                          <SelectItem value="school">Yalnız SchoolAdmin</SelectItem>
-                          <SelectItem value="sector">Yalnız SectorAdmin</SelectItem>
-                          <SelectItem value="region">Yalnız RegionAdmin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
               </TabsContent>
               
               <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-infoline-light-gray">

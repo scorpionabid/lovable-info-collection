@@ -9,15 +9,14 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
   try {
     console.log('Creating school with data:', schoolData);
     
-    // Ensure we have valid UUIDs for type, region_id, and sector_id
-    if (!schoolData.region_id || !schoolData.sector_id || !schoolData.type) {
-      throw new Error('Region, sector and type are required and must be valid UUIDs');
+    // Ensure we have valid UUIDs for region_id and sector_id
+    if (!schoolData.region_id || !schoolData.sector_id) {
+      throw new Error('Region and sector are required and must be valid UUIDs');
     }
     
     // Convert from our DTO format to the database schema format
-    const dbData = {
+    const dbData: any = {
       name: schoolData.name,
-      type_id: schoolData.type, // This should be a UUID
       region_id: schoolData.region_id,
       sector_id: schoolData.sector_id,
       student_count: schoolData.studentCount,
@@ -25,9 +24,17 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       address: schoolData.address,
       email: schoolData.contactEmail,
       phone: schoolData.contactPhone,
-      status: schoolData.status,
-      director: schoolData.director
+      status: schoolData.status
     };
+
+    // Only include type_id if it exists
+    if (schoolData.type) {
+      dbData.type_id = schoolData.type;
+    }
+
+    if (schoolData.director) {
+      dbData.director = schoolData.director;
+    }
 
     // Log the converted data to ensure it's correctly formatted
     console.log('Submitting to database:', dbData);

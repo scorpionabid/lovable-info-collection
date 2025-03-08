@@ -1,4 +1,3 @@
-
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,7 +35,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, schoolTypes, watchedReg
           name="type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Məktəb növü <span className="text-red-500">*</span></FormLabel>
+              <FormLabel>Məktəb növü</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
@@ -52,7 +51,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, schoolTypes, watchedReg
                     ))
                   ) : (
                     <SelectItem value="loading" disabled>
-                      Məlumat yüklənir...
+                      Məktəb növü tapılmadı. Administrator ilə əlaqə saxlayın.
                     </SelectItem>
                   )}
                 </SelectContent>
@@ -224,7 +223,7 @@ export const GeneralInfoTab = ({ form, regions, sectors, schoolTypes, watchedReg
         name="status"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Status <span className="text-red-500">*</span></FormLabel>
+            <FormLabel>Status</FormLabel>
             <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger>

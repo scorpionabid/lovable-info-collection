@@ -18,6 +18,8 @@ export const useSchoolForm = (
 ) => {
   const [activeTab, setActiveTab] = useState('general');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingSchoolTypes, setIsLoadingSchoolTypes] = useState(true);
+  const [isLoadingRegions, setIsLoadingRegions] = useState(true);
   const [regions, setRegions] = useState<Array<{id: string, name: string}>>([]);
   const [sectors, setSectors] = useState<Array<{id: string, name: string}>>([]);
   const [schoolTypes, setSchoolTypes] = useState<Array<{id: string, name: string}>>([]);
@@ -51,6 +53,7 @@ export const useSchoolForm = (
   // Load school types when component mounts
   useEffect(() => {
     const loadSchoolTypes = async () => {
+      setIsLoadingSchoolTypes(true);
       try {
         const data = await getSchoolTypes();
         console.log('Loaded school types:', data);
@@ -60,6 +63,8 @@ export const useSchoolForm = (
         toast.error("Məktəb növləri yüklənərkən xəta baş verdi", {
           description: "Zəhmət olmasa yenidən cəhd edin"
         });
+      } finally {
+        setIsLoadingSchoolTypes(false);
       }
     };
     
@@ -69,6 +74,7 @@ export const useSchoolForm = (
   // Load regions when component mounts
   useEffect(() => {
     const loadRegions = async () => {
+      setIsLoadingRegions(true);
       try {
         const data = await getRegionsForDropdown();
         setRegions(data);
@@ -77,6 +83,8 @@ export const useSchoolForm = (
         toast.error("Regionlar yüklənərkən xəta baş verdi", {
           description: "Zəhmət olmasa yenidən cəhd edin"
         });
+      } finally {
+        setIsLoadingRegions(false);
       }
     };
     
@@ -110,9 +118,9 @@ export const useSchoolForm = (
       setIsSubmitting(true);
       
       // Validate that we have valid UUIDs for required fields
-      if (!data.type || !data.regionId || !data.sectorId) {
+      if (!data.regionId || !data.sectorId) {
         toast.error("Məcburi sahələri doldurun", {
-          description: "Məktəb növü, region və sektor seçilməlidir"
+          description: "Region və sektor seçilməlidir"
         });
         return;
       }
@@ -124,7 +132,7 @@ export const useSchoolForm = (
         // Create the school with properly formatted data
         await createSchool({
           name: data.name,
-          type: data.type, // This should be a valid UUID now
+          type: data.type, // Now optional
           region_id: data.regionId,
           sector_id: data.sectorId,
           region: '', // These will be filled by the backend
@@ -185,6 +193,8 @@ export const useSchoolForm = (
     activeTab,
     setActiveTab,
     isSubmitting,
+    isLoadingSchoolTypes,
+    isLoadingRegions,
     regions,
     sectors,
     schoolTypes,
