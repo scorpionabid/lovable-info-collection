@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { X, Plus, GripVertical, Edit, Trash2 } from "lucide-react";
 import { CategoryType, CategoryColumn } from "./CategoryDetailView";
-import * as categoryService from '@/services/supabase/categoryService';
+import * as categoryService from '@/services/supabase/category';
 
 interface CategoryColumnsModalProps {
   isOpen: boolean;
@@ -38,7 +37,6 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
   });
   const [columnFormErrors, setColumnFormErrors] = useState<Record<string, string>>({});
   
-  // Get columns for this category
   const { 
     data: columns = [], 
     isLoading, 
@@ -50,10 +48,8 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     enabled: isOpen
   });
 
-  // Sort columns by order property
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
 
-  // Mutations
   const createColumnMutation = useMutation({
     mutationFn: (data: categoryService.CreateColumnDto) => 
       categoryService.createColumn(category.id, data),
@@ -136,7 +132,6 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     const { name, value } = e.target;
     setColumnFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear the error for this field
     if (columnFormErrors[name]) {
       setColumnFormErrors(prev => {
         const newErrors = { ...prev };
@@ -149,7 +144,6 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
   const handleColumnTypeChange = (value: string) => {
     setColumnFormData(prev => ({ ...prev, type: value }));
     
-    // Clear the type error if it exists
     if (columnFormErrors.type) {
       setColumnFormErrors(prev => {
         const newErrors = { ...prev };
@@ -325,7 +319,6 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
         </div>
       </div>
       
-      {/* Column Add/Edit Dialog */}
       <Dialog open={isColumnModalOpen} onOpenChange={setIsColumnModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>

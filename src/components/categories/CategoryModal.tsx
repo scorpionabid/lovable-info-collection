@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useMutation } from '@tanstack/react-query';
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { X } from "lucide-react";
 import { CategoryType } from './CategoryDetailView';
-import * as categoryService from '@/services/supabase/categoryService';
+import * as categoryService from '@/services/supabase/category';
 
 interface CategoryModalProps {
   isOpen: boolean;

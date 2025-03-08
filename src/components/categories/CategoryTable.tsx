@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -44,7 +43,6 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
         status: category.status === 'Active' ? 'Inactive' : 'Active'
       });
       
-      // Invalidate the categories query to refresh the data
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       
       toast.success(`Kateqoriya uğurla ${category.status === 'Active' ? 'arxivləşdirildi' : 'aktivləşdirildi'}`);
@@ -63,7 +61,6 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
     try {
       const blob = await categoryService.exportCategoryTemplate(category.id);
       
-      // Create a URL for the blob and trigger download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -81,16 +78,13 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
   };
 
   const handlePriorityChange = (category: CategoryType, direction: 'up' | 'down') => {
-    // Find the category's index in the sorted list
     const sortedCategories = [...categories].sort((a, b) => a.priority - b.priority);
     const index = sortedCategories.findIndex(c => c.id === category.id);
     
     if (direction === 'up' && index > 0) {
-      // Swap with the category above (lower priority number)
       const newPriority = sortedCategories[index - 1].priority;
       onUpdatePriority(category.id, newPriority);
     } else if (direction === 'down' && index < sortedCategories.length - 1) {
-      // Swap with the category below (higher priority number)
       const newPriority = sortedCategories[index + 1].priority;
       onUpdatePriority(category.id, newPriority);
     }

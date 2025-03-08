@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from "lucide-react";
-import { CategoryFilter } from '@/services/supabase/categoryService';
+import { CategoryFilter } from '@/services/supabase/category';
 
 interface CategoryFilterPanelProps {
   onClose: () => void;

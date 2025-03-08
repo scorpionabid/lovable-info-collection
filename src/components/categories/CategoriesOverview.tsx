@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -8,8 +9,8 @@ import { CategoryModal } from './CategoryModal';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
-import * as categoryService from '@/services/supabase/categoryService';
-import { Category } from '@/services/supabase/categoryService';
+import * as categoryService from '@/services/supabase/category';
+import { Category } from '@/services/supabase/category';
 import { CategoryType } from './CategoryDetailView';
 
 const convertToCategory = (category: Category): CategoryType => {
