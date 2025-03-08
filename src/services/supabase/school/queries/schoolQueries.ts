@@ -1,4 +1,3 @@
-
 import { supabase } from '../baseClient';
 import { School, SchoolFilter } from '../types';
 import { calculateCompletionRate, transformSchoolData } from '../utils/queryUtils';
