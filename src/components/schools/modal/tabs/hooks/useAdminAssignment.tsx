@@ -1,12 +1,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/services/api/userService';
-import userService from '@/services/api/userService';
-import authService from '@/services/api/authService';
 
-export interface NewAdminFormState {
+interface NewAdminForm {
   firstName: string;
   lastName: string;
   email: string;
@@ -19,269 +17,169 @@ export const useAdminAssignment = (schoolId?: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
-  const [newAdmin, setNewAdmin] = useState<NewAdminFormState>({
+  const [newAdmin, setNewAdmin] = useState<NewAdminForm>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    password: generateRandomPassword(), // Generate a default password
+    password: generateRandomPassword()
   });
 
-  // Generate a secure random password with letters, numbers, and special characters
-  function generateRandomPassword(length = 10) {
-    // Ensure at least one of each required character type
-    const upperCaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const lowerCaseChars = 'abcdefghijklmnopqrstuvwxyz';
-    const numberChars = '0123456789';
+  // Fetch available admins (users with admin role who aren't assigned to a school yet)
+  const loadAvailableAdmins = useCallback(async () => {
+    if (!schoolId) return;
+    
+    setIsLoading(true);
+    try {
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'school-admin')
+        .single();
+      
+      if (!roleData) {
+        throw new Error('School admin role not found');
+      }
+      
+      const roleId = roleData.id;
+      
+      // Get users with school-admin role who don't have a school assigned yet
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role_id', roleId)
+        .is('school_id', null);
+      
+      if (error) throw error;
+      
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error loading available admins:', error);
+      toast.error('Admin siyahısı yüklənərkən xəta baş verdi');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [schoolId]);
+
+  useEffect(() => {
+    loadAvailableAdmins();
+  }, [loadAvailableAdmins]);
+
+  // Generate a random secure password
+  function generateRandomPassword(): string {
+    const upperChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowerChars = 'abcdefghijkmnopqrstuvwxyz';
+    const numbers = '23456789';
     const specialChars = '!@#$%^&*';
     
-    const allChars = upperCaseChars + lowerCaseChars + numberChars + specialChars;
+    const getRandomChar = (charset: string) => charset.charAt(Math.floor(Math.random() * charset.length));
     
-    // Start with one of each required character type
+    // Ensure we have at least one of each required character type
     let password = 
-      upperCaseChars.charAt(Math.floor(Math.random() * upperCaseChars.length)) +
-      lowerCaseChars.charAt(Math.floor(Math.random() * lowerCaseChars.length)) +
-      numberChars.charAt(Math.floor(Math.random() * numberChars.length)) +
-      specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+      getRandomChar(upperChars) +
+      getRandomChar(lowerChars) +
+      getRandomChar(numbers) +
+      getRandomChar(specialChars);
     
-    // Fill the rest with random characters
-    for (let i = 4; i < length; i++) {
-      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    // Add additional random characters to reach desired length (minimum 8)
+    const allChars = upperChars + lowerChars + numbers + specialChars;
+    while (password.length < 10) {
+      password += getRandomChar(allChars);
     }
     
     // Shuffle the password to avoid predictable patterns
     return password.split('').sort(() => 0.5 - Math.random()).join('');
   }
 
-  // Fetch unassigned users
-  const fetchUsers = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      
-      // First get the school admin role ID
-      const { data: roleData, error: roleError } = await supabase
-        .from('roles')
-        .select('id')
-        .eq('name', 'school-admin')
-        .single();
-        
-      if (roleError) {
-        console.error('Error fetching role:', roleError);
-        toast.error('Rol məlumatları yüklənmədi');
-        return;
-      }
-      
-      if (!roleData || !roleData.id) {
-        console.error('Role ID not found');
-        toast.error('Rol ID tapılmadı');
-        return;
-      }
-      
-      const schoolAdminRoleId = roleData.id;
-      
-      // Get users who are school admins but aren't assigned to any school
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role_id', schoolAdminRoleId)
-        .is('school_id', null)
-        .eq('is_active', true);
-
-      if (error) {
-        console.error('Error fetching users:', error);
-        toast.error('İstifadəçilər yüklənmədi');
-        return;
-      }
-      
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('İstifadəçilər yüklənmədi');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (schoolId) {
-      fetchUsers();
-    }
-  }, [fetchUsers, schoolId]);
-
-  // Assign an existing admin to the school
+  // Assign existing admin to school
   const handleAssignAdmin = async () => {
-    if (!schoolId || !selectedUserId) {
-      toast.error('Məktəb və ya istifadəçi seçilməyib');
-      return;
-    }
-
+    if (!schoolId || !selectedUserId) return;
+    
+    setIsAssigning(true);
     try {
-      setIsAssigning(true);
-      
-      // Update user record to assign them to this school
+      // Update the user record to assign them to this school
       const { error } = await supabase
         .from('users')
         .update({ school_id: schoolId })
         .eq('id', selectedUserId);
-
-      if (error) {
-        console.error('Error assigning admin:', error);
-        toast.error('Admin təyin edilmədi: ' + error.message);
-        return;
-      }
       
-      // Fetch the user's data to show in confirmation message
-      const assignedUser = await userService.getUserById(selectedUserId);
+      if (error) throw error;
       
-      // Get school name
-      const { data: schoolData } = await supabase
-        .from('schools')
-        .select('name')
-        .eq('id', schoolId)
-        .single();
-      
-      const schoolName = schoolData?.name || 'Seçilmiş məktəb';
-      
-      toast.success(`${assignedUser.first_name} ${assignedUser.last_name} "${schoolName}" məktəbinə admin olaraq təyin edildi`);
-      setSelectedUserId('');
-      await fetchUsers(); // Refresh user list
+      toast.success('Admin məktəbə uğurla təyin edildi');
+      await loadAvailableAdmins();
     } catch (error) {
       console.error('Error assigning admin:', error);
-      toast.error('Admin təyin edilmədi: ' + (error as Error).message);
+      toast.error('Admin təyin edilərkən xəta baş verdi');
     } finally {
       setIsAssigning(false);
     }
   };
 
-  // Create a new admin and assign to the school
+  // Create new admin and assign to school
   const handleCreateAdmin = async () => {
-    if (!schoolId) {
-      toast.error('Məktəb seçilməyib');
-      return;
-    }
-
-    if (!newAdmin.firstName || !newAdmin.lastName || !newAdmin.email) {
-      toast.error('Zəhmət olmasa bütün məcburi sahələri doldurun');
-      return;
-    }
-
-    // Password validation
-    if (!newAdmin.password || newAdmin.password.length < 8) {
-      toast.error('Şifrə ən azı 8 simvol olmalıdır');
-      return;
-    }
-
-    // Add more password validation
-    const hasUpperCase = /[A-Z]/.test(newAdmin.password);
-    const hasLowerCase = /[a-z]/.test(newAdmin.password);
-    const hasNumber = /[0-9]/.test(newAdmin.password);
-    const hasSpecialChar = /[!@#$%^&*]/.test(newAdmin.password);
+    if (!schoolId) return;
     
-    if (!(hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar)) {
-      toast.error('Şifrə ən azı bir böyük hərf, bir kiçik hərf, bir rəqəm və bir xüsusi simvol daxil edilməlidir');
-      return;
-    }
-
+    setIsAssigning(true);
     try {
-      setIsAssigning(true);
-      
-      // First check if user with this email already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', newAdmin.email)
-        .single();
-        
-      if (existingUser) {
-        toast.error('Bu email ilə istifadəçi artıq mövcuddur');
-        return;
-      }
-      
-      // Get the school-admin role ID
+      // 1. Get role ID for school-admin
       const { data: roleData, error: roleError } = await supabase
         .from('roles')
         .select('id')
         .eq('name', 'school-admin')
         .single();
-        
-      if (roleError) {
-        console.error('Error fetching role:', roleError);
-        toast.error('Rol məlumatları yüklənmədi');
-        return;
-      }
       
-      if (!roleData || !roleData.id) {
-        console.error('Role ID not found');
-        toast.error('Rol ID tapılmadı');
-        return;
-      }
-
-      const schoolAdminRoleId = roleData.id;
-
-      // Get school details for confirmation message
-      const { data: schoolData } = await supabase
-        .from('schools')
-        .select('name')
-        .eq('id', schoolId)
-        .single();
+      if (roleError) throw roleError;
       
-      const schoolName = schoolData?.name || 'Seçilmiş məktəb';
-
-      // Create auth user first
-      const authResult = await authService.register({
+      const roleId = roleData.id;
+      
+      // 2. Create user in auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newAdmin.email,
-        password: newAdmin.password,
-        firstName: newAdmin.firstName,
-        lastName: newAdmin.lastName,
-        role: schoolAdminRoleId
+        password: newAdmin.password || generateRandomPassword(),
+        options: {
+          data: {
+            first_name: newAdmin.firstName,
+            last_name: newAdmin.lastName
+          }
+        }
       });
-
-      if (!authResult.user) {
-        throw new Error('İstifadəçi yaradılmadı');
+      
+      if (authError) throw authError;
+      
+      if (!authData.user) {
+        throw new Error('İstifadəçi yaradıla bilmədi');
       }
-
-      // Create user in database with school_id already assigned
-      const { error } = await supabase
+      
+      // 3. Insert user data into users table with school_id
+      const { error: insertError } = await supabase
         .from('users')
-        .update({
-          school_id: schoolId // Update the school_id field
-        })
-        .eq('id', authResult.user.id);
-
-      if (error) {
-        console.error('Error assigning school to admin:', error);
-        toast.error('Admin məktəbə təyin edilmədi: ' + error.message);
-        return;
-      }
+        .insert({
+          id: authData.user.id,
+          first_name: newAdmin.firstName,
+          last_name: newAdmin.lastName,
+          email: newAdmin.email,
+          phone: newAdmin.phone,
+          role_id: roleId,
+          school_id: schoolId,
+          is_active: true
+        });
       
-      // Send email notification (simulated)
-      console.log('Sending email notification to:', newAdmin.email, {
-        subject: 'İnfoLine Sistemində Admin Hesabı Yaradıldı',
-        body: `Hörmətli ${newAdmin.firstName} ${newAdmin.lastName},
-          
-        Siz "${schoolName}" məktəbi üçün InforLine sistemində admin təyin edildiniz.
-        Giriş məlumatlarınız:
-        Email: ${newAdmin.email}
-        Şifrə: ${newAdmin.password}
-        
-        İlk dəfə giriş etdikdən sonra şifrənizi dəyişməyi unutmayın.
-        
-        Hörmətlə,
-        InforLine Komandası`
-      });
+      if (insertError) throw insertError;
       
-      // Show success message with login details
+      // Show toast with login details
       toast.success(
-        <div>
-          <p className="font-semibold">Yeni admin yaradıldı və məktəbə təyin edildi</p>
-          <div className="mt-2">
-            <p>Ad: {newAdmin.firstName} {newAdmin.lastName}</p>
+        <div className="space-y-2">
+          <p>Admin uğurla yaradıldı və məktəbə təyin edildi</p>
+          <div className="text-xs bg-gray-100 p-2 rounded">
+            <p><strong>Giriş məlumatları:</strong></p>
             <p>Email: {newAdmin.email}</p>
             <p>Şifrə: {newAdmin.password}</p>
-            <p>Məktəb: {schoolName}</p>
           </div>
+          <p className="text-xs text-gray-500">
+            Bu məlumatları təhlükəsiz şəkildə saxlayın
+          </p>
         </div>,
-        { duration: 8000 }
+        { duration: 10000 }
       );
       
       // Reset form
@@ -293,9 +191,10 @@ export const useAdminAssignment = (schoolId?: string) => {
         password: generateRandomPassword()
       });
       
-    } catch (error) {
+      await loadAvailableAdmins();
+    } catch (error: any) {
       console.error('Error creating admin:', error);
-      toast.error('Admin yaradılmadı: ' + (error as Error).message);
+      toast.error(`Admin yaradılarkən xəta baş verdi: ${error.message || 'Naməlum xəta'}`);
     } finally {
       setIsAssigning(false);
     }
