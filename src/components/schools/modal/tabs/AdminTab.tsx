@@ -17,7 +17,8 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
     newAdmin,
     setNewAdmin,
     handleAssignAdmin,
-    handleCreateAdmin
+    handleCreateAdmin,
+    generateRandomPassword
   } = useAdminAssignment(schoolId);
 
   return (
@@ -42,6 +43,7 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
         onUpdateNewAdmin={setNewAdmin}
         isAssigning={isAssigning}
         onCreate={handleCreateAdmin}
+        onGenerateNewPassword={generateRandomPassword}
       />
     </div>
   );

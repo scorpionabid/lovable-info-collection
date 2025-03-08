@@ -1,7 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 interface NewAdminFormState {
@@ -17,15 +17,39 @@ interface NewAdminCreatorProps {
   onUpdateNewAdmin: (updatedAdmin: NewAdminFormState) => void;
   isAssigning: boolean;
   onCreate: () => void;
+  onGenerateNewPassword?: () => string;
 }
 
 export const NewAdminCreator = ({
   newAdmin,
   onUpdateNewAdmin,
   isAssigning,
-  onCreate
+  onCreate,
+  onGenerateNewPassword
 }: NewAdminCreatorProps) => {
   const [showPassword, setShowPassword] = useState(false);
+  
+  const handleGeneratePassword = () => {
+    if (onGenerateNewPassword) {
+      const newPassword = onGenerateNewPassword();
+      onUpdateNewAdmin({...newAdmin, password: newPassword});
+    }
+  };
+  
+  // Password validation
+  const validatePassword = (password: string = '') => {
+    if (password.length < 8) return false;
+    
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*]/.test(password);
+    
+    return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+  };
+  
+  const isPasswordValid = validatePassword(newAdmin.password);
+  const isFormValid = newAdmin.firstName && newAdmin.lastName && newAdmin.email && isPasswordValid;
 
   return (
     <div className="space-y-4">
@@ -90,22 +114,55 @@ export const NewAdminCreator = ({
             placeholder="Şifrə daxil edin"
             value={newAdmin.password || ''}
             onChange={(e) => onUpdateNewAdmin({...newAdmin, password: e.target.value})}
+            className={!isPasswordValid && newAdmin.password ? "border-red-500" : ""}
           />
-          <button 
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex">
+            <button 
+              type="button"
+              className="text-gray-500 hover:text-gray-700 mr-2"
+              onClick={handleGeneratePassword}
+              title="Yeni şifrə generasiya et"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <button 
+              type="button"
+              className="text-gray-500 hover:text-gray-700"
+              onClick={() => setShowPassword(!showPassword)}
+              title={showPassword ? "Şifrəni gizlət" : "Şifrəni göstər"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
-        <p className="text-xs text-gray-500">Ən azı 8 simvol olmalıdır. Default şifrə avtomatik yaradılıb.</p>
+        <div className="text-xs">
+          <p className={isPasswordValid ? "text-green-600" : "text-gray-500"}>
+            Şifrə tələbləri:
+          </p>
+          <ul className="list-disc list-inside space-y-1 pl-1">
+            <li className={newAdmin.password && newAdmin.password.length >= 8 ? "text-green-600" : "text-gray-500"}>
+              Ən azı 8 simvol
+            </li>
+            <li className={newAdmin.password && /[A-Z]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
+              Ən azı bir böyük hərf (A-Z)
+            </li>
+            <li className={newAdmin.password && /[a-z]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
+              Ən azı bir kiçik hərf (a-z)
+            </li>
+            <li className={newAdmin.password && /[0-9]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
+              Ən azı bir rəqəm (0-9)
+            </li>
+            <li className={newAdmin.password && /[!@#$%^&*]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
+              Ən azı bir xüsusi simvol (!@#$%^&*)
+            </li>
+          </ul>
+        </div>
       </div>
       
       <Button 
         className="w-full" 
         onClick={onCreate} 
-        disabled={isAssigning}
+        disabled={isAssigning || !isFormValid}
       >
         {isAssigning ? (
           <>
