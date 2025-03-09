@@ -193,4 +193,5 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
   }
 };
 
-export { NewAdminForm };
+// Use 'export type' instead of 're-exporting'
+export type { NewAdminForm };

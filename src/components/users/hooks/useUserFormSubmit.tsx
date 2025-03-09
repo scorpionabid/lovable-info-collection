@@ -52,31 +52,41 @@ export const useUserFormSubmit = (
         // First check if user with this email already exists in the database
         if (!isEditing) {
           // Check if user already exists in auth database
-          const { data: existingAuthUser, error: authCheckError } = await supabase.auth
-            .signInWithPassword({
-              email: values.email,
-              password: values.password || "dummy-password-for-check"
-            })
-            .catch(() => ({ data: null, error: null }));
+          try {
+            const { data: existingAuthUser, error: authCheckError } = await supabase.auth
+              .signInWithPassword({
+                email: values.email,
+                password: values.password || "dummy-password-for-check"
+              });
+              
+            if (authCheckError && !authCheckError.message.includes('Invalid login credentials')) {
+              console.error('Error checking existing auth user:', authCheckError);
+              // Don't throw here, just log the error and continue
+            } else if (existingAuthUser?.user) {
+              userId = existingAuthUser.user.id;
+              console.log('User exists in auth database, using ID:', userId);
+            }
+          } catch (e) {
+            // Ignore signin errors as they usually mean the user doesn't exist
+            console.log('Error during auth check:', e);
+          }
             
           // Also check if user exists in our database
-          const { data: existingUsers } = await supabase
-            .from('users')
-            .select('id, email')
-            .eq('email', values.email)
-            .maybeSingle();
-            
-          const existingUserId = existingUsers?.id;
+          if (!userId) {
+            const { data: existingUsers } = await supabase
+              .from('users')
+              .select('id, email')
+              .eq('email', values.email)
+              .maybeSingle();
+              
+            if (existingUsers?.id) {
+              // User already exists in database
+              userId = existingUsers.id;
+              console.log('User already exists in database, using existing ID:', userId);
+            }
+          }
           
-          if (existingUserId) {
-            // User already exists in database
-            userId = existingUserId;
-            console.log('User already exists in database, using existing ID:', userId);
-          } else if (existingAuthUser?.user) {
-            // User exists in auth but not in our database
-            userId = existingAuthUser.user.id;
-            console.log('User exists in auth but not in database, using auth ID:', userId);
-          } else {
+          if (!userId) {
             // Create new auth user if doesn't exist anywhere
             try {
               const authResult = await authService.register({
@@ -90,18 +100,27 @@ export const useUserFormSubmit = (
               if (authResult.error) {
                 // If we get "User already registered" error, try to fetch the user ID
                 if (authResult.error.message?.includes("already registered")) {
-                  const { data: userData } = await supabase.auth
-                    .signInWithPassword({
-                      email: values.email,
-                      password: values.password || "dummy-password-for-check"
-                    })
-                    .catch(() => ({ data: null }));
-                    
-                  if (userData?.user?.id) {
-                    userId = userData.user.id;
-                    console.log('Retrieved ID for existing auth user:', userId);
-                  } else {
-                    throw new Error(`Autentifikasiya xətası: İstifadəçi mövcuddur, lakin giriş etmək mümkün olmadı`);
+                  try {
+                    const { data: userData, error: signinError } = await supabase.auth
+                      .signInWithPassword({
+                        email: values.email,
+                        password: values.password || "dummy-password-for-check"
+                      });
+                      
+                    if (signinError) {
+                      console.error('Error signing in to retrieve user ID:', signinError);
+                      throw new Error(`Autentifikasiya xətası: İstifadəçi mövcuddur, lakin giriş etmək mümkün olmadı`);
+                    }
+                      
+                    if (userData?.user?.id) {
+                      userId = userData.user.id;
+                      console.log('Retrieved ID for existing auth user:', userId);
+                    } else {
+                      throw new Error(`Autentifikasiya xətası: İstifadəçi mövcuddur, lakin giriş etmək mümkün olmadı`);
+                    }
+                  } catch (signinError) {
+                    console.error('Error during signin after auth error:', signinError);
+                    throw new Error(`Autentifikasiya xətası: ${(signinError as Error).message}`);
                   }
                 } else {
                   throw authResult.error;
