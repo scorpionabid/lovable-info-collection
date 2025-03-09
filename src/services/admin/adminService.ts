@@ -92,30 +92,43 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
     if (roleError) throw roleError;
     
     const roleId = roleData.id;
+
+    // 2. Check if user already exists in auth system
+    const { data: existingUser } = await supabase.auth.admin.getUserByEmail(adminData.email);
     
-    // 2. Create user in auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: adminData.email,
-      password: adminData.password || '',
-      options: {
-        data: {
-          first_name: adminData.firstName,
-          last_name: adminData.lastName
+    let userId;
+    
+    if (existingUser?.user) {
+      // User already exists in auth
+      userId = existingUser.user.id;
+      console.log('User already exists in auth system, using existing ID:', userId);
+    } else {
+      // 3. Create user in auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: adminData.email,
+        password: adminData.password || '',
+        options: {
+          data: {
+            first_name: adminData.firstName,
+            last_name: adminData.lastName
+          }
         }
+      });
+      
+      if (authError) throw authError;
+      
+      if (!authData.user) {
+        throw new Error('İstifadəçi yaradıla bilmədi');
       }
-    });
-    
-    if (authError) throw authError;
-    
-    if (!authData.user) {
-      throw new Error('İstifadəçi yaradıla bilmədi');
+      
+      userId = authData.user.id;
     }
     
-    // 3. Insert user data into users table with school_id
+    // 4. Insert user data into users table with school_id using UPSERT
     const { error: insertError } = await supabase
       .from('users')
-      .insert({
-        id: authData.user.id,
+      .upsert({
+        id: userId,
         first_name: adminData.firstName,
         last_name: adminData.lastName,
         email: adminData.email,
@@ -123,6 +136,9 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
         role_id: roleId,
         school_id: schoolId,
         is_active: true
+      }, {
+        onConflict: 'id',
+        returning: 'minimal'
       });
     
     if (insertError) throw insertError;

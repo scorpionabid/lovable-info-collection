@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService, { LoginCredentials } from '@/services/api/authService';
@@ -50,9 +51,32 @@ interface AuthProviderProps {
 
 // Helper function to normalize role names between DB and UI
 const normalizeRoleName = (roleName: string): UserRole => {
+  if (!roleName) return 'school-admin'; // Default role if none provided
+  
   // Map database role names to UI role names
   if (roleName === 'superadmin') return 'super-admin';
   return roleName as UserRole;
+};
+
+// Helper to determine role from user data
+const determineUserRole = (userData: any): UserRole => {
+  // First try to get from the roles object
+  if (userData.roles?.name) {
+    return normalizeRoleName(userData.roles.name);
+  }
+  
+  // Then try with role_id
+  if (userData.role_id) {
+    return normalizeRoleName(userData.role_id);
+  }
+  
+  // Finally, check for role property
+  if (userData.role) {
+    return normalizeRoleName(userData.role);
+  }
+  
+  console.warn('No role information found for user, using default');
+  return 'school-admin'; // Default role
 };
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
@@ -87,22 +111,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Verify token is still valid by calling getCurrentUser
           const userData = await authService.getCurrentUser();
           if (userData) {
-            // Get role from either the roles object or role_id
-            let userRole: UserRole;
-            
-            if (userData.roles?.name) {
-              // If roles data is available, use that
-              userRole = normalizeRoleName(userData.roles.name);
-              console.log(`Role from database (${userData.roles.name}) normalized to: ${userRole}`);
-            } else if (userData.role_id) {
-              // Otherwise fall back to role_id
-              userRole = normalizeRoleName(userData.role_id);
-              console.log(`Role from role_id (${userData.role_id}) normalized to: ${userRole}`);
-            } else {
-              // Default fallback
-              userRole = 'school-admin';
-              console.warn('No role information found, defaulting to school-admin');
-            }
+            // Get role using our helper function
+            const userRole = determineUserRole(userData);
+            console.log(`Role determined as: ${userRole}`);
             
             setUser({
               id: userData.id,
@@ -150,20 +161,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { user: userData } = await authService.login(credentials);
       
       if (userData) {
-        // Determine role from either roles object or role_id
-        // Ensure it maps to a valid UserRole for UI
-        let userRole: UserRole;
-        
-        if (userData.roles?.name) {
-          userRole = normalizeRoleName(userData.roles.name);
-          console.log(`Login: Role from database (${userData.roles.name}) normalized to: ${userRole}`);
-        } else if (typeof userData.role_id === 'string') {
-          userRole = normalizeRoleName(userData.role_id);
-          console.log(`Login: Role from role_id (${userData.role_id}) normalized to: ${userRole}`);
-        } else {
-          userRole = 'school-admin'; // Default fallback
-          console.warn('Login: No role information found, defaulting to school-admin');
-        }
+        // Get role using our helper function
+        const userRole = determineUserRole(userData);
+        console.log(`Login: Role determined as: ${userRole}`);
         
         setUser({
           id: userData.id,

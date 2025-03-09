@@ -119,9 +119,9 @@ export const getSchoolById = async (id: string): Promise<School> => {
         status,
         director,
         created_at,
-        school_types (id, name),
-        regions (id, name),
-        sectors (id, name)
+        school_types:type_id (id, name),
+        regions:region_id (id, name),
+        sectors:sector_id (id, name)
       `)
       .eq('id', id)
       .single();
@@ -131,10 +131,34 @@ export const getSchoolById = async (id: string): Promise<School> => {
     // Calculate completion rate - in a real app, this would be based on data
     const completionRate = await calculateCompletionRate(id);
 
-    // Handle nested objects correctly
-    const schoolType = data.school_types && data.school_types[0] ? data.school_types[0].name : 'N/A';
-    const regionName = data.regions && data.regions[0] ? data.regions[0].name : 'N/A';
-    const sectorName = data.sectors && data.sectors[0] ? data.sectors[0].name : 'N/A';
+    // Handle nested objects correctly with proper type handling
+    let schoolType = 'N/A';
+    let regionName = 'N/A';
+    let sectorName = 'N/A';
+
+    if (data.school_types) {
+      // Type assertion to help TypeScript understand the shape
+      const schoolTypes = data.school_types as { id: string; name: string } | { id: string; name: string }[];
+      schoolType = Array.isArray(schoolTypes) 
+        ? (schoolTypes[0]?.name || 'N/A') 
+        : (schoolTypes.name || 'N/A');
+    }
+
+    if (data.regions) {
+      // Type assertion for regions
+      const regions = data.regions as { id: string; name: string } | { id: string; name: string }[];
+      regionName = Array.isArray(regions)
+        ? (regions[0]?.name || 'N/A')
+        : (regions.name || 'N/A');
+    }
+
+    if (data.sectors) {
+      // Type assertion for sectors
+      const sectors = data.sectors as { id: string; name: string } | { id: string; name: string }[];
+      sectorName = Array.isArray(sectors)
+        ? (sectors[0]?.name || 'N/A')
+        : (sectors.name || 'N/A');
+    }
 
     return {
       id: data.id,
@@ -198,7 +222,8 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
         last_name,
         email,
         phone,
-        role_id
+        role_id,
+        roles(name)
       `)
       .eq('school_id', id)
       .eq('roles.name', 'school-admin')

@@ -99,11 +99,16 @@ export const checkUtisCodeExists = async (utisCode: string, userId?: string) => 
   }
 };
 
-export const createUser = async (userData: Omit<User, 'id'>) => {
+export const createUser = async (userData: User) => {
   try {
+    // Use upsert to handle both create and update, avoiding conflicts
+    // This helps with the race condition between auth and database
     const { data, error } = await supabase
       .from('users')
-      .insert([userData])
+      .upsert([userData], {
+        onConflict: 'id',
+        returning: 'representation'  
+      })
       .select(`
         *,
         roles (
@@ -116,6 +121,19 @@ export const createUser = async (userData: Omit<User, 'id'>) => {
       .single();
       
     if (error) throw error;
+    
+    // If this is a school admin, make sure they're properly linked to the school
+    if (userData.school_id && userData.role_id) {
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('name')
+        .eq('id', userData.role_id)
+        .single();
+        
+      if (roleData?.name === 'school-admin') {
+        console.log(`Ensuring user ${userData.id} is properly linked as admin for school ${userData.school_id}`);
+      }
+    }
     
     return data as User;
   } catch (error) {

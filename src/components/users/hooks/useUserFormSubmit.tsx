@@ -6,6 +6,7 @@ import { User } from "@/services/api/userService";
 import userService from "@/services/api/userService";
 import authService from "@/services/api/authService";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useUserFormSubmit = (
   user: User | undefined,
@@ -37,34 +38,6 @@ export const useUserFormSubmit = (
         const selectedRole = roles.find(r => r.id === values.role_id);
         const isSchoolAdmin = selectedRole?.name === 'school-admin';
         
-        // First create auth user if it's a new user
-        if (!isEditing && values.password) {
-          try {
-            await authService.register({
-              email: values.email,
-              password: values.password,
-              firstName: values.first_name,
-              lastName: values.last_name,
-              role: values.role_id
-            });
-          } catch (authError) {
-            console.error('Auth registration error:', authError);
-            throw new Error(`Autentifikasiya xətası: ${(authError as Error).message}`);
-          }
-        }
-        
-        // Then create or update the user in the database
-        const userData = {
-          ...values,
-          // Make sure required fields are explicitly defined for TypeScript
-          email: values.email,
-          first_name: values.first_name,
-          last_name: values.last_name,
-          role_id: values.role_id, // This should be UUID
-          utis_code: values.utis_code,
-          is_active: values.is_active
-        };
-        
         // Make sure school admin has a school
         if (isSchoolAdmin && !values.school_id) {
           toast({
@@ -73,6 +46,51 @@ export const useUserFormSubmit = (
             variant: "default",
           });
         }
+        
+        let userId = user?.id;
+        
+        // First check if user with this email already exists in the auth system
+        if (!isEditing) {
+          const { data: existingUser } = await supabase.auth.admin.getUserByEmail(values.email);
+          
+          if (existingUser?.user) {
+            // User already exists in auth, we can just update their DB record
+            userId = existingUser.user.id;
+            console.log('User already exists in auth system, using existing ID:', userId);
+          } else {
+            // Create new auth user if it's a new user
+            try {
+              const { data: authData, error: authError } = await authService.register({
+                email: values.email,
+                password: values.password || Math.random().toString(36).slice(-8),
+                firstName: values.first_name,
+                lastName: values.last_name,
+                role: values.role_id
+              });
+              
+              if (authError) throw authError;
+              if (!authData?.user?.id) throw new Error('User ID not returned from auth registration');
+              
+              userId = authData.user.id;
+              console.log('Created new auth user with ID:', userId);
+            } catch (authError) {
+              console.error('Auth registration error:', authError);
+              throw new Error(`Autentifikasiya xətası: ${(authError as Error).message}`);
+            }
+          }
+        }
+        
+        // Then create or update the user in the database
+        const userData = {
+          ...values,
+          id: userId, // Important: Use the ID from auth
+          email: values.email,
+          first_name: values.first_name,
+          last_name: values.last_name,
+          role_id: values.role_id,
+          utis_code: values.utis_code,
+          is_active: values.is_active
+        };
         
         // Show success information including login details for new users
         const successMessage = isEditing 
@@ -92,6 +110,7 @@ export const useUserFormSubmit = (
           
           return result;
         } else {
+          // For new users, use UPSERT to handle potential race conditions
           const result = await userService.createUser(userData);
           
           // Show detailed toast with login info for new users
