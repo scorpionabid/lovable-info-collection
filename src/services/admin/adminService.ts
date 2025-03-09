@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/services/api/userService';
 import { toast } from "sonner";
 
-export interface NewAdminForm {
+// Define the interface here but don't export it directly
+interface NewAdminForm {
   firstName: string;
   lastName: string;
   email: string;
@@ -193,5 +194,5 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
   }
 };
 
-// Use proper type export to avoid conflict
+// Export the type separately to avoid conflict
 export type { NewAdminForm };

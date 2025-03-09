@@ -103,8 +103,11 @@ export const useUserFormSubmit = (
               
               // Handle potential errors with proper typing
               if ('error' in authResult && authResult.error) {
+                // Type guard to ensure error is of type AuthError or similar with a message property
+                const authError = authResult.error as { message?: string };
+                
                 // If we get "User already registered" error, try to fetch the user ID
-                if (authResult.error.message?.includes("already registered")) {
+                if (authError.message && authError.message.includes("already registered")) {
                   try {
                     const signInResponse = await supabase.auth
                       .signInWithPassword({
