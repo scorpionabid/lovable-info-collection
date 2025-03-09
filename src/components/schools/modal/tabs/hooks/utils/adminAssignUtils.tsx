@@ -65,11 +65,22 @@ export const createAdminAuthUser = async (
 ): Promise<{ userId?: string; error?: string }> => {
   try {
     // Check if the user already exists in auth
-    const { data: authUserData, error: checkError } = await supabase.auth.admin.getUserByEmail(email);
+    // Using the correct method from Supabase's auth API
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
+      filter: {
+        email: email
+      }
+    });
     
-    if (authUserData?.user) {
-      console.log('User already exists in auth, using existing ID:', authUserData.user.id);
-      return { userId: authUserData.user.id };
+    if (userError) {
+      console.error('Error checking if user exists:', userError);
+      return { error: `İstifadəçi yoxlanılarkən xəta: ${userError.message}` };
+    }
+    
+    // If user was found in the results
+    if (userData?.users && userData.users.length > 0) {
+      console.log('User already exists in auth, using existing ID:', userData.users[0].id);
+      return { userId: userData.users[0].id };
     }
     
     // User doesn't exist, so create a new one
