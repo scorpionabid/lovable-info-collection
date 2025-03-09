@@ -31,18 +31,39 @@ export const useAdminAssignment = (schoolId?: string) => {
       setUsers(availableAdmins);
       
       // Also check if this school already has an admin
+      const { data: roleData } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'school-admin')
+        .single();
+      
+      if (!roleData) {
+        console.error('School admin role not found');
+        toast.error('Admin rolu tapılmadı');
+        return;
+      }
+      
+      const roleId = roleData.id;
+      
       const { data: schoolAdmin, error } = await supabase
         .from('users')
         .select('*')
         .eq('school_id', schoolId)
-        .eq('roles.name', 'school-admin')
-        .single();
+        .eq('role_id', roleId)
+        .maybeSingle();
         
-      if (!error && schoolAdmin) {
+      if (error) {
+        console.error('Error fetching current school admin:', error);
+      }
+        
+      if (schoolAdmin) {
         setCurrentAdmin(schoolAdmin as User);
       } else {
         setCurrentAdmin(null);
       }
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+      toast.error('Admin məlumatları yüklənərkən xəta baş verdi');
     } finally {
       setIsLoading(false);
     }
@@ -58,16 +79,6 @@ export const useAdminAssignment = (schoolId?: string) => {
     
     setIsAssigning(true);
     try {
-      // If there's already an admin assigned, unassign them first
-      if (currentAdmin) {
-        await supabase
-          .from('users')
-          .update({ school_id: null })
-          .eq('id', currentAdmin.id);
-          
-        toast.info('Previous admin unassigned from school');
-      }
-      
       const success = await assignAdminToSchool(schoolId, selectedUserId);
       if (success) {
         await loadAdminData();
@@ -83,16 +94,6 @@ export const useAdminAssignment = (schoolId?: string) => {
     
     setIsAssigning(true);
     try {
-      // If there's already an admin assigned, unassign them first
-      if (currentAdmin) {
-        await supabase
-          .from('users')
-          .update({ school_id: null })
-          .eq('id', currentAdmin.id);
-          
-        toast.info('Previous admin unassigned from school');
-      }
-      
       const success = await createNewAdmin(schoolId, newAdmin);
       
       if (success) {

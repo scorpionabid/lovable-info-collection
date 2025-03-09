@@ -49,14 +49,20 @@ export const useUserFormSubmit = (
         
         let userId = user?.id;
         
-        // First check if user with this email already exists in the auth system
+        // First check if user with this email already exists in the database
         if (!isEditing) {
-          const { data: existingUser } = await supabase.auth.admin.getUserByEmail(values.email);
+          const { data: existingUsers } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', values.email)
+            .maybeSingle();
+            
+          const existingUserId = existingUsers?.id;
           
-          if (existingUser?.user) {
-            // User already exists in auth, we can just update their DB record
-            userId = existingUser.user.id;
-            console.log('User already exists in auth system, using existing ID:', userId);
+          if (existingUserId) {
+            // User already exists in database
+            userId = existingUserId;
+            console.log('User already exists in database, using existing ID:', userId);
           } else {
             // Create new auth user if it's a new user
             try {
@@ -81,15 +87,18 @@ export const useUserFormSubmit = (
         }
         
         // Then create or update the user in the database
-        const userData = {
-          ...values,
-          id: userId, // Important: Use the ID from auth
+        const userData: User = {
+          id: userId as string, // Important: Use the ID from auth
           email: values.email,
           first_name: values.first_name,
           last_name: values.last_name,
           role_id: values.role_id,
           utis_code: values.utis_code,
-          is_active: values.is_active
+          is_active: values.is_active,
+          region_id: values.region_id || undefined,
+          sector_id: values.sector_id || undefined,
+          school_id: values.school_id || undefined,
+          phone: values.phone
         };
         
         // Show success information including login details for new users
@@ -110,7 +119,7 @@ export const useUserFormSubmit = (
           
           return result;
         } else {
-          // For new users, use UPSERT to handle potential race conditions
+          // For new users, use createUser which uses UPSERT to handle potential race conditions
           const result = await userService.createUser(userData);
           
           // Show detailed toast with login info for new users

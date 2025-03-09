@@ -129,36 +129,58 @@ const authCore = {
   
   register: async (credentials: RegisterCredentials) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: credentials.email,
-        password: credentials.password,
-        options: {
-          data: {
-            first_name: credentials.firstName,
-            last_name: credentials.lastName,
+      // First check if user already exists in auth system
+      const { data: existingAuthUser, error: checkError } = await supabase.auth.admin.getUserById(credentials.email);
+      
+      // If check throws an unexpected error, it's likely an invalid request, not a missing user
+      // Continue with registration but log the error
+      if (checkError && !checkError.message.includes('User not found')) {
+        console.warn('Check user existence warning:', checkError);
+      }
+      
+      // Proceed with registration if user doesn't exist
+      if (!existingAuthUser?.user) {
+        const { data, error } = await supabase.auth.signUp({
+          email: credentials.email,
+          password: credentials.password,
+          options: {
+            data: {
+              first_name: credentials.firstName,
+              last_name: credentials.lastName,
+            }
           }
+        });
+        
+        if (error) throw error;
+        
+        // Validate role_id is a valid UUID
+        if (credentials.role && !(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(credentials.role))) {
+          throw new Error('Invalid role ID format');
         }
-      });
-      
-      if (error) throw error;
-      
-      // Create user profile with role
-      const { error: userError } = await supabase
-        .from('users')
-        .insert([
-          { 
-            id: data.user?.id,
-            email: credentials.email,
-            first_name: credentials.firstName,
-            last_name: credentials.lastName,
-            role_id: credentials.role, // This should be a valid UUID
-            is_active: true
-          }
-        ]);
-      
-      if (userError) throw userError;
-      
-      return data;
+        
+        // Create user profile with role - use upsert to handle race conditions
+        const { error: userError } = await supabase
+          .from('users')
+          .upsert([
+            { 
+              id: data.user?.id,
+              email: credentials.email,
+              first_name: credentials.firstName,
+              last_name: credentials.lastName,
+              role_id: credentials.role, // This should be a valid UUID
+              is_active: true
+            }
+          ], {
+            onConflict: 'id'
+          });
+        
+        if (userError) throw userError;
+        
+        return data;
+      } else {
+        // User already exists, throw meaningful error
+        throw new Error('User with this email already exists');
+      }
     } catch (error) {
       console.error('Registration error:', error);
       throw error;

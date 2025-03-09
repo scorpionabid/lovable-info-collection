@@ -1,8 +1,11 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
 import { SchoolModal } from './SchoolModal';
 import { deleteSchool } from '@/services/supabase/schoolService';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/services/api/userService';
 import {
   SchoolHeader,
   GeneralInfoCard,
@@ -15,6 +18,51 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
   const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [schoolAdmin, setSchoolAdmin] = useState<User | null>(null);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  
+  // Fetch school admin when school data changes
+  useEffect(() => {
+    const fetchSchoolAdmin = async () => {
+      if (!school?.id) return;
+      
+      setIsLoadingAdmin(true);
+      try {
+        // Get role ID for school-admin
+        const { data: roleData } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', 'school-admin')
+          .single();
+          
+        if (!roleData) {
+          console.error('School admin role not found');
+          return;
+        }
+        
+        // Get admin for this school
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('school_id', school.id)
+          .eq('role_id', roleData.id)
+          .maybeSingle();
+          
+        if (error) {
+          console.error('Error fetching school admin:', error);
+          return;
+        }
+        
+        setSchoolAdmin(data as User | null);
+      } catch (error) {
+        console.error('Error loading school admin:', error);
+      } finally {
+        setIsLoadingAdmin(false);
+      }
+    };
+    
+    fetchSchoolAdmin();
+  }, [school?.id]);
   
   const handleSchoolUpdated = () => {
     toast({
@@ -61,7 +109,23 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
     
     try {
       setIsAssigning(true);
-      console.log('Assigning admin to school:', school.id, 'User:', userId);
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ school_id: school.id })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      // Refresh school admin data
+      const { data: updatedAdmin } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      setSchoolAdmin(updatedAdmin as User);
+      
       toast({
         title: "Admin təyin edildi",
         description: "Məktəb admini uğurla təyin edildi."
@@ -108,6 +172,8 @@ export const SchoolDetailView = ({ school, stats, activities }: any) => {
           school={school}
           isAssigning={isAssigning}
           onAssignAdmin={handleAssignAdmin}
+          admin={schoolAdmin}
+          isLoadingAdmin={isLoadingAdmin}
         />
         
         <StatisticsCard 

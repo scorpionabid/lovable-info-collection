@@ -12,26 +12,32 @@ export const fetchAvailableAdmins = async (schoolId?: string): Promise<User[]> =
   if (!schoolId) return [];
   
   try {
-    const { data: roleData } = await supabase
+    // First, get the role ID for school-admin
+    const { data: roleData, error: roleError } = await supabase
       .from('roles')
       .select('id')
       .eq('name', 'school-admin')
       .single();
     
-    if (!roleData) {
-      throw new Error('School admin role not found');
+    if (roleError || !roleData) {
+      console.error('Error fetching school-admin role:', roleError);
+      toast.error('Admin rolu tapılmadı');
+      return [];
     }
     
     const roleId = roleData.id;
     
-    // Get users with school-admin role who don't have a school assigned yet
+    // Then get users with that role who aren't assigned to any school yet
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('role_id', roleId)
       .is('school_id', null);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching available admins:', error);
+      throw error;
+    }
     
     return data || [];
   } catch (error) {
@@ -49,6 +55,27 @@ export const fetchAvailableAdmins = async (schoolId?: string): Promise<User[]> =
  */
 export const assignAdminToSchool = async (schoolId: string, userId: string): Promise<boolean> => {
   try {
+    // Check if school already has an admin
+    const { data: existingAdmin } = await supabase
+      .from('users')
+      .select('id')
+      .eq('school_id', schoolId)
+      .eq('roles.name', 'school-admin')
+      .single();
+    
+    // If there's an existing admin, unassign them first
+    if (existingAdmin) {
+      const { error: unassignError } = await supabase
+        .from('users')
+        .update({ school_id: null })
+        .eq('id', existingAdmin.id);
+      
+      if (unassignError) {
+        console.error('Error unassigning previous admin:', unassignError);
+        // Continue with the assignment, but log the error
+      }
+    }
+    
     // Update the user record to assign them to this school
     const { error } = await supabase
       .from('users')
@@ -89,22 +116,26 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
       .eq('name', 'school-admin')
       .single();
     
-    if (roleError) throw roleError;
+    if (roleError || !roleData) {
+      throw new Error('School admin role not found');
+    }
     
     const roleId = roleData.id;
 
-    // 2. Check if user already exists in auth system
-    const { data: existingUser } = await supabase.auth.admin.getUserByEmail(adminData.email);
+    // 2. Check if user already exists in auth system by email
+    // We can't use getUserByEmail directly, so we'll check users table first
+    const { data: existingUserData } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', adminData.email)
+      .maybeSingle();
     
-    let userId;
+    let userId = existingUserData?.id;
     
-    if (existingUser?.user) {
-      // User already exists in auth
-      userId = existingUser.user.id;
-      console.log('User already exists in auth system, using existing ID:', userId);
-    } else {
-      // 3. Create user in auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+    if (!userId) {
+      // No existing user found in our database, create a new one
+      // First create auth user
+      const authResult = await supabase.auth.signUp({
         email: adminData.email,
         password: adminData.password || '',
         options: {
@@ -115,16 +146,39 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
         }
       });
       
-      if (authError) throw authError;
+      if (authResult.error) {
+        throw authResult.error;
+      }
       
-      if (!authData.user) {
+      if (!authResult.data?.user) {
         throw new Error('İstifadəçi yaradıla bilmədi');
       }
       
-      userId = authData.user.id;
+      userId = authResult.data.user.id;
     }
     
-    // 4. Insert user data into users table with school_id using UPSERT
+    // 3. Check if school already has an admin
+    const { data: existingAdmin } = await supabase
+      .from('users')
+      .select('id')
+      .eq('school_id', schoolId)
+      .eq('roles.name', 'school-admin')
+      .maybeSingle();
+    
+    // If there's an existing admin, unassign them first
+    if (existingAdmin) {
+      const { error: unassignError } = await supabase
+        .from('users')
+        .update({ school_id: null })
+        .eq('id', existingAdmin.id);
+      
+      if (unassignError) {
+        console.error('Error unassigning previous admin:', unassignError);
+        // Continue with the assignment, but log the error
+      }
+    }
+    
+    // 4. Insert or update user data in users table with school_id
     const { error: insertError } = await supabase
       .from('users')
       .upsert({
@@ -137,8 +191,7 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
         school_id: schoolId,
         is_active: true
       }, {
-        onConflict: 'id',
-        returning: 'minimal'
+        onConflict: 'id'
       });
     
     if (insertError) throw insertError;

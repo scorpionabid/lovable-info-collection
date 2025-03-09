@@ -4,7 +4,7 @@ import supabaseUserService, { User, UserFilters } from '../supabase/user';
 const userService = {
   getUsers: (filters?: UserFilters) => supabaseUserService.getUsers(filters),
   getUserById: (id: string) => supabaseUserService.getUserById(id),
-  createUser: (userData: Omit<User, 'id'>) => supabaseUserService.createUser(userData),
+  createUser: (userData: User) => supabaseUserService.createUser(userData),
   updateUser: (id: string, userData: Partial<User>) => supabaseUserService.updateUser(id, userData),
   deleteUser: (id: string) => supabaseUserService.deleteUser(id),
   blockUser: (id: string) => supabaseUserService.blockUser(id),

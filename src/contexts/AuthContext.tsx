@@ -65,17 +65,15 @@ const determineUserRole = (userData: any): UserRole => {
     return normalizeRoleName(userData.roles.name);
   }
   
-  // Then try with role_id
-  if (userData.role_id) {
-    return normalizeRoleName(userData.role_id);
-  }
-  
-  // Finally, check for role property
+  // Then check if there's a role property
   if (userData.role) {
     return normalizeRoleName(userData.role);
   }
   
-  console.warn('No role information found for user, using default');
+  // Get the role using the role_id if needed
+  // This would require an additional database lookup if it's important
+  
+  console.warn('No role information found for user, using default role');
   return 'school-admin'; // Default role
 };
 

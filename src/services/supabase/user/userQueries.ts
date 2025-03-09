@@ -106,8 +106,7 @@ export const createUser = async (userData: User) => {
     const { data, error } = await supabase
       .from('users')
       .upsert([userData], {
-        onConflict: 'id',
-        returning: 'representation'  
+        onConflict: 'id'
       })
       .select(`
         *,
