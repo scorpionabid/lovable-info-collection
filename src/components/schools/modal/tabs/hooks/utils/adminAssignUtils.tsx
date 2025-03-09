@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { fetchSchoolAdminRoleId } from './adminFetchUtils';
+import { User as SupabaseAuthUser } from '@supabase/supabase-js';
 
 /**
  * Assign an existing admin to a school
@@ -73,8 +74,8 @@ export const createAdminAuthUser = async (
     }
     
     // Find user with matching email in the results
-    // Explicitly type the users array to include email property
-    const existingUser = userData?.users?.find(user => {
+    // Explicitly type the user object with the correct interface
+    const existingUser = userData?.users?.find((user: SupabaseAuthUser) => {
       return user.email === email;
     });
     
