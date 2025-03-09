@@ -1,3 +1,4 @@
+
 import { supabase } from '../baseClient';
 import { School, SchoolFilter } from '../types';
 import { calculateCompletionRate, transformSchoolData } from '../utils/queryUtils';
@@ -212,7 +213,7 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
-    // Fix: Properly access the nested objects' properties
+    // Fix: The nested objects returned are not arrays but single objects, so access their properties directly
     const schoolType = data.school_types ? data.school_types.name : 'N/A';
     const regionName = data.regions ? data.regions.name : 'N/A';
     const sectorName = data.sectors ? data.sectors.name : 'N/A';
