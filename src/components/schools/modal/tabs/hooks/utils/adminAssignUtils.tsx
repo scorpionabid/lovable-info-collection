@@ -73,7 +73,10 @@ export const createAdminAuthUser = async (
     }
     
     // Find user with matching email in the results
-    const existingUser = userData?.users?.find(user => user.email === email);
+    // Explicitly type the users array to include email property
+    const existingUser = userData?.users?.find(user => {
+      return user.email === email;
+    });
     
     // If user was found in the results
     if (existingUser) {
