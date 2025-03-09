@@ -213,28 +213,33 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
-    // Fix: Check if these are arrays or objects and access accordingly
+    // Fix: Handle the nested objects properly with proper type assertions
     let schoolType = 'N/A';
     let regionName = 'N/A';
     let sectorName = 'N/A';
 
     if (data.school_types) {
-      // Handle both possible formats
-      schoolType = Array.isArray(data.school_types) 
-        ? (data.school_types[0]?.name || 'N/A') 
-        : (data.school_types.name || 'N/A');
+      // Type assertion to help TypeScript understand the shape
+      const schoolTypes = data.school_types as { id: string; name: string } | { id: string; name: string }[];
+      schoolType = Array.isArray(schoolTypes) 
+        ? (schoolTypes[0]?.name || 'N/A') 
+        : (schoolTypes.name || 'N/A');
     }
 
     if (data.regions) {
-      regionName = Array.isArray(data.regions)
-        ? (data.regions[0]?.name || 'N/A')
-        : (data.regions.name || 'N/A');
+      // Type assertion for regions
+      const regions = data.regions as { id: string; name: string } | { id: string; name: string }[];
+      regionName = Array.isArray(regions)
+        ? (regions[0]?.name || 'N/A')
+        : (regions.name || 'N/A');
     }
 
     if (data.sectors) {
-      sectorName = Array.isArray(data.sectors)
-        ? (data.sectors[0]?.name || 'N/A')
-        : (data.sectors.name || 'N/A');
+      // Type assertion for sectors
+      const sectors = data.sectors as { id: string; name: string } | { id: string; name: string }[];
+      sectorName = Array.isArray(sectors)
+        ? (sectors[0]?.name || 'N/A')
+        : (sectors.name || 'N/A');
     }
 
     const school = {
