@@ -213,10 +213,29 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
-    // Fix: The nested objects returned are not arrays but single objects, so access their properties directly
-    const schoolType = data.school_types ? data.school_types.name : 'N/A';
-    const regionName = data.regions ? data.regions.name : 'N/A';
-    const sectorName = data.sectors ? data.sectors.name : 'N/A';
+    // Fix: Check if these are arrays or objects and access accordingly
+    let schoolType = 'N/A';
+    let regionName = 'N/A';
+    let sectorName = 'N/A';
+
+    if (data.school_types) {
+      // Handle both possible formats
+      schoolType = Array.isArray(data.school_types) 
+        ? (data.school_types[0]?.name || 'N/A') 
+        : (data.school_types.name || 'N/A');
+    }
+
+    if (data.regions) {
+      regionName = Array.isArray(data.regions)
+        ? (data.regions[0]?.name || 'N/A')
+        : (data.regions.name || 'N/A');
+    }
+
+    if (data.sectors) {
+      sectorName = Array.isArray(data.sectors)
+        ? (data.sectors[0]?.name || 'N/A')
+        : (data.sectors.name || 'N/A');
+    }
 
     const school = {
       id: data.id,
