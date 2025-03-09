@@ -7,6 +7,7 @@ import userService from "@/services/api/userService";
 import authService from "@/services/api/authService";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthError } from "@supabase/supabase-js";
 
 export const useUserFormSubmit = (
   user: User | undefined,
@@ -53,14 +54,17 @@ export const useUserFormSubmit = (
         if (!isEditing) {
           // Check if user already exists in auth database
           try {
-            const { data: existingAuthUser, error: authCheckError } = await supabase.auth
+            const signInResponse = await supabase.auth
               .signInWithPassword({
                 email: values.email,
                 password: values.password || "dummy-password-for-check"
               });
               
-            if (authCheckError && !authCheckError.message.includes('Invalid login credentials')) {
-              console.error('Error checking existing auth user:', authCheckError);
+            const signInError = signInResponse.error;
+            const existingAuthUser = signInResponse.data;
+            
+            if (signInError && !signInError.message.includes('Invalid login credentials')) {
+              console.error('Error checking existing auth user:', signInError);
               // Don't throw here, just log the error and continue
             } else if (existingAuthUser?.user) {
               userId = existingAuthUser.user.id;
@@ -97,15 +101,19 @@ export const useUserFormSubmit = (
                 role: values.role_id
               });
               
-              if (authResult.error) {
+              // Handle potential errors with proper typing
+              if ('error' in authResult && authResult.error) {
                 // If we get "User already registered" error, try to fetch the user ID
                 if (authResult.error.message?.includes("already registered")) {
                   try {
-                    const { data: userData, error: signinError } = await supabase.auth
+                    const signInResponse = await supabase.auth
                       .signInWithPassword({
                         email: values.email,
                         password: values.password || "dummy-password-for-check"
                       });
+                    
+                    const signinError = signInResponse.error;
+                    const userData = signInResponse.data;
                       
                     if (signinError) {
                       console.error('Error signing in to retrieve user ID:', signinError);
@@ -125,7 +133,7 @@ export const useUserFormSubmit = (
                 } else {
                   throw authResult.error;
                 }
-              } else if (authResult.user?.id) {
+              } else if ('user' in authResult && authResult.user?.id) {
                 userId = authResult.user.id;
                 console.log('Created new auth user with ID:', userId);
               } else {

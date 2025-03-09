@@ -139,10 +139,10 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
           userId = userData.id;
         } else {
           // Try to get auth user ID by alternative means
-          const { data: signInData } = await supabase.auth.signInWithPassword({
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email: adminData.email,
             password: adminData.password
-          }).catch(() => ({ data: null }));
+          }).catch(() => ({ data: null, error: new Error("Sign in failed") }));
           
           if (signInData?.user?.id) {
             userId = signInData.user.id;
@@ -193,5 +193,5 @@ export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm):
   }
 };
 
-// Use 'export type' instead of 're-exporting'
+// Use proper type export to avoid conflict
 export type { NewAdminForm };
