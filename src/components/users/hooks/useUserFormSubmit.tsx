@@ -66,7 +66,7 @@ export const useUserFormSubmit = (
           } else {
             // Create new auth user if it's a new user
             try {
-              const { data: authData, error: authError } = await authService.register({
+              const authResult = await authService.register({
                 email: values.email,
                 password: values.password || Math.random().toString(36).slice(-8),
                 firstName: values.first_name,
@@ -74,10 +74,10 @@ export const useUserFormSubmit = (
                 role: values.role_id
               });
               
-              if (authError) throw authError;
-              if (!authData?.user?.id) throw new Error('User ID not returned from auth registration');
+              if (authResult.error) throw authResult.error;
+              if (!authResult.user?.id) throw new Error('User ID not returned from auth registration');
               
-              userId = authData.user.id;
+              userId = authResult.user.id;
               console.log('Created new auth user with ID:', userId);
             } catch (authError) {
               console.error('Auth registration error:', authError);

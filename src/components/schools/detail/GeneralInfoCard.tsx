@@ -17,12 +17,16 @@ interface GeneralInfoCardProps {
   school: School;
   isAssigning: boolean;
   onAssignAdmin: (userId: string) => void;
+  admin?: UserType | null;
+  isLoadingAdmin?: boolean;
 }
 
 export const GeneralInfoCard = ({ 
   school,
   isAssigning,
-  onAssignAdmin
+  onAssignAdmin,
+  admin,
+  isLoadingAdmin = false
 }: GeneralInfoCardProps) => {
   const [selectedAdmin, setSelectedAdmin] = useState<string>("");
   const [availableAdmins, setAvailableAdmins] = useState<UserType[]>([]);
@@ -81,14 +85,19 @@ export const GeneralInfoCard = ({
         
         <div className="border-t pt-4">
           <div className="font-medium text-infoline-dark-gray mb-2">Admin</div>
-          {school.adminName ? (
+          {isLoadingAdmin ? (
+            <div className="flex items-center justify-center h-20">
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-infoline-blue"></div>
+            </div>
+          ) : admin ? (
             <div className="bg-infoline-lightest-gray p-3 rounded-lg">
               <div className="flex items-center mb-2">
                 <div className="bg-infoline-blue rounded-full p-1.5 mr-2">
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <div className="font-medium">{school.adminName}</div>
+                <div className="font-medium">{admin.first_name} {admin.last_name}</div>
               </div>
+              <div className="text-sm text-infoline-dark-gray mb-2">{admin.email}</div>
               <Button variant="outline" className="w-full" onClick={() => setSelectedAdmin("")}>
                 Adminni dəyişdir
               </Button>
