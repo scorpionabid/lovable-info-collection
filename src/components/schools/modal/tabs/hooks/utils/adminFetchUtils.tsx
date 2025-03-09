@@ -33,6 +33,23 @@ export const fetchSchoolAdminRoleId = async (): Promise<string | null> => {
  */
 export const fetchAvailableAdmins = async (roleId: string): Promise<User[]> => {
   try {
+    // First check if any admins exist with this role
+    const { data: anyAdmins, error: checkError } = await supabase
+      .from('users')
+      .select('count')
+      .eq('role_id', roleId);
+      
+    if (checkError) {
+      console.error('Error checking for admins:', checkError);
+      return [];
+    }
+    
+    // If no admins exist at all, don't perform the query with IS NULL
+    if (anyAdmins && anyAdmins.length === 0) {
+      return [];
+    }
+    
+    // Get available admins (those without a school assigned)
     const { data: availableAdmins, error: adminsError } = await supabase
       .from('users')
       .select('*')

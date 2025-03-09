@@ -38,14 +38,19 @@ export const useAdminAssignment = (schoolId?: string) => {
 
   // Load data when the component mounts or schoolId changes
   useEffect(() => {
+    if (!schoolId) return;
+    
     const fetchData = async () => {
       const { users: fetchedUsers, currentAdmin: fetchedAdmin } = await loadAdminData();
       setUsers(fetchedUsers);
       setCurrentAdmin(fetchedAdmin);
+      
+      // Reset selected user when loading new data
+      setSelectedUserId('');
     };
     
     fetchData();
-  }, [loadAdminData]);
+  }, [schoolId, loadAdminData]);
 
   // Assign existing admin to school
   const handleAssignAdmin = async () => {
@@ -59,9 +64,11 @@ export const useAdminAssignment = (schoolId?: string) => {
       const success = await assignAdminToSchool(schoolId, selectedUserId);
       
       if (success) {
+        // Reload data to update UI
         const { users: updatedUsers, currentAdmin: updatedAdmin } = await loadAdminData();
         setUsers(updatedUsers);
         setCurrentAdmin(updatedAdmin);
+        setSelectedUserId('');
       }
       
       return success;
@@ -109,9 +116,20 @@ export const useAdminAssignment = (schoolId?: string) => {
       
       if (success) {
         toast.success('Admin uğurla yaradıldı və məktəbə təyin edildi');
+        
+        // Reload data to update UI
         const { users: updatedUsers, currentAdmin: updatedAdmin } = await loadAdminData();
         setUsers(updatedUsers);
         setCurrentAdmin(updatedAdmin);
+        
+        // Reset form
+        setNewAdmin({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          password: generateRandomPassword()
+        });
       }
       
       return success;
@@ -122,6 +140,15 @@ export const useAdminAssignment = (schoolId?: string) => {
     } finally {
       setIsAssigning(false);
     }
+  };
+
+  // Helper to refresh data manually
+  const refreshData = async () => {
+    if (!schoolId) return;
+    
+    const { users: fetchedUsers, currentAdmin: fetchedAdmin } = await loadAdminData();
+    setUsers(fetchedUsers);
+    setCurrentAdmin(fetchedAdmin);
   };
 
   return {
@@ -135,6 +162,7 @@ export const useAdminAssignment = (schoolId?: string) => {
     handleAssignAdmin,
     handleCreateAdmin,
     generateRandomPassword,
-    currentAdmin
+    currentAdmin,
+    refreshData
   };
 };

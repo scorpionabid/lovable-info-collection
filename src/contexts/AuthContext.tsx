@@ -53,8 +53,27 @@ interface AuthProviderProps {
 const normalizeRoleName = (roleName: string): UserRole => {
   if (!roleName) return 'school-admin'; // Default role if none provided
   
+  const normalizedName = roleName.toLowerCase();
+  
   // Map database role names to UI role names
-  if (roleName === 'superadmin') return 'super-admin';
+  if (normalizedName === 'superadmin' || normalizedName === 'super-admin') {
+    return 'super-admin';
+  }
+  
+  if (normalizedName === 'region-admin' || normalizedName === 'region admin') {
+    return 'region-admin';
+  }
+  
+  if (normalizedName === 'sector-admin' || normalizedName === 'sector admin') {
+    return 'sector-admin';
+  }
+  
+  if (normalizedName === 'school-admin' || normalizedName === 'school admin') {
+    return 'school-admin';
+  }
+  
+  // If none matched, return the original (this should not happen)
+  console.warn(`Unrecognized role name: ${roleName}, using as-is`);
   return roleName as UserRole;
 };
 
@@ -69,9 +88,6 @@ const determineUserRole = (userData: any): UserRole => {
   if (userData.role) {
     return normalizeRoleName(userData.role);
   }
-  
-  // Get the role using the role_id if needed
-  // This would require an additional database lookup if it's important
   
   console.warn('No role information found for user, using default role');
   return 'school-admin'; // Default role

@@ -170,3 +170,40 @@ export const isSchoolAdminRole = async (roleId: string): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Create a new admin service for centralized admin operations
+ */
+export const findAdminBySchoolId = async (schoolId: string): Promise<User | null> => {
+  try {
+    // First get the role ID for 'school-admin'
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'school-admin')
+      .single();
+      
+    if (roleError || !roleData) {
+      console.error('Error finding school-admin role:', roleError);
+      return null;
+    }
+    
+    // Then find admin assigned to this school
+    const { data: adminData, error: adminError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('role_id', roleData.id)
+      .maybeSingle();
+      
+    if (adminError) {
+      console.error('Error finding admin for school:', adminError);
+      return null;
+    }
+    
+    return adminData as User | null;
+  } catch (error) {
+    console.error('Error in findAdminBySchoolId:', error);
+    return null;
+  }
+};
