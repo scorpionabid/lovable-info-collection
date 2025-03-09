@@ -64,7 +64,7 @@ export const AdminTab = ({ schoolId }: AdminTabProps) => {
         newAdmin={newAdmin}
         onUpdateNewAdmin={setNewAdmin}
         isAssigning={isAssigning}
-        onCreate={handleCreateAdmin}
+        onCreate={() => handleCreateAdmin(schoolId || '', newAdmin)}
         onGenerateNewPassword={generateRandomPassword}
       />
     </div>

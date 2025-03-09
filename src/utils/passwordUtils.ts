@@ -1,49 +1,54 @@
 
 /**
- * Utility functions for password management
+ * Generates a random password that meets requirements:
+ * - At least 8 characters
+ * - Contains uppercase letters
+ * - Contains lowercase letters
+ * - Contains numbers
+ * - Contains special characters
  */
-
-/**
- * Generates a random secure password
- * @returns A secure random password with at least one uppercase, lowercase, number, and special character
- */
-export function generateRandomPassword(): string {
-  const upperChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lowerChars = 'abcdefghijkmnopqrstuvwxyz';
-  const numbers = '23456789';
-  const specialChars = '!@#$%^&*';
+export const generateRandomPassword = (length = 10): string => {
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Excluded O and I which can be confused
+  const lowercase = 'abcdefghijkmnopqrstuvwxyz'; // Excluded l which can be confused
+  const numbers = '23456789'; // Excluded 0 and 1 which can be confused
+  const symbols = '!@#$%^&*()-_=+';
+  const allChars = uppercase + lowercase + numbers + symbols;
   
-  const getRandomChar = (charset: string) => charset.charAt(Math.floor(Math.random() * charset.length));
-  
-  // Ensure we have at least one of each required character type
+  // Ensure at least one of each character type
   let password = 
-    getRandomChar(upperChars) +
-    getRandomChar(lowerChars) +
-    getRandomChar(numbers) +
-    getRandomChar(specialChars);
-  
-  // Add additional random characters to reach desired length (minimum 8)
-  const allChars = upperChars + lowerChars + numbers + specialChars;
-  while (password.length < 10) {
-    password += getRandomChar(allChars);
+    uppercase.charAt(Math.floor(Math.random() * uppercase.length)) +
+    lowercase.charAt(Math.floor(Math.random() * lowercase.length)) +
+    numbers.charAt(Math.floor(Math.random() * numbers.length)) +
+    symbols.charAt(Math.floor(Math.random() * symbols.length));
+    
+  // Fill the rest with random characters
+  for (let i = 4; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
   }
   
-  // Shuffle the password to avoid predictable patterns
+  // Shuffle the password
   return password.split('').sort(() => 0.5 - Math.random()).join('');
-}
+};
 
 /**
- * Validates that a password meets security requirements
- * @param password The password to validate
- * @returns Boolean indicating if the password is valid
+ * Validates if a password meets requirements
  */
-export function validatePassword(password: string = ''): boolean {
-  if (password.length < 8) return false;
+export const validatePassword = (password: string): { valid: boolean; message?: string } => {
+  if (!password || password.length < 8) {
+    return { valid: false, message: 'Şifrə ən azı 8 simvol olmalıdır' };
+  }
   
-  const hasUpperCase = /[A-Z]/.test(password);
-  const hasLowerCase = /[a-z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecialChar = /[!@#$%^&*]/.test(password);
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Şifrədə ən azı bir böyük hərf olmalıdır' };
+  }
   
-  return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
-}
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Şifrədə ən azı bir kiçik hərf olmalıdır' };
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'Şifrədə ən azı bir rəqəm olmalıdır' };
+  }
+  
+  return { valid: true };
+};

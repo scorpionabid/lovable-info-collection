@@ -51,9 +51,18 @@ export const useUserFormSubmit = (
         
         // First check if user with this email already exists in the database
         if (!isEditing) {
+          // Check if user already exists in auth database
+          const { data: existingAuthUser, error: authCheckError } = await supabase.auth
+            .signInWithPassword({
+              email: values.email,
+              password: values.password || "dummy-password-for-check"
+            })
+            .catch(() => ({ data: null, error: null }));
+            
+          // Also check if user exists in our database
           const { data: existingUsers } = await supabase
             .from('users')
-            .select('id')
+            .select('id, email')
             .eq('email', values.email)
             .maybeSingle();
             
@@ -63,8 +72,12 @@ export const useUserFormSubmit = (
             // User already exists in database
             userId = existingUserId;
             console.log('User already exists in database, using existing ID:', userId);
+          } else if (existingAuthUser?.user) {
+            // User exists in auth but not in our database
+            userId = existingAuthUser.user.id;
+            console.log('User exists in auth but not in database, using auth ID:', userId);
           } else {
-            // Create new auth user if it's a new user
+            // Create new auth user if doesn't exist anywhere
             try {
               const authResult = await authService.register({
                 email: values.email,
@@ -74,16 +87,40 @@ export const useUserFormSubmit = (
                 role: values.role_id
               });
               
-              if (authResult.error) throw authResult.error;
-              if (!authResult.user?.id) throw new Error('User ID not returned from auth registration');
-              
-              userId = authResult.user.id;
-              console.log('Created new auth user with ID:', userId);
+              if (authResult.error) {
+                // If we get "User already registered" error, try to fetch the user ID
+                if (authResult.error.message?.includes("already registered")) {
+                  const { data: userData } = await supabase.auth
+                    .signInWithPassword({
+                      email: values.email,
+                      password: values.password || "dummy-password-for-check"
+                    })
+                    .catch(() => ({ data: null }));
+                    
+                  if (userData?.user?.id) {
+                    userId = userData.user.id;
+                    console.log('Retrieved ID for existing auth user:', userId);
+                  } else {
+                    throw new Error(`Autentifikasiya xətası: İstifadəçi mövcuddur, lakin giriş etmək mümkün olmadı`);
+                  }
+                } else {
+                  throw authResult.error;
+                }
+              } else if (authResult.user?.id) {
+                userId = authResult.user.id;
+                console.log('Created new auth user with ID:', userId);
+              } else {
+                throw new Error('User ID not returned from auth registration');
+              }
             } catch (authError) {
               console.error('Auth registration error:', authError);
               throw new Error(`Autentifikasiya xətası: ${(authError as Error).message}`);
             }
           }
+        }
+        
+        if (!userId) {
+          throw new Error('No user ID available for database operation');
         }
         
         // Then create or update the user in the database
@@ -93,12 +130,12 @@ export const useUserFormSubmit = (
           first_name: values.first_name,
           last_name: values.last_name,
           role_id: values.role_id,
-          utis_code: values.utis_code,
+          utis_code: values.utis_code || undefined,
           is_active: values.is_active,
-          region_id: values.region_id || undefined,
-          sector_id: values.sector_id || undefined,
-          school_id: values.school_id || undefined,
-          phone: values.phone
+          region_id: values.region_id || null,
+          sector_id: values.sector_id || null,
+          school_id: values.school_id || null,
+          phone: values.phone || null
         };
         
         // Show success information including login details for new users

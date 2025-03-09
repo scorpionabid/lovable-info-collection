@@ -1,16 +1,17 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
+
 import { useState } from "react";
-import { validatePassword } from "@/utils/passwordUtils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, RefreshCcw, Eye, EyeOff } from "lucide-react";
 import { NewAdminForm } from "@/services/admin/adminService";
 
 interface NewAdminCreatorProps {
   newAdmin: NewAdminForm;
-  onUpdateNewAdmin: (updatedAdmin: NewAdminForm) => void;
+  onUpdateNewAdmin: (admin: NewAdminForm) => void;
   isAssigning: boolean;
   onCreate: () => void;
-  onGenerateNewPassword?: () => string;
+  onGenerateNewPassword: () => string;
 }
 
 export const NewAdminCreator = ({
@@ -22,135 +23,112 @@ export const NewAdminCreator = ({
 }: NewAdminCreatorProps) => {
   const [showPassword, setShowPassword] = useState(false);
   
-  const handleGeneratePassword = () => {
-    if (onGenerateNewPassword) {
-      const newPassword = onGenerateNewPassword();
-      onUpdateNewAdmin({...newAdmin, password: newPassword});
-    }
+  const handleChange = (field: keyof NewAdminForm, value: string) => {
+    onUpdateNewAdmin({
+      ...newAdmin,
+      [field]: value
+    });
   };
   
-  const isPasswordValid = validatePassword(newAdmin.password);
-  const isFormValid = newAdmin.firstName && newAdmin.lastName && newAdmin.email && isPasswordValid;
-
+  const handleGeneratePassword = () => {
+    const newPassword = onGenerateNewPassword();
+    handleChange('password', newPassword);
+  };
+  
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-medium text-infoline-dark-gray">Yeni admin yarat</h4>
+      <h4 className="text-sm font-medium text-infoline-dark-gray">Yeni Admin Yarat</h4>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-infoline-dark-gray block">
-            Ad <span className="text-red-500">*</span>
-          </label>
+          <Label htmlFor="firstName">Ad</Label>
           <Input 
-            placeholder="Adı daxil edin" 
+            id="firstName" 
             value={newAdmin.firstName} 
-            onChange={(e) => onUpdateNewAdmin({...newAdmin, firstName: e.target.value})}
+            onChange={(e) => handleChange('firstName', e.target.value)}
+            placeholder="Adı daxil edin"
           />
         </div>
         
         <div className="space-y-2">
-          <label className="text-sm font-medium text-infoline-dark-gray block">
-            Soyad <span className="text-red-500">*</span>
-          </label>
+          <Label htmlFor="lastName">Soyad</Label>
           <Input 
-            placeholder="Soyadı daxil edin" 
+            id="lastName" 
             value={newAdmin.lastName} 
-            onChange={(e) => onUpdateNewAdmin({...newAdmin, lastName: e.target.value})}
-          />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-infoline-dark-gray block">
-            E-poçt <span className="text-red-500">*</span>
-          </label>
-          <Input 
-            type="email" 
-            placeholder="E-poçt ünvanını daxil edin" 
-            value={newAdmin.email} 
-            onChange={(e) => onUpdateNewAdmin({...newAdmin, email: e.target.value})}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-infoline-dark-gray block">
-            Telefon
-          </label>
-          <Input 
-            placeholder="Telefon nömrəsini daxil edin" 
-            value={newAdmin.phone} 
-            onChange={(e) => onUpdateNewAdmin({...newAdmin, phone: e.target.value})}
+            onChange={(e) => handleChange('lastName', e.target.value)}
+            placeholder="Soyadı daxil edin"
           />
         </div>
       </div>
       
       <div className="space-y-2">
-        <label className="text-sm font-medium text-infoline-dark-gray block">
-          Şifrə <span className="text-red-500">*</span>
-        </label>
+        <Label htmlFor="email">Email</Label>
+        <Input 
+          id="email" 
+          type="email"
+          value={newAdmin.email} 
+          onChange={(e) => handleChange('email', e.target.value)}
+          placeholder="Email daxil edin"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="phone">Telefon (istəyə bağlı)</Label>
+        <Input 
+          id="phone" 
+          value={newAdmin.phone} 
+          onChange={(e) => handleChange('phone', e.target.value)}
+          placeholder="Telefon nömrəsini daxil edin"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Label htmlFor="password">Şifrə</Label>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleGeneratePassword}
+            className="h-6 px-2 text-xs"
+          >
+            <RefreshCcw className="h-3 w-3 mr-1" /> Şifrə yarat
+          </Button>
+        </div>
         <div className="relative">
           <Input 
+            id="password" 
             type={showPassword ? "text" : "password"}
+            value={newAdmin.password} 
+            onChange={(e) => handleChange('password', e.target.value)}
             placeholder="Şifrə daxil edin"
-            value={newAdmin.password || ''}
-            onChange={(e) => onUpdateNewAdmin({...newAdmin, password: e.target.value})}
-            className={!isPasswordValid && newAdmin.password ? "border-red-500" : ""}
+            className="pr-10"
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex">
-            <button 
-              type="button"
-              className="text-gray-500 hover:text-gray-700 mr-2"
-              onClick={handleGeneratePassword}
-              title="Yeni şifrə generasiya et"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
-            <button 
-              type="button"
-              className="text-gray-500 hover:text-gray-700"
-              onClick={() => setShowPassword(!showPassword)}
-              title={showPassword ? "Şifrəni gizlət" : "Şifrəni göstər"}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-        <div className="text-xs">
-          <p className={isPasswordValid ? "text-green-600" : "text-gray-500"}>
-            Şifrə tələbləri:
-          </p>
-          <ul className="list-disc list-inside space-y-1 pl-1">
-            <li className={newAdmin.password && newAdmin.password.length >= 8 ? "text-green-600" : "text-gray-500"}>
-              Ən azı 8 simvol
-            </li>
-            <li className={newAdmin.password && /[A-Z]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
-              Ən azı bir böyük hərf (A-Z)
-            </li>
-            <li className={newAdmin.password && /[a-z]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
-              Ən azı bir kiçik hərf (a-z)
-            </li>
-            <li className={newAdmin.password && /[0-9]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
-              Ən azı bir rəqəm (0-9)
-            </li>
-            <li className={newAdmin.password && /[!@#$%^&*]/.test(newAdmin.password) ? "text-green-600" : "text-gray-500"}>
-              Ən azı bir xüsusi simvol (!@#$%^&*)
-            </li>
-          </ul>
+          <button
+            type="button"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4 text-gray-400" />
+            ) : (
+              <Eye className="h-4 w-4 text-gray-400" />
+            )}
+          </button>
         </div>
       </div>
       
       <Button 
-        className="w-full" 
+        className="w-full mt-4" 
         onClick={onCreate} 
-        disabled={isAssigning || !isFormValid}
+        disabled={isAssigning || !newAdmin.firstName || !newAdmin.lastName || !newAdmin.email || !newAdmin.password}
       >
         {isAssigning ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Gözləyin...
+            Yaradılır...
           </>
-        ) : 'Yarat və Təyin et'}
+        ) : 'Yeni Admin Yarat'}
       </Button>
     </div>
   );
