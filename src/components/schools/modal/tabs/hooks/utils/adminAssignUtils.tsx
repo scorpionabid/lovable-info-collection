@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { fetchSchoolAdminRoleId } from './adminFetchUtils';
@@ -66,21 +65,20 @@ export const createAdminAuthUser = async (
   try {
     // Check if the user already exists in auth
     // Using the correct method from Supabase's auth API
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
-      filter: {
-        email: email
-      }
-    });
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
     
     if (userError) {
       console.error('Error checking if user exists:', userError);
       return { error: `İstifadəçi yoxlanılarkən xəta: ${userError.message}` };
     }
     
+    // Find user with matching email in the results
+    const existingUser = userData?.users?.find(user => user.email === email);
+    
     // If user was found in the results
-    if (userData?.users && userData.users.length > 0) {
-      console.log('User already exists in auth, using existing ID:', userData.users[0].id);
-      return { userId: userData.users[0].id };
+    if (existingUser) {
+      console.log('User already exists in auth, using existing ID:', existingUser.id);
+      return { userId: existingUser.id };
     }
     
     // User doesn't exist, so create a new one
