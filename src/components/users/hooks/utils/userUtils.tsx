@@ -85,9 +85,25 @@ export const saveUserToDatabase = async (
  * Create a new user in the database
  */
 const createUser = async (userData: User): Promise<User> => {
+  // Create a new object with only the properties that the database expects
+  // This ensures we don't have any type mismatches with the Supabase client
+  const userDataForDb = {
+    id: userData.id,
+    email: userData.email,
+    first_name: userData.first_name,
+    last_name: userData.last_name,
+    role_id: userData.role_id || '', // Ensure role_id is never undefined
+    utis_code: userData.utis_code,
+    is_active: userData.is_active,
+    region_id: userData.region_id,
+    sector_id: userData.sector_id,
+    school_id: userData.school_id,
+    phone: userData.phone
+  };
+    
   const { data, error } = await supabase
     .from('users')
-    .upsert(userData, {
+    .upsert(userDataForDb, {
       onConflict: 'id'
     })
     .select()
@@ -104,9 +120,24 @@ const createUser = async (userData: User): Promise<User> => {
  * Update an existing user in the database
  */
 const updateUser = async (userData: User): Promise<User> => {
+  // Create a new object with only the properties that the database expects
+  const userDataForDb = {
+    id: userData.id,
+    email: userData.email,
+    first_name: userData.first_name,
+    last_name: userData.last_name,
+    role_id: userData.role_id || '', // Ensure role_id is never undefined
+    utis_code: userData.utis_code,
+    is_active: userData.is_active,
+    region_id: userData.region_id,
+    sector_id: userData.sector_id,
+    school_id: userData.school_id,
+    phone: userData.phone
+  };
+  
   const { data, error } = await supabase
     .from('users')
-    .update(userData)
+    .update(userDataForDb)
     .eq('id', userData.id)
     .select()
     .single();
