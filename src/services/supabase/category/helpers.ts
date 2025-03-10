@@ -86,3 +86,39 @@ export const retryQuery = async <T>(
   
   throw lastError;
 };
+
+// Function to export category template as Excel file
+export const exportCategoryTemplate = async (categoryId: string): Promise<Blob> => {
+  try {
+    // Get category columns
+    const { data: columns, error: columnsError } = await supabase
+      .from('columns')
+      .select('*')
+      .eq('category_id', categoryId)
+      .order('order', { ascending: true });
+
+    if (columnsError) throw columnsError;
+
+    // Get category details
+    const { data: category, error: categoryError } = await supabase
+      .from('categories')
+      .select('name')
+      .eq('id', categoryId)
+      .single();
+
+    if (categoryError) throw categoryError;
+
+    // Create template data - in a real implementation, you would use xlsx or similar library
+    // This is a simple placeholder that creates a CSV format
+    const headers = columns.map(col => col.name).join(',');
+    const csvContent = `${headers}\n`;
+    
+    // Convert string to blob
+    const blob = new Blob([csvContent], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    return blob;
+  } catch (error) {
+    console.error('Error exporting category template:', error);
+    throw error;
+  }
+};
