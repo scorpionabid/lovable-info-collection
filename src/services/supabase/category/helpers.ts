@@ -84,9 +84,9 @@ export const retryQuery = async <T>(
       });
       
       // Check for permission errors related to RLS
-      if (error.code === '42501' || error.message?.includes('permission denied')) {
-        console.error('Permission denied - likely an RLS policy issue');
-        throw new Error('İcazə verilmədi. Zəhmət olmasa sistem administratoru ilə əlaqə saxlayın.');
+      if (error.code === '42501' || error.message?.includes('row-level security policy') || error.message?.includes('permission denied')) {
+        console.error('Permission denied - RLS policy violation');
+        throw new Error('İcazə verilmədi. Bu əməliyyatı yerinə yetirmək üçün sizin kifayət qədər hüquqlarınız yoxdur.');
       }
       
       // Check for network errors
@@ -147,51 +147,56 @@ export const exportCategoryTemplate = async (categoryId: string): Promise<Blob> 
   }
 };
 
-// New function to perform operations within a transaction
+// Updated function to perform operations within a transaction
 export const withTransaction = async <T>(
   operations: (client: typeof supabase) => Promise<T>
 ): Promise<T> => {
   // Start a transaction
-  const { error: beginError } = await supabase.rpc('begin_transaction');
-  if (beginError) {
-    console.error('Error starting transaction:', beginError);
-    throw new Error('Tranzaksiya başlada bilmədi: ' + (beginError.message || 'Bilinməyən xəta'));
-  }
-  
   try {
-    // Execute the operations
-    const result = await operations(supabase);
+    const { error: beginError } = await supabase.rpc('begin_transaction');
+    if (beginError) {
+      console.error('Error starting transaction:', beginError);
+      throw new Error('Tranzaksiya başlada bilmədi: ' + (beginError.message || 'Bilinməyən xəta'));
+    }
     
-    // Commit the transaction
-    const { error: commitError } = await supabase.rpc('commit_transaction');
-    if (commitError) {
-      console.error('Error committing transaction:', commitError);
-      // Try to rollback
-      try {
-        const { error: rollbackError } = await supabase.rpc('rollback_transaction');
-        if (rollbackError) {
-          console.error('Failed to rollback after commit error:', rollbackError);
+    try {
+      // Execute the operations
+      const result = await operations(supabase);
+      
+      // Commit the transaction
+      const { error: commitError } = await supabase.rpc('commit_transaction');
+      if (commitError) {
+        console.error('Error committing transaction:', commitError);
+        // Try to rollback
+        try {
+          await supabase.rpc('rollback_transaction');
+        } catch (rollbackException) {
+          console.error('Exception during rollback after commit error:', rollbackException);
         }
+        throw new Error('Tranzaksiya tamamlana bilmədi: ' + (commitError.message || 'Bilinməyən xəta'));
+      }
+      
+      return result;
+    } catch (error: any) {
+      // Rollback the transaction on error
+      try {
+        await supabase.rpc('rollback_transaction');
       } catch (rollbackException) {
         console.error('Exception during rollback:', rollbackException);
       }
-      throw new Error('Tranzaksiya tamamlana bilmədi: ' + (commitError.message || 'Bilinməyən xəta'));
-    }
-    
-    return result;
-  } catch (error: any) {
-    // Rollback the transaction on error
-    try {
-      const { error: rollbackError } = await supabase.rpc('rollback_transaction');
-      if (rollbackError) {
-        console.error('Error rolling back transaction:', rollbackError);
+      
+      console.error('Transaction failed:', error);
+      
+      // Check for RLS errors
+      if (error.code === '42501' || error.message?.includes('row-level security policy')) {
+        throw new Error('İcazə xətası: Bu əməliyyatı yerinə yetirmək üçün lazımi səlahiyyətlərə malik deyilsiniz.');
       }
-    } catch (rollbackException) {
-      console.error('Exception during rollback:', rollbackException);
+      
+      throw new Error('Əməliyyat uğursuz oldu: ' + (error.message || 'Bilinməyən xəta'));
     }
-    
-    console.error('Transaction failed:', error);
-    throw new Error('Əməliyyat uğursuz oldu: ' + (error.message || 'Bilinməyən xəta'));
+  } catch (error: any) {
+    console.error('Transaction setup failed:', error);
+    throw error;
   }
 };
 
