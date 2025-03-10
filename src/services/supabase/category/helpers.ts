@@ -1,68 +1,88 @@
 
 import { supabase } from '../supabaseClient';
 
-// Helper functions
-export const calculateCategoryCompletionRate = async (categoryId: string): Promise<number> => {
-  try {
-    // This is a placeholder for a more complex calculation involving data entries
-    // In a real app, you would calculate this based on how many schools have filled out data for this category
-    
-    // For now, returning a random number between 20 and 95
-    return Math.floor(Math.random() * 75) + 20;
-  } catch (error) {
-    console.error('Error calculating completion rate:', error);
-    return 0;
-  }
-};
-
+// Helper function to get the count of columns for a category
 export const getCategoryColumnsCount = async (categoryId: string): Promise<number> => {
   try {
     const { count, error } = await supabase
       .from('columns')
       .select('id', { count: 'exact', head: true })
       .eq('category_id', categoryId);
-
-    if (error) throw error;
-
+    
+    if (error) {
+      console.error('Error fetching column count:', error);
+      return 0;
+    }
+    
     return count || 0;
   } catch (error) {
-    console.error('Error counting category columns:', error);
+    console.error('Error in getCategoryColumnsCount:', error);
     return 0;
   }
 };
 
-export const getRegionCompletionData = async (categoryId: string): Promise<{ name: string; completion: number }[]> => {
+// Helper function to calculate completion rate
+export const calculateCategoryCompletionRate = async (categoryId: string): Promise<number> => {
   try {
-    // Get all regions
-    const { data: regions, error: regionsError } = await supabase
-      .from('regions')
-      .select('id, name');
-
-    if (regionsError) throw regionsError;
-
-    // Calculate completion rate for each region (this would be a more complex query in a real app)
-    const completionData = regions.map(region => ({
-      name: region.name,
-      completion: Math.floor(Math.random() * 60) + 30 // Random value between 30-90%
-    }));
-
-    // Sort by completion rate descending
-    return completionData.sort((a, b) => b.completion - a.completion);
+    // Get total data entries for the category
+    const { count: totalEntries, error: totalError } = await supabase
+      .from('data')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', categoryId);
+    
+    if (totalError) {
+      console.error('Error fetching total entries:', totalError);
+      return 0;
+    }
+    
+    // Get completed data entries
+    const { count: completedEntries, error: completedError } = await supabase
+      .from('data')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', categoryId)
+      .eq('status', 'completed');
+    
+    if (completedError) {
+      console.error('Error fetching completed entries:', completedError);
+      return 0;
+    }
+    
+    // Calculate completion rate
+    if (totalEntries && totalEntries > 0) {
+      return Math.round((completedEntries || 0) * 100 / totalEntries);
+    }
+    
+    return 0;
   } catch (error) {
-    console.error('Error getting region completion data:', error);
-    return [];
+    console.error('Error in calculateCategoryCompletionRate:', error);
+    return 0;
   }
 };
 
-export const exportCategoryTemplate = async (categoryId: string): Promise<Blob> => {
-  // This function would generate an Excel template based on category columns
-  // For now, we'll just return a simple placeholder
-  try {
-    console.log(`Exporting template for category ${categoryId}`);
-    // Return a simple text blob for demonstration
-    return new Blob(['Sample Excel Template'], { type: 'text/plain' });
-  } catch (error) {
-    console.error('Error exporting category template:', error);
-    throw error;
+// Function to retry a query with exponential backoff
+export const retryQuery = async <T>(
+  queryFn: () => Promise<T>, 
+  maxRetries = 3, 
+  initialDelay = 300
+): Promise<T> => {
+  let lastError: any;
+  let retryCount = 0;
+  
+  while (retryCount < maxRetries) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      lastError = error;
+      retryCount++;
+      
+      if (retryCount < maxRetries) {
+        // Exponential backoff with jitter
+        const delay = initialDelay * Math.pow(2, retryCount) * (0.5 + Math.random() * 0.5);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log(`Retrying query (attempt ${retryCount + 1}/${maxRetries})...`);
+      }
+    }
   }
+  
+  throw lastError;
 };

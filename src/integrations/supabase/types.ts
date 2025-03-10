@@ -178,10 +178,12 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          priority: number
           region_id: string | null
           school_id: string | null
           school_type_id: string | null
           sector_id: string | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -191,10 +193,12 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          priority?: number
           region_id?: string | null
           school_id?: string | null
           school_type_id?: string | null
           sector_id?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -204,10 +208,12 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          priority?: number
           region_id?: string | null
           school_id?: string | null
           school_type_id?: string | null
           sector_id?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [

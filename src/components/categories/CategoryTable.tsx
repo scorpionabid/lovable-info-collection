@@ -39,9 +39,11 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
 
   const handleArchive = async (category: CategoryType) => {
     try {
-      await categoryService.updateCategory(category.id, {
-        status: category.status === 'Active' ? 'Inactive' : 'Active'
-      });
+      await categoryService.retryQuery(() => 
+        categoryService.updateCategory(category.id, {
+          status: category.status === 'Active' ? 'Inactive' : 'Active'
+        })
+      );
       
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       

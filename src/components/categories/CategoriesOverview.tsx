@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -42,11 +41,18 @@ export const CategoriesOverview = () => {
     ? parseInt(searchParams.get('maxCompletionRate')!)
     : undefined;
 
-  const { data: categoriesData = [], isLoading, isError, error, refetch } = useQuery({
+  const { 
+    data: categoriesData = [], 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    isRefetching 
+  } = useQuery({
     queryKey: ['categories', searchQuery, assignment, status, deadlineBefore, deadlineAfter, minCompletionRate, maxCompletionRate],
     queryFn: async () => {
       try {
-        return await categoryService.getCategories({
+        return await categoryService.retryQuery(() => categoryService.getCategories({
           search: searchQuery,
           assignment,
           status,
@@ -54,13 +60,16 @@ export const CategoriesOverview = () => {
           deadlineAfter,
           minCompletionRate,
           maxCompletionRate
-        });
+        }), 3);
       } catch (err) {
         console.error('Error fetching categories:', err);
         toast.error('Kateqoriyaları yükləyərkən xəta baş verdi');
         throw err;
       }
-    }
+    },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(attempt > 1 ? 2000 : 1000, 10000),
+    staleTime: 60000 // 1 minute
   });
 
   const categories = categoriesData.map(convertToCategory);
@@ -209,20 +218,29 @@ export const CategoriesOverview = () => {
         />
       )}
       
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+      {isLoading || isRefetching ? (
+        <div className="flex items-center justify-center h-64 bg-white rounded-lg shadow-sm">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+            <p className="mt-4 text-infoline-dark-gray">Kateqoriyalar yüklənir...</p>
+          </div>
         </div>
       ) : isError ? (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-center">
-          <p>Məlumatları yükləyərkən xəta baş verdi. Zəhmət olmasa bir daha cəhd edin.</p>
+        <div className="bg-red-50 border border-red-200 text-red-700 p-8 rounded-lg text-center">
+          <p className="text-lg mb-4">Məlumatları yükləyərkən xəta baş verdi.</p>
+          <p className="mb-4">{error instanceof Error ? error.message : 'Bilinməyən xəta'}</p>
           <Button 
             variant="outline" 
             className="mt-2"
             onClick={() => refetch()}
           >
+            <RefreshCcw className="mr-2 h-4 w-4" />
             Yenidən cəhd et
           </Button>
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+          <p className="text-infoline-dark-gray">Nəticə tapılmadı</p>
         </div>
       ) : (
         <CategoryTable 
@@ -242,6 +260,7 @@ export const CategoriesOverview = () => {
             categoryService.updateCategoryPriority(id, newPriority)
               .then(() => {
                 queryClient.invalidateQueries({ queryKey: ['categories'] });
+                toast.success('Prioritet uğurla yeniləndi');
               })
               .catch(error => {
                 if (previousCategories) {

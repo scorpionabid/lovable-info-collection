@@ -59,8 +59,11 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
   }, [category, mode, isOpen]);
 
   const createMutation = useMutation({
-    mutationFn: (data: categoryService.CreateCategoryDto) => categoryService.createCategory(data),
+    mutationFn: (data: categoryService.CreateCategoryDto) => {
+      return categoryService.retryQuery(() => categoryService.createCategory(data), 3);
+    },
     onSuccess: () => {
+      toast.success(mode === 'create' ? 'Kateqoriya uğurla yaradıldı' : 'Kateqoriya uğurla yeniləndi');
       if (onSuccess) onSuccess();
       onClose();
     },
@@ -71,8 +74,9 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: categoryService.UpdateCategoryDto }) => 
-      categoryService.updateCategory(id, data),
+      categoryService.retryQuery(() => categoryService.updateCategory(id, data), 3),
     onSuccess: () => {
+      toast.success('Kateqoriya uğurla yeniləndi');
       if (onSuccess) onSuccess();
       onClose();
     },
@@ -121,6 +125,10 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
     
     if (!formData.assignment) {
       errors.assignment = 'Təyinat seçilməlidir';
+    }
+    
+    if (formData.priority < 1) {
+      errors.priority = 'Prioritet 1-dən böyük və ya bərabər olmalıdır';
     }
     
     setFormErrors(errors);
