@@ -84,14 +84,14 @@ export const retryQuery = async <T>(
         code: error.code || ''
       });
       
-      // Check for permission errors related to RLS
-      if (error.code === '42501' || error.message?.includes('row-level security policy') || error.message?.includes('permission denied')) {
+      // Check for specific RLS errors
+      if (error.code === '42501' || error.message?.includes('row-level security policy')) {
         console.error('Permission denied - RLS policy violation');
         throw new Error('İcazə verilmədi. Bu əməliyyatı yerinə yetirmək üçün sizin kifayət qədər hüquqlarınız yoxdur.');
       }
       
       // Check for network errors
-      if (error.code === 'NETWORK_ERROR' || error.message?.includes('network')) {
+      if (error.code === 'NETWORK_ERROR' || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
         if (retryCount >= maxRetries) {
           throw new Error('Şəbəkə xətası. Zəhmət olmasa internet bağlantınızı yoxlayın və yenidən cəhd edin.');
         }
@@ -154,6 +154,18 @@ export const withTransaction = async <T>(
 ): Promise<T> => {
   // Start a transaction
   try {
+    // Check connectivity first
+    try {
+      const { error: connectError } = await supabase.from('categories').select('id', { count: 'exact', head: true }).limit(1);
+      if (connectError) {
+        console.error('Connection check failed before transaction:', connectError);
+        throw new Error('Verilənlər bazası ilə əlaqə yaradıla bilmədi: ' + (connectError.message || 'Bilinməyən xəta'));
+      }
+    } catch (connectException) {
+      console.error('Exception during connection check:', connectException);
+      throw new Error('Verilənlər bazası ilə əlaqə yoxlaması zamanı xəta: ' + (connectException.message || 'Bilinməyən xəta'));
+    }
+    
     const { error: beginError } = await supabase.rpc('begin_transaction');
     if (beginError) {
       console.error('Error starting transaction:', beginError);

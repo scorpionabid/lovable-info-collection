@@ -1663,6 +1663,12 @@ export type Database = {
       }
     }
     Functions: {
+      can_manage_categories: {
+        Args: {
+          category_data?: Json
+        }
+        Returns: boolean
+      }
       get_user_region_id: {
         Args: Record<PropertyKey, never>
         Returns: string
