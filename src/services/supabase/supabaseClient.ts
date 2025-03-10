@@ -11,11 +11,31 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
   },
+  global: {
+    headers: {
+      'x-app-version': import.meta.env.VITE_APP_VERSION || 'development',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
 });
 
-// Log the connection state in development, but don't block the application
+// Check if connection is successful and log info in development
 try {
-  console.log('Supabase connection initialized');
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    console.warn('Warning: Could not verify Supabase connection', error);
+  } else {
+    console.log('Supabase connection initialized successfully');
+    
+    // Cache frequently used auth values for later use
+    const sessionUser = data?.session?.user;
+    if (sessionUser) {
+      localStorage.setItem('supabase_user_id', sessionUser.id);
+      localStorage.setItem('supabase_user_email', sessionUser.email || '');
+    }
+  }
 } catch (error) {
   console.error('Supabase initialization warning:', error);
   // Continue execution - don't block the app
@@ -183,4 +203,42 @@ export type PasswordReset = {
   token: string;
   expires_at: string;
   created_at: string;
+};
+
+// Helper to check if we're in a development environment
+export const isDevelopment = () => {
+  return import.meta.env.DEV || import.meta.env.MODE === 'development';
+};
+
+// Function to get the current authenticated user ID
+export const getCurrentUserId = async (): Promise<string | null> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user?.id || null;
+  } catch (error) {
+    console.error('Error getting current user ID:', error);
+    return null;
+  }
+};
+
+// Wrapper function to log API calls in development
+export const logApiCall = async <T>(
+  name: string, 
+  fn: () => Promise<T>
+): Promise<T> => {
+  if (!isDevelopment()) return fn();
+  
+  console.log(`API Call: ${name} - Started`);
+  const startTime = performance.now();
+  
+  try {
+    const result = await fn();
+    const endTime = performance.now();
+    console.log(`API Call: ${name} - Completed in ${Math.round(endTime - startTime)}ms`, result);
+    return result;
+  } catch (error) {
+    const endTime = performance.now();
+    console.error(`API Call: ${name} - Failed in ${Math.round(endTime - startTime)}ms`, error);
+    throw error;
+  }
 };

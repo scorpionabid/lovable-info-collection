@@ -8,7 +8,9 @@ import {
 } from './types';
 import { 
   calculateCategoryCompletionRate, 
-  getCategoryColumnsCount 
+  getCategoryColumnsCount,
+  withTransaction,
+  validateCategoryData
 } from './helpers';
 
 // Category CRUD functions
@@ -56,7 +58,10 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error when fetching categories:', error);
+      throw new Error(`Kateqoriyaları əldə edərkən xəta baş verdi: ${error.message}`);
+    }
 
     // If no data is returned, return an empty array
     if (!data || data.length === 0) {
@@ -84,9 +89,9 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
     );
 
     return categoriesWithCompletionRates;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching categories:', error);
-    throw error;
+    throw new Error(`Kateqoriyaları əldə edərkən xəta baş verdi: ${error.message || 'Bilinməyən xəta'}`);
   }
 };
 
@@ -106,7 +111,12 @@ export const getCategoryById = async (id: string): Promise<Category> => {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error(`Kateqoriya tapılmadı: ID ${id}`);
+      }
+      throw new Error(`Kateqoriya məlumatları əldə edərkən xəta baş verdi: ${error.message}`);
+    }
 
     // Get columns for this category
     const { getCategoryColumns } = await import('./columnQueries');
@@ -124,130 +134,170 @@ export const getCategoryById = async (id: string): Promise<Category> => {
       priority: data.priority,
       createdAt: data.created_at
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching category details:', error);
-    throw error;
+    throw new Error(`Kateqoriya məlumatları əldə edərkən xəta baş verdi: ${error.message || 'Bilinməyən xəta'}`);
   }
 };
 
 export const createCategory = async (category: CreateCategoryDto): Promise<Category> => {
-  try {
-    // Validate assignment type
-    const validAssignments = ['All', 'Regions', 'Sectors', 'Schools'];
-    if (!validAssignments.includes(category.assignment)) {
-      throw new Error(`Invalid assignment value. Must be one of: ${validAssignments.join(', ')}`);
-    }
-    
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({
-        name: category.name,
-        description: category.description,
-        assignment: category.assignment,
-        priority: category.priority,
-        status: category.status
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      assignment: data.assignment,
-      columns: 0,
-      completionRate: 0,
-      status: data.status,
-      priority: data.priority,
-      createdAt: data.created_at
-    };
-  } catch (error) {
-    console.error('Error creating category:', error);
-    throw error;
+  // Validate category data before proceeding
+  const validation = validateCategoryData(category);
+  if (!validation.isValid) {
+    throw new Error(`Doğrulama xətası: ${validation.errors.join(', ')}`);
   }
+
+  // Use transaction to ensure data consistency
+  return withTransaction(async (client) => {
+    try {
+      const { data, error } = await client
+        .from('categories')
+        .insert({
+          name: category.name,
+          description: category.description,
+          assignment: category.assignment,
+          priority: category.priority,
+          status: category.status
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Kateqoriya yaradılarkən xəta baş verdi: ${error.message}`);
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        assignment: data.assignment,
+        columns: 0,
+        completionRate: 0,
+        status: data.status,
+        priority: data.priority,
+        createdAt: data.created_at
+      };
+    } catch (error: any) {
+      console.error('Error creating category:', error);
+      throw new Error(`Kateqoriya yaradılarkən xəta baş verdi: ${error.message || 'Bilinməyən xəta'}`);
+    }
+  });
 };
 
 export const updateCategory = async (id: string, category: UpdateCategoryDto): Promise<Category> => {
-  try {
-    // Validate assignment type if provided
-    if (category.assignment) {
-      const validAssignments = ['All', 'Regions', 'Sectors', 'Schools'];
-      if (!validAssignments.includes(category.assignment)) {
-        throw new Error(`Invalid assignment value. Must be one of: ${validAssignments.join(', ')}`);
-      }
-    }
-    
-    const { data, error } = await supabase
-      .from('categories')
-      .update({
-        name: category.name,
-        description: category.description,
-        assignment: category.assignment,
-        priority: category.priority,
-        status: category.status
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Get columns count and completion rate
-    const columnsCount = await getCategoryColumnsCount(id);
-    const completionRate = await calculateCategoryCompletionRate(id);
-
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      assignment: data.assignment || 'All',
-      columns: columnsCount,
-      completionRate,
-      status: data.status,
-      priority: data.priority,
-      createdAt: data.created_at
-    };
-  } catch (error) {
-    console.error('Error updating category:', error);
-    throw error;
+  // Only validate fields that are actually being updated
+  const fieldsToValidate = {
+    name: category.name,
+    assignment: category.assignment,
+    priority: category.priority,
+    status: category.status
+  };
+  
+  const fieldsToUpdate: Record<string, any> = {};
+  if (category.name !== undefined) fieldsToUpdate.name = category.name;
+  if (category.description !== undefined) fieldsToUpdate.description = category.description;
+  if (category.assignment !== undefined) fieldsToUpdate.assignment = category.assignment;
+  if (category.priority !== undefined) fieldsToUpdate.priority = category.priority;
+  if (category.status !== undefined) fieldsToUpdate.status = category.status;
+  
+  // Only validate the fields that are actually being updated
+  const validation = validateCategoryData(fieldsToValidate);
+  if (!validation.isValid) {
+    throw new Error(`Doğrulama xətası: ${validation.errors.join(', ')}`);
   }
+  
+  // Use transaction for update
+  return withTransaction(async (client) => {
+    try {
+      const { data, error } = await client
+        .from('categories')
+        .update(fieldsToUpdate)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Kateqoriya yenilənərkən xəta baş verdi: ${error.message}`);
+      }
+
+      // Get columns count and completion rate
+      const columnsCount = await getCategoryColumnsCount(id);
+      const completionRate = await calculateCategoryCompletionRate(id);
+
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description || '',
+        assignment: data.assignment || 'All',
+        columns: columnsCount,
+        completionRate,
+        status: data.status,
+        priority: data.priority,
+        createdAt: data.created_at
+      };
+    } catch (error: any) {
+      console.error('Error updating category:', error);
+      throw new Error(`Kateqoriya yenilənərkən xəta baş verdi: ${error.message || 'Bilinməyən xəta'}`);
+    }
+  });
 };
 
 export const deleteCategory = async (id: string): Promise<void> => {
-  try {
-    // First delete all columns associated with this category
-    const { error: columnsError } = await supabase
-      .from('columns')
-      .delete()
-      .eq('category_id', id);
+  // Use transaction to ensure data consistency during deletion
+  return withTransaction(async (client) => {
+    try {
+      // First delete all columns associated with this category
+      const { error: columnsError } = await client
+        .from('columns')
+        .delete()
+        .eq('category_id', id);
 
-    if (columnsError) throw columnsError;
+      if (columnsError) {
+        throw new Error(`Sütunlar silinərkən xəta baş verdi: ${columnsError.message}`);
+      }
 
-    // Then delete the category
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id);
+      // Then delete the category
+      const { error } = await client
+        .from('categories')
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting category:', error);
-    throw error;
-  }
+      if (error) {
+        throw new Error(`Kateqoriya silinərkən xəta baş verdi: ${error.message}`);
+      }
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      throw new Error(`Kateqoriya silinərkən xəta baş verdi: ${error.message || 'Bilinməyən xəta'}`);
+    }
+  });
 };
 
 export const updateCategoryPriority = async (id: string, newPriority: number): Promise<void> => {
   try {
+    if (newPriority < 1) {
+      throw new Error('Prioritet 1-dən böyük və ya bərabər olmalıdır');
+    }
+    
     const { error } = await supabase
       .from('categories')
       .update({ priority: newPriority })
       .eq('id', id);
 
-    if (error) throw error;
-  } catch (error) {
+    if (error) {
+      throw new Error(`Prioritet yenilənərkən xəta baş verdi: ${error.message}`);
+    }
+  } catch (error: any) {
     console.error('Error updating category priority:', error);
-    throw error;
+    throw new Error(`Prioritet yenilənərkən xəta baş verdi: ${error.message || 'Bilinməyən xəta'}`);
+  }
+};
+
+// New function to clear schema cache
+export const clearSchemaCache = async (): Promise<void> => {
+  try {
+    await supabase.rpc('pg_advisory_unlock_all');
+    console.log('Schema cache cleared successfully');
+  } catch (error) {
+    console.error('Error clearing schema cache:', error);
   }
 };
