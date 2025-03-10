@@ -30,39 +30,51 @@ export const fetchSchoolAdminRoleId = async (): Promise<string | null> => {
 
 /**
  * Fetch available admins (not assigned to any school)
+ * This function has been improved to handle empty results correctly
  */
 export const fetchAvailableAdmins = async (roleId: string): Promise<User[]> => {
   try {
-    // First check if any admins exist with this role
-    const { data: anyAdmins, error: checkError } = await supabase
+    // Get the current user's role to apply proper filtering
+    const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
-      .select('count')
-      .eq('role_id', roleId);
-      
-    if (checkError) {
-      console.error('Error checking for admins:', checkError);
+      .select('*, roles(name)')
+      .eq('id', supabase.auth.getUser().then(res => res.data.user?.id))
+      .single();
+    
+    if (currentUserError) {
+      console.error('Error fetching current user:', currentUserError);
       return [];
     }
     
-    // If no admins exist at all, don't perform the query with IS NULL
-    if (anyAdmins && anyAdmins.length === 0) {
-      return [];
-    }
-    
-    // Get available admins (those without a school assigned)
-    const { data: availableAdmins, error: adminsError } = await supabase
+    let query = supabase
       .from('users')
       .select('*')
       .eq('role_id', roleId)
       .is('school_id', null);
-      
+    
+    // Apply role-based filtering to respect hierarchy
+    const userRole = currentUser?.roles?.name;
+    if (userRole === 'region-admin' && currentUser.region_id) {
+      query = query.eq('region_id', currentUser.region_id);
+    } else if (userRole === 'sector-admin' && currentUser.sector_id) {
+      query = query.eq('sector_id', currentUser.sector_id);
+    }
+    
+    const { data: availableAdmins, error: adminsError } = await query;
+    
     if (adminsError) {
       console.error('Error fetching available admins:', adminsError);
       toast.error('Mövcud adminlər yüklənərkən xəta baş verdi');
       return [];
     }
     
-    return availableAdmins || [];
+    if (!availableAdmins || availableAdmins.length === 0) {
+      // Return empty array but don't show error - this is a valid state
+      console.log('No available admins found');
+      return [];
+    }
+    
+    return availableAdmins;
   } catch (error) {
     console.error('Error fetching available admins:', error);
     return [];

@@ -12,7 +12,7 @@ export const ProtectedRoute = ({
   children, 
   allowedRoles = ['super-admin', 'region-admin', 'sector-admin', 'school-admin', 'superadmin'] 
 }: ProtectedRouteProps) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, permissions } = useAuth();
   const location = useLocation();
 
   // Show loading state while checking authentication
@@ -31,16 +31,22 @@ export const ProtectedRoute = ({
 
   // If user doesn't have required role, redirect to unauthorized page
   if (user) {
+    // Get the user role, ensuring it's normalized
+    const userRole = user.role || 'school-admin';
+    
     // Special handling for superadmin/super-admin equivalence
     const hasRequiredRole = allowedRoles.some(allowedRole => {
       // If the allowed role is super-admin, also accept superadmin, and vice versa
-      if (allowedRole === 'super-admin' && user.role === 'superadmin') return true;
-      if (allowedRole === 'superadmin' && user.role === 'super-admin') return true;
-      return user.role === allowedRole;
+      if (allowedRole === 'super-admin' && (userRole === 'superadmin' || userRole === 'super-admin')) return true;
+      if (allowedRole === 'superadmin' && (userRole === 'super-admin' || userRole === 'superadmin')) return true;
+      
+      // Regular role matching
+      return userRole === allowedRole;
     });
 
     if (!hasRequiredRole) {
-      console.log(`Access denied. User role: ${user.role}. Allowed roles:`, allowedRoles);
+      console.log(`Access denied. User role: ${userRole}. Allowed roles:`, allowedRoles);
+      console.log('User permissions:', permissions);
       return <Navigate to="/unauthorized" replace />;
     }
   }

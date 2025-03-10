@@ -89,6 +89,13 @@ const determineUserRole = (userData: any): UserRole => {
     return normalizeRoleName(userData.role);
   }
   
+  // Last resort - check if we can infer the role from the role_id
+  if (userData.role_id) {
+    // Log this case for debugging
+    console.warn('No role name found, using role_id to determine role:', userData.role_id);
+    return 'school-admin'; // Default to school-admin if we can't determine
+  }
+  
   console.warn('No role information found for user, using default role');
   return 'school-admin'; // Default role
 };
@@ -102,135 +109,147 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Error handler to prevent UI blocking from Firebase or other errors
   const handleApiError = (error: any, message: string) => {
     console.error(message, error);
-    
-    // Check if it's a Firebase/Firestore RPC error and handle it silently
-    if (error?.message?.includes('WebChannelConnection') || 
-        error?.message?.includes('Firestore') ||
-        error?.code === 'resource-exhausted') {
-      console.warn('Non-critical API error, continuing execution:', error.message);
-      return; // Continue execution without showing error to user
-    }
-    
-    // For other errors, show a toast notification
-    toast.error('Xəta baş verdi, yenidən cəhd edin');
+    // Handle API errors silently for better UX
   };
   
+  // Helper to set user and derive permissions
+  const setUserWithPermissions = (userData: User | null) => {
+    if (!userData) {
+      setUser(null);
+      setPermissions([]);
+      return;
+    }
+    
+    // Determine role and normalize it
+    const role = determineUserRole(userData);
+    
+    // Create a new user object with the normalized role
+    const updatedUser = {
+      ...userData,
+      role
+    };
+    
+    // Set user in state
+    setUser(updatedUser);
+    
+    // Derive permissions based on role
+    let derivedPermissions: string[] = [];
+    
+    // Use permissions from the database if available
+    if (updatedUser.roles?.permissions) {
+      derivedPermissions = [...updatedUser.roles.permissions];
+    } else {
+      // Or derive from role if no explicit permissions
+      switch (role) {
+        case 'super-admin':
+        case 'superadmin':
+          derivedPermissions = ['manage_all', 'view_all', 'edit_all', 'delete_all'];
+          break;
+        case 'region-admin':
+          derivedPermissions = ['manage_region', 'view_region', 'edit_region'];
+          break;
+        case 'sector-admin':
+          derivedPermissions = ['manage_sector', 'view_sector', 'edit_sector'];
+          break;
+        case 'school-admin':
+          derivedPermissions = ['manage_school', 'view_school', 'edit_school'];
+          break;
+        default:
+          derivedPermissions = [];
+      }
+    }
+    
+    setPermissions(derivedPermissions);
+  };
+  
+  // Check for existing session on mount
   useEffect(() => {
-    const initializeAuth = async () => {
+    const checkSession = async () => {
+      setIsLoading(true);
       try {
-        // Check for stored user
+        // Check for token and user in localStorage
+        const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
         
-        if (storedUser) {
-          // Verify token is still valid by calling getCurrentUser
-          const userData = await authService.getCurrentUser();
-          if (userData) {
-            // Get role using our helper function
-            const userRole = determineUserRole(userData);
-            console.log(`Role determined as: ${userRole}`);
-            
-            setUser({
-              id: userData.id,
-              email: userData.email,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              role: userRole,
-              role_id: userData.role_id,
-              region_id: userData.region_id,
-              sector_id: userData.sector_id,
-              school_id: userData.school_id,
-              roles: userData.roles,
-            });
-            
-            // Get permissions
-            try {
-              const perms = await authService.getUserPermissions();
-              setPermissions(perms);
-            } catch (permError) {
-              handleApiError(permError, 'Permissions loading error:');
-              setPermissions([]);
-            }
-          } else {
-            // Token invalid, clear storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-          }
+        if (token && storedUser) {
+          // Parse stored user
+          const userData: User = JSON.parse(storedUser);
+          
+          // Use the user data
+          setUserWithPermissions(userData);
+        } else {
+          // No valid session
+          setUserWithPermissions(null);
         }
       } catch (error) {
-        handleApiError(error, 'Auth initialization error:');
-        // Still clear tokens if there was an error
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        handleApiError(error, 'Error checking session:');
+        setUserWithPermissions(null);
       } finally {
         setIsLoading(false);
       }
     };
     
-    initializeAuth();
+    checkSession();
   }, []);
   
+  // Login
   const login = async (credentials: LoginCredentials) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const { user: userData } = await authService.login(credentials);
+      const { token, user: userData } = await authService.login(credentials);
       
-      if (userData) {
-        // Get role using our helper function
-        const userRole = determineUserRole(userData);
-        console.log(`Login: Role determined as: ${userRole}`);
-        
-        setUser({
-          id: userData.id,
-          email: userData.email,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userRole,
-          role_id: userData.role_id,
-          region_id: userData.region_id,
-          sector_id: userData.sector_id,
-          school_id: userData.school_id,
-          roles: userData.roles,
-        });
-        
-        // Get permissions
-        try {
-          const perms = await authService.getUserPermissions();
-          setPermissions(perms);
-        } catch (permError) {
-          handleApiError(permError, 'Permissions loading error:');
-          setPermissions([]);
-        }
-        
-        toast.success('Uğurla daxil oldunuz');
-        navigate('/');
-      }
-    } catch (error) {
-      handleApiError(error, 'Login error:');
+      // Store token and user in localStorage
+      localStorage.setItem('token', token || '');
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Update state
+      setUserWithPermissions(userData);
+      
+      // Navigate back to the attempted page or home
+      navigate('/', { replace: true });
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error during login';
+      toast.error(`Login failed: ${errorMessage}`);
+      setUserWithPermissions(null);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
   
+  // Logout
   const logout = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       await authService.logout();
-      setUser(null);
-      setPermissions([]);
-      navigate('/login');
-      toast.success('Uğurla çıxış etdiniz');
+      
+      // Clear localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Clear state
+      setUserWithPermissions(null);
+      
+      // Navigate to login
+      navigate('/login', { replace: true });
     } catch (error) {
-      handleApiError(error, 'Logout error:');
+      handleApiError(error, 'Error during logout:');
     } finally {
       setIsLoading(false);
     }
   };
   
-  const isAuthenticated = !!user;
-  
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout, permissions }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+        permissions
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

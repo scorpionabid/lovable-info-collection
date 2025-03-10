@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { fetchSchoolAdminRoleId } from './adminFetchUtils';
@@ -64,28 +65,19 @@ export const createAdminAuthUser = async (
   lastName: string
 ): Promise<{ userId?: string; error?: string }> => {
   try {
+    // First try to find the user by email in the database
+    const { data: existingDBUser, error: dbError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingDBUser) {
+      console.log('User already exists in database, using existing ID:', existingDBUser.id);
+      return { userId: existingDBUser.id };
+    }
+      
     // Check if the user already exists in auth
-    // Using the correct method from Supabase's auth API
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-    
-    if (userError) {
-      console.error('Error checking if user exists:', userError);
-      return { error: `İstifadəçi yoxlanılarkən xəta: ${userError.message}` };
-    }
-    
-    // Find user with matching email in the results
-    // Explicitly type the user object with the correct interface
-    const existingUser = userData?.users?.find((user: SupabaseAuthUser) => {
-      return user.email === email;
-    });
-    
-    // If user was found in the results
-    if (existingUser) {
-      console.log('User already exists in auth, using existing ID:', existingUser.id);
-      return { userId: existingUser.id };
-    }
-    
-    // User doesn't exist, so create a new one
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -115,15 +107,25 @@ export const createAdminAuthUser = async (
           return { userId: signInData.user.id };
         }
         
-        // If we can't sign in, look for the user in the database
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
+        // If we can't sign in, try fetching the user from auth.users directly via admin API
+        try {
+          const { data: usersList, error: listError } = await supabase.auth.admin.listUsers();
           
-        if (userData?.id) {
-          return { userId: userData.id };
+          if (listError) {
+            console.error('Error listing users:', listError);
+            return { error: `İstifadəçilər siyahısı alınarkən xəta: ${listError.message}` };
+          }
+          
+          // Explicitly type user as SupabaseAuthUser for the filter operation
+          const authUser = usersList?.users?.find((user: SupabaseAuthUser) => {
+            return user.email === email;
+          });
+          
+          if (authUser?.id) {
+            return { userId: authUser.id };
+          }
+        } catch (adminError) {
+          console.error('Admin API error:', adminError);
         }
         
         return { error: 'İstifadəçi mövcuddur, lakin bazada tapılmadı' };
