@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 
 // Helper function to get the count of columns for a category
