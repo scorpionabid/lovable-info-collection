@@ -13,7 +13,7 @@ import { CategoryModal } from './CategoryModal';
 import { CategoryColumnsModal } from './CategoryColumnsModal';
 import { Eye, Edit, Archive, MoreHorizontal, Download, Table2, ArrowUp, ArrowDown, Trash } from "lucide-react";
 import { CategoryType } from './CategoryDetailView';
-import * as categoryService from '@/services/supabase/categoryService';
+import * as categoryService from '@/services/supabase/category';
 
 interface CategoryTableProps {
   categories: CategoryType[];
