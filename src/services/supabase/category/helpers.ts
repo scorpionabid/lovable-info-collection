@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 
 // Helper function to get the count of columns for a category
@@ -168,18 +167,27 @@ export const withTransaction = async <T>(
     if (commitError) {
       console.error('Error committing transaction:', commitError);
       // Try to rollback
-      await supabase.rpc('rollback_transaction').catch(e => 
-        console.error('Failed to rollback after commit error:', e)
-      );
+      try {
+        const { error: rollbackError } = await supabase.rpc('rollback_transaction');
+        if (rollbackError) {
+          console.error('Failed to rollback after commit error:', rollbackError);
+        }
+      } catch (rollbackException) {
+        console.error('Exception during rollback:', rollbackException);
+      }
       throw new Error('Tranzaksiya tamamlana bilmədi: ' + (commitError.message || 'Bilinməyən xəta'));
     }
     
     return result;
   } catch (error: any) {
     // Rollback the transaction on error
-    const { error: rollbackError } = await supabase.rpc('rollback_transaction');
-    if (rollbackError) {
-      console.error('Error rolling back transaction:', rollbackError);
+    try {
+      const { error: rollbackError } = await supabase.rpc('rollback_transaction');
+      if (rollbackError) {
+        console.error('Error rolling back transaction:', rollbackError);
+      }
+    } catch (rollbackException) {
+      console.error('Exception during rollback:', rollbackException);
     }
     
     console.error('Transaction failed:', error);
