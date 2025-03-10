@@ -34,11 +34,20 @@ export const fetchSchoolAdminRoleId = async (): Promise<string | null> => {
  */
 export const fetchAvailableAdmins = async (roleId: string): Promise<User[]> => {
   try {
+    // Get the current user's auth data
+    const authResponse = await supabase.auth.getUser();
+    const currentUserId = authResponse.data.user?.id;
+    
+    if (!currentUserId) {
+      console.error('No authenticated user found');
+      return [];
+    }
+    
     // Get the current user's role to apply proper filtering
     const { data: currentUser, error: currentUserError } = await supabase
       .from('users')
       .select('*, roles(name)')
-      .eq('id', supabase.auth.getUser().then(res => res.data.user?.id))
+      .eq('id', currentUserId)
       .single();
     
     if (currentUserError) {
