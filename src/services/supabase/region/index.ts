@@ -1,19 +1,18 @@
 
-import { getRegions, getRegionById, searchRegionsByName } from './getRegions';
-import { getRegionSectors } from './getRegionSectors';
-import { createRegion, updateRegion, deleteRegion, archiveRegion } from './crudOperations';
-import { RegionWithStats, PaginationParams, SortParams, FilterParams } from './types';
+// Re-export all region-related functions and types
+export * from './types';
+export * from './getRegions';
+export * from './getRegionSectors';
+export * from './crudOperations';
 
-const regionService = {
-  getRegions,
-  getRegionById,
-  getRegionSectors,
+// Export as default for backward compatibility
+import * as regionService from './getRegions';
+import { createRegion, updateRegion, deleteRegion, archiveRegion } from './crudOperations';
+
+export default {
+  ...regionService,
   createRegion,
   updateRegion,
   deleteRegion,
-  archiveRegion,
-  searchRegionsByName
+  archiveRegion
 };
-
-export default regionService;
-export type { RegionWithStats, PaginationParams, SortParams, FilterParams };

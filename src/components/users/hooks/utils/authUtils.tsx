@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/services/supabase/client";
 import { AuthError } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
 

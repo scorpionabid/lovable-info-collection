@@ -1,30 +1,36 @@
 
-import { Region } from '../supabaseClient';
+import { Database } from '@/types/supabase';
 
-// Extended Region type to include statistics
+export type Region = Database['public']['Tables']['regions']['Row'];
+
 export interface RegionWithStats extends Region {
   sectorCount: number;
   schoolCount: number;
   completionRate: number;
-  userCount?: number;
 }
 
-// Pagination parameters
 export interface PaginationParams {
   page: number;
   pageSize: number;
 }
 
-// Sort parameters
 export interface SortParams {
   column: string;
   direction: 'asc' | 'desc';
 }
 
-// Filter parameters
 export interface FilterParams {
   searchQuery?: string;
   dateFrom?: string;
   dateTo?: string;
-  completionRate?: 'all' | 'high' | 'medium' | 'low';
+  completionRate?: string;
+}
+
+export interface RegionFilter {
+  searchTerm?: string;
+  dateRange?: {
+    from: Date;
+    to: Date;
+  };
+  completionRate?: string;
 }

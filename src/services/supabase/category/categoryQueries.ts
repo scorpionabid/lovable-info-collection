@@ -1,5 +1,5 @@
 
-import { supabase } from '../supabaseClient';
+import { supabase } from '../client';
 import { 
   Category, 
   CategoryFilter, 

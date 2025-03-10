@@ -1,4 +1,5 @@
-import { supabase } from '../supabaseClient';
+
+import { supabase } from '../client';
 import { CategoryColumn } from '@/components/categories/CategoryDetailView';
 import { CreateColumnDto, UpdateColumnDto } from './types';
 import { getCategoryColumnsCount } from './helpers';

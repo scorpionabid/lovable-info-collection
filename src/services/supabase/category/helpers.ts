@@ -1,5 +1,4 @@
-
-import { supabase } from '../supabaseClient';
+import { supabase } from '../client';
 
 // Helper function to get the count of columns for a category
 export const getCategoryColumnsCount = async (categoryId: string): Promise<number> => {
