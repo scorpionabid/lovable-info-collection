@@ -1,22 +1,62 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Layout } from "@/components/layout/Layout";
 import { CategoryDetailView } from "@/components/categories/CategoryDetailView";
+import { getCategoryById } from '@/services/supabase/category/categoryQueries';
+import { getCategoryColumns } from '@/services/supabase/category/columnQueries';
 
 const CategoryDetails = () => {
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(true);
   
-  // This would typically fetch data from an API
+  // Fetch category data
+  const { 
+    data: categoryData,
+    isLoading: isCategoryLoading,
+    isError: isCategoryError 
+  } = useQuery({
+    queryKey: ['category', id],
+    queryFn: () => id ? getCategoryById(id) : null,
+    enabled: !!id,
+    meta: {
+      onSettled: (data, error) => {
+        if (error) {
+          console.error('Error loading category:', error);
+          toast.error('Kateqoriya məlumatlarını yükləyərkən xəta baş verdi');
+        }
+      }
+    }
+  });
+  
+  // Fetch columns data
+  const {
+    data: columnsData = [],
+    isLoading: isColumnsLoading,
+    isError: isColumnsError
+  } = useQuery({
+    queryKey: ['category-columns', id],
+    queryFn: () => id ? getCategoryColumns(id) : [],
+    enabled: !!id,
+    meta: {
+      onSettled: (data, error) => {
+        if (error) {
+          console.error('Error loading columns:', error);
+          toast.error('Sütun məlumatlarını yükləyərkən xəta baş verdi');
+        }
+      }
+    }
+  });
+  
+  // Update the loading state based on the query states
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [id]);
+    setIsLoading(isCategoryLoading || isColumnsLoading);
+  }, [isCategoryLoading, isColumnsLoading]);
+  
+  // Create a combined error flag
+  const hasError = isCategoryError || isColumnsError;
   
   if (isLoading) {
     return (
@@ -28,122 +68,31 @@ const CategoryDetails = () => {
     );
   }
   
-  // Mock data for the category
-  const categoryData = {
-    id: id || '1',
-    name: 'Müəllim Məlumatları',
-    description: 'Məktəb müəllimlərinin əsas məlumatları',
-    assignment: 'All',
-    priority: 1,
-    deadline: '2023-12-15',
-    completionRate: 78,
-    status: 'Active',
-    createdAt: '2023-05-10',
-    columns: [
-      {
-        id: '1',
-        name: 'Ad',
-        type: 'text',
-        required: true,
-        description: 'Müəllimin adı',
-        order: 1
-      },
-      {
-        id: '2',
-        name: 'Soyad',
-        type: 'text',
-        required: true,
-        description: 'Müəllimin soyadı',
-        order: 2
-      },
-      {
-        id: '3',
-        name: 'Doğum tarixi',
-        type: 'date',
-        required: true,
-        description: 'Müəllimin doğum tarixi',
-        order: 3
-      },
-      {
-        id: '4',
-        name: 'Cinsi',
-        type: 'select',
-        required: true,
-        description: 'Müəllimin cinsi',
-        options: ['Kişi', 'Qadın'],
-        order: 4
-      },
-      {
-        id: '5',
-        name: 'Təhsil səviyyəsi',
-        type: 'select',
-        required: true,
-        description: 'Müəllimin təhsil səviyyəsi',
-        options: ['Bakalavr', 'Magistr', 'Doktorantura'],
-        order: 5
-      },
-      {
-        id: '6',
-        name: 'İxtisas',
-        type: 'text',
-        required: true,
-        description: 'Müəllimin ixtisası',
-        order: 6
-      },
-      {
-        id: '7',
-        name: 'İş təcrübəsi (il)',
-        type: 'number',
-        required: true,
-        description: 'Müəllimin iş təcrübəsi illə',
-        order: 7
-      },
-      {
-        id: '8',
-        name: 'Əlaqə nömrəsi',
-        type: 'text',
-        required: true,
-        description: 'Müəllimin əlaqə nömrəsi',
-        order: 8
-      },
-      {
-        id: '9',
-        name: 'Email',
-        type: 'text',
-        required: false,
-        description: 'Müəllimin email ünvanı',
-        order: 9
-      },
-      {
-        id: '10',
-        name: 'Sertifikatlar',
-        type: 'text',
-        required: false,
-        description: 'Müəllimin malik olduğu sertifikatlar',
-        order: 10
-      },
-      {
-        id: '11',
-        name: 'Tədris etdiyi fənn',
-        type: 'text',
-        required: true,
-        description: 'Müəllimin tədris etdiyi fənn',
-        order: 11
-      },
-      {
-        id: '12',
-        name: 'Əlavə qeydlər',
-        type: 'textarea',
-        required: false,
-        description: 'Əlavə qeydlər',
-        order: 12
-      }
-    ]
+  if (hasError || !categoryData) {
+    return (
+      <Layout userRole="super-admin">
+        <div className="flex flex-col items-center justify-center h-96">
+          <p className="text-red-500 mb-4">Məlumatları yükləyərkən xəta baş verdi.</p>
+          <button 
+            className="px-4 py-2 bg-infoline-blue text-white rounded hover:bg-infoline-dark-blue"
+            onClick={() => window.location.reload()}
+          >
+            Yenidən cəhd edin
+          </button>
+        </div>
+      </Layout>
+    );
+  }
+  
+  // Combine category data with columns data
+  const category = {
+    ...categoryData,
+    columns: columnsData
   };
   
   return (
     <Layout userRole="super-admin">
-      <CategoryDetailView category={categoryData} />
+      <CategoryDetailView category={category} />
     </Layout>
   );
 };

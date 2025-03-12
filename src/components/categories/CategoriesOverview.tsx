@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +15,7 @@ import { CategoryType } from './CategoryDetailView';
 const convertToCategory = (category: Category): CategoryType => {
   return {
     ...category,
-    deadline: '',
+    deadline: '', // Set a default value for deadline
     columns: typeof category.columns === 'number' ? [] : category.columns
   };
 };
@@ -63,7 +62,7 @@ export const CategoriesOverview = () => {
     }
   });
 
-  const categories = categoriesData.map(convertToCategory);
+  const categories = categoriesData.map((category) => convertToCategory(category));
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => categoryService.deleteCategory(id),
