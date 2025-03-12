@@ -1,19 +1,29 @@
 
-import { UserRole } from '@/contexts/AuthContext';
+export interface UserFilters {
+  search?: string;
+  roleId?: string;
+  regionId?: string;
+  sectorId?: string;
+  schoolId?: string;
+  status?: 'active' | 'inactive';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 export interface User {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  role_id?: string;
-  role?: UserRole;
+  role_id: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
   phone?: string;
   utis_code?: string;
-  is_active?: boolean;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
   last_login?: string;
   roles?: {
     id: string;
@@ -21,13 +31,4 @@ export interface User {
     description?: string;
     permissions: string[];
   };
-}
-
-export interface UserFilters {
-  role?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  status?: 'active' | 'inactive' | 'blocked';
-  search?: string;
 }

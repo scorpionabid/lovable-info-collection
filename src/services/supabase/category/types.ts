@@ -4,10 +4,34 @@ import { Json } from '@/integrations/supabase/types';
 export type CategoryAssignment = 'All' | 'Regions' | 'Sectors' | 'Schools' | string;
 export type CategoryStatus = 'Active' | 'Inactive' | string;
 
+export interface CategoryFilter {
+  searchQuery?: string;
+  status?: string;
+  assignment?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  search?: string;
+  deadlineBefore?: string;
+  deadlineAfter?: string;
+  minCompletionRate?: number;
+  maxCompletionRate?: number;
+}
+
+export interface PaginationOptions {
+  page: number;
+  pageSize: number;
+}
+
+export interface SortOptions {
+  column: string;
+  direction: 'asc' | 'desc';
+}
+
 export interface Category {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   assignment: CategoryAssignment;
   status: CategoryStatus;
   priority: number;
@@ -29,12 +53,34 @@ export interface CategoryColumn {
   type: string;
   required: boolean;
   description?: string;
-  options: Json | string[];
+  options?: string[];
   order: number;
   category_id?: string;
   created_at?: string;
   updated_at?: string;
 }
+
+export interface CreateCategoryDto {
+  name: string;
+  description: string;
+  assignment: CategoryAssignment;
+  priority: number;
+  status: CategoryStatus;
+}
+
+export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {}
+
+export interface CreateColumnDto {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+  options?: string[];
+  category_id?: string;
+  order?: number;
+}
+
+export interface UpdateColumnDto extends Partial<CreateColumnDto> {}
 
 export interface CategoryStats {
   totalEntries: number;
@@ -55,23 +101,4 @@ export interface CategoryData {
   approved_at?: string;
   created_by?: string;
   approved_by?: string;
-}
-
-export interface CategoryFilter {
-  searchQuery?: string;
-  status?: string;
-  assignment?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-}
-
-export interface PaginationOptions {
-  page: number;
-  pageSize: number;
-}
-
-export interface SortOptions {
-  column: string;
-  direction: 'asc' | 'desc';
 }

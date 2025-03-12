@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Notification } from '@/services/supabase/supabaseClient';
+import { Notification } from '../supabase/supabaseClient';
 
 export const getNotifications = async (userId: string, limit = 10, offset = 0) => {
   try {
@@ -11,9 +11,7 @@ export const getNotifications = async (userId: string, limit = 10, offset = 0) =
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     
-    if (error) throw error;
-    
-    return { data, count, error: null };
+    return { data: data as Notification[], count, error: null };
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return { data: null, count: 0, error };

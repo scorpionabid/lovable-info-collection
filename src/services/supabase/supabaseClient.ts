@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
 
@@ -50,13 +49,16 @@ export interface Notification {
   id: string;
   user_id: string;
   title: string;
-  body: string;
+  message: string;
+  type: string;
   is_read: boolean;
   read_at?: string;
   created_at: string;
+  link?: string;
   notification_type: string;
   action_url?: string;
   data?: any;
+  body: string;
 }
 
 export interface DataEntry {
