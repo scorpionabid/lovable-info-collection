@@ -262,6 +262,7 @@ export type Database = {
           id: string
           name: string
           options: Json | null
+          order: number | null
           required: boolean | null
           type: string
           updated_at: string
@@ -273,6 +274,7 @@ export type Database = {
           id?: string
           name: string
           options?: Json | null
+          order?: number | null
           required?: boolean | null
           type: string
           updated_at?: string
@@ -284,6 +286,7 @@ export type Database = {
           id?: string
           name?: string
           options?: Json | null
+          order?: number | null
           required?: boolean | null
           type?: string
           updated_at?: string

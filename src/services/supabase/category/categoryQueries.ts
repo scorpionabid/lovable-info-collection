@@ -1,14 +1,8 @@
+
 import { supabase } from '../supabaseClient';
-import { 
-  Category, 
-  CategoryFilter, 
-  CreateCategoryDto, 
-  UpdateCategoryDto 
-} from './types';
-import { 
-  calculateCategoryCompletionRate, 
-  getCategoryColumnsCount 
-} from './helpers';
+import { Category, CreateCategoryDto, UpdateCategoryDto, CategoryFilter } from './types';
+import { calculateCategoryCompletionRate, getCategoryColumnsCount } from './helpers';
+import { getCategoryColumns } from './columnQueries';
 
 // Category CRUD functions
 export const getCategories = async (filters?: CategoryFilter): Promise<Category[]> => {
@@ -108,7 +102,6 @@ export const getCategoryById = async (id: string): Promise<Category> => {
     if (error) throw error;
 
     // Get columns for this category
-    const { getCategoryColumns } = await import('./columnQueries');
     const columns = await getCategoryColumns(id);
     const completionRate = await calculateCategoryCompletionRate(id);
 
