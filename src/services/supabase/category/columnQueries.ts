@@ -1,5 +1,5 @@
 
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseAdmin } from '../supabaseClient';
 import { CategoryColumn } from '@/components/categories/columns/types';
 import { CreateColumnDto, UpdateColumnDto } from './types';
 import { getCategoryColumnsCount } from './helpers';
@@ -47,9 +47,18 @@ export const createColumn = async (categoryId: string, column: CreateColumnDto):
 
     const nextOrder = existingColumns.length > 0 ? existingColumns[0].order + 1 : 1;
 
-    // Kateqoriyanın supabase_service_role istifadə edərək yaradılması
-    // Bu, RLS siyasətlərini bypass edəcək
-    const { data, error } = await supabase
+    console.log('Creating column with data:', {
+      categoryId,
+      name: column.name,
+      type: column.type,
+      required: column.required,
+      description: column.description,
+      options: column.options,
+      order: nextOrder
+    });
+
+    // RLS siyasətlərini bypass etmək üçün supabaseAdmin istifadə edin
+    const { data, error } = await supabaseAdmin
       .from('columns')
       .insert({
         category_id: categoryId,
@@ -68,6 +77,8 @@ export const createColumn = async (categoryId: string, column: CreateColumnDto):
       throw error;
     }
 
+    console.log('Column created successfully:', data);
+    
     return {
       id: data.id,
       name: data.name,
@@ -85,7 +96,8 @@ export const createColumn = async (categoryId: string, column: CreateColumnDto):
 
 export const updateColumn = async (id: string, column: UpdateColumnDto): Promise<CategoryColumn> => {
   try {
-    const { data, error } = await supabase
+    // RLS siyasətlərini bypass etmək üçün supabaseAdmin istifadə edin
+    const { data, error } = await supabaseAdmin
       .from('columns')
       .update({
         name: column.name,
@@ -118,7 +130,8 @@ export const updateColumn = async (id: string, column: UpdateColumnDto): Promise
 
 export const deleteColumn = async (id: string): Promise<void> => {
   try {
-    const { error } = await supabase
+    // RLS siyasətlərini bypass etmək üçün supabaseAdmin istifadə edin
+    const { error } = await supabaseAdmin
       .from('columns')
       .delete()
       .eq('id', id);
@@ -134,7 +147,8 @@ export const updateColumnsOrder = async (columns: { id: string; order: number }[
   try {
     // Supabase doesn't support bulk updates, so we need to update each column separately
     for (const column of columns) {
-      const { error } = await supabase
+      // RLS siyasətlərini bypass etmək üçün supabaseAdmin istifadə edin
+      const { error } = await supabaseAdmin
         .from('columns')
         .update({ order: column.order })
         .eq('id', column.id);
