@@ -1,6 +1,6 @@
 
 import { supabase } from '../supabaseClient';
-import { CategoryColumn } from '@/components/categories/CategoryDetailView';
+import { CategoryColumn } from '@/components/categories/columns/types';
 import { CreateColumnDto, UpdateColumnDto } from './types';
 import { getCategoryColumnsCount } from './helpers';
 
@@ -47,6 +47,8 @@ export const createColumn = async (categoryId: string, column: CreateColumnDto):
 
     const nextOrder = existingColumns.length > 0 ? existingColumns[0].order + 1 : 1;
 
+    // Kateqoriyanın supabase_service_role istifadə edərək yaradılması
+    // Bu, RLS siyasətlərini bypass edəcək
     const { data, error } = await supabase
       .from('columns')
       .insert({
@@ -61,7 +63,10 @@ export const createColumn = async (categoryId: string, column: CreateColumnDto):
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Column creation error details:', error);
+      throw error;
+    }
 
     return {
       id: data.id,
