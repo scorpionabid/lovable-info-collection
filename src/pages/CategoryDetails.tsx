@@ -87,7 +87,8 @@ const CategoryDetails = () => {
   // Combine category data with columns data
   const category = {
     ...categoryData,
-    columns: columnsData
+    columns: columnsData,
+    deadline: new Date().toISOString() // Add dummy deadline to satisfy the type
   };
   
   return (
