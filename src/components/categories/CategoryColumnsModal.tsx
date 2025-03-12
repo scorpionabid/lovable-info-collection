@@ -4,11 +4,11 @@ import { toast } from "sonner";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { CategoryType, CategoryColumn } from "../CategoryDetailView";
 import * as categoryService from '@/services/supabase/category';
 import { ColumnsTable } from './columns/ColumnsTable';
 import { ColumnForm } from './columns/ColumnForm';
 import { CategoryColumnsModalProps } from './columns/types';
+import { CategoryColumn } from './columns/types';
 
 export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColumnsModalProps) => {
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);

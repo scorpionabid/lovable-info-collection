@@ -1,5 +1,15 @@
 
-import { CategoryType, CategoryColumn } from "../CategoryDetailView";
+import { CategoryType } from "../CategoryDetailView";
+
+export interface CategoryColumn {
+  id: string;
+  name: string;
+  type: string;
+  required: boolean;
+  description: string;
+  options?: string[];
+  order: number;
+}
 
 export interface CategoryColumnsModalProps {
   isOpen: boolean;
