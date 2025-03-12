@@ -1,73 +1,92 @@
 
-import { supabase, Region } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
+import { Region } from '../supabaseClient';
 
 // Create a new region
-export const createRegion = async (region: Omit<Region, 'id' | 'created_at'>) => {
+export const createRegion = async (regionData: Omit<Region, 'id' | 'created_at'>) => {
   try {
     const { data, error } = await supabase
       .from('regions')
-      .insert([region])
-      .select()
-      .single();
+      .insert({
+        name: regionData.name,
+        code: regionData.code,
+        description: regionData.description
+      })
+      .select();
     
     if (error) throw error;
-    return data as Region;
+    
+    return { data, error: null };
   } catch (error) {
     console.error('Error creating region:', error);
-    throw error;
+    return { data: null, error };
   }
 };
 
-// Update an existing region
-export const updateRegion = async (id: string, region: Partial<Omit<Region, 'id' | 'created_at'>>) => {
+// Get a region by ID
+export const getRegionById = async (id: string) => {
   try {
     const { data, error } = await supabase
       .from('regions')
-      .update(region)
+      .select('*')
       .eq('id', id)
-      .select()
       .single();
     
     if (error) throw error;
-    return data as Region;
+    
+    return { data, error: null };
   } catch (error) {
-    console.error('Error updating region:', error);
-    throw error;
+    console.error('Error fetching region by ID:', error);
+    return { data: null, error };
   }
 };
 
-// Delete a region
-export const deleteRegion = async (id: string) => {
+// Update a region
+export const updateRegion = async (id: string, updates: Partial<Region>) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('regions')
-      .delete()
-      .eq('id', id);
+      .update({
+        name: updates.name,
+        code: updates.code,
+        description: updates.description,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
     
     if (error) throw error;
-    return true;
+    
+    return { data, error: null };
   } catch (error) {
-    console.error('Error deleting region:', error);
-    throw error;
+    console.error('Error updating region:', error);
+    return { data: null, error };
   }
 };
 
 // Archive a region (soft delete)
 export const archiveRegion = async (id: string) => {
   try {
-    // This is just a placeholder implementation since we don't have an 'is_archived' field
-    // In a real application, you might add this field or implement proper archiving
+    // Since 'archived' doesn't exist in regions table, we'll handle this
+    // differently. For now, we could just mark all sectors in the region as archived
     const { data, error } = await supabase
-      .from('regions')
+      .from('sectors')
       .update({ archived: true })
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('region_id', id)
+      .select();
     
     if (error) throw error;
-    return data as Region;
+    
+    return { data, error: null };
   } catch (error) {
     console.error('Error archiving region:', error);
-    throw error;
+    return { data: null, error };
   }
+};
+
+export default {
+  createRegion,
+  getRegionById,
+  updateRegion,
+  archiveRegion
 };

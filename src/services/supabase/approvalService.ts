@@ -1,100 +1,116 @@
 
 import { supabase } from './supabaseClient';
+import { DataEntry } from './supabaseClient';
 
-const approvalService = {
-  getPendingApprovals: async (filters?: { regionId?: string; sectorId?: string; categoryId?: string }) => {
-    let query = supabase
-      .from('data_entries')
+// Get all pending data entries for approval
+export const getPendingApprovals = async () => {
+  try {
+    // Using 'data' table instead of 'data_entries'
+    const { data, error } = await supabase
+      .from('data')
       .select(`
         *,
-        schools(id, name, region_id, sector_id),
-        categories(id, name),
-        users(id, first_name, last_name)
+        schools:schools(id, name),
+        categories:categories(id, name)
       `)
       .eq('status', 'submitted')
-      .order('submitted_at', { ascending: true });
-    
-    if (filters?.regionId) {
-      query = query.filter('schools.region_id', 'eq', filters.regionId);
-    }
-    
-    if (filters?.sectorId) {
-      query = query.filter('schools.sector_id', 'eq', filters.sectorId);
-    }
-    
-    if (filters?.categoryId) {
-      query = query.eq('category_id', filters.categoryId);
-    }
-    
-    const { data, error } = await query;
+      .order('submitted_at', { ascending: false });
     
     if (error) throw error;
-    return data;
-  },
-  
-  approveData: async (dataId: string, userId: string) => {
-    const { data, error } = await supabase
-      .from('data_entries')
-      .update({
-        status: 'approved',
-        approved_by: userId,
-        approved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', dataId)
-      .select()
-      .single();
     
-    if (error) throw error;
-    return data;
-  },
-  
-  rejectData: async (dataId: string, reason: string) => {
-    const { data, error } = await supabase
-      .from('data_entries')
-      .update({
-        status: 'rejected',
-        rejection_reason: reason,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', dataId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-  
-  getApprovalHistory: async (filters?: { userId?: string; categoryId?: string; status?: string }) => {
-    let query = supabase
-      .from('data_entries')
-      .select(`
-        *,
-        schools(id, name),
-        categories(id, name),
-        users:user_id(id, first_name, last_name),
-        approvers:approved_by(id, first_name, last_name)
-      `)
-      .or('status.eq.approved,status.eq.rejected')
-      .order('updated_at', { ascending: false });
-    
-    if (filters?.userId) {
-      query = query.eq('user_id', filters.userId);
-    }
-    
-    if (filters?.categoryId) {
-      query = query.eq('category_id', filters.categoryId);
-    }
-    
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    return data;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching pending approvals:', error);
+    return { data: null, error };
   }
 };
 
-export default approvalService;
+// Get approvals for a specific region
+export const getRegionApprovals = async (regionId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('data')
+      .select(`
+        *,
+        schools:schools(id, name, region_id),
+        categories:categories(id, name)
+      `)
+      .eq('status', 'submitted')
+      .eq('schools.region_id', regionId)
+      .order('submitted_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching region approvals:', error);
+    return { data: null, error };
+  }
+};
+
+// Get approvals for a specific sector
+export const getSectorApprovals = async (sectorId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('data')
+      .select(`
+        *,
+        schools:schools(id, name, sector_id),
+        categories:categories(id, name)
+      `)
+      .eq('status', 'submitted')
+      .eq('schools.sector_id', sectorId)
+      .order('submitted_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching sector approvals:', error);
+    return { data: null, error };
+  }
+};
+
+// Approve a data entry
+export const approveDataEntry = async (entryId: string, userId: string) => {
+  try {
+    // First fetch the current data entry
+    const { data: currentEntry, error: fetchError } = await supabase
+      .from('data')
+      .select('*')
+      .eq('id', entryId)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    // Update the data entry status
+    const { data, error } = await supabase
+      .from('data')
+      .update({
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: userId
+      })
+      .eq('id', entryId)
+      .select();
+    
+    if (error) throw error;
+    
+    // Create a history record
+    if (currentEntry) {
+      await supabase
+        .from('data_history')
+        .insert({
+          data_id: entryId,
+          data: currentEntry.data,
+          status: 'approved',
+          changed_by: userId
+        });
+    }
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error approving data entry:', error);
+    return { data: null, error };
+  }
+};

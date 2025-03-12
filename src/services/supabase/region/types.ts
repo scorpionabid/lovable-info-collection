@@ -3,6 +3,12 @@ import { Region } from '../supabaseClient';
 
 // Extended Region type to include statistics
 export interface RegionWithStats extends Region {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string;
+  created_at: string;
+  updated_at?: string;
   sectorCount: number;
   schoolCount: number;
   completionRate: number;

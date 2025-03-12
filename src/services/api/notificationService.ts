@@ -1,93 +1,73 @@
 
-import { supabase } from '../supabase/supabaseClient';
-import type { Notification } from '../supabase/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
+import { Notification } from '@/services/supabase/supabaseClient';
 
-interface NotificationFilter {
-  read?: boolean;
-  type?: string;
-  page?: number;
-  limit?: number;
-}
-
-const notificationService = {
-  getNotifications: async (filters: NotificationFilter = {}) => {
-    // Get current user ID from auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('Not authenticated');
-    
-    let query = supabase
+export const getNotifications = async (userId: string, limit = 10, offset = 0) => {
+  try {
+    const { data, count, error } = await supabase
       .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    
-    if (filters.read !== undefined) {
-      query = query.eq('is_read', filters.read);
-    }
-    
-    if (filters.type) {
-      query = query.eq('type', filters.type);
-    }
-    
-    // Handle pagination
-    const limit = filters.limit || 10;
-    const page = filters.page || 1;
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    
-    query = query.range(from, to);
-    
-    const { data, error } = await query;
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
     
     if (error) throw error;
     
-    // Get total count for pagination
-    const { count, error: countError } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
-    
-    if (countError) throw countError;
-    
-    return {
-      notifications: data as Notification[],
-      pagination: {
-        total: count || 0,
-        page,
-        limit,
-        pages: Math.ceil((count || 0) / limit)
-      }
-    };
-  },
-  
-  markAsRead: async (id: string) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data as Notification;
-  },
-  
-  markAllAsRead: async () => {
-    // Get current user ID from auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('Not authenticated');
-    
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false);
-    
-    if (error) throw error;
-    return true;
+    return { data, count, error: null };
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return { data: null, count: 0, error };
   }
 };
 
-export default notificationService;
+export const getUnreadNotificationsCount = async (userId: string) => {
+  try {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+    
+    if (error) throw error;
+    
+    return { count: count || 0, error: null };
+  } catch (error) {
+    console.error('Error fetching unread notification count:', error);
+    return { count: 0, error };
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('mark_notification_read', { p_notification_id: notificationId });
+    
+    if (error) throw error;
+    
+    return { success: data, error: null };
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    return { success: false, error };
+  }
+};
+
+export const markAllNotificationsAsRead = async () => {
+  try {
+    const { data, error } = await supabase
+      .rpc('mark_all_notifications_read');
+    
+    if (error) throw error;
+    
+    return { count: data, error: null };
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    return { count: 0, error };
+  }
+};
+
+export default {
+  getNotifications,
+  getUnreadNotificationsCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead
+};

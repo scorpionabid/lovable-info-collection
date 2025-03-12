@@ -1,95 +1,138 @@
 
-import { supabase } from '../supabase/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
-// API Base configuration - switched to use Supabase
-const api = {
-  auth: supabase.auth,
-  db: supabase,
-  
-  // Custom request methods that maintain the same interface as before
-  get: async (path: string, params?: any) => {
-    const pathParts = path.split('/');
-    const resource = pathParts[1]; // e.g., 'users' from '/users'
-    const id = pathParts[2]; // e.g., '123' from '/users/123'
+// This is a generic API service for handling common CRUD operations
+
+// Generic fetch function with pagination and filtering
+export const fetchItems = async (
+  tableName: string, 
+  page = 1, 
+  pageSize = 10, 
+  filter = {}, 
+  sortColumn = 'created_at', 
+  sortDirection = 'desc'
+) => {
+  try {
+    // Calculate offset
+    const offset = (page - 1) * pageSize;
     
-    let query = supabase.from(resource).select('*');
+    // Build query
+    // This is an example of using string interpolation for table names
+    // This should be safe as the tableName comes from our code, not user input
+    // However, this might cause TypeScript errors since the table might not be recognized
+    let query = supabase
+      .from(tableName as any)
+      .select('*', { count: 'exact' });
     
-    if (id) {
-      query = query.eq('id', id);
-      const { data, error } = await query.single();
-      if (error) throw error;
-      return { data };
-    }
-    
-    if (params) {
-      // Apply filters
-      Object.entries(params).forEach(([key, value]) => {
-        if (key === 'limit') {
-          query = query.limit(value as number);
-        } else if (key === 'page') {
-          const limit = params.limit || 10;
-          const page = value as number;
-          const from = (page - 1) * limit;
-          const to = from + limit - 1;
-          query = query.range(from, to);
+    // Apply filters
+    Object.entries(filter).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (key.includes('.')) {
+          // Handle relationship filters
+          const [relation, field] = key.split('.');
+          query = query.eq(`${relation}.${field}`, value);
+        } else if (typeof value === 'string' && value.includes('%')) {
+          // Handle LIKE queries
+          query = query.ilike(key, value);
         } else {
+          // Handle exact matches
           query = query.eq(key, value);
         }
-      });
-    }
+      }
+    });
     
-    const { data, error } = await query;
-    if (error) throw error;
-    return { data };
-  },
-  
-  post: async (path: string, body: any) => {
-    const pathParts = path.split('/');
-    const resource = pathParts[1]; // e.g., 'users' from '/users'
+    // Apply sorting
+    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
     
-    const { data, error } = await supabase
-      .from(resource)
-      .insert([{ ...body, created_at: new Date().toISOString() }])
-      .select()
-      .single();
+    // Apply pagination
+    query = query.range(offset, offset + pageSize - 1);
+    
+    // Execute query
+    const { data, count, error } = await query;
     
     if (error) throw error;
-    return { data };
-  },
-  
-  put: async (path: string, body: any) => {
-    const pathParts = path.split('/');
-    const resource = pathParts[1]; // e.g., 'users' from '/users'
-    const id = pathParts[2]; // e.g., '123' from '/users/123'
     
-    if (!id) throw new Error('ID is required for PUT requests');
-    
+    return { data, count, error: null };
+  } catch (error) {
+    console.error(`Error fetching items from ${tableName}:`, error);
+    return { data: null, count: 0, error };
+  }
+};
+
+// Generic get by ID
+export const getItemById = async (tableName: string, id: string) => {
+  try {
     const { data, error } = await supabase
-      .from(resource)
-      .update({ ...body, updated_at: new Date().toISOString() })
+      .from(tableName as any)
+      .select('*')
       .eq('id', id)
-      .select()
       .single();
     
     if (error) throw error;
-    return { data };
-  },
-  
-  delete: async (path: string) => {
-    const pathParts = path.split('/');
-    const resource = pathParts[1]; // e.g., 'users' from '/users'
-    const id = pathParts[2]; // e.g., '123' from '/users/123'
     
-    if (!id) throw new Error('ID is required for DELETE requests');
+    return { data, error: null };
+  } catch (error) {
+    console.error(`Error fetching item from ${tableName}:`, error);
+    return { data: null, error };
+  }
+};
+
+// Generic create
+export const createItem = async (tableName: string, item: Record<string, any>) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName as any)
+      .insert(item)
+      .select();
     
-    const { error } = await supabase
-      .from(resource)
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error(`Error creating item in ${tableName}:`, error);
+    return { data: null, error };
+  }
+};
+
+// Generic update
+export const updateItem = async (tableName: string, id: string, updates: Record<string, any>) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName as any)
+      .update(updates)
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error(`Error updating item in ${tableName}:`, error);
+    return { data: null, error };
+  }
+};
+
+// Generic delete
+export const deleteItem = async (tableName: string, id: string) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName as any)
       .delete()
       .eq('id', id);
     
     if (error) throw error;
-    return { data: true };
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error(`Error deleting item from ${tableName}:`, error);
+    return { success: false, error };
   }
 };
 
-export default api;
+export default {
+  fetchItems,
+  getItemById,
+  createItem,
+  updateItem,
+  deleteItem
+};

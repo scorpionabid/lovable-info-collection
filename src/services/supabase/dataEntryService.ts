@@ -1,112 +1,127 @@
 
-import { supabase, DataEntry, DataHistory } from './supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
+import { DataEntry, DataHistory } from './supabaseClient';
 
-const dataEntryService = {
-  getData: async (categoryId: string, schoolId: string) => {
+// Get data entries for a category
+export const getDataEntries = async (categoryId: string) => {
+  try {
     const { data, error } = await supabase
-      .from('data_entries')
-      .select('*')
+      .from('data')
+      .select(`
+        *,
+        schools:schools(id, name),
+        created_by_user:users!created_by(id, first_name, last_name)
+      `)
       .eq('category_id', categoryId)
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data?.[0] as DataEntry | undefined;
-  },
-  
-  submitData: async (dataEntry: Omit<DataEntry, 'id' | 'created_at'>) => {
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching data entries:', error);
+    return { data: null, error };
+  }
+};
+
+// Get a specific data entry
+export const getDataEntry = async (entryId: string) => {
+  try {
     const { data, error } = await supabase
-      .from('data_entries')
-      .insert([{ 
-        ...dataEntry, 
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-        created_at: new Date().toISOString() 
-      }])
-      .select()
+      .from('data')
+      .select(`
+        *,
+        schools:schools(id, name),
+        categories:categories(id, name, description),
+        created_by_user:users!created_by(id, first_name, last_name),
+        approved_by_user:users!approved_by(id, first_name, last_name)
+      `)
+      .eq('id', entryId)
       .single();
     
     if (error) throw error;
-    return data as DataEntry;
-  },
-  
-  saveDraft: async (dataEntry: Omit<DataEntry, 'id' | 'created_at'>) => {
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching data entry:', error);
+    return { data: null, error };
+  }
+};
+
+// Create a new data entry
+export const createDataEntry = async (entry: Partial<DataEntry>) => {
+  try {
     const { data, error } = await supabase
-      .from('data_entries')
-      .insert([{ 
-        ...dataEntry, 
-        status: 'draft',
-        created_at: new Date().toISOString() 
-      }])
-      .select()
-      .single();
+      .from('data')
+      .insert(entry)
+      .select();
     
     if (error) throw error;
-    return data as DataEntry;
-  },
-  
-  updateData: async (id: string, dataEntry: Partial<Omit<DataEntry, 'id' | 'created_at'>>) => {
-    // First get the existing data for history
-    const { data: existingData, error: fetchError } = await supabase
-      .from('data_entries')
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error creating data entry:', error);
+    return { data: null, error };
+  }
+};
+
+// Update a data entry
+export const updateDataEntry = async (entryId: string, updates: Partial<DataEntry>, userId: string) => {
+  try {
+    // First get the current entry
+    const { data: currentEntry, error: fetchError } = await supabase
+      .from('data')
       .select('*')
-      .eq('id', id)
+      .eq('id', entryId)
       .single();
     
     if (fetchError) throw fetchError;
     
-    // Update the data
+    // Update the entry
     const { data, error } = await supabase
-      .from('data_entries')
-      .update({ 
-        ...dataEntry,
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', id)
-      .select()
-      .single();
+      .from('data')
+      .update(updates)
+      .eq('id', entryId)
+      .select();
     
     if (error) throw error;
     
-    // Create history record
-    if (existingData && existingData.data !== dataEntry.data) {
+    // Create a history record if we have the current entry
+    if (currentEntry && data && data.length > 0) {
       await supabase
         .from('data_history')
-        .insert([{
-          data_id: id,
-          user_id: dataEntry.user_id || existingData.user_id,
-          previous_data: existingData.data,
-          new_data: dataEntry.data || existingData.data,
-          created_at: new Date().toISOString()
-        }]);
+        .insert({
+          data_id: entryId,
+          changed_by: userId,
+          data: updates.data || currentEntry.data,
+          status: updates.status || currentEntry.status
+        });
     }
     
-    return data as DataEntry;
-  },
-  
-  getDataHistory: async (dataId: string) => {
-    const { data, error } = await supabase
-      .from('data_history')
-      .select('*, users(first_name, last_name)')
-      .eq('data_id', dataId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data as (DataHistory & { users: { first_name: string, last_name: string } })[];
-  },
-  
-  getPendingDataByCategory: async (categoryId: string) => {
-    const { data, error } = await supabase
-      .from('data_entries')
-      .select('*, schools(name), users(first_name, last_name)')
-      .eq('category_id', categoryId)
-      .eq('status', 'submitted')
-      .order('submitted_at', { ascending: true });
-    
-    if (error) throw error;
-    return data;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error updating data entry:', error);
+    return { data: null, error };
   }
 };
 
-export default dataEntryService;
+// Get history for a data entry
+export const getDataEntryHistory = async (dataId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('data_history')
+      .select(`
+        *,
+        users:changed_by(id, first_name, last_name)
+      `)
+      .eq('data_id', dataId)
+      .order('changed_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching data entry history:', error);
+    return { data: null, error };
+  }
+};

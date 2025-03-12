@@ -13,7 +13,7 @@ interface User {
   first_name: string;
   last_name: string;
   role?: UserRole; 
-  role_id: string;
+  role_id?: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
@@ -179,16 +179,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const userRole = determineUserRole(userData);
         console.log(`Login: Role determined as: ${userRole}`);
         
+        const role_id = userData.role_id || userData.roles?.id || '';
+        
         setUser({
           id: userData.id,
           email: userData.email,
           first_name: userData.first_name,
           last_name: userData.last_name,
           role: userRole,
-          role_id: userData.role_id,
-          region_id: userData.region_id,
-          sector_id: userData.sector_id,
-          school_id: userData.school_id,
+          role_id: role_id,
+          region_id: userData.region_id || undefined,
+          sector_id: userData.sector_id || undefined,
+          school_id: userData.school_id || undefined,
           roles: userData.roles,
         });
         

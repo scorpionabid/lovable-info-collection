@@ -1,47 +1,77 @@
 
-import { CategoryColumn } from '@/components/categories/CategoryDetailView';
+import { Json } from '@/integrations/supabase/types';
 
-// Interfaces for the service
+export type CategoryAssignment = 'All' | 'Regions' | 'Sectors' | 'Schools' | string;
+export type CategoryStatus = 'Active' | 'Inactive' | string;
+
 export interface Category {
   id: string;
   name: string;
-  description: string;
-  assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
-  columns: number | CategoryColumn[];
-  completionRate: number;
-  status: 'Active' | 'Inactive';
-  priority: number;
-  createdAt: string;
-}
-
-export interface CategoryFilter {
-  search?: string;
-  assignment?: 'All' | 'Regions' | 'Sectors' | 'Schools';
-  status?: 'Active' | 'Inactive';
-  deadlineBefore?: string;
-  deadlineAfter?: string;
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
-}
-
-export interface CreateCategoryDto {
-  name: string;
   description?: string;
-  assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
+  assignment: CategoryAssignment;
+  status: CategoryStatus;
   priority: number;
-  status: 'Active' | 'Inactive';
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  school_type_id?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  columns?: number;
+  completionRate?: number;
+  createdAt?: string;
 }
 
-export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {}
-
-export interface CreateColumnDto {
+export interface CategoryColumn {
+  id: string;
   name: string;
   type: string;
   required: boolean;
   description?: string;
-  options?: string[];
+  options: Json | string[];
+  order: number;
+  category_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface UpdateColumnDto extends Partial<CreateColumnDto> {
-  order?: number;
+export interface CategoryStats {
+  totalEntries: number;
+  pendingApprovals: number;
+  completionRate: number;
+  recentActivity: any[];
+}
+
+export interface CategoryData {
+  id: string;
+  category_id: string;
+  school_id?: string;
+  data: any;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  submitted_at?: string;
+  approved_at?: string;
+  created_by?: string;
+  approved_by?: string;
+}
+
+export interface CategoryFilter {
+  searchQuery?: string;
+  status?: string;
+  assignment?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+}
+
+export interface PaginationOptions {
+  page: number;
+  pageSize: number;
+}
+
+export interface SortOptions {
+  column: string;
+  direction: 'asc' | 'desc';
 }

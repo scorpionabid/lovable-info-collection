@@ -1,8 +1,6 @@
+import { supabase } from '@/integrations/supabase/client';
+import { CompletionStatistic } from './types';
 
-import { supabase } from '../supabaseClient';
-import { CompletionStatistic, ReportParams, CriticalArea } from './types';
-
-// Helper Functions
 const calculateRegionCompletionRate = async (regionId: string, params?: ReportParams): Promise<number> => {
   try {
     // In a real application, this would be a complex calculation based on data entries
@@ -25,7 +23,6 @@ const calculateCategoryCompletionRate = async (categoryId: string, params?: Repo
   }
 };
 
-// Completion Statistics Reports
 export const getRegionCompletionStats = async (params?: ReportParams): Promise<CompletionStatistic[]> => {
   try {
     // Calculate the actual completion rates based on data entries in the database
@@ -230,5 +227,95 @@ export const getCriticalAreas = async (params?: ReportParams): Promise<CriticalA
   } catch (error) {
     console.error('Error fetching critical areas:', error);
     throw error;
+  }
+};
+
+export const getOnTimeSubmissionRate = async (params: any = {}) => {
+  try {
+    const { regionId, sectorId, schoolId, startDate, endDate } = params;
+    
+    let query = supabase
+      .from('data')
+      .select(`
+        id,
+        submitted_at,
+        created_at,
+        schools:schools(id, name, region_id, sector_id),
+        categories:categories(id, name)
+      `)
+      .not('submitted_at', 'is', null);
+    
+    // Apply filters
+    if (regionId) {
+      query = query.eq('schools.region_id', regionId);
+    }
+    
+    if (sectorId) {
+      query = query.eq('schools.sector_id', sectorId);
+    }
+    
+    if (schoolId) {
+      query = query.eq('school_id', schoolId);
+    }
+    
+    if (startDate) {
+      query = query.gte('submitted_at', startDate);
+    }
+    
+    if (endDate) {
+      query = query.lte('submitted_at', endDate);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      return { 
+        onTime: 0, 
+        late: 0, 
+        totalSubmitted: 0,
+        onTimePercentage: 0
+      };
+    }
+    
+    let onTime = 0;
+    let late = 0;
+    
+    // For each submission, check if it was on time
+    // Since we don't have actual deadline information, we'll use a simulated approach
+    data.forEach(submission => {
+      // For demo purposes, we'll consider submissions made within 7 days of creation as "on time"
+      // In a real application, you would compare with an actual deadline field
+      const createdDate = new Date(submission.created_at);
+      const submittedDate = new Date(submission.submitted_at);
+      const timeDiff = submittedDate.getTime() - createdDate.getTime();
+      const daysDiff = timeDiff / (1000 * 3600 * 24);
+      
+      if (daysDiff <= 7) {
+        onTime++;
+      } else {
+        late++;
+      }
+    });
+    
+    const totalSubmitted = onTime + late;
+    const onTimePercentage = totalSubmitted > 0 ? Math.round((onTime / totalSubmitted) * 100) : 0;
+    
+    return {
+      onTime,
+      late,
+      totalSubmitted,
+      onTimePercentage
+    };
+  } catch (error) {
+    console.error('Error calculating on-time submission rate:', error);
+    return { 
+      onTime: 0, 
+      late: 0, 
+      totalSubmitted: 0,
+      onTimePercentage: 0,
+      error
+    };
   }
 };

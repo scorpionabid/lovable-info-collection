@@ -1,6 +1,5 @@
-
-import { supabase } from '../supabaseClient';
-import { User, UserFilters } from './types';
+import { supabase } from '@/integrations/supabase/client';
+import { User } from '../supabaseClient';
 
 export const getUsers = async (filters?: UserFilters) => {
   try {
@@ -101,8 +100,6 @@ export const checkUtisCodeExists = async (utisCode: string, userId?: string) => 
 
 export const createUser = async (userData: User) => {
   try {
-    // Use upsert to handle both create and update, avoiding conflicts
-    // This helps with the race condition between auth and database
     const { data, error } = await supabase
       .from('users')
       .upsert([userData], {
@@ -121,7 +118,6 @@ export const createUser = async (userData: User) => {
       
     if (error) throw error;
     
-    // If this is a school admin, make sure they're properly linked to the school
     if (userData.school_id && userData.role_id) {
       const { data: roleData } = await supabase
         .from('roles')
@@ -210,5 +206,38 @@ export const resetPassword = async (id: string) => {
   } catch (error) {
     console.error(`Error resetting password for user with ID ${id}:`, error);
     throw error;
+  }
+};
+
+export const createUsers = async (users: Omit<User, 'id' | 'created_at'>[]) => {
+  try {
+    if (!users || users.length === 0) {
+      return { data: [], error: new Error('No users provided') };
+    }
+    
+    const validUsers = users.map(user => ({
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role_id: user.role_id || '',
+      region_id: user.region_id,
+      sector_id: user.sector_id,
+      school_id: user.school_id,
+      phone: user.phone,
+      utis_code: user.utis_code,
+      is_active: user.is_active !== undefined ? user.is_active : true
+    }));
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert(validUsers)
+      .select();
+    
+    if (error) throw error;
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error creating users:', error);
+    return { data: null, error };
   }
 };
