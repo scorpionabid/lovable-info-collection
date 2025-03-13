@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/layout/Layout';
 import { CategoryDetailView } from '@/components/categories/CategoryDetailView';
 import { getCategoryById, updateCategory, deleteCategory } from '@/services/api/categoryService';
-import { CategoryType } from '@/components/categories/types';
+import { CategoryType } from '@/components/categories/CategoryDetailView';
 
 const CategoryDetails = () => {
   const { id } = useParams<{ id: string }>();

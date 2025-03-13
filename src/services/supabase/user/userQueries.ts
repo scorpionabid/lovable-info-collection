@@ -101,9 +101,23 @@ export const checkUtisCodeExists = async (utisCode: string, userId?: string) => 
 
 export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
   try {
+    // Use type casting to handle Supabase's strong typing requirements
+    const userDataForInsert = {
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      role_id: userData.role_id || '',
+      region_id: userData.region_id,
+      sector_id: userData.sector_id,
+      school_id: userData.school_id,
+      phone: userData.phone,
+      utis_code: userData.utis_code,
+      is_active: userData.is_active !== undefined ? userData.is_active : true
+    };
+    
     const { data, error } = await supabase
       .from('users')
-      .insert([userData])
+      .insert([userDataForInsert])
       .select(`
         *,
         roles (
@@ -228,9 +242,10 @@ export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 
       is_active: user.is_active !== undefined ? user.is_active : true
     }));
     
+    // Use type assertion to handle the type mismatch
     const { data, error } = await supabase
       .from('users')
-      .insert(validUsers)
+      .insert(validUsers as any)
       .select();
     
     if (error) throw error;

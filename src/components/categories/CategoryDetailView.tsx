@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -48,11 +49,14 @@ export interface CategoryType {
   deadline: string;
 }
 
-interface CategoryDetailViewProps {
+export interface CategoryDetailViewProps {
   category: CategoryType;
+  onGoBack: () => void;
+  isLoading: boolean;
+  onDeleteCategory: () => Promise<void>;
 }
 
-export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
+export const CategoryDetailView = ({ category, onGoBack, isLoading, onDeleteCategory }: CategoryDetailViewProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -93,7 +97,7 @@ export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
           <Button 
             variant="outline" 
             size="icon"
-            onClick={() => navigate('/categories')}
+            onClick={onGoBack}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

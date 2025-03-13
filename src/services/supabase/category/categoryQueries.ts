@@ -63,17 +63,10 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
         const columnsCount = await getCategoryColumnsCount(item.id);
         
         return {
-          id: item.id,
-          name: item.name,
-          description: item.description || '',
-          assignment: item.assignment as Category['assignment'],
-          status: item.status as Category['status'],
-          priority: item.priority,
+          ...item,
           columns: columnsCount,
           completionRate,
-          created_at: item.created_at,
-          updated_at: item.updated_at || item.created_at,
-          createdAt: item.created_at
+          createdAt: item.created_at,
         } as Category;
       })
     );
@@ -109,18 +102,12 @@ export const getCategoryById = async (id: string): Promise<Category> => {
     const completionRate = await calculateCategoryCompletionRate(id);
 
     return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      assignment: data.assignment as Category['assignment'],
-      status: data.status as Category['status'],
-      priority: data.priority,
+      ...data,
       columns: columns,
       completionRate,
-      created_at: data.created_at,
-      updated_at: data.updated_at || data.created_at,
-      createdAt: data.created_at
-    } as Category;
+      createdAt: data.created_at,
+      deadline: new Date().toISOString(),
+    } as unknown as Category;
   } catch (error) {
     console.error('Error fetching category details:', error);
     throw error;
@@ -150,16 +137,12 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
     if (error) throw error;
 
     return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      assignment: data.assignment,
+      ...data,
       columns: 0,
       completionRate: 0,
-      status: data.status,
-      priority: data.priority,
-      createdAt: data.created_at
-    };
+      createdAt: data.created_at,
+      deadline: new Date().toISOString(),
+    } as unknown as Category;
   } catch (error) {
     console.error('Error creating category:', error);
     throw error;
@@ -196,16 +179,12 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
     const completionRate = await calculateCategoryCompletionRate(id);
 
     return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      assignment: data.assignment || 'All',
+      ...data,
       columns: columnsCount,
       completionRate,
-      status: data.status,
-      priority: data.priority,
-      createdAt: data.created_at
-    };
+      createdAt: data.created_at,
+      deadline: new Date().toISOString(),
+    } as unknown as Category;
   } catch (error) {
     console.error('Error updating category:', error);
     throw error;

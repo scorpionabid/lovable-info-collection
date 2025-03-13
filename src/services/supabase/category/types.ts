@@ -44,8 +44,8 @@ export interface Category {
   created_by?: string;
   columns?: number | CategoryColumn[];
   completionRate: number;
-  createdAt?: string;
-  deadline?: string;
+  createdAt: string;
+  deadline: string;
 }
 
 export interface CategoryColumn {
@@ -120,4 +120,20 @@ export interface CategoryData {
   approved_at?: string;
   created_by?: string;
   approved_by?: string;
+}
+
+// Extended type for use in frontend components
+export interface ExtendedColumnData extends CategoryColumn {
+  type: string;
+  required: boolean;
+  options?: string[] | any;
+  validation?: {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    minValue?: number;
+    maxValue?: number;
+    pattern?: string;
+    options?: string[];
+  };
 }
