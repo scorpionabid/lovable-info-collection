@@ -1,50 +1,5 @@
 import { supabase } from './supabaseClient';
-import { CategoryColumn } from '@/components/categories/CategoryDetailView';
-
-// Interfaces for the service
-export interface Category {
-  id: string;
-  name: string;
-  description: string;
-  assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
-  columns: number | CategoryColumn[];
-  completionRate: number;
-  status: 'Active' | 'Inactive';
-  priority: number;
-  createdAt: string;
-}
-
-export interface CategoryFilter {
-  search?: string;
-  assignment?: 'All' | 'Regions' | 'Sectors' | 'Schools';
-  status?: 'Active' | 'Inactive';
-  deadlineBefore?: string;
-  deadlineAfter?: string;
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
-}
-
-export interface CreateCategoryDto {
-  name: string;
-  description?: string;
-  assignment: 'All' | 'Regions' | 'Sectors' | 'Schools';
-  priority: number;
-  status: 'Active' | 'Inactive';
-}
-
-export interface UpdateCategoryDto extends Partial<CreateCategoryDto> {}
-
-export interface CreateColumnDto {
-  name: string;
-  type: string;
-  required: boolean;
-  description?: string;
-  options?: string[];
-}
-
-export interface UpdateColumnDto extends Partial<CreateColumnDto> {
-  order?: number;
-}
+import { CategoryColumn, Category, CategoryFilter, CreateCategoryDto, UpdateCategoryDto, CreateColumnDto, UpdateColumnDto, CategoryAssignment, CategoryStatus } from './category/types';
 
 // Category CRUD functions
 export const getCategories = async (filters?: CategoryFilter): Promise<Category[]> => {
@@ -108,17 +63,19 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
           id: item.id,
           name: item.name,
           description: item.description || '',
-          assignment: item.assignment || 'All',
+          assignment: item.assignment as CategoryAssignment || 'All',
           columns: columnsCount,
           completionRate,
-          status: item.status,
+          status: item.status as CategoryStatus,
           priority: item.priority,
+          created_at: item.created_at,
+          updated_at: item.created_at, // Default updated_at to created_at
           createdAt: item.created_at
         };
       })
     );
 
-    return categoriesWithCompletionRates;
+    return categoriesWithCompletionRates as Category[];
   } catch (error) {
     console.error('Error fetching categories:', error);
     throw error;
@@ -151,13 +108,15 @@ export const getCategoryById = async (id: string): Promise<Category> => {
       id: data.id,
       name: data.name,
       description: data.description || '',
-      assignment: data.assignment,
+      assignment: data.assignment as CategoryAssignment,
       columns: columns,
       completionRate,
-      status: data.status,
+      status: data.status as CategoryStatus,
       priority: data.priority,
+      created_at: data.created_at,
+      updated_at: data.created_at, // Default updated_at to created_at
       createdAt: data.created_at
-    };
+    } as Category;
   } catch (error) {
     console.error('Error fetching category details:', error);
     throw error;
@@ -168,7 +127,7 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
   try {
     // Validate assignment type
     const validAssignments = ['All', 'Regions', 'Sectors', 'Schools'];
-    if (!validAssignments.includes(category.assignment)) {
+    if (!validAssignments.includes(category.assignment as string)) {
       throw new Error(`Invalid assignment value. Must be one of: ${validAssignments.join(', ')}`);
     }
     
@@ -190,13 +149,15 @@ export const createCategory = async (category: CreateCategoryDto): Promise<Categ
       id: data.id,
       name: data.name,
       description: data.description || '',
-      assignment: data.assignment,
+      assignment: data.assignment as CategoryAssignment,
       columns: 0,
       completionRate: 0,
-      status: data.status,
+      status: data.status as CategoryStatus,
       priority: data.priority,
+      created_at: data.created_at,
+      updated_at: data.created_at, // Default updated_at to created_at
       createdAt: data.created_at
-    };
+    } as Category;
   } catch (error) {
     console.error('Error creating category:', error);
     throw error;
@@ -208,7 +169,7 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
     // Validate assignment type if provided
     if (category.assignment) {
       const validAssignments = ['All', 'Regions', 'Sectors', 'Schools'];
-      if (!validAssignments.includes(category.assignment)) {
+      if (!validAssignments.includes(category.assignment as string)) {
         throw new Error(`Invalid assignment value. Must be one of: ${validAssignments.join(', ')}`);
       }
     }
@@ -236,13 +197,15 @@ export const updateCategory = async (id: string, category: UpdateCategoryDto): P
       id: data.id,
       name: data.name,
       description: data.description || '',
-      assignment: data.assignment || 'All',
+      assignment: data.assignment as CategoryAssignment || 'All',
       columns: columnsCount,
       completionRate,
-      status: data.status,
+      status: data.status as CategoryStatus,
       priority: data.priority,
+      created_at: data.created_at,
+      updated_at: data.updated_at || data.created_at,
       createdAt: data.created_at
-    };
+    } as Category;
   } catch (error) {
     console.error('Error updating category:', error);
     throw error;

@@ -43,10 +43,6 @@ const CategoryDetails = () => {
     }
   });
 
-  const handleUpdate = (data: any) => {
-    updateMutation.mutate(data);
-  };
-
   const handleDelete = async () => {
     if (window.confirm('Bu kateqoriyanı silmək istədiyinizə əminsiniz?')) {
       setLoading(true);
@@ -98,10 +94,9 @@ const CategoryDetails = () => {
     <Layout>
       <CategoryDetailView
         category={categoryWithDefaults}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
         onGoBack={handleGoBack}
-        isSubmitting={updateMutation.isPending || deleteMutation.isPending || loading}
+        isLoading={updateMutation.isPending || deleteMutation.isPending || loading}
+        onDeleteCategory={handleDelete}
       />
     </Layout>
   );

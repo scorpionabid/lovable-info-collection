@@ -1,24 +1,6 @@
-import { supabase } from '../supabaseClient';
-import { User } from './types';
 
-interface UserFilters {
-  search?: string;
-  roleId?: string;
-  regionId?: string;
-  sectorId?: string;
-  schoolId?: string;
-  status?: 'active' | 'inactive';
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  pageSize?: number;
-  // For backward compatibility
-  role?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-}
+import { supabase } from '../supabaseClient';
+import { User, UserFilters } from './types';
 
 export const getUsers = async (filters?: UserFilters) => {
   try {
@@ -52,7 +34,7 @@ export const getUsers = async (filters?: UserFilters) => {
       if (filters.school_id) query = query.eq('school_id', filters.school_id);
       
       if (filters.status === 'active') query = query.eq('is_active', true);
-      if (filters.status === 'inactive' || filters.status === 'blocked') query = query.eq('is_active', false);
+      if (filters.status === 'inactive') query = query.eq('is_active', false);
       
       if (filters.search) {
         query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
@@ -117,13 +99,11 @@ export const checkUtisCodeExists = async (utisCode: string, userId?: string) => 
   }
 };
 
-export const createUser = async (userData: User) => {
+export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .upsert([userData], {
-        onConflict: 'id'
-      })
+      .insert([userData])
       .select(`
         *,
         roles (
@@ -145,7 +125,7 @@ export const createUser = async (userData: User) => {
         .single();
         
       if (roleData?.name === 'school-admin') {
-        console.log(`Ensuring user ${userData.id} is properly linked as admin for school ${userData.school_id}`);
+        console.log(`Ensuring user ${data.id} is properly linked as admin for school ${userData.school_id}`);
       }
     }
     
@@ -228,12 +208,13 @@ export const resetPassword = async (id: string) => {
   }
 };
 
-export const createUsers = async (users: Omit<User, 'id' | 'created_at'>[]) => {
+export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 'updated_at'>>) => {
   try {
     if (!users || users.length === 0) {
       return { data: [], error: new Error('No users provided') };
     }
     
+    // Map users to the correct structure expected by Supabase
     const validUsers = users.map(user => ({
       email: user.email,
       first_name: user.first_name,

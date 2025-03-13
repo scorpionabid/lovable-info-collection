@@ -1,114 +1,160 @@
 
-import { supabase, Notification } from './supabaseClient';
+import { supabase } from './supabaseClient';
 
-const notificationService = {
-  getNotifications: async (filters: { read?: boolean; type?: string; page?: number; limit?: number } = {}) => {
-    // Get current user ID from auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('Not authenticated');
-    
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  is_read: boolean;
+  entity_type?: string;
+  entity_id?: string;
+  action_url?: string;
+  created_at: string;
+}
+
+export interface NotificationFilter {
+  isRead?: boolean;
+  type?: string;
+  entityType?: string;
+  entityId?: string;
+  fromDate?: string;
+  toDate?: string;
+  limit?: number;
+}
+
+export const getUserNotifications = async (userId: string, filter?: NotificationFilter) => {
+  try {
     let query = supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    
-    if (filters.read !== undefined) {
-      query = query.eq('is_read', filters.read);
-    }
-    
-    if (filters.type) {
-      query = query.eq('type', filters.type);
-    }
-    
-    // Handle pagination
-    const limit = filters.limit || 10;
-    const page = filters.page || 1;
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    
-    query = query.range(from, to);
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    // Get total count for pagination
-    const { count, error: countError } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
-    
-    if (countError) throw countError;
-    
-    return {
-      notifications: data as Notification[],
-      pagination: {
-        total: count || 0,
-        page,
-        limit,
-        pages: Math.ceil((count || 0) / limit)
+
+    if (filter) {
+      if (filter.isRead !== undefined) {
+        query = query.eq('is_read', filter.isRead);
       }
-    };
-  },
-  
-  markAsRead: async (id: string) => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', id)
-      .select()
-      .single();
-    
+      if (filter.type) {
+        query = query.eq('type', filter.type);
+      }
+      if (filter.entityType) {
+        query = query.eq('entity_type', filter.entityType);
+      }
+      if (filter.entityId) {
+        query = query.eq('entity_id', filter.entityId);
+      }
+      if (filter.fromDate) {
+        query = query.gte('created_at', filter.fromDate);
+      }
+      if (filter.toDate) {
+        query = query.lte('created_at', filter.toDate);
+      }
+      if (filter.limit) {
+        query = query.limit(filter.limit);
+      }
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
-    return data as Notification;
-  },
-  
-  markAllAsRead: async () => {
-    // Get current user ID from auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) throw new Error('Not authenticated');
-    
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false);
-    
-    if (error) throw error;
-    return true;
-  },
-  
-  // Setup realtime notifications
-  subscribeToNotifications: (onNotification: (notification: Notification) => void) => {
-    // Get current user ID from auth
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
-      if (error || !user) return;
-      
-      const subscription = supabase
-        .channel('public:notifications')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            onNotification(payload.new as Notification);
-          }
-        )
-        .subscribe();
-      
-      // Return cleanup function
-      return () => {
-        supabase.removeChannel(subscription);
-      };
-    });
+
+    return data as Notification[];
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    throw error;
   }
 };
 
-export default notificationService;
+export const getUnreadNotificationsCount = async (userId: string) => {
+  try {
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+
+    return count || 0;
+  } catch (error) {
+    console.error('Error counting unread notifications:', error);
+    return 0;
+  }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    throw error;
+  }
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    throw error;
+  }
+};
+
+export const createNotification = async (notification: Omit<Notification, 'id' | 'created_at'>) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([notification])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data as Notification;
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    throw error;
+  }
+};
+
+export const deleteNotification = async (notificationId: string) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    throw error;
+  }
+};
+
+export default {
+  getUserNotifications,
+  getUnreadNotificationsCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  createNotification,
+  deleteNotification
+};

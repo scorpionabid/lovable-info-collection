@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,7 +12,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import userService, { User } from '@/services/api/userService';
+import userService, { User, CreateUserDto } from '@/services/api/userService';
 
 const userFormSchema = z.object({
   email: z.string().email({ message: 'Düzgün email formatı daxil edin' }),
@@ -40,6 +41,23 @@ export const UserForm = ({ isOpen, onClose, onSuccess, user }: UserFormProps) =>
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
 
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      email: user?.email || '',
+      password: '',
+      first_name: user?.first_name || '',
+      last_name: user?.last_name || '',
+      role_id: user?.role_id || '',
+      region_id: user?.region_id || '',
+      sector_id: user?.sector_id || '',
+      school_id: user?.school_id || '',
+      phone: user?.phone || '',
+      utis_code: user?.utis_code || '',
+      is_active: user?.is_active ?? true,
+    },
+  });
+
   // Fetch roles for dropdown
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
@@ -66,23 +84,6 @@ export const UserForm = ({ isOpen, onClose, onSuccess, user }: UserFormProps) =>
     enabled: !!form.watch('sector_id'),
   });
 
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      email: user?.email || '',
-      password: '',
-      first_name: user?.first_name || '',
-      last_name: user?.last_name || '',
-      role_id: user?.role_id || '',
-      region_id: user?.region_id || '',
-      sector_id: user?.sector_id || '',
-      school_id: user?.school_id || '',
-      phone: user?.phone || '',
-      utis_code: user?.utis_code || '',
-      is_active: user?.is_active ?? true,
-    },
-  });
-
   const onSubmit = async (values: UserFormValues) => {
     setIsSubmitting(true);
     try {
@@ -91,8 +92,21 @@ export const UserForm = ({ isOpen, onClose, onSuccess, user }: UserFormProps) =>
         await userService.updateUser(user.id, values);
         toast("İstifadəçi məlumatları uğurla yeniləndi");
       } else {
-        // Create new user
-        await userService.createUser(values);
+        // Create new user - ensure email is not optional for creation
+        const newUserData: CreateUserDto = {
+          email: values.email,
+          password: values.password,
+          first_name: values.first_name,
+          last_name: values.last_name,
+          role_id: values.role_id,
+          region_id: values.region_id,
+          sector_id: values.sector_id,
+          school_id: values.school_id,
+          phone: values.phone,
+          utis_code: values.utis_code,
+          is_active: values.is_active
+        };
+        await userService.createUser(newUserData);
         toast("İstifadəçi uğurla yaradıldı");
       }
       onSuccess();

@@ -1,9 +1,12 @@
 
 import { z } from 'zod';
-import { ColumnData } from '@/services/api/categoryService';
+import { CategoryColumn } from '@/services/api/categoryService';
 
-// Extend the ColumnData type to include validation
-interface ExtendedColumnData extends ColumnData {
+// Extended column data with validation properties
+interface ExtendedColumnData extends CategoryColumn {
+  type: string;
+  required: boolean;
+  options?: string[];
   validation?: {
     required?: boolean;
     minLength?: number;
@@ -15,93 +18,91 @@ interface ExtendedColumnData extends ColumnData {
   };
 }
 
-export const validateDataField = (value: any, column: ExtendedColumnData) => {
-  if (!column) return { valid: true };
+// Create validation schema based on column definitions
+export const createValidationSchema = (columns: ExtendedColumnData[]) => {
+  const schemaShape: Record<string, any> = {};
 
-  // Create a dynamic schema based on column type and validation rules
-  let schema;
+  columns.forEach(column => {
+    let validator;
 
-  if (column.type === 'string' || column.type === 'text') {
-    schema = z.string();
-    
-    if (column.validation?.required || column.required) {
-      schema = schema.min(1, { message: 'Bu sahə tələb olunur' });
-    } else {
-      schema = schema.optional();
-    }
-    
-    if (column.validation?.minLength) {
-      schema = schema.min(column.validation.minLength, { message: `Minimum ${column.validation.minLength} simvol olmalıdır` });
-    }
-    
-    if (column.validation?.maxLength) {
-      schema = schema.max(column.validation.maxLength, { message: `Maksimum ${column.validation.maxLength} simvol olmalıdır` });
-    }
-    
-    if (column.validation?.pattern) {
-      schema = schema.regex(new RegExp(column.validation.pattern), { message: 'Daxil etdiyiniz dəyər düzgün formatda deyil' });
-    }
-  } else if (column.type === 'number') {
-    schema = z.number();
-    
-    if (column.validation?.required || column.required) {
-      schema = schema;
-    } else {
-      schema = schema.optional();
-    }
-    
-    if (column.validation?.minValue !== undefined) {
-      schema = schema.min(column.validation.minValue, { message: `Minimum dəyər ${column.validation.minValue} olmalıdır` });
-    }
-    
-    if (column.validation?.maxValue !== undefined) {
-      schema = schema.max(column.validation.maxValue, { message: `Maksimum dəyər ${column.validation.maxValue} olmalıdır` });
-    }
-  } else if (column.type === 'date' || column.type === 'datetime') {
-    schema = z.string().refine(val => !isNaN(Date.parse(val)), { message: 'Düzgün tarix formatı deyil' });
-    
-    if (column.validation?.required || column.required) {
-      schema = schema.min(1, { message: 'Bu sahə tələb olunur' });
-    } else {
-      schema = schema.optional();
-    }
-  } else if (column.type === 'boolean') {
-    schema = z.boolean();
-    
-    if (!(column.validation?.required || column.required)) {
-      schema = schema.optional();
-    }
-  } else if (column.type === 'select' || column.type === 'radio') {
-    schema = z.string();
-    
-    if (column.validation?.options || column.options) {
-      const options = column.validation?.options || column.options || [];
-      schema = z.enum(options as [string, ...string[]]);
-    }
-    
-    if (column.validation?.required || column.required) {
-      schema = schema.min(1, { message: 'Bu sahə tələb olunur' });
-    } else {
-      schema = schema.optional();
-    }
-  } else {
-    // Default to string validation if type is unknown
-    schema = z.string();
-    
-    if (column.validation?.required || column.required) {
-      schema = schema.min(1, { message: 'Bu sahə tələb olunur' });
-    } else {
-      schema = schema.optional();
-    }
-  }
+    if (column.type === 'text' || column.type === 'textarea') {
+      validator = z.string();
 
-  try {
-    schema.parse(value);
-    return { valid: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { valid: false, error: error.errors[0].message };
+      if (column.required) {
+        validator = validator.min(1, { message: 'Bu sahə boş ola bilməz' });
+      } else {
+        validator = validator.optional();
+      }
+
+      if (column.validation?.minLength) {
+        validator = validator.min(column.validation.minLength, { 
+          message: `Minimum ${column.validation.minLength} simvol olmalıdır` 
+        });
+      }
+
+      if (column.validation?.maxLength) {
+        validator = validator.max(column.validation.maxLength, { 
+          message: `Maksimum ${column.validation.maxLength} simvol ola bilər` 
+        });
+      }
+
+      if (column.validation?.pattern) {
+        validator = validator.regex(new RegExp(column.validation.pattern), { 
+          message: 'Düzgün format daxil edin' 
+        });
+      }
+    } else if (column.type === 'number') {
+      validator = z.coerce.number();
+      
+      if (column.required) {
+        validator = validator.min(0, { message: 'Bu sahə boş ola bilməz' });
+      } else {
+        validator = validator.optional();
+      }
+
+      if (column.validation?.minValue !== undefined) {
+        validator = validator.min(column.validation.minValue, {
+          message: `Minimum ${column.validation.minValue} olmalıdır`
+        });
+      }
+
+      if (column.validation?.maxValue !== undefined) {
+        validator = validator.max(column.validation.maxValue, {
+          message: `Maksimum ${column.validation.maxValue} ola bilər`
+        });
+      }
+    } else if (column.type === 'date') {
+      validator = z.string();
+      
+      if (column.required) {
+        validator = validator.min(1, { message: 'Tarix seçilməlidir' });
+      } else {
+        validator = validator.optional();
+      }
+    } else if (column.type === 'select') {
+      validator = z.string();
+      
+      if (column.options && column.options.length > 0) {
+        validator = z.enum(column.options as [string, ...string[]]);
+      }
+      
+      if (column.required) {
+        validator = validator.min(1, { message: 'Seçim edilməlidir' });
+      } else {
+        validator = validator.optional();
+      }
+    } else if (column.type === 'checkbox') {
+      validator = z.boolean();
+      
+      if (column.required) {
+        validator = validator.refine(val => val === true, {
+          message: 'Bu sahə mütləq seçilməlidir',
+        });
+      }
     }
-    return { valid: false, error: 'Düzgün deyil' };
-  }
+
+    schemaShape[column.name] = validator;
+  });
+
+  return z.object(schemaShape);
 };
