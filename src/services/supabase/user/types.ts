@@ -19,7 +19,7 @@ export interface User {
   school_id?: string;
   phone?: string;
   utis_code?: string;
-  is_active?: boolean;
+  is_active: boolean; // Changed from optional to required
   last_login?: string;
   created_at?: string;
   updated_at?: string;
@@ -27,7 +27,7 @@ export interface User {
   role?: string; // Added for backward compatibility
 }
 
-export type UserStatus = 'active' | 'inactive' | string;
+export type UserStatus = 'active' | 'inactive' | 'all' | string;
 
 export interface CreateUserDto {
   email: string;

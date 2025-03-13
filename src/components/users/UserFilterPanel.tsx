@@ -78,19 +78,19 @@ export const UserFilterPanel: React.FC<UserFilterPanelProps> = ({
       />
 
       <SectorFilter 
-        regionId={filters.region_id}
+        regionId={filters.region_id || ''}
         value={filters.sector_id || ''}
         onChange={handleSectorChange}
       />
 
       <SchoolFilter 
-        sectorId={filters.sector_id}
+        sectorId={filters.sector_id || ''}
         value={filters.school_id || ''}
         onChange={handleSchoolChange}
       />
 
       <StatusFilter 
-        value={filters.status as UserStatus || 'all'}
+        value={filters.status || 'all'}
         onChange={handleStatusChange}
       />
 

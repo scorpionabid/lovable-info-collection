@@ -1,19 +1,14 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import React from 'react';
 
-interface FilterHeaderProps {
-  onClose: () => void;
+export interface FilterHeaderProps {
+  title: string; // Add title prop
 }
 
-export const FilterHeader = ({ onClose }: FilterHeaderProps) => {
+export const FilterHeader: React.FC<FilterHeaderProps> = ({ title }) => {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="font-medium text-infoline-dark-blue">Ətraflı Filtrlər</h3>
-      <Button variant="ghost" size="icon" onClick={onClose}>
-        <X className="h-4 w-4" />
-      </Button>
+    <div className="mb-4">
+      <h3 className="text-lg font-medium text-gray-900">{title}</h3>
     </div>
   );
 };

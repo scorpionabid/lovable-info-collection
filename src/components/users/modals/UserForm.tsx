@@ -63,8 +63,6 @@ export const UserForm: React.FC<UserFormProps> = ({
     }
   }, [user]);
   
-  const { handleSubmit } = useUserFormSubmit();
-  
   const onSubmit = async () => {
     // Validate form
     if (!formData.email || !formData.first_name || !formData.last_name || !formData.role_id) {
@@ -130,26 +128,50 @@ export const UserForm: React.FC<UserFormProps> = ({
             
             <TabsContent value="profile" className="space-y-4 py-4">
               <UserProfileTab 
-                formData={formData}
-                updateFormData={updateFormData}
-                isEditMode={isEditMode}
+                form={{
+                  control: {
+                    register: () => ({}),
+                    handleSubmit: (fn) => fn,
+                    formState: { errors: {} },
+                    watch: () => ({}),
+                    setValue: () => {},
+                    getValues: () => ({}),
+                    trigger: () => Promise.resolve(true),
+                    reset: () => {},
+                    setError: () => {},
+                    clearErrors: () => {},
+                    setFocus: () => {}
+                  }
+                }}
+                isEditing={isEditMode}
+                user={user}
+                isCheckingUtisCode={false}
               />
             </TabsContent>
             
             <TabsContent value="role" className="space-y-4 py-4">
               <RoleTab
-                selectedRoleId={formData.role_id}
-                onRoleChange={(roleId) => updateFormData('role_id', roleId)}
-              />
-              
-              <OrganizationSelectionComponent 
-                selectedRoleId={formData.role_id}
-                regionId={formData.region_id}
-                sectorId={formData.sector_id}
-                schoolId={formData.school_id}
-                onRegionChange={(id) => updateFormData('region_id', id)}
-                onSectorChange={(id) => updateFormData('sector_id', id)}
-                onSchoolChange={(id) => updateFormData('school_id', id)}
+                form={{
+                  control: {
+                    register: () => ({}),
+                    handleSubmit: (fn) => fn,
+                    formState: { errors: {} },
+                    watch: () => ({}),
+                    setValue: () => {},
+                    getValues: () => ({}),
+                    trigger: () => Promise.resolve(true),
+                    reset: () => {},
+                    setError: () => {},
+                    clearErrors: () => {},
+                    setFocus: () => {}
+                  }
+                }}
+                roles={[]}
+                regions={[]}
+                sectors={[]}
+                schools={[]}
+                isEditing={isEditMode}
+                user={user}
               />
             </TabsContent>
           </Tabs>

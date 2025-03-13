@@ -1,53 +1,24 @@
+import React from 'react';
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-interface School {
-  id: string;
-  name: string;
+export interface SchoolFilterProps {
+  sectorId: string; // Add sectorId prop
+  value: string; // Add value prop
+  onChange: (value: string) => void; // Add onChange prop
 }
 
-interface SchoolFilterProps {
-  schools: School[];
-  selectedSchool?: string;
-  onChange: (value: string | undefined) => void;
-  isLoading: boolean;
-  disabled: boolean;
-}
-
-export const SchoolFilter = ({ 
-  schools, 
-  selectedSchool, 
-  onChange, 
-  isLoading, 
-  disabled 
-}: SchoolFilterProps) => {
+export const SchoolFilter: React.FC<SchoolFilterProps> = ({ sectorId, value, onChange }) => {
   return (
     <div className="space-y-2">
-      <label htmlFor="school" className="text-sm font-medium text-infoline-dark-gray">
-        Məktəb
-      </label>
-      <Select 
-        value={selectedSchool} 
-        onValueChange={(value) => onChange(value === 'all' ? undefined : value)}
-        disabled={disabled || isLoading}
-      >
-        <SelectTrigger id="school">
-          <SelectValue placeholder="Bütün məktəblər" />
+      <Label htmlFor="school-filter">School</Label>
+      <Select value={value} onValueChange={onChange} disabled={!sectorId}>
+        <SelectTrigger id="school-filter">
+          <SelectValue placeholder="All schools" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Bütün məktəblər</SelectItem>
-          {schools.map((school) => (
-            <SelectItem key={school.id} value={school.id}>
-              {school.name}
-            </SelectItem>
-          ))}
+          <SelectItem value="">All schools</SelectItem>
+          {/* Add your schools dynamically here */}
         </SelectContent>
       </Select>
     </div>

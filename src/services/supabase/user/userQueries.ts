@@ -227,28 +227,48 @@ export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 
       return { data: [], error: new Error('No users provided') };
     }
     
-    // Map users to the correct structure expected by Supabase
-    const validUsers = users.map(user => ({
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      role_id: user.role_id || '',
-      region_id: user.region_id,
-      sector_id: user.sector_id,
-      school_id: user.school_id,
-      phone: user.phone,
-      utis_code: user.utis_code,
-      is_active: user.is_active !== undefined ? user.is_active : true
-    }));
+    // Process each user individually to avoid bulk insert issues
+    const results = [];
+    const errors = [];
     
-    // Use type assertion to handle the type mismatch
-    const { data, error } = await supabase
-      .from('users')
-      .insert(validUsers as any);
+    for (const user of users) {
+      // Map user to the correct structure expected by Supabase
+      const userData = {
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role_id: user.role_id || '',
+        region_id: user.region_id,
+        sector_id: user.sector_id,
+        school_id: user.school_id,
+        phone: user.phone,
+        utis_code: user.utis_code,
+        is_active: user.is_active !== undefined ? user.is_active : true
+      };
+      
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .insert(userData)
+          .select();
+          
+        if (error) {
+          console.error(`Error creating user ${userData.email}:`, error);
+          errors.push({ user: userData, error });
+        } else if (data) {
+          results.push(data[0]);
+        }
+      } catch (err) {
+        console.error(`Exception creating user ${userData.email}:`, err);
+        errors.push({ user: userData, error: err });
+      }
+    }
     
-    if (error) throw error;
-    
-    return { data, error: null };
+    return { 
+      data: results, 
+      error: errors.length > 0 ? new Error(`${errors.length} users failed to create`) : null,
+      errorDetails: errors
+    };
   } catch (error) {
     console.error('Error creating users:', error);
     return { data: null, error };

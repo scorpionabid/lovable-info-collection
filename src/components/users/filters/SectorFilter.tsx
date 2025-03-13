@@ -1,53 +1,24 @@
+import React from 'react';
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import React from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-interface Sector {
-  id: string;
-  name: string;
+export interface SectorFilterProps {
+  regionId: string; // Add regionId prop
+  value: string; // Add value prop
+  onChange: (value: string) => void; // Add onChange prop
 }
 
-interface SectorFilterProps {
-  sectors: Sector[];
-  selectedSector?: string;
-  onChange: (value: string | undefined) => void;
-  isLoading: boolean;
-  disabled: boolean;
-}
-
-export const SectorFilter = ({ 
-  sectors, 
-  selectedSector, 
-  onChange, 
-  isLoading, 
-  disabled 
-}: SectorFilterProps) => {
+export const SectorFilter: React.FC<SectorFilterProps> = ({ regionId, value, onChange }) => {
   return (
     <div className="space-y-2">
-      <label htmlFor="sector" className="text-sm font-medium text-infoline-dark-gray">
-        Sektor
-      </label>
-      <Select 
-        value={selectedSector} 
-        onValueChange={(value) => onChange(value === 'all' ? undefined : value)}
-        disabled={disabled || isLoading}
-      >
-        <SelectTrigger id="sector">
-          <SelectValue placeholder="Bütün sektorlar" />
+      <Label htmlFor="sector-filter">Sector</Label>
+      <Select value={value} onValueChange={onChange} disabled={!regionId}>
+        <SelectTrigger id="sector-filter">
+          <SelectValue placeholder="All sectors" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Bütün sektorlar</SelectItem>
-          {sectors.map((sector) => (
-            <SelectItem key={sector.id} value={sector.id}>
-              {sector.name}
-            </SelectItem>
-          ))}
+          <SelectItem value="">All sectors</SelectItem>
+          {/* Add your sectors dynamically here */}
         </SelectContent>
       </Select>
     </div>

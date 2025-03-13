@@ -1,19 +1,23 @@
 
-import React from "react";
+import React from 'react';
 import { Button } from "@/components/ui/button";
+import { LoadingIndicator } from './LoadingIndicator';
 
-interface FilterButtonsProps {
-  onReset: () => void;
-  onClose: () => void;
+export interface FilterButtonsProps {
   onApply: () => void;
+  onReset: () => void;
+  isLoading: boolean; // Add isLoading prop
 }
 
-export const FilterButtons = ({ onReset, onClose, onApply }: FilterButtonsProps) => {
+export const FilterButtons: React.FC<FilterButtonsProps> = ({ onApply, onReset, isLoading }) => {
   return (
-    <div className="flex justify-end gap-2 mt-4">
-      <Button variant="outline" onClick={onReset}>Sıfırla</Button>
-      <Button variant="outline" onClick={onClose}>Ləğv et</Button>
-      <Button className="bg-infoline-blue hover:bg-infoline-dark-blue" onClick={onApply}>Tətbiq et</Button>
+    <div className="flex space-x-2 pt-4">
+      <Button variant="outline" onClick={onReset} disabled={isLoading}>
+        Reset
+      </Button>
+      <Button onClick={onApply} disabled={isLoading}>
+        {isLoading ? <LoadingIndicator /> : 'Apply Filters'}
+      </Button>
     </div>
   );
 };

@@ -1,6 +1,92 @@
-
 import { z } from 'zod';
-import { CategoryColumn } from '@/services/supabase/category/types';
+
+// Helper function for number validations
+const applyNumberValidations = (schema: z.ZodNumber, validations: any) => {
+  let updatedSchema = schema;
+  
+  if (validations.min !== undefined && typeof validations.min === 'number') {
+    updatedSchema = updatedSchema.min(validations.min);
+  }
+  
+  if (validations.max !== undefined && typeof validations.max === 'number') {
+    updatedSchema = updatedSchema.max(validations.max);
+  }
+  
+  return updatedSchema;
+};
+
+// Helper function for string validations
+const applyStringValidations = (schema: z.ZodString, validations: any) => {
+  let updatedSchema = schema;
+  
+  if (validations.min !== undefined && typeof validations.min === 'number') {
+    updatedSchema = updatedSchema.min(validations.min);
+  }
+  
+  if (validations.max !== undefined && typeof validations.max === 'number') {
+    updatedSchema = updatedSchema.max(validations.max);
+  }
+  
+  if (validations.regex !== undefined && validations.regex instanceof RegExp) {
+    updatedSchema = updatedSchema.regex(validations.regex);
+  }
+  
+  return updatedSchema;
+};
+
+// Helper function to create a schema based on column type
+export const createSchemaForColumn = (column: any) => {
+  if (!column || !column.type) {
+    return z.any();
+  }
+  
+  let schema;
+  
+  switch (column.type.toLowerCase()) {
+    case 'text':
+    case 'string':
+      schema = z.string();
+      if (column.validations) {
+        schema = applyStringValidations(schema, column.validations);
+      }
+      break;
+      
+    case 'number':
+    case 'integer':
+      schema = z.number();
+      if (column.validations) {
+        schema = applyNumberValidations(schema, column.validations);
+      }
+      break;
+      
+    case 'boolean':
+      schema = z.boolean();
+      break;
+      
+    case 'date':
+      schema = z.string().refine((val) => !isNaN(Date.parse(val)), {
+        message: "Invalid date format",
+      });
+      break;
+      
+    case 'select':
+      schema = z.string();
+      if (column.validations && column.validations.options) {
+        schema = z.enum(column.validations.options);
+      }
+      break;
+      
+    default:
+      schema = z.any();
+  }
+  
+  // Handle required fields
+  if (column.required) {
+    return schema;
+  } else {
+    return schema.optional();
+  }
+};
 
 export type ExtendedColumnData = CategoryColumn & {
   type: string;
