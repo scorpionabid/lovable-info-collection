@@ -18,6 +18,7 @@ export interface User {
   last_name: string;
   role_id: string;
   roles?: Role;
+  role?: string; // Add backwards compatibility field
   region_id?: string;
   sector_id?: string;
   school_id?: string;
@@ -29,13 +30,17 @@ export interface User {
   last_login?: string;
 }
 
+// Define the UserStatus type
+export type UserStatus = 'active' | 'inactive' | 'all';
+
 // User Filters interface
 export interface UserFilters {
   role?: string;
+  role_id?: string; // Add this property
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  status?: 'active' | 'inactive' | 'all';
+  status?: UserStatus;
   search?: string;
 }
 
@@ -54,6 +59,9 @@ export interface CreateUserDto {
   is_active: boolean; // Making this required to match User
   password?: string; // Additional field for creation
 }
+
+// Define UpdateUserDto
+export interface UpdateUserDto extends Partial<CreateUserDto> {}
 
 // Define any other types needed
 export type QueryResult<T> = Promise<PostgrestResponse<T>>;

@@ -118,7 +118,7 @@ export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
     // We don't include 'id' in the insert as Supabase will generate it
     const { data, error } = await supabase
       .from('users')
-      .insert(userDataForInsert)
+      .insert([userDataForInsert]) // Wrap in array for proper typing
       .select(`
         *,
         roles (

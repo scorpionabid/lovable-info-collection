@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
@@ -115,7 +114,7 @@ export const UsersOverview = () => {
     exportUsers(users as any);
   };
 
-  // Add a user type adapter function
+  // Fix the adaptUserData function to properly map role/roles
   const adaptUserData = (userData: any): User => {
     return {
       id: userData.id,
@@ -133,7 +132,7 @@ export const UsersOverview = () => {
       updated_at: userData.updated_at,
       last_login: userData.last_login,
       roles: userData.roles,
-      role: userData.roles ? userData.roles.name : (userData.role || '')
+      role: userData.roles ? userData.roles.name : undefined
     };
   };
 

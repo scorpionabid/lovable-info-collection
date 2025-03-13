@@ -8,7 +8,7 @@ import { UserProfileTab } from "./UserProfileTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState } from "./LoadingState";
 import userService from "@/services/supabase/user";
-import { CreateUserDto, UpdateUserDto, User } from "@/services/supabase/user/types";
+import { CreateUserDto, User, UpdateUserDto } from "@/services/supabase/user/types";
 import { useUserFormSubmit } from "../hooks/useUserFormSubmit";
 import { useUtisCodeValidation } from "../hooks/useUtisCodeValidation";
 
