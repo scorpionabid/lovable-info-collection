@@ -115,10 +115,10 @@ export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
       is_active: userData.is_active !== undefined ? userData.is_active : true
     };
     
-    // We don't include 'id' in the insert as Supabase will generate it
+    // Insert as array for proper typing and pass userDataForInsert as the array's only element
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert]) // Wrap in array for proper typing
+      .insert([userDataForInsert])
       .select(`
         *,
         roles (
