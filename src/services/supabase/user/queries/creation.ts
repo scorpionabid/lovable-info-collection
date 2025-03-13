@@ -1,6 +1,6 @@
 
 import { supabase } from '../../supabaseClient';
-import { User, CreateUserDto } from '../types';
+import { User, CreateUserDto, MultiUserCreationResult } from '../types';
 
 export const createUser = async (userData: CreateUserDto) => {
   try {
@@ -21,7 +21,7 @@ export const createUser = async (userData: CreateUserDto) => {
     // Insert the user with the correct array format
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert])
+      .insert(userDataForInsert) // No need to wrap in array - Supabase handles this
       .select(`
         *,
         roles (
@@ -54,15 +54,15 @@ export const createUser = async (userData: CreateUserDto) => {
   }
 };
 
-export const createUsers = async (users: Array<CreateUserDto>) => {
+export const createUsers = async (users: Array<CreateUserDto>): Promise<MultiUserCreationResult> => {
   try {
     if (!users || users.length === 0) {
       return { data: [], error: new Error('No users provided') };
     }
     
     // Process each user individually to avoid bulk insert issues
-    const results = [];
-    const errors = [];
+    const results: User[] = [];
+    const errors: { user: CreateUserDto; error: any }[] = [];
     
     for (const user of users) {
       try {

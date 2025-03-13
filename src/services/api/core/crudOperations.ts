@@ -59,8 +59,10 @@ export const createItem = async (tableName: string, item: any) => {
   return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
-    const { data, error } = await query.insert([item]).select().single();
-    return { success: !error, data, error };
+    // Wrap the item in an array to ensure it's handled correctly by Supabase
+    const { data, error } = await query.insert([item]).select();
+    // Return the first item from the array if successful
+    return { success: !error, data: data && data.length > 0 ? data[0] : null, error };
   });
 };
 
@@ -68,8 +70,9 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
   return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
-    const { data, error } = await query.update(item).eq('id', id).select().single();
-    return { success: !error, data, error };
+    const { data, error } = await query.update(item).eq('id', id).select();
+    // Return the first item from the array if successful
+    return { success: !error, data: data && data.length > 0 ? data[0] : null, error };
   });
 };
 
