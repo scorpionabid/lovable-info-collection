@@ -46,7 +46,6 @@ export interface UserFilters {
 
 // CreateUserDto should mirror User but make id optional
 export interface CreateUserDto {
-  id?: string; // Optional because we don't need it for creation
   email: string;
   first_name: string;
   last_name: string;
@@ -58,6 +57,7 @@ export interface CreateUserDto {
   utis_code?: string;
   is_active: boolean;
   password?: string; // Additional field for creation
+  id?: string; // Make id optional for creation
 }
 
 // Define UpdateUserDto
