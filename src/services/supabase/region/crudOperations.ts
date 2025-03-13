@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { Region } from '../supabaseClient';
 
@@ -84,9 +83,38 @@ export const archiveRegion = async (id: string) => {
   }
 };
 
+// Delete a region
+export const deleteRegion = async (id: string): Promise<void> => {
+  try {
+    // First, check if the region has any associated sectors
+    const { data: sectorsData, error: sectorsError } = await supabase
+      .from('sectors')
+      .select('id')
+      .eq('region_id', id);
+
+    if (sectorsError) throw sectorsError;
+
+    if (sectorsData && sectorsData.length > 0) {
+      throw new Error('Cannot delete region with associated sectors. Remove the sectors first.');
+    }
+
+    // Then delete the region
+    const { error } = await supabase
+      .from('regions')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error deleting region:', error);
+    throw error;
+  }
+};
+
 export default {
   createRegion,
   getRegionById,
   updateRegion,
-  archiveRegion
+  archiveRegion,
+  deleteRegion
 };

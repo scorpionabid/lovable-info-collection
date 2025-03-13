@@ -1,5 +1,5 @@
 
-import { User } from "@/services/api/userService";
+import { User } from "@/services/supabase/user/types";
 
 export const getEntityName = (user: User) => {
   if (user.school_id) return "Məktəb";

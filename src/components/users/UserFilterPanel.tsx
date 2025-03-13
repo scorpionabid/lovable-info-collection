@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { UserFilters } from "@/services/api/userService";
+import { UserFilters } from "@/services/supabase/user/types";
 import { FilterHeader } from "./filters/FilterHeader";
 import { FilterButtons } from "./filters/FilterButtons";
 import { SearchFilter } from "./filters/SearchFilter";
@@ -52,8 +52,8 @@ export const UserFilterPanel = ({ onClose, onApplyFilters, currentFilters = {} }
         
         <RoleFilter 
           roles={roles} 
-          selectedRole={filters.role} 
-          onChange={(value) => updateFilters('role', value)}
+          selectedRole={filters.roleId} 
+          onChange={(value) => updateFilters('roleId', value)}
           isLoading={isLoading}
         />
         
@@ -74,8 +74,8 @@ export const UserFilterPanel = ({ onClose, onApplyFilters, currentFilters = {} }
         
         <SchoolFilter 
           schools={schools}
-          selectedSchool={filters.school_id}
-          onChange={(value) => updateFilters('school_id', value)}
+          selectedSchool={filters.schoolId}
+          onChange={(value) => updateFilters('schoolId', value)}
           isLoading={isLoading}
           disabled={!selectedSector || schools.length === 0}
         />

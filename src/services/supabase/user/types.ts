@@ -8,6 +8,12 @@ export interface UserFilters {
   status?: 'active' | 'inactive';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  // For backward compatibility
+  role?: string;
+  role_id?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
 }
 
 export interface User {
@@ -31,4 +37,6 @@ export interface User {
     description?: string;
     permissions: string[];
   };
+  // For backward compatibility
+  role?: string;
 }

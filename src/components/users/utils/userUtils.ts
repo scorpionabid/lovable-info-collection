@@ -1,5 +1,5 @@
 
-import { User } from "@/services/api/userService";
+import { User } from "@/services/supabase/user/types";
 import { UserRole } from "@/contexts/AuthContext";
 
 export const sortUsers = (users: User[], sortField: string | null, sortDirection: 'asc' | 'desc') => {

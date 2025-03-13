@@ -23,9 +23,19 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
     const fetchNotifications = async () => {
       try {
         setLoading(true);
-        const result = await notificationService.getNotifications();
-        setNotifications(result.notifications);
-        setUnreadCount(result.notifications.filter(n => !n.is_read).length);
+        const { data: authUser } = await supabase.auth.getUser();
+        const userId = authUser?.user?.id;
+        
+        if (!userId) {
+          console.error("No authenticated user found");
+          return;
+        }
+        
+        const result = await notificationService.getNotifications(userId);
+        if (result.data) {
+          setNotifications(result.data);
+          setUnreadCount(result.data.filter(n => !n.is_read).length);
+        }
       } catch (error) {
         console.error('Error fetching notifications:', error);
         toast({
@@ -62,7 +72,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
             
             toast({
               title: newNotification.title,
-              description: newNotification.message,
+              description: newNotification.body,
             });
           }
         )
@@ -85,7 +95,15 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead();
+      const { data: authUser } = await supabase.auth.getUser();
+      const userId = authUser?.user?.id;
+      
+      if (!userId) {
+        console.error("No authenticated user found");
+        return;
+      }
+      
+      await notificationService.markAllNotificationsAsRead();
       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
       toast({
@@ -104,7 +122,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await notificationService.markAsRead(id);
+      await notificationService.markNotificationAsRead(id);
       setNotifications(
         notifications.map(n => 
           n.id === id ? { ...n, is_read: true } : n
@@ -192,7 +210,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
               >
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.type)}
+                    {getNotificationIcon(notification.notification_type)}
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between">
@@ -211,20 +229,20 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
                       )}
                     </div>
                     <p className="text-sm text-infoline-dark-gray mt-1">
-                      {notification.message}
+                      {notification.body}
                     </p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs text-infoline-gray">
                         {format(new Date(notification.created_at), 'dd.MM.yyyy HH:mm')}
                       </span>
-                      {notification.link && (
+                      {notification.action_url && (
                         <Button
                           variant="link"
                           size="sm"
                           className="h-6 p-0 text-xs text-infoline-blue"
                           asChild
                         >
-                          <a href={notification.link}>Bax</a>
+                          <a href={notification.action_url}>Bax</a>
                         </Button>
                       )}
                     </div>

@@ -1,12 +1,13 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import userService, { UserFilters } from "@/services/api/userService";
+import userService from "@/services/api/userService";
+import { UserFilters } from "@/services/supabase/user/types";
 
 export const useFilterData = (initialFilters: UserFilters = {}) => {
   const [filters, setFilters] = useState<UserFilters>(initialFilters);
-  const [selectedRegion, setSelectedRegion] = useState<string | undefined>(initialFilters.region_id);
-  const [selectedSector, setSelectedSector] = useState<string | undefined>(initialFilters.sector_id);
+  const [selectedRegion, setSelectedRegion] = useState<string | undefined>(initialFilters.regionId);
+  const [selectedSector, setSelectedSector] = useState<string | undefined>(initialFilters.sectorId);
 
   // Fetch filter data
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
@@ -49,12 +50,12 @@ export const useFilterData = (initialFilters: UserFilters = {}) => {
     setSelectedRegion(regionId);
     
     // Reset sector and school if region changes
-    if (regionId !== filters.region_id) {
+    if (regionId !== filters.regionId) {
       setFilters(prev => ({
         ...prev,
-        region_id: regionId,
-        sector_id: undefined,
-        school_id: undefined
+        regionId: regionId,
+        sectorId: undefined,
+        schoolId: undefined
       }));
       setSelectedSector(undefined);
     }
@@ -65,11 +66,11 @@ export const useFilterData = (initialFilters: UserFilters = {}) => {
     setSelectedSector(sectorId);
     
     // Reset school if sector changes
-    if (sectorId !== filters.sector_id) {
+    if (sectorId !== filters.sectorId) {
       setFilters(prev => ({
         ...prev,
-        sector_id: sectorId,
-        school_id: undefined
+        sectorId: sectorId,
+        schoolId: undefined
       }));
     }
   };

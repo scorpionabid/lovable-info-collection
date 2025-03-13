@@ -42,8 +42,8 @@ export interface Category {
   created_at: string;
   updated_at: string;
   created_by?: string;
-  columns?: number;
-  completionRate?: number;
+  columns?: number | CategoryColumn[];
+  completionRate: number;
   createdAt?: string;
 }
 
@@ -53,7 +53,7 @@ export interface CategoryColumn {
   type: string;
   required: boolean;
   description?: string;
-  options?: string[];
+  options?: string[] | Json;
   order: number;
   category_id?: string;
   created_at?: string;

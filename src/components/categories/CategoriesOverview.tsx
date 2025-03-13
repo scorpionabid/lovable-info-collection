@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,14 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
 import * as categoryService from '@/services/supabase/category';
-import { Category } from '@/services/supabase/category';
+import { Category, CategoryFilter } from '@/services/supabase/category/types';
 import { CategoryType } from './CategoryDetailView';
 
 const convertToCategory = (category: Category): CategoryType => {
   return {
     ...category,
     deadline: '', // Set a default value for deadline
-    columns: typeof category.columns === 'number' ? [] : category.columns
+    columns: typeof category.columns === 'number' ? [] : category.columns || [],
+    description: category.description || '', // Ensure description is not optional
+    completionRate: category.completionRate || 0 // Ensure completionRate is not optional
   };
 };
 
@@ -83,7 +86,7 @@ export const CategoriesOverview = () => {
     return () => clearTimeout(timeoutId);
   }, [localSearchQuery]);
 
-  const handleFilterChange = (filters: categoryService.CategoryFilter) => {
+  const handleFilterChange = (filters: CategoryFilter) => {
     const newParams = new URLSearchParams();
     
     if (filters.search) newParams.set('search', filters.search);

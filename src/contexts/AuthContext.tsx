@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService, { LoginCredentials } from '@/services/api/authService';
@@ -135,7 +134,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               first_name: userData.first_name,
               last_name: userData.last_name,
               role: userRole,
-              role_id: userData.role_id,
+              role_id: userData.role_id || userData.roles?.id,
               region_id: userData.region_id,
               sector_id: userData.sector_id,
               school_id: userData.school_id,
@@ -188,9 +187,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           last_name: userData.last_name,
           role: userRole,
           role_id: role_id,
-          region_id: userData.region_id || undefined,
-          sector_id: userData.sector_id || undefined,
-          school_id: userData.school_id || undefined,
+          region_id: userData.region_id,
+          sector_id: userData.sector_id,
+          school_id: userData.school_id,
           roles: userData.roles,
         });
         

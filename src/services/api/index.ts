@@ -1,138 +1,167 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// This is a generic API service for handling common CRUD operations
-
-// Generic fetch function with pagination and filtering
-export const fetchItems = async (
-  tableName: string, 
-  page = 1, 
-  pageSize = 10, 
-  filter = {}, 
-  sortColumn = 'created_at', 
-  sortDirection = 'desc'
-) => {
-  try {
-    // Calculate offset
-    const offset = (page - 1) * pageSize;
-    
-    // Build query
-    // This is an example of using string interpolation for table names
-    // This should be safe as the tableName comes from our code, not user input
-    // However, this might cause TypeScript errors since the table might not be recognized
-    let query = supabase
-      .from(tableName as any)
-      .select('*', { count: 'exact' });
-    
-    // Apply filters
-    Object.entries(filter).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        if (key.includes('.')) {
-          // Handle relationship filters
-          const [relation, field] = key.split('.');
-          query = query.eq(`${relation}.${field}`, value);
-        } else if (typeof value === 'string' && value.includes('%')) {
-          // Handle LIKE queries
-          query = query.ilike(key, value);
-        } else {
-          // Handle exact matches
-          query = query.eq(key, value);
+/**
+ * Generic API service for CRUD operations
+ */
+export const api = {
+  fetchItems: async (tableName: string, page = 1, pageSize = 10, filter = {}, sortColumn = '', sortDirection = 'desc') => {
+    try {
+      // Calculate the range for pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      
+      // Build the query
+      let query = supabase
+        .from(tableName)
+        .select('*', { count: 'exact' });
+      
+      // Apply filters
+      Object.entries(filter).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          if (typeof value === 'string' && value.includes('%')) {
+            query = query.ilike(key, value);
+          } else {
+            query = query.eq(key, value);
+          }
         }
+      });
+      
+      // Apply sorting
+      if (sortColumn) {
+        query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+      } else {
+        // Default sort is by creation date
+        query = query.order('created_at', { ascending: false });
       }
-    });
-    
-    // Apply sorting
-    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
-    
-    // Apply pagination
-    query = query.range(offset, offset + pageSize - 1);
-    
-    // Execute query
-    const { data, count, error } = await query;
-    
-    if (error) throw error;
-    
-    return { data, count, error: null };
-  } catch (error) {
-    console.error(`Error fetching items from ${tableName}:`, error);
-    return { data: null, count: 0, error };
+      
+      // Apply pagination
+      query = query.range(from, to);
+      
+      // Execute query
+      const { data, count, error } = await query;
+      
+      if (error) throw error;
+      
+      return { data, count: count || 0, error: null };
+    } catch (error) {
+      console.error(`Error fetching ${tableName}:`, error);
+      return { data: [], count: 0, error };
+    }
+  },
+
+  getItemById: async (tableName: string, id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error(`Error fetching ${tableName} item:`, error);
+      return { data: null, error };
+    }
+  },
+
+  // HTTP method-like interfaces for better readability
+  get: async (endpoint: string, params = {}) => {
+    // For endpoints like 'regions', 'categories/123/columns', etc.
+    try {
+      const [tableName, id, relation] = endpoint.split('/');
+      
+      if (!id && !relation) {
+        // Fetching a list
+        return api.fetchItems(tableName, params.page, params.pageSize, params.filter, params.sortColumn, params.sortDirection);
+      } else if (id && !relation) {
+        // Fetching a single item
+        return api.getItemById(tableName, id);
+      } else if (id && relation) {
+        // Fetching related items
+        const { data: parent, error: parentError } = await api.getItemById(tableName, id);
+        
+        if (parentError) throw parentError;
+        
+        const { data: related, error: relatedError } = await supabase
+          .from(relation)
+          .select('*')
+          .eq(`${tableName.slice(0, -1)}_id`, id);
+        
+        if (relatedError) throw relatedError;
+        
+        return { data: { parent, related }, error: null };
+      }
+    } catch (error) {
+      console.error(`Error in GET request for ${endpoint}:`, error);
+      return { data: null, error };
+    }
+  },
+
+  post: async (endpoint: string, data = {}) => {
+    try {
+      const tableName = endpoint.split('/')[0];
+      
+      const { data: result, error } = await supabase
+        .from(tableName)
+        .insert(data)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: result, error: null };
+    } catch (error) {
+      console.error(`Error in POST request for ${endpoint}:`, error);
+      return { data: null, error };
+    }
+  },
+
+  put: async (endpoint: string, data = {}) => {
+    try {
+      const [tableName, id] = endpoint.split('/');
+      
+      if (!id) {
+        throw new Error('ID is required for PUT requests');
+      }
+      
+      const { data: result, error } = await supabase
+        .from(tableName)
+        .update(data)
+        .eq('id', id)
+        .select();
+      
+      if (error) throw error;
+      
+      return { data: result, error: null };
+    } catch (error) {
+      console.error(`Error in PUT request for ${endpoint}:`, error);
+      return { data: null, error };
+    }
+  },
+
+  delete: async (endpoint: string) => {
+    try {
+      const [tableName, id] = endpoint.split('/');
+      
+      if (!id) {
+        throw new Error('ID is required for DELETE requests');
+      }
+      
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      return { success: true, error: null };
+    } catch (error) {
+      console.error(`Error in DELETE request for ${endpoint}:`, error);
+      return { success: false, error };
+    }
   }
 };
 
-// Generic get by ID
-export const getItemById = async (tableName: string, id: string) => {
-  try {
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    
-    return { data, error: null };
-  } catch (error) {
-    console.error(`Error fetching item from ${tableName}:`, error);
-    return { data: null, error };
-  }
-};
-
-// Generic create
-export const createItem = async (tableName: string, item: Record<string, any>) => {
-  try {
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .insert(item)
-      .select();
-    
-    if (error) throw error;
-    
-    return { data, error: null };
-  } catch (error) {
-    console.error(`Error creating item in ${tableName}:`, error);
-    return { data: null, error };
-  }
-};
-
-// Generic update
-export const updateItem = async (tableName: string, id: string, updates: Record<string, any>) => {
-  try {
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .update(updates)
-      .eq('id', id)
-      .select();
-    
-    if (error) throw error;
-    
-    return { data, error: null };
-  } catch (error) {
-    console.error(`Error updating item in ${tableName}:`, error);
-    return { data: null, error };
-  }
-};
-
-// Generic delete
-export const deleteItem = async (tableName: string, id: string) => {
-  try {
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error(`Error deleting item from ${tableName}:`, error);
-    return { success: false, error };
-  }
-};
-
-export default {
-  fetchItems,
-  getItemById,
-  createItem,
-  updateItem,
-  deleteItem
-};
+export default api;
