@@ -65,3 +65,16 @@ export interface UpdateUserDto extends Partial<CreateUserDto> {}
 
 // Define any other types needed
 export type QueryResult<T> = Promise<PostgrestResponse<T>>;
+
+// Define error structure for multi-user creation
+export interface UserCreationError {
+  user: CreateUserDto;
+  error: any;
+}
+
+// Define multi-user creation result
+export interface MultiUserCreationResult {
+  data: User[] | null;
+  error: Error | null;
+  errorDetails?: UserCreationError[];
+}

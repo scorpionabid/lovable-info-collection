@@ -1,5 +1,6 @@
 
 import { getTableQuery } from '../utils/tableOperations';
+import { safeQuery } from '../utils/helpers';
 
 // Type-safe querying with hardcoded table names to prevent errors
 export const fetchItems = async (
@@ -10,7 +11,7 @@ export const fetchItems = async (
   sortColumn = '',
   sortDirection = 'asc'
 ) => {
-  try {
+  return safeQuery(async () => {
     // Get the query builder for this table
     let query = getTableQuery(tableName).select('*');
 
@@ -37,60 +38,46 @@ export const fetchItems = async (
       });
     }
 
-    const { data, error, count } = await query.select('*', { count: 'exact' });
+    // Use count option for exact count
+    const { data, error, count } = await query;
     return { data, count: count || 0, error };
-  } catch (error) {
-    console.error(`Error fetching items from ${tableName}:`, error);
-    return { data: [], count: 0, error };
-  }
+  });
 };
 
 export const getItemById = async (tableName: string, id: string) => {
   if (!id) return { data: null, error: 'No ID provided' };
 
-  try {
+  return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName).select('*');
     const { data, error } = await query.eq('id', id).single();
     return { data, error };
-  } catch (error) {
-    console.error(`Error getting item by id from ${tableName}:`, error);
-    return { data: null, error };
-  }
+  });
 };
 
 export const createItem = async (tableName: string, item: any) => {
-  try {
+  return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
-    const { data, error } = await query.insert(item).select().single();
+    const { data, error } = await query.insert([item]).select().single();
     return { success: !error, data, error };
-  } catch (error) {
-    console.error(`Error creating item in ${tableName}:`, error);
-    return { success: false, data: null, error };
-  }
+  });
 };
 
 export const updateItem = async (tableName: string, id: string, item: any) => {
-  try {
+  return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
     const { data, error } = await query.update(item).eq('id', id).select().single();
     return { success: !error, data, error };
-  } catch (error) {
-    console.error(`Error updating item in ${tableName}:`, error);
-    return { success: false, data: null, error };
-  }
+  });
 };
 
 export const deleteItem = async (tableName: string, id: string) => {
-  try {
+  return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
     const { error } = await query.delete().eq('id', id);
     return { success: !error, data: null, error };
-  } catch (error) {
-    console.error(`Error deleting item from ${tableName}:`, error);
-    return { success: false, data: null, error };
-  }
+  });
 };

@@ -9,8 +9,9 @@ import {
   deleteUser,
   blockUser,
   activateUser,
-  resetPassword
-} from './userQueries';
+  resetPassword,
+  createUsers
+} from './queries';
 import {
   getRegions,
   getSectors,
@@ -29,6 +30,7 @@ const userService = {
   blockUser,
   activateUser,
   resetPassword,
+  createUsers,
   
   // Entity information
   getRegions,
