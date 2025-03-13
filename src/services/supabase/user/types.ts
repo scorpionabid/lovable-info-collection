@@ -13,13 +13,13 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role_id: string; // Changed from optional to required to match API User
+  role_id: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
   phone?: string;
   utis_code?: string;
-  is_active: boolean; // Changed from optional to required
+  is_active: boolean;
   last_login?: string;
   created_at?: string;
   updated_at?: string;
@@ -40,7 +40,7 @@ export interface CreateUserDto {
   school_id?: string;
   phone?: string;
   utis_code?: string;
-  is_active?: boolean;
+  is_active: boolean; // Changed from optional to required
 }
 
 export interface UpdateUserDto {

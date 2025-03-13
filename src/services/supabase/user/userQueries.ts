@@ -1,6 +1,6 @@
 
 import { supabase } from '../supabaseClient';
-import { User, UserFilters } from './types';
+import { User, UserFilters, CreateUserDto } from './types';
 
 export const getUsers = async (filters?: UserFilters) => {
   try {
@@ -222,7 +222,7 @@ export const resetPassword = async (id: string) => {
   }
 };
 
-export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 'updated_at'>>) => {
+export const createUsers = async (users: Array<Omit<CreateUserDto, 'id'>>) => {
   try {
     if (!users || users.length === 0) {
       return { data: [], error: new Error('No users provided') };
@@ -234,28 +234,20 @@ export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 
     
     for (const user of users) {
       try {
-        // Insert one record at a time to handle the requirements of the Supabase API
-        const { data, error } = await supabase
-          .from('users')
-          .insert({
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            role_id: user.role_id,
-            region_id: user.region_id,
-            sector_id: user.sector_id,
-            school_id: user.school_id,
-            phone: user.phone,
-            utis_code: user.utis_code,
-            is_active: user.is_active !== undefined ? user.is_active : true
-          })
-          .select();
+        // Ensure is_active is defined
+        const userWithDefaults = {
+          ...user,
+          is_active: user.is_active !== undefined ? user.is_active : true
+        };
+        
+        // Insert one record at a time with proper type handling
+        const { data, error } = await createUser(userWithDefaults as Omit<User, 'id' | 'created_at'>);
           
         if (error) {
           console.error(`Error creating user ${user.email}:`, error);
           errors.push({ user, error });
         } else if (data) {
-          results.push(data[0]);
+          results.push(data);
         }
       } catch (err) {
         console.error(`Exception creating user ${user.email}:`, err);

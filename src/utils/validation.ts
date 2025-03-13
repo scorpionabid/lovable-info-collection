@@ -1,23 +1,17 @@
-
 import { z } from 'zod';
 
 interface CategoryColumn {
   id: string;
   name: string;
-  data_type: string;
+  type: string;
   required: boolean;
-  min_value?: number | null;
-  max_value?: number | null;
-  regex_pattern?: string | null;
-  min_length?: number | null;
-  max_length?: number | null;
-  options?: string[] | null;
-  category_id: string;
+  options?: any;
+  description?: string;
 }
 
 export const generateSchemaFromColumn = (column: any) => {
   const { 
-    data_type, 
+    type, 
     required,
     min_value = null,
     max_value = null,
@@ -29,7 +23,7 @@ export const generateSchemaFromColumn = (column: any) => {
 
   let schema;
 
-  switch (data_type) {
+  switch (type) {
     case 'string':
       schema = z.string();
       if (min_length !== null) {
@@ -75,11 +69,52 @@ export const generateSchemaFromColumn = (column: any) => {
   return required ? schema : schema.optional().nullable();
 };
 
-export const generateValidationSchema = (columns: CategoryColumn[]) => {
+export const generateValidationSchema = (fields: any[]): z.ZodObject<any> => {
   const schemaObj: Record<string, z.ZodTypeAny> = {};
 
-  columns.forEach(column => {
-    schemaObj[column.id] = generateSchemaFromColumn(column);
+  fields.forEach((field) => {
+    let fieldSchema: z.ZodTypeAny;
+
+    switch (field.type) {
+      case 'text':
+        fieldSchema = z.string();
+        if (field.required) {
+          fieldSchema = fieldSchema.min(1, { message: `${field.name} alanı zorunludur` });
+        } else {
+          fieldSchema = fieldSchema.optional().or(z.literal(''));
+        }
+        break;
+
+      case 'number':
+        fieldSchema = z.number().or(z.string().transform((val) => Number(val) || 0));
+        break;
+
+      case 'email':
+        fieldSchema = z.string().email();
+        break;
+
+      case 'date':
+        fieldSchema = z.string().or(z.date());
+        break;
+
+      case 'select':
+        if (field.options && Array.isArray(field.options)) {
+          fieldSchema = z.string();
+          if (field.required) {
+            fieldSchema = fieldSchema.min(1, { message: `${field.name} seçilmelidir` });
+          } else {
+            fieldSchema = fieldSchema.optional().or(z.literal(''));
+          }
+        } else {
+          fieldSchema = z.string().optional().or(z.literal(''));
+        }
+        break;
+
+      default:
+        fieldSchema = z.string().optional().or(z.literal(''));
+    }
+
+    schemaObj[field.id] = fieldSchema;
   });
 
   return z.object(schemaObj);

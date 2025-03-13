@@ -39,6 +39,7 @@ export const useOrganizationSelection = ({
   const [selectedRole, setSelectedRole] = useState(user?.role_id || "");
   const [selectedRegion, setSelectedRegion] = useState(user?.region_id || "");
   const [selectedSector, setSelectedSector] = useState(user?.sector_id || "");
+  const [selectedSchool, setSelectedSchool] = useState(user?.school_id || "");
 
   // Get the selected role details
   const getRoleById = (roleId: string) => {
@@ -80,11 +81,20 @@ export const useOrganizationSelection = ({
     setSelectedRegion(value);
     // Reset sector when region changes
     setSelectedSector("");
+    // Reset school when region changes
+    setSelectedSchool("");
   };
 
   // Handle sector selection
   const handleSectorChange = (value: string) => {
     setSelectedSector(value);
+    // Reset school when sector changes
+    setSelectedSchool("");
+  };
+  
+  // Handle school selection
+  const handleSchoolChange = (value: string) => {
+    setSelectedSchool(value);
   };
 
   // Update form values when role selection changes
@@ -134,14 +144,20 @@ export const useOrganizationSelection = ({
       form.setValue("school_id", "");
     }
   }, [selectedSector, form]);
+  
+  useEffect(() => {
+    form.setValue("school_id", selectedSchool || "");
+  }, [selectedSchool, form]);
 
   return {
     selectedRole,
     selectedRegion,
     selectedSector,
+    selectedSchool,
     handleRoleSelect,
     handleRegionChange,
     handleSectorChange,
+    handleSchoolChange,
     getRoleById,
     filterRolesByUserRole
   };

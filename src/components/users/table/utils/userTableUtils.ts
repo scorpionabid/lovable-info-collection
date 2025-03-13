@@ -1,42 +1,72 @@
 
 import { User } from "@/services/supabase/user/types";
 
-export const getUserRole = (user: User): string => {
-  if (user.roles) {
+// This function gets the role name from either roles.name or role property
+export const getRoleName = (user: User): string => {
+  if (user.roles && user.roles.name) {
     return user.roles.name;
   }
   if (user.role) {
     return user.role;
   }
-  return "Unknown Role";
+  return 'Unknown Role';
 };
 
-export const getUserStatus = (user: User): string => {
-  return user.is_active ? "active" : "inactive";
-};
-
-export const getEntityName = (entity: any): string => {
-  if (!entity) return '';
-  return entity.name || '';
-};
-
-export const formatDate = (dateString?: string): string => {
-  if (!dateString) return "Never";
+// Get entity name (region, sector, or school) based on user's role
+export const getEntityName = (user: User): string => {
+  const role = getRoleName(user).toLowerCase();
   
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "Invalid date";
+  if (role.includes('super')) {
+    return 'System';
+  } else if (role.includes('region') && user.region_id) {
+    return `Region: ${user.region_id}`;
+  } else if (role.includes('sector') && user.sector_id) {
+    return `Sector: ${user.sector_id}`;
+  } else if (role.includes('school') && user.school_id) {
+    return `School: ${user.school_id}`;
+  }
   
-  // Format: DD.MM.YYYY HH:MM
-  return new Intl.DateTimeFormat('az-AZ', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).format(date);
+  return 'N/A';
 };
 
-export const getFullName = (user: User): string => {
-  return `${user.first_name} ${user.last_name}`;
+// Sort users by different criteria
+export const sortUsers = (users: User[], column: string | null, direction: 'asc' | 'desc'): User[] => {
+  if (!column) return users;
+  
+  return [...users].sort((a, b) => {
+    let valueA, valueB;
+    
+    switch (column) {
+      case 'name':
+        valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'email':
+        valueA = a.email.toLowerCase();
+        valueB = b.email.toLowerCase();
+        break;
+      case 'role':
+        valueA = getRoleName(a).toLowerCase();
+        valueB = getRoleName(b).toLowerCase();
+        break;
+      case 'entity':
+        valueA = getEntityName(a).toLowerCase();
+        valueB = getEntityName(b).toLowerCase();
+        break;
+      case 'lastActive':
+        valueA = a.last_login || '';
+        valueB = b.last_login || '';
+        break;
+      case 'status':
+        valueA = a.is_active ? 'active' : 'inactive';
+        valueB = b.is_active ? 'active' : 'inactive';
+        break;
+      default:
+        return 0;
+    }
+    
+    if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+    if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 };

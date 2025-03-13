@@ -52,9 +52,11 @@ export const RoleTab = ({
     selectedRole,
     selectedRegion,
     selectedSector,
+    selectedSchool, // Added this
     handleRoleSelect,
     handleRegionChange,
     handleSectorChange,
+    handleSchoolChange, // Added this
     getRoleById,
     filterRolesByUserRole
   } = useOrganizationSelection({
@@ -65,17 +67,18 @@ export const RoleTab = ({
 
   return (
     <OrganizationSelectionComponent 
-      form={form}
+      selectedRole={selectedRole}
+      regionId={selectedRegion}
+      sectorId={selectedSector}
+      schoolId={selectedSchool || ''}
+      onRoleChange={handleRoleSelect}
+      onRegionChange={handleRegionChange}
+      onSectorChange={handleSectorChange}
+      onSchoolChange={handleSchoolChange}
       roles={roles}
       regions={regions}
       sectors={sectors}
       schools={schools}
-      selectedRole={selectedRole}
-      selectedRegion={selectedRegion}
-      selectedSector={selectedSector}
-      onRoleSelect={handleRoleSelect}
-      onRegionChange={handleRegionChange}
-      onSectorChange={handleSectorChange}
       isEditing={isEditing}
       user={user}
       getRoleById={getRoleById}

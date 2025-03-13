@@ -38,8 +38,8 @@ export interface User {
   roles?: {
     id: string;
     name: string;
-    description?: string;
-    permissions: string[];
+    description: string; // Made required to match Supabase Role type
+    permissions: any; // Changed to 'any' to be compatible with both Json and string[]
   };
   // For backward compatibility
   role?: string;
@@ -55,7 +55,7 @@ export interface CreateUserDto {
   school_id?: string;
   phone?: string;
   utis_code?: string;
-  is_active?: boolean;
+  is_active: boolean; // Changed from optional to required
   password?: string;
 }
 
@@ -64,8 +64,8 @@ export interface UpdateUserDto extends Partial<CreateUserDto> {}
 const userService = {
   getUsers: (filters?: UserFilters) => supabaseUserService.getUsers(filters),
   getUserById: (id: string) => supabaseUserService.getUserById(id),
-  createUser: (userData: CreateUserDto) => supabaseUserService.createUser(userData as any), // Casting to any to avoid type issues
-  updateUser: (id: string, userData: UpdateUserDto) => supabaseUserService.updateUser(id, userData as any), // Casting to any to avoid type issues
+  createUser: (userData: CreateUserDto) => supabaseUserService.createUser(userData as any),
+  updateUser: (id: string, userData: UpdateUserDto) => supabaseUserService.updateUser(id, userData as any),
   deleteUser: (id: string) => supabaseUserService.deleteUser(id),
   blockUser: (id: string) => supabaseUserService.blockUser(id),
   activateUser: (id: string) => supabaseUserService.activateUser(id),

@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { OrganizationSelectionComponent } from "./role/OrganizationSelectionComponent";
-import { RoleTab } from "./role/RoleTab";
 import { UserProfileTab } from "./UserProfileTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState } from "./LoadingState";
@@ -89,7 +88,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         toast("İstifadəçi uğurla yeniləndi");
       } else {
         // Create new user
-        await userService.createUser(formData as CreateUserDto);
+        await userService.createUser(formData);
         toast("İstifadəçi uğurla yaradıldı");
       }
       
@@ -158,6 +157,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                 onRegionChange={(id) => updateFormData('region_id', id)}
                 onSectorChange={(id) => updateFormData('sector_id', id)}
                 onSchoolChange={(id) => updateFormData('school_id', id)}
+                roles={[]} // We'll fetch these dynamically
+                regions={[]} // We'll fetch these dynamically
+                sectors={[]} // We'll fetch these dynamically
+                schools={[]} // We'll fetch these dynamically
               />
             </TabsContent>
           </Tabs>
