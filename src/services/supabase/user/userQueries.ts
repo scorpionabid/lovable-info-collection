@@ -116,10 +116,10 @@ export const createUser = async (userData: CreateUserDto) => {
       is_active: userData.is_active !== undefined ? userData.is_active : true
     };
     
-    // Properly format as a single object for Supabase insert
+    // Wrap in array for the insert operation since it requires an array
     const { data, error } = await supabase
       .from('users')
-      .insert(userDataForInsert)
+      .insert([userDataForInsert])
       .select(`
         *,
         roles (
