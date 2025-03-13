@@ -21,7 +21,7 @@ export const createUser = async (userData: CreateUserDto) => {
     // Insert the user with the correct array format
     const { data, error } = await supabase
       .from('users')
-      .insert(userDataForInsert) // No need to wrap in array - Supabase handles this
+      .insert([userDataForInsert]) // Wrap in array for proper insertion
       .select(`
         *,
         roles (
