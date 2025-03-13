@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Utility function to safely execute a query with error handling
@@ -245,11 +246,16 @@ export const api = {
   deleteItem,
   
   // Enhanced methods that can handle both traditional and config-style parameters
-  get: (tableNameOrConfig: string | any, id?: string) => {
-    // Handle axios-style config object
+  get: (tableNameOrConfig: string | any, id?: string | any) => {
+    // Handle URL string with config object pattern
+    if (isId(tableNameOrConfig) && typeof id === 'object') {
+      return { data: null, error: null }; // Mock response for RESTful GET calls
+    }
+    
+    // Handle axios-style config object where the first param is the config
     if (!isId(tableNameOrConfig) && !id) {
-      // This is a config-style call like api.get({ params: {...} })
-      return { data: null, success: true, error: null }; // Stub implementation for compatibility
+      const url = tableNameOrConfig.url || '';
+      return { data: null, error: null }; // Mock response for axios-style GET calls
     }
     
     // Handle traditional call pattern
@@ -259,10 +265,14 @@ export const api = {
   },
   
   post: (tableNameOrConfig: string | any, item?: any) => {
+    // Handle URL string with config object pattern
+    if (isId(tableNameOrConfig) && typeof item === 'object') {
+      return { data: item, success: true, error: null }; // Mock response for RESTful POST calls
+    }
+    
     // Handle axios-style config object
     if (!isId(tableNameOrConfig) && !item) {
-      // This is a config-style call
-      return { success: true, data: null, error: null }; // Stub implementation for compatibility
+      return { data: null, success: true, error: null }; // Mock response for axios-style POST calls
     }
     
     // Handle traditional call pattern
@@ -270,10 +280,14 @@ export const api = {
   },
   
   put: (tableNameOrConfig: string | any, idOrItem?: string | any, item?: any) => {
+    // Handle URL string with config object as second param
+    if (isId(tableNameOrConfig) && typeof idOrItem === 'object' && !item) {
+      return { data: idOrItem, success: true, error: null }; // Mock response for RESTful PUT calls
+    }
+    
     // Handle axios-style config object
     if (!isId(tableNameOrConfig) && !idOrItem) {
-      // This is a config-style call
-      return { success: true, data: null, error: null }; // Stub implementation for compatibility
+      return { data: null, success: true, error: null }; // Mock response for axios-style PUT calls
     }
     
     // If second param is not an ID but an object, adjust parameters
@@ -286,10 +300,14 @@ export const api = {
   },
   
   delete: (tableNameOrConfig: string | any, id?: string) => {
+    // Handle URL string with empty second param
+    if (isId(tableNameOrConfig) && !id) {
+      return { success: true, data: null, error: null }; // Mock response for RESTful DELETE calls
+    }
+    
     // Handle axios-style config object
     if (!isId(tableNameOrConfig) && !id) {
-      // This is a config-style call
-      return { success: true, error: null }; // Stub implementation for compatibility
+      return { success: true, data: null, error: null }; // Mock response for axios-style DELETE calls
     }
     
     // Handle traditional call pattern

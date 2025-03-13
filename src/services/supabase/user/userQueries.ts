@@ -119,7 +119,7 @@ export const createUser = async (userData: CreateUserDto) => {
     // Insert as array for proper typing
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert]) // Wrap in array to match expected format
+      .insert([userDataForInsert]) // Wrap in array for proper typing
       .select(`
         *,
         roles (
