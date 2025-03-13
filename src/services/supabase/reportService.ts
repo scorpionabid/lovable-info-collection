@@ -1,5 +1,5 @@
 
-import { supabase } from '../supabaseClient';
+import { supabase } from './supabaseClient';
 import { ReportParams, ExportConfig } from './reports/types';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -12,14 +12,40 @@ import * as trendsService from './reports/trendsService';
 import * as performanceService from './reports/performanceService';
 import * as customReportService from './reports/customReportService';
 
+// Implement missing functions
+export const getRegionCompletionStats = (params?: any) => {
+  return completionStatsService.getRegionCompletionData('all', params);
+};
+
+export const getCategoryCompletionStats = (params?: any) => {
+  return completionStatsService.getCategoryCompletionData('all', params);
+};
+
+export const getTimelineCompletionStats = (params?: any) => {
+  return completionStatsService.getTimelineData(params);
+};
+
+export const getSubmissionStatusStats = (params?: any) => {
+  return completionStatsService.getSubmissionStatusData(params);
+};
+
+export const getRegionPerformanceRanking = (params?: any) => {
+  return performanceService.getRegionPerformanceData(params);
+};
+
+export const getPerformanceTrend = (params?: any) => {
+  return performanceService.getPerformanceTrendData(params);
+};
+
+export const getRegionSectorPerformance = (params?: any) => {
+  return performanceService.getRegionSectorData(params);
+};
+
 // Re-export all functions from the report services
 export const {
-  getCompletionStatistics,
-  getRegionStatistics,
-  getSchoolStatistics,
-  getTopCompletionRates,
-  getLowCompletionRates,
-  getCriticalAreas
+  getCompletionData,
+  getCriticalAreas,
+  getOnTimeSubmissionRate
 } = completionStatsService;
 
 export const {
@@ -31,18 +57,18 @@ export const {
 } = trendsService;
 
 export const {
-  getPerformanceMetrics,
-  getRegionPerformance,
-  getTopPerformers,
-  getLowPerformers
+  getPerformanceMetrics
 } = performanceService;
 
 export const {
   getCustomReports,
   getCustomReportById,
-  createCustomReport,
-  generateCustomReport
+  createCustomReport
 } = customReportService;
+
+export const generateCustomReport = (reportId: string, params: any = {}) => {
+  return customReportService.getCustomReportData(reportId, params);
+};
 
 // Add missing export function for report data
 export const exportReportData = async (

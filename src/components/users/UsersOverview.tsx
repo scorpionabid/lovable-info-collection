@@ -1,120 +1,267 @@
-
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import userService, { UserFilters } from "@/services/api/userService";
-import { UserTable } from "./UserTable";
-import { UserModal } from "./UserModal";
-import { UserFilterPanel } from "./UserFilterPanel";
-import { UserHeader } from "./components/UserHeader";
-import { SelectedUsersBar } from "./components/SelectedUsersBar";
-import { UserLoadingState } from "./components/UserLoadingState";
-import { EmptyUserState } from "./components/EmptyUserState";
-import { UserErrorState } from "./components/UserErrorState";
+import { useState, useEffect } from 'react';
+import { toast } from "sonner";
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Plus, Edit, Trash2, FileDown } from "lucide-react";
+import { UserTablePagination } from "./table/UserTablePagination";
+import { UserTableToolbar } from "./table/UserTableToolbar";
+import { UserForm } from "./modals/UserForm";
+import { sortUsers } from "./utils/userUtils";
 import { useUserExport } from "./hooks/useUserExport";
-import { useBulkActions } from "./hooks/useBulkActions";
+import { confirm } from "@/components/ui/confirm/confirm";
+import userService from "@/services/api/userService";
+import { User } from '@/services/supabase/user/types';
 
 export const UsersOverview = () => {
-  const [showFilters, setShowFilters] = useState(false);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState<UserFilters>({});
-  const { toast } = useToast();
-  
-  // Custom hooks
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [search, setSearch] = useState('');
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   const { exportUsers } = useUserExport();
 
-  // Fetch users with react-query
-  const { 
-    data: users = [], 
-    isLoading, 
-    isError, 
-    error, 
-    refetch 
-  } = useQuery({
-    queryKey: ['users', filters],
-    queryFn: () => userService.getUsers({ ...filters, search: searchTerm }),
-  });
+  const { data: usersData, refetch } = useQuery(
+    ['users', page, perPage, search, sortColumn, sortOrder],
+    () => userService.getUsers({
+      page,
+      pageSize: perPage,
+      search,
+      sortColumn,
+      sortDirection: sortOrder,
+    })
+  );
 
-  const { selectedRows, setSelectedRows, handleBulkAction } = useBulkActions(refetch);
+  useEffect(() => {
+    setIsLoading(true);
+    if (usersData?.data) {
+      handleFetchSuccess(usersData.data);
+    }
+  }, [usersData?.data]);
 
-  const toggleFilters = () => {
-    setShowFilters(!showFilters);
+  useEffect(() => {
+    if (usersData?.error) {
+      toast({
+        title: "Xəta",
+        description: "İstifadəçiləri yükləyərkən xəta baş verdi",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+  }, [usersData?.error]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
   };
 
-  const handleCreateUser = () => {
-    setIsCreatingUser(true);
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortOrder('asc');
+    }
   };
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+  const handleEdit = (user: User) => {
+    setSelectedUser(user);
+    setIsFormOpen(true);
   };
 
-  const handleApplyFilters = (newFilters: UserFilters) => {
-    setFilters(newFilters);
-    setShowFilters(false);
-  };
-
-  const handleImportUsers = () => {
-    // This would typically open a file input dialog
-    toast({
-      title: "İstifadəçi idxalı",
-      description: "İstifadəçi idxalı funksiyası hazırlanır",
+  const handleDelete = async (user: User) => {
+    const confirmed = await confirm({
+      title: "Silmək istədiyinizə əminsiniz?",
+      description: "Bu əməliyyatı geri almaq mümkün deyil",
     });
+
+    if (!confirmed) return;
+
+    try {
+      await userService.deleteUser(user.id);
+      toast({
+        title: "Uğurlu",
+        description: "İstifadəçi uğurla silindi",
+      });
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Xəta",
+        description: "İstifadəçini silərkən xəta baş verdi",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleExportUsers = () => {
+  const handleFormSuccess = () => {
+    setIsFormOpen(false);
+    setSelectedUser(null);
+    refetch();
+  };
+
+  const handleExport = () => {
+    if (!users) {
+      toast({
+        title: "Xəta",
+        description: "İxrac etmək üçün məlumat tapılmadı",
+        variant: "destructive",
+      });
+      return;
+    }
     exportUsers(users);
   };
 
-  if (isError && error) {
-    return <UserErrorState error={error as Error} onRetry={refetch} />;
-  }
+  // Add a user type adapter function
+  const adaptUserData = (userData: any): User => {
+    return {
+      id: userData.id,
+      email: userData.email,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      role_id: userData.role_id || '', 
+      region_id: userData.region_id,
+      sector_id: userData.sector_id,
+      school_id: userData.school_id,
+      phone: userData.phone,
+      utis_code: userData.utis_code,
+      is_active: userData.is_active,
+      created_at: userData.created_at,
+      updated_at: userData.updated_at,
+      last_login: userData.last_login,
+      roles: userData.roles,
+      role: userData.role || (userData.roles ? userData.roles.name : '')
+    };
+  };
+
+  // Fix the sortUsers call by adapting the data
+  const sortedUsers = sortUsers(
+    users ? users.map(adaptUserData) : [],
+    sortColumn,
+    sortOrder as 'asc' | 'desc'
+  );
+
+  // Fix the setUsers call by using the adapter
+  const handleFetchSuccess = (data: any[]) => {
+    setUsers(data.map(adaptUserData));
+    setIsLoading(false);
+  };
 
   return (
-    <div className="space-y-4">
-      <UserHeader 
-        searchTerm={searchTerm}
-        onSearchChange={handleSearch}
-        onToggleFilters={toggleFilters}
-        onImportUsers={handleImportUsers}
-        onExportUsers={handleExportUsers}
-        onCreateUser={handleCreateUser}
-        isLoading={isLoading}
-      />
+    <div className="container mx-auto py-10">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">İstifadəçilər</h1>
+        <Button onClick={() => navigate('/users/import')}>Import</Button>
+      </div>
 
-      {showFilters && (
-        <UserFilterPanel 
-          onClose={() => setShowFilters(false)} 
-          onApplyFilters={handleApplyFilters}
-          currentFilters={filters}
+      <div className="flex items-center justify-between mb-4">
+        <Input
+          type="text"
+          placeholder="Axtar..."
+          value={search}
+          onChange={handleSearchChange}
+          className="max-w-md"
         />
-      )}
+        <div className="flex items-center space-x-2">
+          <Button onClick={handleExport} variant="outline">
+            <FileDown className="mr-2 h-4 w-4" />
+            İxrac et
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Əlavə et
+          </Button>
+        </div>
+      </div>
 
-      <SelectedUsersBar 
-        selectedCount={selectedRows.length}
-        onBulkAction={handleBulkAction}
-        onClearSelection={() => setSelectedRows([])}
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
+                Ad Soyad
+                {sortColumn === 'name' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+              </TableHead>
+              <TableHead onClick={() => handleSort('email')} className="cursor-pointer">
+                Email
+                {sortColumn === 'email' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+              </TableHead>
+              <TableHead onClick={() => handleSort('role')} className="cursor-pointer">
+                Rol
+                {sortColumn === 'role' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+              </TableHead>
+              <TableHead onClick={() => handleSort('entity')} className="cursor-pointer">
+                Qurum
+                {sortColumn === 'entity' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+              </TableHead>
+              <TableHead onClick={() => handleSort('lastActive')} className="cursor-pointer">
+                Son aktivlik
+                {sortColumn === 'lastActive' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+              </TableHead>
+              <TableHead onClick={() => handleSort('status')} className="cursor-pointer">
+                Status
+                {sortColumn === 'status' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+              </TableHead>
+              <TableHead className="text-right">Əməliyyatlar</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-4">Yüklənir...</TableCell>
+              </TableRow>
+            ) : sortedUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-4">Məlumat tapılmadı</TableCell>
+              </TableRow>
+            ) : (
+              sortedUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.first_name} {user.last_name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.roles?.name || user.role}</TableCell>
+                  <TableCell>{user.region_id}</TableCell>
+                  <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString() : 'Heç vaxt'}</TableCell>
+                  <TableCell>{user.is_active ? 'Aktiv' : 'Deaktiv'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button onClick={() => handleEdit(user)} variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                    <Button onClick={() => handleDelete(user)} variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <UserTablePagination
+        page={page}
+        perPage={perPage}
+        totalItems={usersData?.count || 0}
+        setPage={setPage}
+        setPerPage={setPerPage}
       />
 
-      {isLoading ? (
-        <UserLoadingState />
-      ) : users.length === 0 ? (
-        <EmptyUserState />
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <UserTable 
-            users={users} 
-            onSelectedRowsChange={setSelectedRows} 
-            selectedRows={selectedRows}
-            onRefetch={refetch}
-          />
-        </div>
-      )}
-
-      {isCreatingUser && (
-        <UserModal onClose={() => setIsCreatingUser(false)} onSuccess={() => refetch()} />
-      )}
+      <UserForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSuccess={handleFormSuccess}
+        user={selectedUser}
+      />
     </div>
   );
 };

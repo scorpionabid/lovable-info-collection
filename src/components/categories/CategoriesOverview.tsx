@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +19,27 @@ const convertToCategory = (category: Category): CategoryType => {
     columns: typeof category.columns === 'number' ? [] : category.columns || [],
     description: category.description || '', // Ensure description is not optional
     completionRate: category.completionRate || 0 // Ensure completionRate is not optional
+  };
+};
+
+const adaptCategoryData = (category: any) => {
+  return {
+    id: category.id,
+    name: category.name,
+    description: category.description || '',
+    assignment: category.assignment || 'All',
+    status: category.status || 'Active',
+    priority: category.priority || 0,
+    region_id: category.region_id,
+    sector_id: category.sector_id,
+    school_id: category.school_id,
+    school_type_id: category.school_type_id,
+    created_at: category.created_at || category.createdAt,
+    updated_at: category.updated_at,
+    columns: Array.isArray(category.columns) ? category.columns : [],
+    completionRate: category.completionRate || 0,
+    createdAt: category.createdAt || category.created_at,
+    deadline: category.deadline || new Date().toISOString()
   };
 };
 
@@ -65,7 +85,7 @@ export const CategoriesOverview = () => {
     }
   });
 
-  const categories = categoriesData.map((category) => convertToCategory(category));
+  const categories = categoriesData.map((category) => adaptCategoryData(category));
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => categoryService.deleteCategory(id),

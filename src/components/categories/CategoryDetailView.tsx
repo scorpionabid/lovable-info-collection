@@ -24,7 +24,7 @@ export interface CategoryColumn {
   type: string;
   required: boolean;
   description: string;
-  options?: string[];
+  options?: string[] | any;
   order: number;
 }
 
@@ -33,12 +33,19 @@ export interface CategoryType {
   name: string;
   description: string;
   assignment: string;
-  columns: number | CategoryColumn[];
-  deadline: string;
-  completionRate: number;
+  columns: CategoryColumn[];
   status: string;
   priority: number;
+  completionRate: number;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  school_type_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
   createdAt: string;
+  deadline: string;
 }
 
 interface CategoryDetailViewProps {
@@ -51,9 +58,7 @@ export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   
-  const columnsCount = typeof category.columns === 'number' 
-    ? category.columns 
-    : category.columns.length;
+  const columnsCount = category.columns.length;
   
   const regionCompletionData = [
     { name: 'Bakı şəhəri', completion: 85 },
@@ -309,29 +314,21 @@ export const CategoryDetailView = ({ category }: CategoryDetailViewProps) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(category.columns) ? (
-                    category.columns.map((column, index) => (
-                      <tr key={column.id} className="border-b border-infoline-light-gray">
-                        <td className="px-4 py-3 text-sm text-infoline-dark-gray">{index + 1}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{column.name}</td>
-                        <td className="px-4 py-3 text-sm text-infoline-dark-gray capitalize">{column.type}</td>
-                        <td className="px-4 py-3 text-center">
-                          {column.required ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-gray-400 mx-auto" />
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-infoline-dark-gray">{column.description}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-infoline-dark-gray">
-                        Sütun məlumatları mövcud deyil. Zəhmət olmasa, sütunları əlavə edin.
+                  {category.columns.map((column, index) => (
+                    <tr key={column.id} className="border-b border-infoline-light-gray">
+                      <td className="px-4 py-3 text-sm text-infoline-dark-gray">{index + 1}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{column.name}</td>
+                      <td className="px-4 py-3 text-sm text-infoline-dark-gray capitalize">{column.type}</td>
+                      <td className="px-4 py-3 text-center">
+                        {column.required ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-gray-400 mx-auto" />
+                        )}
                       </td>
+                      <td className="px-4 py-3 text-sm text-infoline-dark-gray">{column.description}</td>
                     </tr>
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>

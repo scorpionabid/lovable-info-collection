@@ -52,8 +52,8 @@ export interface CategoryColumn {
   name: string;
   type: string;
   required: boolean;
-  description?: string;
-  options?: string[] | Json;
+  description: string;
+  options?: string[] | any;
   order: number;
   category_id?: string;
   created_at?: string;
@@ -74,8 +74,8 @@ export interface CreateColumnDto {
   name: string;
   type: string;
   required: boolean;
-  description?: string;
-  options?: string[];
+  description: string;
+  options?: string[] | any;
   category_id?: string;
   order?: number;
 }

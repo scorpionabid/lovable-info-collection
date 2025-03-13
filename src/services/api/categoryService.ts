@@ -1,83 +1,60 @@
 
 import api from './index';
 
-export interface CategoryData {
-  id?: string;
-  name: string;
-  description?: string;
-  order?: number;
-  deadline?: string;
-  status?: string;
-}
+const CATEGORIES_ENDPOINT = 'categories';
+const COLUMNS_ENDPOINT = 'columns';
 
-export interface ColumnData {
-  id?: string;
-  name: string;
-  description?: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'file';
-  required: boolean;
-  options?: string[];
-  validation?: {
-    minLength?: number;
-    maxLength?: number;
-    min?: number;
-    max?: number;
-    regex?: string;
-    message?: string;
-  };
-  order?: number;
-}
-
-const categoryService = {
-  getCategories: async () => {
-    const response = await api.get('/categories');
-    return response.data;
-  },
-  
-  createCategory: async (categoryData: CategoryData) => {
-    const response = await api.post('/categories', categoryData);
-    return response.data;
-  },
-  
-  getCategory: async (id: string) => {
-    const response = await api.get(`/categories/${id}`);
-    return response.data;
-  },
-  
-  updateCategory: async (id: string, categoryData: Partial<CategoryData>) => {
-    const response = await api.put(`/categories/${id}`, categoryData);
-    return response.data;
-  },
-  
-  deleteCategory: async (id: string) => {
-    const response = await api.delete(`/categories/${id}`);
-    return response.data;
-  },
-  
-  getCategoryColumns: async (categoryId: string) => {
-    const response = await api.get(`/categories/${categoryId}/columns`);
-    return response.data;
-  },
-  
-  addCategoryColumn: async (categoryId: string, columnData: ColumnData) => {
-    const response = await api.post(`/categories/${categoryId}/columns`, columnData);
-    return response.data;
-  },
-  
-  getColumn: async (id: string) => {
-    const response = await api.get(`/columns/${id}`);
-    return response.data;
-  },
-  
-  updateColumn: async (id: string, columnData: Partial<ColumnData>) => {
-    const response = await api.put(`/columns/${id}`, columnData);
-    return response.data;
-  },
-  
-  deleteColumn: async (id: string) => {
-    const response = await api.delete(`/columns/${id}`);
-    return response.data;
-  }
+// Category CRUD operations
+export const getCategories = async (filters = {}) => {
+  return api.fetchItems(CATEGORIES_ENDPOINT, 1, 100, filters);
 };
 
-export default categoryService;
+export const getCategoryById = async (id) => {
+  return api.getItemById(CATEGORIES_ENDPOINT, id);
+};
+
+export const createCategory = async (category) => {
+  return api.createItem(CATEGORIES_ENDPOINT, category);
+};
+
+export const updateCategory = async (id, category) => {
+  return api.updateItem(CATEGORIES_ENDPOINT, id, category);
+};
+
+export const deleteCategory = async (id) => {
+  return api.deleteItem(CATEGORIES_ENDPOINT, id);
+};
+
+// Column CRUD operations
+export const getCategoryColumns = async (categoryId) => {
+  return api.fetchItems(COLUMNS_ENDPOINT, 1, 100, { category_id: categoryId });
+};
+
+export const getColumnById = async (id) => {
+  return api.getItemById(COLUMNS_ENDPOINT, id);
+};
+
+export const createColumn = async (categoryId, column) => {
+  const result = await api.createItem(COLUMNS_ENDPOINT, { ...column, category_id: categoryId });
+  return { success: result.success, data: result.data, error: result.error };
+};
+
+export const updateColumn = async (id, column) => {
+  const result = await api.updateItem(COLUMNS_ENDPOINT, id, column);
+  return { success: result.success, data: result.data, error: result.error };
+};
+
+export const deleteColumn = async (id) => {
+  return api.deleteItem(COLUMNS_ENDPOINT, id);
+};
+
+// Category utilities
+export const getCategoryCompletionRate = async (categoryId) => {
+  // Mock implementation - this would be a real calculation in production
+  return Math.floor(Math.random() * 100);
+};
+
+export const exportCategoryTemplate = async (categoryId) => {
+  // Mock implementation
+  return new Blob(['Sample template data'], { type: 'text/plain' });
+};

@@ -8,7 +8,7 @@ export interface ReportParams {
   categoryId?: string;
   status?: string;
   filter?: string;
-  periodType?: string;
+  periodType?: 'week' | 'month' | 'quarter' | 'year';
 }
 
 export interface CriticalArea {
@@ -17,6 +17,11 @@ export interface CriticalArea {
   severity: number;
   impact: number;
   description: string;
+  region?: string;
+  sector?: string;
+  category?: string;
+  completionRate?: number;
+  status?: string;
 }
 
 export interface ReportResult<T> {
@@ -30,14 +35,17 @@ export interface ExportConfig {
 }
 
 export interface CompletionStatistic {
-  id: string;
-  category: string;
-  totalEntries: number;
-  completedEntries: number;
-  completionRate: number;
+  id?: string;
+  category?: string;
+  totalEntries?: number;
+  completedEntries?: number;
+  completionRate?: number;
   onTimeSubmissions?: number;
   lateSubmissions?: number;
   status?: string;
+  // For chart compatibility
+  name?: string;
+  value?: number;
 }
 
 export interface CustomReportDefinition {
@@ -65,6 +73,12 @@ export interface RegionPerformance {
   metric: number;
   previousMetric: number;
   change: number;
+  // For compatibility with some components
+  region?: string;
+  sector?: string;
+  performance?: number;
+  onTimeSubmission?: number;
+  quality?: number;
 }
 
 export interface ComparisonData {
@@ -72,4 +86,8 @@ export interface ComparisonData {
   value: number;
   previousValue?: number;
   change?: number;
+  // For compatibility with yearlyComparison
+  category?: string;
+  previousYear?: number;
+  currentYear?: number;
 }

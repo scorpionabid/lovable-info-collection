@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +6,28 @@ import { Layout } from "@/components/layout/Layout";
 import { CategoryDetailView } from "@/components/categories/CategoryDetailView";
 import { getCategoryById } from '@/services/supabase/category/categoryQueries';
 import { getCategoryColumns } from '@/services/supabase/category/columnQueries';
+
+const adaptCategoryData = (data): CategoryType => {
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description || '',
+    assignment: data.assignment,
+    status: data.status || 'Active',
+    priority: data.priority || 0,
+    region_id: data.region_id,
+    sector_id: data.sector_id,
+    school_id: data.school_id,
+    school_type_id: data.school_type_id,
+    columns: data.columns || [],
+    completionRate: data.completionRate || 0,
+    createdAt: data.createdAt || data.created_at || new Date().toISOString(),
+    deadline: data.deadline || new Date().toISOString(),
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    created_by: data.created_by
+  };
+};
 
 const CategoryDetails = () => {
   const { id } = useParams();
@@ -85,11 +106,7 @@ const CategoryDetails = () => {
   }
   
   // Combine category data with columns data
-  const category = {
-    ...categoryData,
-    columns: columnsData,
-    deadline: new Date().toISOString() // Add dummy deadline to satisfy the type
-  };
+  const category = adaptCategoryData(categoryData);
   
   return (
     <Layout userRole="super-admin">

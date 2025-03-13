@@ -7,7 +7,7 @@ export interface CategoryColumn {
   type: string;
   required: boolean;
   description: string;
-  options?: string[];
+  options?: string[] | any;
   order: number;
 }
 

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChartCard } from '@/components/dashboard/ChartCard';
@@ -7,6 +6,19 @@ import { Button } from "@/components/ui/button";
 import { FileDown, Printer, Mail } from "lucide-react";
 import * as reportService from '@/services/supabase/reportService';
 import { toast } from 'sonner';
+
+// Add an adapter function for the report data
+const adaptReportData = (data: any) => {
+  if (!data) return [];
+  
+  return data.map((item: any) => ({
+    id: item.id || '',
+    name: item.name || item.category || '',
+    value: item.value || item.currentYear || 0,
+    previousValue: item.previousValue || item.previousYear || 0,
+    change: item.change || 0
+  }));
+};
 
 export const ComparativeTrendsReport = () => {
   const [period, setPeriod] = useState('all-time');
@@ -42,21 +54,21 @@ export const ComparativeTrendsReport = () => {
   });
   
   // Handle exports
-  const handleExport = async (type: 'xlsx' | 'csv' | 'pdf') => {
+  const handleExport = async (type: 'xlsx' | 'pdf' | 'csv') => {
     try {
-      // Prepare data for export
+      // Prepare data for export with the adapter
       const exportData = [
-        ...(categoryTrendsData || []).map(item => ({
+        ...(categoryTrendsData ? adaptReportData(categoryTrendsData) : []).map(item => ({
           Category: 'Kateqoriya trendi',
           Name: item.name,
           Value: `${item.value}%`
         })),
-        ...(regionComparisonData || []).map(item => ({
+        ...(regionComparisonData ? adaptReportData(regionComparisonData) : []).map(item => ({
           Category: 'Region müqayisəsi',
           Name: item.name,
           Value: `${item.value}%`
         })),
-        ...(quarterlyTrendsData || []).map(item => ({
+        ...(quarterlyTrendsData ? adaptReportData(quarterlyTrendsData) : []).map(item => ({
           Category: 'Rüblük trend',
           Period: item.name,
           Value: `${item.value}%`
@@ -179,9 +191,9 @@ export const ComparativeTrendsReport = () => {
               <tbody>
                 {yearlyComparisonData.map((item, index) => (
                   <tr key={index} className="border-b border-infoline-light-gray">
-                    <td className="px-4 py-3 text-sm text-infoline-dark-blue">{item.category}</td>
-                    <td className="px-4 py-3 text-center text-sm text-infoline-dark-gray">{item.previousYear}%</td>
-                    <td className="px-4 py-3 text-center text-sm text-infoline-dark-gray">{item.currentYear}%</td>
+                    <td className="px-4 py-3 text-sm text-infoline-dark-blue">{item.name || item.category}</td>
+                    <td className="px-4 py-3 text-center text-sm text-infoline-dark-gray">{item.previousValue || item.previousYear}%</td>
+                    <td className="px-4 py-3 text-center text-sm text-infoline-dark-gray">{item.value || item.currentYear}%</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`flex items-center justify-center text-xs font-medium ${
                         item.change > 0 ? 'text-green-600' : 'text-red-600'

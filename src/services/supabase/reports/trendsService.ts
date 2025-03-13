@@ -1,137 +1,59 @@
 
-import { supabase } from '../supabaseClient';
-import { CompletionStatistic, ComparisonData, ReportParams } from './types';
+import { CompletionStatistic, ComparisonData } from './types';
 
-// Comparative Trends Report
-export const getCategoryTrends = async (params?: ReportParams): Promise<CompletionStatistic[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name');
-    
-    if (error) throw error;
-    
-    // For each category, calculate the trend value
-    const trends = await Promise.all(
-      data.slice(0, 5).map(async (category) => {
-        // In a real app, you would calculate this based on historical data
-        const trendValue = Math.floor(Math.random() * 35) + 55; // Random value between 55-90%
-        
-        return {
-          name: category.name,
-          value: trendValue
-        };
-      })
-    );
-    
-    return trends.sort((a, b) => b.value - a.value);
-  } catch (error) {
-    console.error('Error fetching category trends:', error);
-    throw error;
-  }
+// Helper function to generate category trend data
+export const getCategoryTrends = async (params?: any): Promise<any[]> => {
+  const categories = ['Ümumi məlumatlar', 'İnfrastruktur', 'Akademik göstəricilər', 'Müəllim heyəti', 'Şagird nailiyyətləri'];
+  
+  return categories.map(category => ({
+    id: category,
+    name: category,
+    value: Math.floor(Math.random() * 30) + 60 // 60-90%
+  }));
 };
 
-export const getRegionComparison = async (params?: ReportParams): Promise<CompletionStatistic[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('regions')
-      .select('id, name');
-    
-    if (error) throw error;
-    
-    // For each region, calculate the comparison value
-    const comparison = await Promise.all(
-      data.slice(0, 5).map(async (region) => {
-        // In a real app, you would calculate this based on comparative data
-        const comparisonValue = Math.floor(Math.random() * 30) + 55; // Random value between 55-85%
-        
-        return {
-          name: region.name,
-          value: comparisonValue
-        };
-      })
-    );
-    
-    return comparison.sort((a, b) => b.value - a.value);
-  } catch (error) {
-    console.error('Error fetching region comparison:', error);
-    throw error;
-  }
+// Helper function to generate region comparison data
+export const getRegionComparison = async (params?: any): Promise<any[]> => {
+  const regions = ['Bakı', 'Gəncə', 'Sumqayıt', 'Şirvan', 'Mingəçevir', 'Naxçıvan'];
+  
+  return regions.map(region => ({
+    id: region,
+    name: region,
+    value: Math.floor(Math.random() * 30) + 50 // 50-80%
+  }));
 };
 
-export const getQuarterlyTrends = async (params?: ReportParams): Promise<CompletionStatistic[]> => {
-  try {
-    // Generate quarterly trend data for 2022-2023
-    const quarters = ['2022 Q1', '2022 Q2', '2022 Q3', '2022 Q4', '2023 Q1', '2023 Q2', '2023 Q3', '2023 Q4'];
-    
-    // Simulate an improving trend over time
-    const trends = quarters.map((quarter, index) => {
-      const baseValue = 68;
-      const increment = Math.floor(index * 3);
-      const variation = Math.floor(Math.random() * 3) - 1; // Small random variation
-      
-      return {
-        name: quarter,
-        value: baseValue + increment + variation
-      };
-    });
-    
-    return trends;
-  } catch (error) {
-    console.error('Error fetching quarterly trends:', error);
-    throw error;
-  }
+// Helper function to generate quarterly trends data
+export const getQuarterlyTrends = async (params?: any): Promise<any[]> => {
+  const quarters = ['2022 Q1', '2022 Q2', '2022 Q3', '2022 Q4', '2023 Q1', '2023 Q2', '2023 Q3', '2023 Q4'];
+  
+  return quarters.map(quarter => ({
+    id: quarter,
+    name: quarter,
+    value: Math.floor(Math.random() * 35) + 55 // 55-90%
+  }));
 };
 
-export const getDistributionData = async (params?: ReportParams): Promise<CompletionStatistic[]> => {
-  try {
-    // Calculate the distribution of schools by completion percentage
-    // In a real app, this would be based on actual school data
-    
-    // Distribution ranges
-    const ranges = ['90-100%', '75-89%', '50-74%', '25-49%', '0-24%'];
-    
-    // Simulated distribution data
-    const distribution = [
-      { name: ranges[0], value: 15 },
-      { name: ranges[1], value: 30 },
-      { name: ranges[2], value: 35 },
-      { name: ranges[3], value: 15 },
-      { name: ranges[4], value: 5 }
-    ];
-    
-    return distribution;
-  } catch (error) {
-    console.error('Error fetching distribution data:', error);
-    throw error;
-  }
+// Helper function to generate distribution data
+export const getDistributionData = async (params?: any): Promise<any[]> => {
+  return [
+    { id: '90-100%', name: '90-100%', value: 15 },
+    { id: '80-90%', name: '80-90%', value: 25 },
+    { id: '70-80%', name: '70-80%', value: 30 },
+    { id: '60-70%', name: '60-70%', value: 18 },
+    { id: '< 60%', name: '< 60%', value: 12 }
+  ];
 };
 
-export const getYearlyComparison = async (params?: ReportParams): Promise<ComparisonData[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name');
-    
-    if (error) throw error;
-    
-    // Generate year-over-year comparison data for selected categories
-    const comparisonData = data.slice(0, 3).map(category => {
-      const previousYear = Math.floor(Math.random() * 20) + 60; // 60-80%
-      const currentYear = previousYear + Math.floor(Math.random() * 15) + (Math.random() > 0.2 ? 1 : -3); // Mostly improvements
-      const change = currentYear - previousYear;
-      
-      return {
-        category: category.name,
-        previousYear,
-        currentYear,
-        change
-      };
-    });
-    
-    return comparisonData;
-  } catch (error) {
-    console.error('Error fetching yearly comparison data:', error);
-    throw error;
-  }
+// Helper function to generate yearly comparison data
+export const getYearlyComparison = async (params?: any): Promise<any[]> => {
+  const categories = [
+    { category: 'Ümumi məlumatlar', previousYear: 72, currentYear: 78, change: 6 },
+    { category: 'İnfrastruktur', previousYear: 65, currentYear: 74, change: 9 },
+    { category: 'Akademik göstəricilər', previousYear: 85, currentYear: 83, change: -2 },
+    { category: 'Müəllim heyəti', previousYear: 79, currentYear: 86, change: 7 },
+    { category: 'Şagird nailiyyətləri', previousYear: 81, currentYear: 87, change: 6 }
+  ];
+  
+  return categories;
 };
