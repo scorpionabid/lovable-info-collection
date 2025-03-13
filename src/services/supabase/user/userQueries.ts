@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 import { User, UserFilters, CreateUserDto } from './types';
 
@@ -100,7 +101,7 @@ export const checkUtisCodeExists = async (utisCode: string, userId?: string) => 
 
 export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
   try {
-    // Use type casting to handle Supabase's strong typing requirements
+    // Supabase requires us to use specific field names
     const userDataForInsert = {
       email: userData.email,
       first_name: userData.first_name,
@@ -114,6 +115,7 @@ export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
       is_active: userData.is_active !== undefined ? userData.is_active : true
     };
     
+    // We don't include 'id' in the insert as Supabase will generate it
     const { data, error } = await supabase
       .from('users')
       .insert(userDataForInsert)
@@ -240,7 +242,9 @@ export const createUsers = async (users: Array<Omit<CreateUserDto, 'id'>>) => {
         };
         
         // Insert one record at a time with proper type handling
-        const result = await createUser(userWithDefaults as Omit<User, 'id' | 'created_at'>);
+        // We need to cast this because createUser expects a User type but we have CreateUserDto
+        const userData = userWithDefaults as unknown as Omit<User, 'id' | 'created_at'>;
+        const result = await createUser(userData);
           
         if (result) {
           results.push(result);

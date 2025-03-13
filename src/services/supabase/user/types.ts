@@ -1,37 +1,48 @@
 
-import { Json } from '@/integrations/supabase/types';
+// Import any required dependencies
+import { PostgrestResponse } from '@supabase/supabase-js';
 
+// Define the Role interface
 export interface Role {
   id: string;
   name: string;
   description: string;
-  permissions: Json;
+  permissions: string[] | any; // Allow for JSON type from Supabase
 }
 
+// Define the User interface
 export interface User {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
   role_id: string;
+  roles?: Role;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
   phone?: string;
   utis_code?: string;
   is_active: boolean;
-  last_login?: string;
   created_at?: string;
   updated_at?: string;
-  roles?: Role;
-  role?: string; // Added for backward compatibility
+  last_login?: string;
 }
 
-export type UserStatus = 'active' | 'inactive' | 'all' | string;
+// User Filters interface
+export interface UserFilters {
+  role?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  status?: 'active' | 'inactive' | 'all';
+  search?: string;
+}
 
+// CreateUserDto should mirror User but make some fields optional
 export interface CreateUserDto {
+  id?: string; // Optional because we don't need it for creation
   email: string;
-  password?: string;
   first_name: string;
   last_name: string;
   role_id: string;
@@ -40,46 +51,9 @@ export interface CreateUserDto {
   school_id?: string;
   phone?: string;
   utis_code?: string;
-  is_active: boolean; // Changed from optional to required
+  is_active: boolean; // Making this required to match User
+  password?: string; // Additional field for creation
 }
 
-export interface UpdateUserDto {
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  phone?: string;
-  utis_code?: string;
-  is_active?: boolean;
-}
-
-export interface UserFilters {
-  role?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  status?: UserStatus;
-  search?: string;
-  page?: number;
-  pageSize?: number;
-}
-
-export interface UserStats {
-  totalUsers: number;
-  activeUsers: number;
-  newUsersThisMonth: number;
-  roleDistribution: { role: string; count: number }[];
-}
-
-export interface PasswordResetRequest {
-  email: string;
-}
-
-export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-}
+// Define any other types needed
+export type QueryResult<T> = Promise<PostgrestResponse<T>>;
