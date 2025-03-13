@@ -1,5 +1,24 @@
-import { supabase } from '@/integrations/supabase/client';
-import { User } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
+import { User } from './types';
+
+interface UserFilters {
+  search?: string;
+  roleId?: string;
+  regionId?: string;
+  sectorId?: string;
+  schoolId?: string;
+  status?: 'active' | 'inactive';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+  // For backward compatibility
+  role?: string;
+  role_id?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+}
 
 export const getUsers = async (filters?: UserFilters) => {
   try {

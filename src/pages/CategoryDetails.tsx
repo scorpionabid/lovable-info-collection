@@ -1,116 +1,108 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { Layout } from "@/components/layout/Layout";
-import { CategoryDetailView } from "@/components/categories/CategoryDetailView";
-import { getCategoryById } from '@/services/supabase/category/categoryQueries';
-import { getCategoryColumns } from '@/services/supabase/category/columnQueries';
 
-const adaptCategoryData = (data): CategoryType => {
-  return {
-    id: data.id,
-    name: data.name,
-    description: data.description || '',
-    assignment: data.assignment,
-    status: data.status || 'Active',
-    priority: data.priority || 0,
-    region_id: data.region_id,
-    sector_id: data.sector_id,
-    school_id: data.school_id,
-    school_type_id: data.school_type_id,
-    columns: data.columns || [],
-    completionRate: data.completionRate || 0,
-    createdAt: data.createdAt || data.created_at || new Date().toISOString(),
-    deadline: data.deadline || new Date().toISOString(),
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-    created_by: data.created_by
-  };
-};
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Layout } from '@/components/layout/Layout';
+import { CategoryDetailView } from '@/components/categories/CategoryDetailView';
+import { getCategoryById, updateCategory, deleteCategory } from '@/services/api/categoryService';
+import { CategoryType } from '@/components/categories/types';
 
 const CategoryDetails = () => {
-  const { id } = useParams();
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Fetch category data
-  const { 
-    data: categoryData,
-    isLoading: isCategoryLoading,
-    isError: isCategoryError 
-  } = useQuery({
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
+
+  const { data: category, isLoading, isError } = useQuery({
     queryKey: ['category', id],
-    queryFn: () => id ? getCategoryById(id) : null,
+    queryFn: () => getCategoryById(id as string),
     enabled: !!id,
-    meta: {
-      onSettled: (data, error) => {
-        if (error) {
-          console.error('Error loading category:', error);
-          toast.error('Kateqoriya məlumatlarını yükləyərkən xəta baş verdi');
-        }
-      }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => updateCategory(id as string, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['category', id] });
+      toast.success('Kateqoriya məlumatları uğurla yeniləndi');
+    },
+    onError: (error: any) => {
+      toast.error(`Xəta: ${error?.message || 'Kateqoriya yenilənərkən xəta baş verdi'}`);
     }
   });
-  
-  // Fetch columns data
-  const {
-    data: columnsData = [],
-    isLoading: isColumnsLoading,
-    isError: isColumnsError
-  } = useQuery({
-    queryKey: ['category-columns', id],
-    queryFn: () => id ? getCategoryColumns(id) : [],
-    enabled: !!id,
-    meta: {
-      onSettled: (data, error) => {
-        if (error) {
-          console.error('Error loading columns:', error);
-          toast.error('Sütun məlumatlarını yükləyərkən xəta baş verdi');
-        }
-      }
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteCategory(id as string),
+    onSuccess: () => {
+      toast.success('Kateqoriya uğurla silindi');
+      navigate('/categories');
+    },
+    onError: (error: any) => {
+      toast.error(`Xəta: ${error?.message || 'Kateqoriya silinərkən xəta baş verdi'}`);
     }
   });
-  
-  // Update the loading state based on the query states
-  useEffect(() => {
-    setIsLoading(isCategoryLoading || isColumnsLoading);
-  }, [isCategoryLoading, isColumnsLoading]);
-  
-  // Create a combined error flag
-  const hasError = isCategoryError || isColumnsError;
-  
+
+  const handleUpdate = (data: any) => {
+    updateMutation.mutate(data);
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Bu kateqoriyanı silmək istədiyinizə əminsiniz?')) {
+      setLoading(true);
+      try {
+        await deleteMutation.mutateAsync();
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleGoBack = () => {
+    navigate('/categories');
+  };
+
   if (isLoading) {
     return (
-      <Layout userRole="super-admin">
-        <div className="flex items-center justify-center h-96">
+      <Layout>
+        <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
         </div>
       </Layout>
     );
   }
-  
-  if (hasError || !categoryData) {
+
+  if (isError || !category) {
     return (
-      <Layout userRole="super-admin">
-        <div className="flex flex-col items-center justify-center h-96">
-          <p className="text-red-500 mb-4">Məlumatları yükləyərkən xəta baş verdi.</p>
-          <button 
-            className="px-4 py-2 bg-infoline-blue text-white rounded hover:bg-infoline-dark-blue"
-            onClick={() => window.location.reload()}
-          >
-            Yenidən cəhd edin
-          </button>
+      <Layout>
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+          <p className="font-semibold">Kateqoriya məlumatlarını yükləyərkən xəta baş verdi</p>
+          <p className="mt-2">Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sistem administratoru ilə əlaqə saxlayın.</p>
+          <Button className="mt-4" onClick={handleGoBack}>Geri qayıt</Button>
         </div>
       </Layout>
     );
   }
-  
-  // Combine category data with columns data
-  const category = adaptCategoryData(categoryData);
-  
+
+  // Ensure createdAt is not optional by providing a default
+  const categoryWithDefaults: CategoryType = {
+    ...category,
+    columns: Array.isArray(category.columns) ? category.columns : [],
+    deadline: category.deadline || new Date().toISOString(),
+    description: category.description || '',
+    completionRate: category.completionRate || 0,
+    createdAt: category.createdAt || category.created_at || new Date().toISOString()
+  };
+
   return (
-    <Layout userRole="super-admin">
-      <CategoryDetailView category={category} />
+    <Layout>
+      <CategoryDetailView
+        category={categoryWithDefaults}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        onGoBack={handleGoBack}
+        isSubmitting={updateMutation.isPending || deleteMutation.isPending || loading}
+      />
     </Layout>
   );
 };

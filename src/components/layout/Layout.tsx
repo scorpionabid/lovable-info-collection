@@ -1,7 +1,7 @@
 
 import { useState, ReactNode } from 'react';
 import { Header } from './Header';
-import { Sidebar } from './Sidebar';
+import Sidebar from './Sidebar';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/contexts/AuthContext';
 

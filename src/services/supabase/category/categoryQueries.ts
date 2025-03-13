@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { Category, CreateCategoryDto, UpdateCategoryDto, CategoryFilter } from './types';
 import { calculateCategoryCompletionRate, getCategoryColumnsCount } from './helpers';
@@ -16,7 +15,8 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
         assignment,
         status,
         priority,
-        created_at
+        created_at,
+        updated_at
       `);
 
     // Apply filters if provided
@@ -66,13 +66,15 @@ export const getCategories = async (filters?: CategoryFilter): Promise<Category[
           id: item.id,
           name: item.name,
           description: item.description || '',
-          assignment: item.assignment || 'All',
+          assignment: item.assignment as Category['assignment'],
+          status: item.status as Category['status'],
+          priority: item.priority,
           columns: columnsCount,
           completionRate,
-          status: item.status,
-          priority: item.priority,
+          created_at: item.created_at,
+          updated_at: item.updated_at || item.created_at,
           createdAt: item.created_at
-        };
+        } as Category;
       })
     );
 
@@ -94,7 +96,8 @@ export const getCategoryById = async (id: string): Promise<Category> => {
         assignment,
         status,
         priority,
-        created_at
+        created_at,
+        updated_at
       `)
       .eq('id', id)
       .single();
@@ -109,13 +112,15 @@ export const getCategoryById = async (id: string): Promise<Category> => {
       id: data.id,
       name: data.name,
       description: data.description || '',
-      assignment: data.assignment,
+      assignment: data.assignment as Category['assignment'],
+      status: data.status as Category['status'],
+      priority: data.priority,
       columns: columns,
       completionRate,
-      status: data.status,
-      priority: data.priority,
+      created_at: data.created_at,
+      updated_at: data.updated_at || data.created_at,
       createdAt: data.created_at
-    };
+    } as Category;
   } catch (error) {
     console.error('Error fetching category details:', error);
     throw error;

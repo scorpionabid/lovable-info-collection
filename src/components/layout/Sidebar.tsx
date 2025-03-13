@@ -1,11 +1,15 @@
+
 import React from 'react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, Building, Briefcase, ListChecks, Settings, AlertTriangle } from 'lucide-react';
 
-const Sidebar = () => {
-  const { userRole } = useAuth();
+const Sidebar = ({ userRole }: { userRole?: UserRole }) => {
+  const { userRole: contextUserRole } = useAuth();
   const location = useLocation();
+  
+  // Use provided userRole or fall back to context
+  const role = userRole || contextUserRole;
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -28,7 +32,7 @@ const Sidebar = () => {
           </li>
 
           {/* Super Admin Menu */}
-          {userRole === 'super-admin' && (
+          {(role === 'super-admin') && (
             <>
               <li>
                 <Link to="/users" className={`flex items-center px-6 py-3 hover:bg-gray-100 rounded-md ${isActive('/users') ? 'bg-gray-100 font-medium' : ''}`}>
@@ -46,7 +50,7 @@ const Sidebar = () => {
           )}
 
           {/* Region Admin Menu */}
-          {(userRole === 'super-admin' || userRole === 'region-admin') && (
+          {(role === 'super-admin' || role === 'region-admin') && (
             <li>
               <Link to="/regions" className={`flex items-center px-6 py-3 hover:bg-gray-100 rounded-md ${isActive('/regions') ? 'bg-gray-100 font-medium' : ''}`}>
                 <Building className="mr-2 h-4 w-4" />
@@ -56,7 +60,7 @@ const Sidebar = () => {
           )}
 
           {/* Sector Admin Menu */}
-          {(userRole === 'super-admin' || userRole === 'region-admin' || userRole === 'sector-admin') && (
+          {(role === 'super-admin' || role === 'region-admin' || role === 'sector-admin') && (
             <li>
               <Link to="/sectors" className={`flex items-center px-6 py-3 hover:bg-gray-100 rounded-md ${isActive('/sectors') ? 'bg-gray-100 font-medium' : ''}`}>
                 <Briefcase className="mr-2 h-4 w-4" />

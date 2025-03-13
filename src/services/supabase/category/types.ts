@@ -45,6 +45,7 @@ export interface Category {
   columns?: number | CategoryColumn[];
   completionRate: number;
   createdAt?: string;
+  deadline?: string;
 }
 
 export interface CategoryColumn {
@@ -58,6 +59,15 @@ export interface CategoryColumn {
   category_id?: string;
   created_at?: string;
   updated_at?: string;
+  validation?: {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    minValue?: number;
+    maxValue?: number;
+    pattern?: string;
+    options?: string[];
+  };
 }
 
 export interface CreateCategoryDto {
@@ -78,6 +88,15 @@ export interface CreateColumnDto {
   options?: string[] | any;
   category_id?: string;
   order?: number;
+  validation?: {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    minValue?: number;
+    maxValue?: number;
+    pattern?: string;
+    options?: string[];
+  };
 }
 
 export interface UpdateColumnDto extends Partial<CreateColumnDto> {}

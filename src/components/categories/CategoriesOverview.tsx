@@ -10,19 +10,20 @@ import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
 import * as categoryService from '@/services/supabase/category';
 import { Category, CategoryFilter } from '@/services/supabase/category/types';
-import { CategoryType } from './CategoryDetailView';
+import { CategoryType } from './types';
 
 const convertToCategory = (category: Category): CategoryType => {
   return {
     ...category,
-    deadline: '', // Set a default value for deadline
+    deadline: category.deadline || '', 
     columns: typeof category.columns === 'number' ? [] : category.columns || [],
-    description: category.description || '', // Ensure description is not optional
-    completionRate: category.completionRate || 0 // Ensure completionRate is not optional
+    description: category.description || '',
+    completionRate: category.completionRate || 0,
+    createdAt: category.createdAt || category.created_at || ''
   };
 };
 
-const adaptCategoryData = (category: any) => {
+const adaptCategoryData = (category: any): CategoryType => {
   return {
     id: category.id,
     name: category.name,
@@ -38,7 +39,7 @@ const adaptCategoryData = (category: any) => {
     updated_at: category.updated_at,
     columns: Array.isArray(category.columns) ? category.columns : [],
     completionRate: category.completionRate || 0,
-    createdAt: category.createdAt || category.created_at,
+    createdAt: category.createdAt || category.created_at || '',
     deadline: category.deadline || new Date().toISOString()
   };
 };

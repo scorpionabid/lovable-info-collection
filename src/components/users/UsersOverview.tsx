@@ -10,9 +10,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, Edit, Trash2, FileDown } from "lucide-react";
 import { UserTablePagination } from "./table/UserTablePagination";
 import { UserTableToolbar } from "./table/UserTableToolbar";
@@ -21,6 +21,11 @@ import { sortUsers } from "./utils/userUtils";
 import { useUserExport } from "./hooks/useUserExport";
 import { confirm } from "@/components/ui/confirm";
 import userService, { User } from "@/services/api/userService";
+
+interface UserApiResponse {
+  data: User[];
+  count: number;
+}
 
 export const UsersOverview = () => {
   const [page, setPage] = useState(1);
@@ -54,14 +59,13 @@ export const UsersOverview = () => {
   }, [usersData]);
 
   useEffect(() => {
-    if (usersData && 'error' in usersData) {
+    if ((usersData as any)?.error) {
       toast("İstifadəçiləri yükləyərkən xəta baş verdi", {
-        description: usersData.error?.message,
-        variant: "destructive"
+        description: (usersData as any).error?.toString()
       });
       setIsLoading(false);
     }
-  }, [usersData]);
+  }, [(usersData as any)?.error]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -94,9 +98,7 @@ export const UsersOverview = () => {
       toast("İstifadəçi uğurla silindi");
       refetch();
     } catch (error) {
-      toast("İstifadəçini silərkən xəta baş verdi", {
-        variant: "destructive"
-      });
+      toast("İstifadəçini silərkən xəta baş verdi");
     }
   };
 
@@ -108,9 +110,7 @@ export const UsersOverview = () => {
 
   const handleExport = () => {
     if (!users) {
-      toast("İxrac etmək üçün məlumat tapılmadı", {
-        variant: "destructive"
-      });
+      toast("İxrac etmək üçün məlumat tapılmadı");
       return;
     }
     exportUsers(users);
@@ -147,7 +147,7 @@ export const UsersOverview = () => {
 
   // Fix the setUsers call by using the adapter
   const handleFetchSuccess = (data: any) => {
-    if (data && Array.isArray(data)) {
+    if (Array.isArray(data)) {
       setUsers(data.map(adaptUserData));
     } else if (data && 'data' in data && Array.isArray(data.data)) {
       setUsers(data.data.map(adaptUserData));
@@ -232,7 +232,7 @@ export const UsersOverview = () => {
       <UserTablePagination
         page={page}
         perPage={perPage}
-        totalItems={usersData && 'count' in usersData ? usersData.count : 0}
+        totalItems={(usersData as any)?.count || 0}
         setPage={setPage}
         setPerPage={setPerPage}
       />
