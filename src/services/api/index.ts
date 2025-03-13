@@ -159,7 +159,7 @@ export const createItem = async (tableName: string, item: any) => {
       break;
     default:
       console.error(`Unknown table: ${tableName}`);
-      return { success: false, error: `Unknown table: ${tableName}` };
+      return { success: false, data: null, error: `Unknown table: ${tableName}` };
   }
 
   const { data, error } = await query.insert(item).select().single();
@@ -194,7 +194,7 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
       break;
     default:
       console.error(`Unknown table: ${tableName}`);
-      return { success: false, error: `Unknown table: ${tableName}` };
+      return { success: false, data: null, error: `Unknown table: ${tableName}` };
   }
 
   const { data, error } = await query.update(item).eq('id', id).select().single();
@@ -229,11 +229,11 @@ export const deleteItem = async (tableName: string, id: string) => {
       break;
     default:
       console.error(`Unknown table: ${tableName}`);
-      return { success: false, error: `Unknown table: ${tableName}` };
+      return { success: false, data: null, error: `Unknown table: ${tableName}` };
   }
 
   const { error } = await query.delete().eq('id', id);
-  return { success: !error, error };
+  return { success: !error, data: null, error };
 };
 
 // Enhanced API interface that supports both traditional and axios-like calls
