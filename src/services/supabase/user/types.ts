@@ -13,7 +13,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role_id?: string;
+  role_id: string; // Changed from optional to required to match API User
   region_id?: string;
   sector_id?: string;
   school_id?: string;
@@ -24,7 +24,10 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   roles?: Role;
+  role?: string; // Added for backward compatibility
 }
+
+export type UserStatus = 'active' | 'inactive' | string;
 
 export interface CreateUserDto {
   email: string;
@@ -55,10 +58,11 @@ export interface UpdateUserDto {
 
 export interface UserFilters {
   role?: string;
+  role_id?: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  status?: 'active' | 'inactive' | string;
+  status?: UserStatus;
   search?: string;
   page?: number;
   pageSize?: number;

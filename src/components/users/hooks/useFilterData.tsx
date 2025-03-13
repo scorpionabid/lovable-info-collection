@@ -1,98 +1,89 @@
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import userService from "@/services/api/userService";
-import { UserFilters } from "@/services/supabase/user/types";
+import { useState, useEffect } from 'react';
+import { UserFilters } from '@/services/supabase/user/types';
+import userService from '@/services/api/userService';
 
-export const useFilterData = (initialFilters: UserFilters = {}) => {
-  const [filters, setFilters] = useState<UserFilters>(initialFilters);
-  const [selectedRegion, setSelectedRegion] = useState<string | undefined>(initialFilters.regionId);
-  const [selectedSector, setSelectedSector] = useState<string | undefined>(initialFilters.sectorId);
+export const useFilterData = () => {
+  const [filters, setFilters] = useState<UserFilters>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([]);
+  const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
 
-  // Fetch filter data
-  const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => userService.getRoles(),
-  });
+  // Load initial data for filters
+  useEffect(() => {
+    const loadFilterData = async () => {
+      setIsLoading(true);
+      try {
+        const [rolesData, regionsData] = await Promise.all([
+          userService.getRoles(),
+          userService.getRegions()
+        ]);
+        
+        setRoles(rolesData || []);
+        setRegions(regionsData || []);
+      } catch (error) {
+        console.error('Error loading filter data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const { data: regions = [], isLoading: isLoadingRegions } = useQuery({
-    queryKey: ['regions'],
-    queryFn: () => userService.getRegions(),
-  });
-  
-  const { data: sectors = [], isLoading: isLoadingSectors } = useQuery({
-    queryKey: ['sectors', selectedRegion],
-    queryFn: () => userService.getSectors(selectedRegion),
-    enabled: !!selectedRegion,
-  });
+    loadFilterData();
+  }, []);
 
-  const { data: schools = [], isLoading: isLoadingSchools } = useQuery({
-    queryKey: ['schools', selectedSector],
-    queryFn: () => userService.getSchools(selectedSector),
-    enabled: !!selectedSector,
-  });
+  // Load sectors when region changes
+  useEffect(() => {
+    const loadSectors = async () => {
+      if (!filters.region_id) {
+        setSectors([]);
+        return;
+      }
 
-  const updateFilters = (field: keyof UserFilters, value: any) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+      setIsLoading(true);
+      try {
+        const sectorsData = await userService.getSectors(filters.region_id);
+        setSectors(sectorsData || []);
+      } catch (error) {
+        console.error('Error loading sectors:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const resetFilters = () => {
-    setFilters({});
-    setSelectedRegion(undefined);
-    setSelectedSector(undefined);
-  };
+    loadSectors();
+  }, [filters.region_id]);
 
-  // Change region handling
-  const handleRegionChange = (regionId: string | undefined) => {
-    setSelectedRegion(regionId);
-    
-    // Reset sector and school if region changes
-    if (regionId !== filters.regionId) {
-      setFilters(prev => ({
-        ...prev,
-        regionId: regionId,
-        sectorId: undefined,
-        schoolId: undefined
-      }));
-      setSelectedSector(undefined);
-    }
-  };
+  // Load schools when sector changes
+  useEffect(() => {
+    const loadSchools = async () => {
+      if (!filters.sector_id) {
+        setSchools([]);
+        return;
+      }
 
-  // Change sector handling
-  const handleSectorChange = (sectorId: string | undefined) => {
-    setSelectedSector(sectorId);
-    
-    // Reset school if sector changes
-    if (sectorId !== filters.sectorId) {
-      setFilters(prev => ({
-        ...prev,
-        sectorId: sectorId,
-        schoolId: undefined
-      }));
-    }
-  };
+      setIsLoading(true);
+      try {
+        const schoolsData = await userService.getSchools(filters.sector_id);
+        setSchools(schoolsData || []);
+      } catch (error) {
+        console.error('Error loading schools:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const isLoading = isLoadingRoles || isLoadingRegions || isLoadingSectors || isLoadingSchools;
+    loadSchools();
+  }, [filters.sector_id]);
 
   return {
     filters,
+    setFilters,
+    isLoading,
     roles,
     regions,
     sectors,
-    schools,
-    selectedRegion,
-    selectedSector,
-    isLoading,
-    isLoadingRoles,
-    isLoadingRegions,
-    isLoadingSectors,
-    isLoadingSchools,
-    updateFilters,
-    resetFilters,
-    handleRegionChange,
-    handleSectorChange
+    schools
   };
 };

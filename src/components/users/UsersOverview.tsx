@@ -17,10 +17,11 @@ import { Plus, Edit, Trash2, FileDown } from "lucide-react";
 import { UserTablePagination } from "./table/UserTablePagination";
 import { UserTableToolbar } from "./table/UserTableToolbar";
 import { UserForm } from "./modals/UserForm";
-import { sortUsers } from "./utils/userUtils";
+import { sortUsers, getRoleName, getEntityName } from "./utils/userUtils";
 import { useUserExport } from "./hooks/useUserExport";
 import { confirm } from "@/components/ui/confirm";
-import userService, { User } from "@/services/api/userService";
+import userService from "@/services/api/userService";
+import { User } from '@/services/supabase/user/types';
 
 interface UserApiResponse {
   data: User[];
@@ -34,7 +35,7 @@ export const UsersOverview = () => {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [users, setUsers] = useState<User[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -60,9 +61,7 @@ export const UsersOverview = () => {
 
   useEffect(() => {
     if ((usersData as any)?.error) {
-      toast("İstifadəçiləri yükləyərkən xəta baş verdi", {
-        description: (usersData as any).error?.toString()
-      });
+      toast(`İstifadəçiləri yükləyərkən xəta baş verdi: ${(usersData as any).error?.toString()}`);
       setIsLoading(false);
     }
   }, [(usersData as any)?.error]);
@@ -113,7 +112,7 @@ export const UsersOverview = () => {
       toast("İxrac etmək üçün məlumat tapılmadı");
       return;
     }
-    exportUsers(users);
+    exportUsers(users as any);
   };
 
   // Add a user type adapter function
@@ -134,16 +133,12 @@ export const UsersOverview = () => {
       updated_at: userData.updated_at,
       last_login: userData.last_login,
       roles: userData.roles,
-      role: userData.role || (userData.roles ? userData.roles.name : '')
+      role: userData.roles ? userData.roles.name : (userData.role || '')
     };
   };
 
   // Fix the sortUsers call by adapting the data
-  const sortedUsers = sortUsers(
-    users ? users.map(adaptUserData) : [],
-    sortColumn,
-    sortOrder as 'asc' | 'desc'
-  );
+  const sortedUsers = users ? sortUsers(users, sortColumn, sortOrder) : [];
 
   // Fix the setUsers call by using the adapter
   const handleFetchSuccess = (data: any) => {
@@ -214,8 +209,8 @@ export const UsersOverview = () => {
                 <TableRow key={user.id}>
                   <TableCell>{user.first_name} {user.last_name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.roles?.name || user.role}</TableCell>
-                  <TableCell>{user.region_id}</TableCell>
+                  <TableCell>{getRoleName(user)}</TableCell>
+                  <TableCell>{getEntityName(user)}</TableCell>
                   <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString() : 'Heç vaxt'}</TableCell>
                   <TableCell>{user.is_active ? 'Aktiv' : 'Deaktiv'}</TableCell>
                   <TableCell className="text-right">

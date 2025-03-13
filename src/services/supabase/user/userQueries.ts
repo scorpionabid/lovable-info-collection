@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { User, UserFilters } from './types';
 
@@ -245,8 +244,7 @@ export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 
     // Use type assertion to handle the type mismatch
     const { data, error } = await supabase
       .from('users')
-      .insert(validUsers as any)
-      .select();
+      .insert(validUsers as any);
     
     if (error) throw error;
     
