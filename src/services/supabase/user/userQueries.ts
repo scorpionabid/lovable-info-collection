@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 import { User, UserFilters, CreateUserDto } from './types';
 
@@ -118,7 +119,7 @@ export const createUser = async (userData: CreateUserDto) => {
     // Insert as array for proper typing
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert])
+      .insert([userDataForInsert]) // Wrap in array to match expected format
       .select(`
         *,
         roles (
