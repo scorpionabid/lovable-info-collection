@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
@@ -5,9 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -20,7 +19,7 @@ import { UserTableToolbar } from "./table/UserTableToolbar";
 import { UserForm } from "./modals/UserForm";
 import { sortUsers } from "./utils/userUtils";
 import { useUserExport } from "./hooks/useUserExport";
-import { confirm } from "@/components/ui/confirm/confirm";
+import { confirm } from "@/components/ui/confirm";
 import userService from "@/services/api/userService";
 import { User } from '@/services/supabase/user/types';
 
@@ -37,16 +36,16 @@ export const UsersOverview = () => {
   const navigate = useNavigate();
   const { exportUsers } = useUserExport();
 
-  const { data: usersData, refetch } = useQuery(
-    ['users', page, perPage, search, sortColumn, sortOrder],
-    () => userService.getUsers({
+  const { data: usersData, refetch } = useQuery({
+    queryKey: ['users', page, perPage, search, sortColumn, sortOrder],
+    queryFn: () => userService.getUsers({
       page,
       pageSize: perPage,
       search,
       sortColumn,
       sortDirection: sortOrder,
     })
-  );
+  });
 
   useEffect(() => {
     setIsLoading(true);
@@ -168,25 +167,12 @@ export const UsersOverview = () => {
         <Button onClick={() => navigate('/users/import')}>Import</Button>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <Input
-          type="text"
-          placeholder="Axtar..."
-          value={search}
-          onChange={handleSearchChange}
-          className="max-w-md"
-        />
-        <div className="flex items-center space-x-2">
-          <Button onClick={handleExport} variant="outline">
-            <FileDown className="mr-2 h-4 w-4" />
-            İxrac et
-          </Button>
-          <Button onClick={() => setIsFormOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Əlavə et
-          </Button>
-        </div>
-      </div>
+      <UserTableToolbar 
+        search={search}
+        onSearchChange={handleSearchChange}
+        onExport={handleExport}
+        onAddUser={() => setIsFormOpen(true)}
+      />
 
       <div className="border rounded-md">
         <Table>
