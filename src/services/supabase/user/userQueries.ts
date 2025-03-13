@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 import { User, UserFilters, CreateUserDto } from './types';
 
@@ -241,13 +240,10 @@ export const createUsers = async (users: Array<Omit<CreateUserDto, 'id'>>) => {
         };
         
         // Insert one record at a time with proper type handling
-        const { data, error } = await createUser(userWithDefaults as Omit<User, 'id' | 'created_at'>);
+        const result = await createUser(userWithDefaults as Omit<User, 'id' | 'created_at'>);
           
-        if (error) {
-          console.error(`Error creating user ${user.email}:`, error);
-          errors.push({ user, error });
-        } else if (data) {
-          results.push(data);
+        if (result) {
+          results.push(result);
         }
       } catch (err) {
         console.error(`Exception creating user ${user.email}:`, err);

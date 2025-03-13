@@ -12,16 +12,13 @@ interface OrganizationSelectionComponentProps {
   onRegionChange: (id: string) => void;
   onSectorChange: (id: string) => void;
   onSchoolChange: (id: any) => void;
-  selectedRoleId?: string;
   onRoleChange?: (roleId: string) => void;
   roles?: any[];
   regions?: any[];
   sectors?: any[];
   schools?: any[];
-  form?: any;
   isEditing?: boolean;
   user?: any;
-  getRoleById?: (id: string) => any;
   currentUserRole?: string;
 }
 
@@ -33,7 +30,6 @@ export const OrganizationSelectionComponent = ({
   onRegionChange,
   onSectorChange,
   onSchoolChange,
-  selectedRoleId,
   onRoleChange,
   roles = [],
   regions = [],
@@ -41,7 +37,6 @@ export const OrganizationSelectionComponent = ({
   schools = []
 }: OrganizationSelectionComponentProps) => {
   // Use either selectedRole or selectedRoleId based on which was provided
-  const roleId = selectedRoleId || selectedRole;
   const handleRoleChange = onRoleChange || (() => {});
   
   return (
@@ -49,7 +44,7 @@ export const OrganizationSelectionComponent = ({
       <div className="space-y-4">
         <h4 className="font-medium text-infoline-dark-blue">İstifadəçi Rolu</h4>
         <RoleSelection
-          selectedRole={roleId}
+          selectedRole={selectedRole}
           onRoleSelect={handleRoleChange}
           roles={roles}
         />
@@ -60,9 +55,9 @@ export const OrganizationSelectionComponent = ({
       <div className="space-y-4">
         <h4 className="font-medium text-infoline-dark-blue">Əlaqəli Təşkilat</h4>
         
-        {roleId && (
+        {selectedRole && (
           <OrganizationSelect
-            roleType={roleId}
+            roleType={selectedRole}
             selectedRegion={regionId}
             selectedSector={sectorId}
             schoolValue={schoolId}

@@ -61,7 +61,7 @@ export const UserModalContent = ({
 
   // Use hooks for functionality
   const { createUserMutation, isCreatingAuth } = useUserFormSubmit(user, onClose, onSuccess);
-  const { isCheckingUtisCode } = useUtisCodeValidation(form, isEditing, user);
+  const { isCheckingUtisCode } = useUtisCodeValidation();
   const { roles, regions, sectors, schools, isLoading, getRoleById } = useOrganizationData(
     currentUserId,
     currentUserRole,
@@ -74,7 +74,7 @@ export const UserModalContent = ({
   };
 
   if (isLoading) {
-    return <LoadingState />;
+    return <LoadingState message="Loading organization data..." />;
   }
 
   return (
@@ -88,23 +88,41 @@ export const UserModalContent = ({
           
           <TabsContent value="profile" className="mt-4">
             <UserProfileTab 
-              form={form} 
               isEditing={isEditing} 
               user={user}
               isCheckingUtisCode={isCheckingUtisCode}
+              email={form.watch("email")}
+              firstName={form.watch("first_name")}
+              lastName={form.watch("last_name")}
+              phone={form.watch("phone") || ""}
+              utisCode={form.watch("utis_code") || ""}
+              password={form.watch("password") || ""}
+              onEmailChange={(value) => form.setValue("email", value)}
+              onFirstNameChange={(value) => form.setValue("first_name", value)}
+              onLastNameChange={(value) => form.setValue("last_name", value)}
+              onPhoneChange={(value) => form.setValue("phone", value)}
+              onUtisCodeChange={(value) => form.setValue("utis_code", value)}
+              onPasswordChange={(value) => form.setValue("password", value)}
             />
           </TabsContent>
           
           <TabsContent value="role" className="mt-4">
             <RoleTab 
-              form={form}
               roles={roles}
               regions={regions}
               sectors={sectors}
               schools={schools}
               isEditing={isEditing}
               user={user}
-              currentUserRole={currentUserRole}
+              currentUserRole={currentUserRole || ""}
+              selectedRole={form.watch("role_id")}
+              selectedRegion={form.watch("region_id") || ""}
+              selectedSector={form.watch("sector_id") || ""}
+              selectedSchool={form.watch("school_id") || ""}
+              onRoleChange={(value) => form.setValue("role_id", value)}
+              onRegionChange={(value) => form.setValue("region_id", value)}
+              onSectorChange={(value) => form.setValue("sector_id", value)}
+              onSchoolChange={(value) => form.setValue("school_id", value)}
             />
           </TabsContent>
         </Tabs>

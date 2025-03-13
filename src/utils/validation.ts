@@ -1,136 +1,121 @@
-import { z } from 'zod';
 
+// Import required libraries and types
+import { z } from "zod";
+
+// Category Column interface
 interface CategoryColumn {
   id: string;
   name: string;
-  type: string;
-  required: boolean;
-  options?: any;
   description?: string;
+  dataType: string;
+  isRequired: boolean;
+  order: number;
+  options?: any[];
 }
 
-export const generateSchemaFromColumn = (column: any) => {
-  const { 
-    type, 
-    required,
-    min_value = null,
-    max_value = null,
-    regex_pattern = null,
-    min_length = null,
-    max_length = null,
-    options = null
-  } = column;
+// Zod validation for numeric values
+export const validateNumber = (value: any): boolean => {
+  return !isNaN(Number(value)) && value !== null && value !== undefined && value !== "";
+};
 
-  let schema;
+// Helper function to add validation to a Zod schema
+export const addValidationRules = (schema: z.ZodTypeAny, rules: any) => {
+  let updatedSchema = schema;
+  
+  if (rules.required) {
+    updatedSchema = updatedSchema.refine((val) => val && val.trim() !== "", {
+      message: rules.requiredMessage || "This field is required",
+    });
+  }
 
-  switch (type) {
-    case 'string':
-      schema = z.string();
-      if (min_length !== null) {
-        schema = schema.min(min_length);
-      }
-      if (max_length !== null) {
-        schema = schema.max(max_length);
-      }
-      if (regex_pattern) {
-        const regexObj = new RegExp(regex_pattern);
-        schema = schema.regex(regexObj);
-      }
+  if (rules.minLength !== undefined) {
+    updatedSchema = updatedSchema.refine((val) => !val || val.length >= rules.minLength, {
+      message: rules.minLengthMessage || `Minimum length is ${rules.minLength} characters`,
+    });
+  }
+
+  if (rules.maxLength !== undefined) {
+    updatedSchema = updatedSchema.refine((val) => !val || val.length <= rules.maxLength, {
+      message: rules.maxLengthMessage || `Maximum length is ${rules.maxLength} characters`,
+    });
+  }
+
+  if (rules.pattern) {
+    updatedSchema = updatedSchema.refine((val) => !val || new RegExp(rules.pattern).test(val), {
+      message: rules.patternMessage || "Invalid format",
+    });
+  }
+
+  return updatedSchema;
+};
+
+// Create Zod schema for field based on column definition
+export const createFieldSchema = (column: CategoryColumn) => {
+  const { dataType, isRequired } = column;
+  
+  let schema = z.any();
+  
+  switch (dataType) {
+    case "text":
+    case "longtext":
+    case "email":
+    case "phone":
+    case "date":
+    case "select":
+      schema = isRequired ? z.string().min(1, { message: "This field is required" }) : z.string().optional();
       break;
-    case 'number':
-      schema = z.number();
-      if (min_value !== null) {
-        schema = schema.min(min_value);
-      }
-      if (max_value !== null) {
-        schema = schema.max(max_value);
-      }
+    case "number":
+      schema = isRequired 
+        ? z.string().refine(validateNumber, { message: "Must be a number" }) 
+        : z.string().refine((val) => !val || validateNumber(val), { message: "Must be a number" }).optional();
       break;
-    case 'boolean':
-      schema = z.boolean();
-      break;
-    case 'date':
-      schema = z.string()
-        .refine(val => !isNaN(Date.parse(val)), {
-          message: "Invalid date format",
-        });
-      break;
-    case 'enum':
-      if (options && Array.isArray(options) && options.length > 0) {
-        schema = z.enum(options as [string, ...string[]]);
-      } else {
-        schema = z.string();
-      }
+    case "boolean":
+      schema = z.boolean().optional();
       break;
     default:
-      schema = z.string();
+      schema = isRequired ? z.string().min(1) : z.string().optional();
   }
-
-  return required ? schema : schema.optional().nullable();
+  
+  return schema;
 };
 
-export const generateValidationSchema = (fields: any[]): z.ZodObject<any> => {
-  const schemaObj: Record<string, z.ZodTypeAny> = {};
-
-  fields.forEach((field) => {
-    let fieldSchema: z.ZodTypeAny;
-
-    switch (field.type) {
-      case 'text':
-        fieldSchema = z.string();
-        if (field.required) {
-          fieldSchema = fieldSchema.min(1, { message: `${field.name} alanı zorunludur` });
-        } else {
-          fieldSchema = fieldSchema.optional().or(z.literal(''));
-        }
-        break;
-
-      case 'number':
-        fieldSchema = z.number().or(z.string().transform((val) => Number(val) || 0));
-        break;
-
-      case 'email':
-        fieldSchema = z.string().email();
-        break;
-
-      case 'date':
-        fieldSchema = z.string().or(z.date());
-        break;
-
-      case 'select':
-        if (field.options && Array.isArray(field.options)) {
-          fieldSchema = z.string();
-          if (field.required) {
-            fieldSchema = fieldSchema.min(1, { message: `${field.name} seçilmelidir` });
-          } else {
-            fieldSchema = fieldSchema.optional().or(z.literal(''));
-          }
-        } else {
-          fieldSchema = z.string().optional().or(z.literal(''));
-        }
-        break;
-
-      default:
-        fieldSchema = z.string().optional().or(z.literal(''));
-    }
-
-    schemaObj[field.id] = fieldSchema;
+// Create a full form schema based on all columns
+export const createFormSchema = (columns: CategoryColumn[]) => {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  
+  columns.forEach((column) => {
+    shape[column.id] = createFieldSchema(column);
   });
-
-  return z.object(schemaObj);
+  
+  return z.object(shape);
 };
 
-export const isValidNumber = (value: any): boolean => {
-  if (value === null || value === undefined || value === '') {
-    return false;
-  }
-  return !isNaN(Number(value));
-};
-
-export const isValidDate = (value: any): boolean => {
-  if (value === null || value === undefined || value === '') {
-    return false;
-  }
-  const date = new Date(value);
-  return !isNaN(date.getTime());
+// Get form default values from columns
+export const getFormDefaultValues = (columns: CategoryColumn[]) => {
+  const defaultValues: Record<string, any> = {};
+  
+  columns.forEach((column) => {
+    const { id, dataType } = column;
+    
+    switch (dataType) {
+      case "text":
+      case "longtext":
+      case "email":
+      case "phone":
+      case "date":
+      case "select":
+        defaultValues[id] = "";
+        break;
+      case "number":
+        defaultValues[id] = "";
+        break;
+      case "boolean":
+        defaultValues[id] = false;
+        break;
+      default:
+        defaultValues[id] = "";
+    }
+  });
+  
+  return defaultValues;
 };

@@ -1,88 +1,59 @@
 
 import React from "react";
-import { UseFormReturn } from "react-hook-form";
-import { UserFormValues } from "../UserFormSchema";
-import { User } from "@/services/api/userService";
-import { useOrganizationSelection } from "../../hooks/useOrganizationSelection";
 import { OrganizationSelectionComponent } from "./OrganizationSelectionComponent";
-
-interface Role {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-interface Region {
-  id: string;
-  name: string;
-}
-
-interface Sector {
-  id: string;
-  name: string;
-}
-
-interface School {
-  id: string;
-  name: string;
-}
+import { User } from "@/services/api/userService";
 
 interface RoleTabProps {
-  form: UseFormReturn<UserFormValues>;
-  roles: Role[];
-  regions: Region[];
-  sectors: Sector[];
-  schools: School[];
+  roles: any[];
+  regions: any[];
+  sectors: any[];
+  schools: any[];
   isEditing: boolean;
   user?: User;
-  currentUserRole?: string;
+  currentUserRole: string;
+  selectedRole: string;
+  selectedRegion: string;
+  selectedSector: string;
+  selectedSchool: string;
+  onRoleChange: (value: string) => void;
+  onRegionChange: (value: string) => void;
+  onSectorChange: (value: string) => void;
+  onSchoolChange: (value: string) => void;
 }
 
-export const RoleTab = ({ 
-  form,
+export const RoleTab: React.FC<RoleTabProps> = ({
   roles,
   regions,
   sectors,
   schools,
   isEditing,
   user,
-  currentUserRole
-}: RoleTabProps) => {
-  const {
-    selectedRole,
-    selectedRegion,
-    selectedSector,
-    selectedSchool, // Added this
-    handleRoleSelect,
-    handleRegionChange,
-    handleSectorChange,
-    handleSchoolChange, // Added this
-    getRoleById,
-    filterRolesByUserRole
-  } = useOrganizationSelection({
-    form,
-    user,
-    roles
-  });
-
+  currentUserRole,
+  selectedRole,
+  selectedRegion,
+  selectedSector,
+  selectedSchool,
+  onRoleChange,
+  onRegionChange,
+  onSectorChange,
+  onSchoolChange
+}) => {
   return (
-    <OrganizationSelectionComponent 
-      selectedRole={selectedRole}
-      regionId={selectedRegion}
-      sectorId={selectedSector}
-      schoolId={selectedSchool || ''}
-      onRoleChange={handleRoleSelect}
-      onRegionChange={handleRegionChange}
-      onSectorChange={handleSectorChange}
-      onSchoolChange={handleSchoolChange}
-      roles={roles}
-      regions={regions}
-      sectors={sectors}
-      schools={schools}
-      isEditing={isEditing}
-      user={user}
-      getRoleById={getRoleById}
-      currentUserRole={currentUserRole}
-    />
+    <div className="space-y-6">
+      <OrganizationSelectionComponent
+        selectedRole={selectedRole}
+        regionId={selectedRegion}
+        sectorId={selectedSector}
+        schoolId={selectedSchool}
+        onRoleChange={onRoleChange}
+        onRegionChange={onRegionChange}
+        onSectorChange={onSectorChange}
+        onSchoolChange={onSchoolChange}
+        roles={roles}
+        regions={regions}
+        sectors={sectors}
+        schools={schools}
+      />
+    </div>
   );
 };
