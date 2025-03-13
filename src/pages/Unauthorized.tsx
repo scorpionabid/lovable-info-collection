@@ -1,70 +1,54 @@
 
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shield, ArrowLeft, Home, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Shield, AlertTriangle } from 'lucide-react';
 
 const Unauthorized = () => {
-  const navigate = useNavigate();
-  const { user, permissions } = useAuth();
-
-  const goBack = () => {
-    navigate(-1);
-  };
-
-  const goHome = () => {
-    navigate('/');
-  };
-
-  const refresh = () => {
-    window.location.reload();
-  };
+  const { user, userRole } = useAuth();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-infoline-light-blue/10 to-white p-4">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md animate-scale-in text-center">
-        <div className="flex justify-center mb-6">
-          <div className="bg-red-100 p-4 rounded-full">
-            <Shield className="h-16 w-16 text-red-500" />
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="w-full max-w-lg p-8 space-y-8 bg-white shadow-md rounded-lg">
+        <div className="flex justify-center">
+          <div className="p-3 bg-red-100 rounded-full">
+            <Shield className="w-16 h-16 text-red-500" />
           </div>
         </div>
         
-        <h1 className="text-2xl font-bold text-infoline-dark-blue mb-2">İcazə yoxdur</h1>
-        
-        <p className="text-infoline-dark-gray mb-6">
-          Bu səhifəyə giriş icazəniz yoxdur. Sizin rolunuz <span className="font-semibold">{user?.role}</span> 
-          bu əməliyyatı yerinə yetirmək üçün kifayət deyil.
-        </p>
-        
-        {/* Debug information section */}
-        <div className="mt-4 mb-6 text-left p-4 bg-gray-50 rounded-lg text-xs text-gray-700 overflow-auto max-h-40">
-          <h3 className="font-semibold mb-2">Debug məlumatı:</h3>
-          <p><strong>İstifadəçi ID:</strong> {user?.id}</p>
-          <p><strong>İstifadəçi rol:</strong> {user?.role}</p>
-          <p><strong>Role ID:</strong> {user?.role_id}</p>
-          {user?.roles && (
-            <>
-              <p><strong>DB rol adı:</strong> {user.roles.name}</p>
-              <p><strong>İcazələr:</strong> {permissions.join(', ') || 'Yoxdur'}</p>
-            </>
+        <div className="space-y-4 text-center">
+          <h1 className="text-3xl font-bold text-gray-900">İcazə yoxdur</h1>
+          
+          <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-md">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              <p className="text-sm font-medium text-yellow-800">
+                Bu bölməyə giriş üçün icazəniz yoxdur.
+              </p>
+            </div>
+          </div>
+          
+          <p className="text-gray-600">
+            Bu səhifəyə daxil olmaq üçün tələb olunan icazəyə malik deyilsiniz. İcazə ilə bağlı problemlər varsa, sistem administratoru ilə əlaqə saxlayın.
+          </p>
+          
+          {user && (
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-md text-left">
+              <p className="text-sm text-blue-800">
+                <strong>İstifadəçi:</strong> {user.first_name} {user.last_name}
+              </p>
+              <p className="text-sm text-blue-800">
+                <strong>Rol:</strong> {userRole}
+              </p>
+            </div>
           )}
-        </div>
-        
-        <div className="flex flex-col space-y-2">
-          <Button onClick={goBack} variant="outline" className="w-full">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Geri qayıt
-          </Button>
           
-          <Button onClick={goHome} className="w-full">
-            <Home className="mr-2 h-4 w-4" />
-            Ana səhifəyə keç
-          </Button>
-          
-          <Button onClick={refresh} variant="outline" className="w-full">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Səhifəni yenilə
-          </Button>
+          <div className="pt-4">
+            <Button asChild className="w-full">
+              <Link to="/">Ana səhifəyə qayıt</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

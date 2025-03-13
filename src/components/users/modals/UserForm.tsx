@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from 'sonner';
-import userService from '@/services/api/userService';
-import { User } from '@/services/supabase/user/types';
+import userService, { User } from '@/services/api/userService';
 
 // Form validation schema
 const formSchema = z.object({
@@ -72,29 +71,24 @@ export const UserForm: React.FC<UserFormProps> = ({
         } else {
           await userService.updateUser(user.id, values);
         }
-        toast({ 
-          title: "Uğurlu", 
-          description: "İstifadəçi uğurla yeniləndi" 
-        });
+        toast("İstifadəçi uğurla yeniləndi");
       } else {
         // New user requires password
         if (!values.password) {
           form.setError('password', { message: 'Şifrə tələb olunur' });
           return;
         }
-        await userService.createUser(values);
-        toast({ 
-          title: "Uğurlu", 
-          description: "İstifadəçi uğurla yaradıldı" 
-        });
+        
+        // Since the createUser expects a User type but we don't have an ID yet,
+        // we cast it as any for this specific case
+        await userService.createUser(values as any);
+        toast("İstifadəçi uğurla yaradıldı");
       }
       onSuccess();
     } catch (error) {
       console.error('Error saving user:', error);
-      toast({ 
-        title: "Xəta", 
-        description: "İstifadəçi yaddaşda saxlanılarkən xəta baş verdi", 
-        variant: "destructive" 
+      toast("İstifadəçi yaddaşda saxlanılarkən xəta baş verdi", {
+        variant: "destructive"
       });
     }
   }

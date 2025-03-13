@@ -7,9 +7,8 @@ import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, LoginCredentials } from '@/contexts/AuthContext';
 import { LogIn } from 'lucide-react';
-import { LoginCredentials } from '@/services/api/authService';
 
 // Validation schema
 const loginSchema = z.object({
@@ -20,7 +19,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const LoginForm = () => {
-  const { login, isLoading } = useAuth();
+  const { login, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   // Initialize form
@@ -101,9 +100,9 @@ export const LoginForm = () => {
           <Button 
             type="submit" 
             className="w-full bg-infoline-blue hover:bg-infoline-dark-blue"
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? (
+            {loading ? (
               "Giriş edilir..."
             ) : (
               <>

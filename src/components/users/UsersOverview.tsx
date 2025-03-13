@@ -20,8 +20,7 @@ import { UserForm } from "./modals/UserForm";
 import { sortUsers } from "./utils/userUtils";
 import { useUserExport } from "./hooks/useUserExport";
 import { confirm } from "@/components/ui/confirm";
-import userService from "@/services/api/userService";
-import { User } from '@/services/supabase/user/types';
+import userService, { User } from "@/services/api/userService";
 
 export const UsersOverview = () => {
   const [page, setPage] = useState(1);
@@ -39,31 +38,30 @@ export const UsersOverview = () => {
   const { data: usersData, refetch } = useQuery({
     queryKey: ['users', page, perPage, search, sortColumn, sortOrder],
     queryFn: () => userService.getUsers({
-      page,
+      sortBy: sortColumn || undefined,
+      sortOrder: sortOrder,
+      search: search || undefined,
       pageSize: perPage,
-      search,
-      sortColumn,
-      sortDirection: sortOrder,
+      page: page,
     })
   });
 
   useEffect(() => {
     setIsLoading(true);
-    if (usersData?.data) {
-      handleFetchSuccess(usersData.data);
+    if (usersData) {
+      handleFetchSuccess(usersData);
     }
-  }, [usersData?.data]);
+  }, [usersData]);
 
   useEffect(() => {
-    if (usersData?.error) {
-      toast({
-        title: "Xəta",
-        description: "İstifadəçiləri yükləyərkən xəta baş verdi",
-        variant: "destructive",
+    if (usersData && 'error' in usersData) {
+      toast("İstifadəçiləri yükləyərkən xəta baş verdi", {
+        description: usersData.error?.message,
+        variant: "destructive"
       });
       setIsLoading(false);
     }
-  }, [usersData?.error]);
+  }, [usersData]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -93,16 +91,11 @@ export const UsersOverview = () => {
 
     try {
       await userService.deleteUser(user.id);
-      toast({
-        title: "Uğurlu",
-        description: "İstifadəçi uğurla silindi",
-      });
+      toast("İstifadəçi uğurla silindi");
       refetch();
     } catch (error) {
-      toast({
-        title: "Xəta",
-        description: "İstifadəçini silərkən xəta baş verdi",
-        variant: "destructive",
+      toast("İstifadəçini silərkən xəta baş verdi", {
+        variant: "destructive"
       });
     }
   };
@@ -115,10 +108,8 @@ export const UsersOverview = () => {
 
   const handleExport = () => {
     if (!users) {
-      toast({
-        title: "Xəta",
-        description: "İxrac etmək üçün məlumat tapılmadı",
-        variant: "destructive",
+      toast("İxrac etmək üçün məlumat tapılmadı", {
+        variant: "destructive"
       });
       return;
     }
@@ -155,8 +146,12 @@ export const UsersOverview = () => {
   );
 
   // Fix the setUsers call by using the adapter
-  const handleFetchSuccess = (data: any[]) => {
-    setUsers(data.map(adaptUserData));
+  const handleFetchSuccess = (data: any) => {
+    if (data && Array.isArray(data)) {
+      setUsers(data.map(adaptUserData));
+    } else if (data && 'data' in data && Array.isArray(data.data)) {
+      setUsers(data.data.map(adaptUserData));
+    }
     setIsLoading(false);
   };
 
@@ -237,7 +232,7 @@ export const UsersOverview = () => {
       <UserTablePagination
         page={page}
         perPage={perPage}
-        totalItems={usersData?.count || 0}
+        totalItems={usersData && 'count' in usersData ? usersData.count : 0}
         setPage={setPage}
         setPerPage={setPerPage}
       />
