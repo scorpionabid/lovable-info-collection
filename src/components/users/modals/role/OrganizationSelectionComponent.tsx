@@ -3,7 +3,6 @@ import React from "react";
 import { RoleSelection } from "../RoleSelection";
 import { OrganizationSelect } from "../OrganizationSelect";
 import { Separator } from "@/components/ui/separator";
-import { AccountSettings } from "../AccountSettings";
 
 interface OrganizationSelectionComponentProps {
   selectedRole: string;
@@ -15,6 +14,15 @@ interface OrganizationSelectionComponentProps {
   onSchoolChange: (id: any) => void;
   selectedRoleId?: string;
   onRoleChange?: (roleId: string) => void;
+  roles?: any[];
+  regions?: any[];
+  sectors?: any[];
+  schools?: any[];
+  form?: any;
+  isEditing?: boolean;
+  user?: any;
+  getRoleById?: (id: string) => any;
+  currentUserRole?: string;
 }
 
 export const OrganizationSelectionComponent = ({
@@ -26,7 +34,11 @@ export const OrganizationSelectionComponent = ({
   onSectorChange,
   onSchoolChange,
   selectedRoleId,
-  onRoleChange
+  onRoleChange,
+  roles = [],
+  regions = [],
+  sectors = [],
+  schools = []
 }: OrganizationSelectionComponentProps) => {
   // Use either selectedRole or selectedRoleId based on which was provided
   const roleId = selectedRoleId || selectedRole;
@@ -39,6 +51,7 @@ export const OrganizationSelectionComponent = ({
         <RoleSelection
           selectedRole={roleId}
           onRoleSelect={handleRoleChange}
+          roles={roles}
         />
       </div>
       
@@ -56,6 +69,9 @@ export const OrganizationSelectionComponent = ({
             onRegionChange={onRegionChange}
             onSectorChange={onSectorChange}
             onSchoolChange={onSchoolChange}
+            regions={regions}
+            sectors={sectors}
+            schools={schools}
           />
         )}
       </div>

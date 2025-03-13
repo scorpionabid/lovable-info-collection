@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 import { User, UserFilters } from './types';
 
@@ -116,7 +117,7 @@ export const createUser = async (userData: Omit<User, 'id' | 'created_at'>) => {
     
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert])
+      .insert(userDataForInsert)
       .select(`
         *,
         roles (
@@ -232,35 +233,33 @@ export const createUsers = async (users: Array<Omit<User, 'id' | 'created_at' | 
     const errors = [];
     
     for (const user of users) {
-      // Map user to the correct structure expected by Supabase
-      const userData = {
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        role_id: user.role_id || '',
-        region_id: user.region_id,
-        sector_id: user.sector_id,
-        school_id: user.school_id,
-        phone: user.phone,
-        utis_code: user.utis_code,
-        is_active: user.is_active !== undefined ? user.is_active : true
-      };
-      
       try {
+        // Insert one record at a time to handle the requirements of the Supabase API
         const { data, error } = await supabase
           .from('users')
-          .insert(userData)
+          .insert({
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role_id: user.role_id,
+            region_id: user.region_id,
+            sector_id: user.sector_id,
+            school_id: user.school_id,
+            phone: user.phone,
+            utis_code: user.utis_code,
+            is_active: user.is_active !== undefined ? user.is_active : true
+          })
           .select();
           
         if (error) {
-          console.error(`Error creating user ${userData.email}:`, error);
-          errors.push({ user: userData, error });
+          console.error(`Error creating user ${user.email}:`, error);
+          errors.push({ user, error });
         } else if (data) {
           results.push(data[0]);
         }
       } catch (err) {
-        console.error(`Exception creating user ${userData.email}:`, err);
-        errors.push({ user: userData, error: err });
+        console.error(`Exception creating user ${user.email}:`, err);
+        errors.push({ user, error: err });
       }
     }
     

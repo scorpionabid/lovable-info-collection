@@ -1,56 +1,42 @@
 
-import { User } from "@/services/api/userService";
+import { User } from "@/services/supabase/user/types";
 
-export const getRoleName = (user: User) => {
-  // Try to get role from roles relationship first
-  const roleName = user.roles?.name || user.role;
-  if (!roleName) return 'Unknown role';
-  
-  switch (roleName) {
-    case 'super-admin':
-      return 'Super Admin';
-    case 'region-admin':
-      return 'Region Admin';
-    case 'sector-admin':
-      return 'Sector Admin';
-    case 'school-admin':
-      return 'School Admin';
-    default:
-      return roleName;
+export const getUserRole = (user: User): string => {
+  if (user.roles) {
+    return user.roles.name;
   }
+  if (user.role) {
+    return user.role;
+  }
+  return "Unknown Role";
 };
 
-export const getEntityName = (user: User) => {
-  if (user.school_id) return "School";
-  if (user.sector_id) return "Sector";
-  if (user.region_id) return "Region";
-  if (getRoleName(user).includes("Super")) return "System";
-  return "Not assigned";
+export const getUserStatus = (user: User): string => {
+  return user.is_active ? "active" : "inactive";
 };
 
-export const getStatusColor = (isActive: boolean) => {
-  return isActive ? 'green' : 'red';
+export const getEntityName = (entity: any): string => {
+  if (!entity) return '';
+  return entity.name || '';
 };
 
-export const getStatusText = (isActive: boolean) => {
-  return isActive ? 'Active' : 'Inactive';
-};
-
-export const formatDate = (dateString?: string) => {
-  if (!dateString) return 'Never';
-  return new Date(dateString).toLocaleString();
-};
-
-// Helper function to filter users by search term
-export const filterUsersBySearchTerm = (users: User[], searchTerm: string) => {
-  if (!searchTerm) return users;
+export const formatDate = (dateString?: string): string => {
+  if (!dateString) return "Never";
   
-  const lowerCaseSearch = searchTerm.toLowerCase();
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Invalid date";
   
-  return users.filter(user => 
-    user.first_name.toLowerCase().includes(lowerCaseSearch) ||
-    user.last_name.toLowerCase().includes(lowerCaseSearch) ||
-    user.email.toLowerCase().includes(lowerCaseSearch) ||
-    getRoleName(user).toLowerCase().includes(lowerCaseSearch)
-  );
+  // Format: DD.MM.YYYY HH:MM
+  return new Intl.DateTimeFormat('az-AZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
+};
+
+export const getFullName = (user: User): string => {
+  return `${user.first_name} ${user.last_name}`;
 };

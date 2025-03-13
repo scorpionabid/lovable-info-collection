@@ -8,7 +8,8 @@ import { RoleTab } from "./role/RoleTab";
 import { UserProfileTab } from "./UserProfileTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState } from "./LoadingState";
-import userService, { CreateUserDto, UpdateUserDto, User } from "@/services/api/userService";
+import userService from "@/services/supabase/user";
+import { CreateUserDto, UpdateUserDto, User } from "@/services/supabase/user/types";
 import { useUserFormSubmit } from "../hooks/useUserFormSubmit";
 import { useUtisCodeValidation } from "../hooks/useUtisCodeValidation";
 
@@ -43,7 +44,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { checkUtisCodeExists } = useUtisCodeValidation();
+  const { checkUtisCodeExists, isCheckingUtisCode } = useUtisCodeValidation();
   
   // Initialize form with user data if in edit mode
   useEffect(() => {
@@ -57,7 +58,7 @@ export const UserForm: React.FC<UserFormProps> = ({
         region_id: user.region_id || '',
         sector_id: user.sector_id || '',
         school_id: user.school_id || '',
-        is_active: user.is_active ?? true,
+        is_active: user.is_active,
         utis_code: user.utis_code || ''
       });
     }
@@ -93,6 +94,7 @@ export const UserForm: React.FC<UserFormProps> = ({
       }
       
       onSuccess();
+      onClose();
     } catch (error) {
       console.error("Error submitting user form:", error);
       toast("Xəta baş verdi");
@@ -128,50 +130,34 @@ export const UserForm: React.FC<UserFormProps> = ({
             
             <TabsContent value="profile" className="space-y-4 py-4">
               <UserProfileTab 
-                form={{
-                  control: {
-                    register: () => ({}),
-                    handleSubmit: (fn) => fn,
-                    formState: { errors: {} },
-                    watch: () => ({}),
-                    setValue: () => {},
-                    getValues: () => ({}),
-                    trigger: () => Promise.resolve(true),
-                    reset: () => {},
-                    setError: () => {},
-                    clearErrors: () => {},
-                    setFocus: () => {}
-                  }
-                }}
                 isEditing={isEditMode}
                 user={user}
-                isCheckingUtisCode={false}
+                isCheckingUtisCode={isCheckingUtisCode}
+                email={formData.email}
+                firstName={formData.first_name}
+                lastName={formData.last_name}
+                phone={formData.phone || ''}
+                utisCode={formData.utis_code || ''}
+                password={formData.password || ''}
+                onEmailChange={(value) => updateFormData('email', value)}
+                onFirstNameChange={(value) => updateFormData('first_name', value)}
+                onLastNameChange={(value) => updateFormData('last_name', value)}
+                onPhoneChange={(value) => updateFormData('phone', value)}
+                onUtisCodeChange={(value) => updateFormData('utis_code', value)}
+                onPasswordChange={(value) => updateFormData('password', value)}
               />
             </TabsContent>
             
             <TabsContent value="role" className="space-y-4 py-4">
-              <RoleTab
-                form={{
-                  control: {
-                    register: () => ({}),
-                    handleSubmit: (fn) => fn,
-                    formState: { errors: {} },
-                    watch: () => ({}),
-                    setValue: () => {},
-                    getValues: () => ({}),
-                    trigger: () => Promise.resolve(true),
-                    reset: () => {},
-                    setError: () => {},
-                    clearErrors: () => {},
-                    setFocus: () => {}
-                  }
-                }}
-                roles={[]}
-                regions={[]}
-                sectors={[]}
-                schools={[]}
-                isEditing={isEditMode}
-                user={user}
+              <OrganizationSelectionComponent
+                selectedRole={formData.role_id}
+                regionId={formData.region_id || ''}
+                sectorId={formData.sector_id || ''}
+                schoolId={formData.school_id || ''}
+                onRoleChange={(roleId) => updateFormData('role_id', roleId)}
+                onRegionChange={(id) => updateFormData('region_id', id)}
+                onSectorChange={(id) => updateFormData('sector_id', id)}
+                onSchoolChange={(id) => updateFormData('school_id', id)}
               />
             </TabsContent>
           </Tabs>
