@@ -103,7 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('Auth state changed:', event);
       if (event === "SIGNED_IN" && session) {
         await handleUserLoggedIn(session.user);
-      } else if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+      } else if (event === "SIGNED_OUT") {
         handleUserLoggedOut();
       } else if (event === "TOKEN_REFRESHED" && session) {
         // Session was refreshed, no need to fetch user data again if we already have it
