@@ -1,3 +1,4 @@
+
 import { Database } from '@/integrations/supabase/types';
 
 // Mock data store for our mock Supabase instance
@@ -5,6 +6,7 @@ interface MockDataStore {
   [table: string]: any[];
 }
 
+// Create initial mock data
 const mockData: MockDataStore = {
   users: [],
   regions: [],
@@ -49,7 +51,7 @@ const mockAuthFunctions = {
 };
 
 // Helper functions for resetting and seeding mock data
-const resetMockData = () => {
+function resetMockData() {
   for (const table in mockData) {
     if (table === 'roles') {
       // Keep the default roles
@@ -57,22 +59,14 @@ const resetMockData = () => {
     }
     mockData[table] = [];
   }
-};
+}
 
-const seedMockData = (table: string, data: any[]) => {
+function seedMockData(table: string, data: any[]) {
   mockData[table] = [...data];
-};
-
-// Helper to mock Supabase
-export const mockSupabase = () => {
-  return createMockSupabaseClient();
-};
-
-// Export the reset and seed functions separately for easier testing
-export { resetMockData, seedMockData };
+}
 
 // Supabase client mock
-const createMockSupabaseClient = () => {
+function createMockSupabaseClient() {
   const mockClient = {
     from: jest.fn((table: string) => {
       return {
@@ -169,9 +163,19 @@ const createMockSupabaseClient = () => {
   };
 
   // Add helper methods for testing
-  return {
+  const mockWithHelpers = {
     ...mockClient,
     _reset: resetMockData,
     _seed: seedMockData
   };
+
+  return mockWithHelpers;
+}
+
+// Export the main mock function
+export const mockSupabase = () => {
+  return createMockSupabaseClient();
 };
+
+// Also export the helper functions separately
+export { resetMockData, seedMockData };

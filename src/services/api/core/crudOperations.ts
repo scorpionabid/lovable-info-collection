@@ -63,8 +63,8 @@ export const createItem = async (tableName: string, item: any) => {
     // Ensure we're using an array for insert
     const itemsArray = Array.isArray(item) ? item : [item];
     
-    // Use explicit any type to bypass TypeScript errors
-    const { data, error } = await query.insert(itemsArray).select();
+    // Use type assertion to bypass TypeScript errors
+    const { data, error } = await query.insert(itemsArray as any).select();
     
     // Return the first item from the array if successful
     return { 
@@ -83,8 +83,8 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
     // Ensure we're updating a single item (not an array)
     const singleItem = Array.isArray(item) ? item[0] : item;
     
-    // Use explicit any type to bypass TypeScript errors
-    const { data, error } = await query.update(singleItem).eq('id', id).select();
+    // Use type assertion to bypass TypeScript errors
+    const { data, error } = await query.update(singleItem as any).eq('id', id).select();
     
     // Return the first item from the array if successful
     return { 
