@@ -2,10 +2,13 @@
 import { mockSupabase } from '../mocks/supabaseMock';
 import * as categoryService from '@/services/supabase/category';
 
+// Get a typed mock instance
+const mockedSupabase = mockSupabase();
+
 // Apply the mock before running tests
 jest.mock('@/services/supabase/supabaseClient', () => {
   return {
-    supabase: mockSupabase()
+    supabase: mockedSupabase
   };
 });
 
@@ -13,7 +16,7 @@ describe('categoryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset mock data
-    mockSupabase._reset();
+    mockedSupabase._reset();
   });
 
   describe('getCategories', () => {
@@ -24,7 +27,7 @@ describe('categoryService', () => {
         { id: 'cat-2', name: 'Category 2', priority: 2, status: 'Active' }
       ];
       
-      mockSupabase._seed('categories', mockCategories);
+      mockedSupabase._seed('categories', mockCategories);
       
       // Test the service function
       const result = await categoryService.getCategories();
@@ -37,8 +40,12 @@ describe('categoryService', () => {
 
     it('should handle errors when fetching categories', async () => {
       // Mock an error
-      jest.spyOn(mockSupabase.from('categories'), 'select').mockImplementationOnce(() => {
-        throw new Error('Database error');
+      mockedSupabase.from.mockImplementationOnce(() => {
+        return {
+          select: jest.fn().mockImplementationOnce(() => {
+            throw new Error('Database error');
+          })
+        };
       });
       
       await expect(categoryService.getCategories()).rejects.toThrow('Database error');
@@ -49,7 +56,7 @@ describe('categoryService', () => {
     it('should fetch a category by ID', async () => {
       // Seed mock data
       const mockCategory = { id: 'cat-1', name: 'Category 1', priority: 1, status: 'Active' };
-      mockSupabase._seed('categories', [mockCategory]);
+      mockedSupabase._seed('categories', [mockCategory]);
       
       // Test the service function
       const result = await categoryService.getCategoryById('cat-1');
@@ -61,7 +68,7 @@ describe('categoryService', () => {
 
     it('should handle not finding a category', async () => {
       // Test with empty data
-      mockSupabase._reset();
+      mockedSupabase._reset();
       
       await expect(categoryService.getCategoryById('non-existent')).rejects.toThrow();
     });

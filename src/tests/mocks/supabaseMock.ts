@@ -1,3 +1,4 @@
+
 import { Database } from '@/integrations/supabase/types';
 
 // Mock data store for our mock Supabase instance
@@ -19,8 +20,37 @@ const mockData: MockDataStore = {
   ]
 };
 
+// Create proper mock functions for auth
+const mockAuthFunctions = {
+  signInWithPassword: jest.fn(() => Promise.resolve({ 
+    data: { user: { id: 'mock-user-id' }, session: { access_token: 'mock-token' } }, 
+    error: null 
+  })),
+  signUp: jest.fn(() => Promise.resolve({ 
+    data: { user: { id: 'mock-user-id' } }, 
+    error: null 
+  })),
+  signOut: jest.fn(() => Promise.resolve({ error: null })),
+  resetPasswordForEmail: jest.fn(() => Promise.resolve({ error: null })),
+  updateUser: jest.fn(() => Promise.resolve({ 
+    data: { user: { id: 'mock-user-id' } }, 
+    error: null 
+  })),
+  getUser: jest.fn(() => Promise.resolve({ 
+    data: { user: { id: 'mock-user-id' } }, 
+    error: null 
+  })),
+  // Mock admin methods
+  admin: {
+    listUsers: jest.fn(() => Promise.resolve({ 
+      data: { users: [] }, 
+      error: null 
+    }))
+  }
+};
+
 // Supabase client mock
-export const mockSupabaseClient = {
+const mockSupabaseClient = {
   from: jest.fn((table: string) => {
     return {
       select: jest.fn((columns: string = '*') => {
@@ -112,37 +142,11 @@ export const mockSupabaseClient = {
       })
     };
   }),
-  auth: {
-    signInWithPassword: jest.fn(() => Promise.resolve({ 
-      data: { user: { id: 'mock-user-id' }, session: { access_token: 'mock-token' } }, 
-      error: null 
-    })),
-    signUp: jest.fn(() => Promise.resolve({ 
-      data: { user: { id: 'mock-user-id' } }, 
-      error: null 
-    })),
-    signOut: jest.fn(() => Promise.resolve({ error: null })),
-    resetPasswordForEmail: jest.fn(() => Promise.resolve({ error: null })),
-    updateUser: jest.fn(() => Promise.resolve({ 
-      data: { user: { id: 'mock-user-id' } }, 
-      error: null 
-    })),
-    getUser: jest.fn(() => Promise.resolve({ 
-      data: { user: { id: 'mock-user-id' } }, 
-      error: null 
-    })),
-    // Mock admin methods
-    admin: {
-      listUsers: jest.fn(() => Promise.resolve({ 
-        data: { users: [] }, 
-        error: null 
-      }))
-    }
-  }
+  auth: mockAuthFunctions
 };
 
-// Add the seed and reset methods directly to the mock object
-mockSupabaseClient._reset = () => {
+// Helper functions for resetting and seeding mock data
+const resetMockData = () => {
   for (const table in mockData) {
     if (table === 'roles') {
       // Keep the default roles
@@ -152,24 +156,24 @@ mockSupabaseClient._reset = () => {
   }
 };
 
-mockSupabaseClient._seed = (table: string, data: any[]) => {
+const seedMockData = (table: string, data: any[]) => {
   mockData[table] = [...data];
 };
 
+// Add _reset and _seed methods as properties of the mockSupabaseClient object
+mockSupabaseClient._reset = resetMockData;
+mockSupabaseClient._seed = seedMockData;
+
 // Helper to mock Supabase
 export const mockSupabase = () => {
-  jest.mock('@/integrations/supabase/client', () => ({
-    supabase: mockSupabaseClient
-  }));
-  
-  jest.mock('@/services/supabase/supabaseClient', () => ({
-    supabase: mockSupabaseClient
-  }));
-  
-  // Return the mock for direct access
-  return mockSupabaseClient;
+  // Return the mock client - adding type assertion to handle the custom properties
+  return mockSupabaseClient as typeof mockSupabaseClient & {
+    _reset: typeof resetMockData;
+    _seed: typeof seedMockData;
+  };
 };
 
+// Export the seed function separately
 export const seedMockData = (table: string, data: any[]) => {
   mockData[table] = [...data];
 };

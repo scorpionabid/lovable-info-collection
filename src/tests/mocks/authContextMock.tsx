@@ -1,7 +1,7 @@
 
 import React, { ReactNode, createContext } from 'react';
 
-// Create a local version of AuthContext for testing
+// Create a local version of AuthContext for testing (not importing from @/contexts/AuthContext)
 export const AuthContext = createContext<any>(null);
 
 // Define UserRole type to match what's in the context

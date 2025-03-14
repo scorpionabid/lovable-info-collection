@@ -20,10 +20,10 @@ export const createUser = async (userData: CreateUserDto) => {
       ...(userData.id ? { id: userData.id } : {})
     };
     
-    // Insert the user with the correct array format, using 'as any' to bypass type checking
+    // Use type assertion for insert operation
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert] as any)
+      .insert(userDataForInsert as any)
       .select(`
         *,
         roles (
