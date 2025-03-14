@@ -38,9 +38,9 @@ export const fetchItems = async (
       });
     }
 
-    // Use count option for exact count
-    const { data, error, count } = await query;
-    return { data, count: count || 0, error };
+    // Use type assertion to avoid deep instantiation error
+    const result = await (query as any);
+    return { data: result.data, count: result.count || 0, error: result.error };
   });
 };
 
