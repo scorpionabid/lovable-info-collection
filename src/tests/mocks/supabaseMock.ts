@@ -1,4 +1,3 @@
-
 import { Database } from '@/integrations/supabase/types';
 
 // Mock data store for our mock Supabase instance
@@ -49,102 +48,6 @@ const mockAuthFunctions = {
   }
 };
 
-// Supabase client mock
-const mockSupabaseClient = {
-  from: jest.fn((table: string) => {
-    return {
-      select: jest.fn((columns: string = '*') => {
-        return {
-          eq: jest.fn((column: string, value: any) => {
-            const filteredData = mockData[table]?.filter(item => item[column] === value) || [];
-            return {
-              single: jest.fn(() => Promise.resolve({ 
-                data: filteredData.length > 0 ? filteredData[0] : null, 
-                error: null 
-              })),
-              data: filteredData,
-              error: null
-            };
-          }),
-          order: jest.fn(() => ({
-            data: mockData[table] || [],
-            error: null
-          })),
-          range: jest.fn(() => ({
-            data: mockData[table] || [],
-            error: null,
-            count: mockData[table]?.length || 0
-          })),
-          data: mockData[table] || [],
-          error: null
-        };
-      }),
-      insert: jest.fn((data: any) => {
-        // Handle both array and non-array data
-        const dataArray = Array.isArray(data) ? data : [data];
-        const newItems = dataArray.map(item => ({
-          id: `mock-id-${Math.random().toString(36).substring(2, 9)}`,
-          ...item
-        }));
-        
-        if (!mockData[table]) {
-          mockData[table] = [];
-        }
-        
-        mockData[table].push(...newItems);
-        
-        return {
-          select: jest.fn(() => Promise.resolve({ 
-            data: newItems, 
-            error: null 
-          })),
-          data: newItems,
-          error: null
-        };
-      }),
-      update: jest.fn((data: any) => {
-        return {
-          eq: jest.fn((column: string, value: any) => {
-            const index = mockData[table]?.findIndex(item => item[column] === value) || -1;
-            if (index !== -1 && mockData[table]) {
-              mockData[table][index] = { ...mockData[table][index], ...data };
-              return {
-                select: jest.fn(() => Promise.resolve({ 
-                  data: [mockData[table][index]], 
-                  error: null 
-                })),
-                data: [mockData[table][index]],
-                error: null
-              };
-            }
-            return {
-              select: jest.fn(() => Promise.resolve({ data: null, error: { message: 'Item not found' } })),
-              data: null,
-              error: { message: 'Item not found' }
-            };
-          })
-        };
-      }),
-      delete: jest.fn(() => {
-        return {
-          eq: jest.fn((column: string, value: any) => {
-            const initialLength = mockData[table]?.length || 0;
-            if (mockData[table]) {
-              mockData[table] = mockData[table].filter(item => item[column] !== value);
-            }
-            const deleted = initialLength - (mockData[table]?.length || 0);
-            return Promise.resolve({ 
-              data: { deleted }, 
-              error: null 
-            });
-          })
-        };
-      })
-    };
-  }),
-  auth: mockAuthFunctions
-};
-
 // Helper functions for resetting and seeding mock data
 const resetMockData = () => {
   for (const table in mockData) {
@@ -160,20 +63,115 @@ const seedMockData = (table: string, data: any[]) => {
   mockData[table] = [...data];
 };
 
-// Add _reset and _seed methods as properties of the mockSupabaseClient object
-mockSupabaseClient._reset = resetMockData;
-mockSupabaseClient._seed = seedMockData;
-
 // Helper to mock Supabase
 export const mockSupabase = () => {
-  // Return the mock client - adding type assertion to handle the custom properties
-  return mockSupabaseClient as typeof mockSupabaseClient & {
-    _reset: typeof resetMockData;
-    _seed: typeof seedMockData;
-  };
+  return createMockSupabaseClient();
 };
 
-// Export the seed function separately
-export const seedMockData = (table: string, data: any[]) => {
-  mockData[table] = [...data];
+// Export the reset and seed functions separately for easier testing
+export { resetMockData, seedMockData };
+
+// Supabase client mock
+const createMockSupabaseClient = () => {
+  const mockClient = {
+    from: jest.fn((table: string) => {
+      return {
+        select: jest.fn((columns: string = '*') => {
+          return {
+            eq: jest.fn((column: string, value: any) => {
+              const filteredData = mockData[table]?.filter(item => item[column] === value) || [];
+              return {
+                single: jest.fn(() => Promise.resolve({ 
+                  data: filteredData.length > 0 ? filteredData[0] : null, 
+                  error: null 
+                })),
+                data: filteredData,
+                error: null
+              };
+            }),
+            order: jest.fn(() => ({
+              data: mockData[table] || [],
+              error: null
+            })),
+            range: jest.fn(() => ({
+              data: mockData[table] || [],
+              error: null,
+              count: mockData[table]?.length || 0
+            })),
+            data: mockData[table] || [],
+            error: null
+          };
+        }),
+        insert: jest.fn((data: any) => {
+          // Handle both array and non-array data
+          const dataArray = Array.isArray(data) ? data : [data];
+          const newItems = dataArray.map(item => ({
+            id: `mock-id-${Math.random().toString(36).substring(2, 9)}`,
+            ...item
+          }));
+          
+          if (!mockData[table]) {
+            mockData[table] = [];
+          }
+          
+          mockData[table].push(...newItems);
+          
+          return {
+            select: jest.fn(() => Promise.resolve({ 
+              data: newItems, 
+              error: null 
+            })),
+            data: newItems,
+            error: null
+          };
+        }),
+        update: jest.fn((data: any) => {
+          return {
+            eq: jest.fn((column: string, value: any) => {
+              const index = mockData[table]?.findIndex(item => item[column] === value) || -1;
+              if (index !== -1 && mockData[table]) {
+                mockData[table][index] = { ...mockData[table][index], ...data };
+                return {
+                  select: jest.fn(() => Promise.resolve({ 
+                    data: [mockData[table][index]], 
+                    error: null 
+                  })),
+                  data: [mockData[table][index]],
+                  error: null
+                };
+              }
+              return {
+                select: jest.fn(() => Promise.resolve({ data: null, error: { message: 'Item not found' } })),
+                data: null,
+                error: { message: 'Item not found' }
+              };
+            })
+          };
+        }),
+        delete: jest.fn(() => {
+          return {
+            eq: jest.fn((column: string, value: any) => {
+              const initialLength = mockData[table]?.length || 0;
+              if (mockData[table]) {
+                mockData[table] = mockData[table].filter(item => item[column] !== value);
+              }
+              const deleted = initialLength - (mockData[table]?.length || 0);
+              return Promise.resolve({ 
+                data: { deleted }, 
+                error: null 
+              });
+            })
+          };
+        })
+      };
+    }),
+    auth: mockAuthFunctions
+  };
+
+  // Add helper methods for testing
+  return {
+    ...mockClient,
+    _reset: resetMockData,
+    _seed: seedMockData
+  };
 };

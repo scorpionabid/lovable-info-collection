@@ -40,7 +40,8 @@ describe('categoryService', () => {
 
     it('should handle errors when fetching categories', async () => {
       // Mock an error
-      mockedSupabase.from.mockImplementationOnce(() => {
+      const originalFrom = mockedSupabase.from;
+      mockedSupabase.from = jest.fn().mockImplementationOnce(() => {
         return {
           select: jest.fn().mockImplementationOnce(() => {
             throw new Error('Database error');
@@ -49,6 +50,9 @@ describe('categoryService', () => {
       });
       
       await expect(categoryService.getCategories()).rejects.toThrow('Database error');
+      
+      // Restore original mock
+      mockedSupabase.from = originalFrom;
     });
   });
 

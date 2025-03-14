@@ -20,7 +20,7 @@ export const createUser = async (userData: CreateUserDto) => {
       ...(userData.id ? { id: userData.id } : {})
     };
     
-    // Use type assertion for insert operation
+    // Use type assertion to avoid TypeScript errors with insert operation
     const { data, error } = await supabase
       .from('users')
       .insert(userDataForInsert as any)
