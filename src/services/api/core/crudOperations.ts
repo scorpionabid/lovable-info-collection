@@ -1,6 +1,7 @@
 
 import { getTableQuery } from '../utils/tableOperations';
 import { safeQuery } from '../utils/helpers';
+import { PostgrestFilterBuilder, PostgrestQueryBuilder } from '@supabase/supabase-js';
 
 // Type-safe querying with hardcoded table names to prevent errors
 export const fetchItems = async (
@@ -63,8 +64,14 @@ export const createItem = async (tableName: string, item: any) => {
     // Ensure we're using an array for insert
     const itemsArray = Array.isArray(item) ? item : [item];
     
-    // Use type assertion to bypass TypeScript errors
-    const { data, error } = await query.insert(itemsArray as any).select();
+    // Use a type assertion to bypass TypeScript errors
+    type AnyPostgrestQuery = {
+      insert: (data: any) => { select: () => Promise<{ data: any, error: any }> }
+    };
+    
+    const { data, error } = await (query as unknown as AnyPostgrestQuery)
+      .insert(itemsArray)
+      .select();
     
     // Return the first item from the array if successful
     return { 
@@ -83,8 +90,19 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
     // Ensure we're updating a single item (not an array)
     const singleItem = Array.isArray(item) ? item[0] : item;
     
-    // Use type assertion to bypass TypeScript errors
-    const { data, error } = await query.update(singleItem as any).eq('id', id).select();
+    // Use a type assertion to bypass TypeScript errors
+    type AnyPostgrestQuery = {
+      update: (data: any) => { 
+        eq: (column: string, value: string) => {
+          select: () => Promise<{ data: any, error: any }>
+        }
+      }
+    };
+    
+    const { data, error } = await (query as unknown as AnyPostgrestQuery)
+      .update(singleItem)
+      .eq('id', id)
+      .select();
     
     // Return the first item from the array if successful
     return { 
