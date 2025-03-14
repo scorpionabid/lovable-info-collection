@@ -45,5 +45,5 @@ export const setupConnectionMonitoring = () => {
     });
     
   // Additional diagnostic information
-  console.log(`Supabase realtime connection status: ${supabase.realtime.getConnectionStatus()}`);
+  console.log(`Supabase realtime connection status: ${supabase.realtime.connectionState}`);
 };
