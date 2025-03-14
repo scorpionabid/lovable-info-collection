@@ -50,7 +50,7 @@ export const getItemById = async (tableName: string, id: string) => {
   return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName).select('*');
-    const { data, error } = await query.eq('id', id).single();
+    const { data, error } = await (query as any).eq('id', id).single();
     return { data, error };
   });
 };
@@ -102,7 +102,7 @@ export const deleteItem = async (tableName: string, id: string) => {
   return safeQuery(async () => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
-    const { error } = await query.delete().eq('id', id);
+    const { error } = await (query as any).delete().eq('id', id);
     return { success: !error, data: null, error };
   });
 };
