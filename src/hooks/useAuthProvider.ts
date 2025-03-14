@@ -161,8 +161,8 @@ export const useAuthProvider = () => {
   }, [handleUserLoggedIn, handleUserLoggedOut, user]);
 
   const login = async (emailOrCredentials: string | LoginCredentials, password?: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
       let email: string;
       let pwd: string;
       
@@ -181,7 +181,12 @@ export const useAuthProvider = () => {
           });
           
           if (error) {
-            setLoading(false); // Ensure loading is set to false if there's an error
+            setLoading(false);
+            toast({
+              title: "Giriş xətası",
+              description: error.message || "Giriş linki göndərilə bilmədi",
+              variant: "destructive",
+            });
             throw error;
           }
           
@@ -190,7 +195,7 @@ export const useAuthProvider = () => {
             description: "E-poçt ünvanınızı yoxlayın və giriş linkini tıklayın",
           });
           
-          setLoading(false); // Set loading to false after successful OTP send
+          setLoading(false);
           return;
         }
       } else {
@@ -220,13 +225,12 @@ export const useAuthProvider = () => {
           variant: "destructive",
         });
         
-        setLoading(false); // Ensure loading is set to false if there's an error
+        setLoading(false);
         throw error;
       }
       
       if (data.user) {
         // handleUserLoggedIn will be called by the auth listener
-        // But we set loading to false explicitly here to ensure it happens
         toast({
           title: "Uğurlu giriş",
           description: "Sistemə uğurla daxil oldunuz",
@@ -235,13 +239,13 @@ export const useAuthProvider = () => {
         // Redirect to dashboard after successful login
         navigate("/dashboard");
       }
-      
-      // Always set loading to false regardless of outcome
-      setLoading(false);
     } catch (error: any) {
       console.error('Login error:', error);
-      setLoading(false); // Ensure loading is set to false if there's an exception
+      setLoading(false);
       throw error;
+    } finally {
+      // Ensure loading state is always reset
+      setLoading(false);
     }
   };
 
@@ -251,7 +255,7 @@ export const useAuthProvider = () => {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Logout error:', error);
-        setLoading(false); // Set loading to false on error
+        setLoading(false);
         throw error;
       }
       handleUserLoggedOut();
@@ -262,14 +266,14 @@ export const useAuthProvider = () => {
       });
     } catch (error: any) {
       console.error('Logout error:', error);
-      setLoading(false); // Ensure loading is set to false if there's an exception
+      setLoading(false);
       toast({
         title: "Çıxış xətası",
         description: error.message || "Çıxış zamanı xəta baş verdi",
         variant: "destructive",
       });
     } finally {
-      setLoading(false); // Always set loading to false
+      setLoading(false);
     }
   };
 
