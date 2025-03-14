@@ -1,16 +1,22 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
 
-// Define the environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || '';
+// Define the Supabase URLs and keys directly
+const supabaseUrl = "https://wxkaasjwpavlwrpvsuia.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4a2Fhc2p3cGF2bHdycHZzdWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODA3NzAsImV4cCI6MjA1NTk1Njc3MH0.Sy0ktssGHAMNtU4kCrEKuFNf8Yf5R280uqwpsMcZpuM";
+// Note: Service role key should be kept secure and not exposed in client code
+// This is a placeholder - use environment variables in production
+const supabaseServiceKey = "";
 
 // Create a standard client (with anonymous access)
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 // Create an admin client (with service role for bypassing RLS)
-export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey);
+// Only initialize if service key is available
+export const supabaseAdmin = supabaseServiceKey ? 
+  createClient<Database>(supabaseUrl, supabaseServiceKey) : 
+  supabase;
 
 // Custom type definitions
 export interface Region {
