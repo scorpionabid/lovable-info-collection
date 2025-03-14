@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -21,9 +21,17 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const LoginForm = () => {
-  const { login, loading } = useAuth();
+  const { login, loading, isAuthenticated } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   // Initialize form
   const form = useForm<LoginFormValues>({
@@ -46,7 +54,7 @@ export const LoginForm = () => {
       };
       
       await login(credentials);
-      // Login success is handled in AuthContext
+      // Login success is handled in useAuthProvider (navigation and toast notification)
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || "Daxil etdiyiniz məlumatlar yanlışdır");
@@ -74,6 +82,8 @@ export const LoginForm = () => {
     form.setValue('password', password);
   };
 
+  const isDisabled = isSubmitting || loading;
+
   return (
     <div>
       <div className="text-center mb-8">
@@ -93,7 +103,7 @@ export const LoginForm = () => {
                   <Input 
                     placeholder="email@example.com" 
                     {...field} 
-                    disabled={isSubmitting}
+                    disabled={isDisabled}
                   />
                 </FormControl>
                 <FormMessage />
@@ -112,7 +122,7 @@ export const LoginForm = () => {
                     type="password" 
                     placeholder="********" 
                     {...field} 
-                    disabled={isSubmitting}
+                    disabled={isDisabled}
                   />
                 </FormControl>
                 <FormMessage />
@@ -130,9 +140,9 @@ export const LoginForm = () => {
           <Button 
             type="submit" 
             className="w-full bg-infoline-blue hover:bg-infoline-dark-blue"
-            disabled={isSubmitting || loading}
+            disabled={isDisabled}
           >
-            {(isSubmitting || loading) ? (
+            {isDisabled ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Giriş edilir...
@@ -168,7 +178,7 @@ export const LoginForm = () => {
               variant="outline"
               className="text-xs justify-start"
               onClick={() => fillCredentials(cred.email, cred.password)}
-              disabled={isSubmitting || loading}
+              disabled={isDisabled}
             >
               <span className="mr-2 font-medium">{cred.role}:</span>
               {cred.email}
