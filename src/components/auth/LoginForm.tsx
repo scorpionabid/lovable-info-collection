@@ -65,6 +65,7 @@ export const LoginForm = () => {
         variant: "destructive",
       });
     } finally {
+      // Always make sure to reset submission state regardless of outcome
       setIsSubmitting(false);
     }
   };
@@ -82,7 +83,9 @@ export const LoginForm = () => {
     form.setValue('password', password);
   };
 
-  const isDisabled = isSubmitting || loading;
+  // Use local isSubmitting state rather than the global loading state
+  // This ensures that the button state is tied directly to this form's submission
+  const isDisabled = isSubmitting;
 
   return (
     <div>

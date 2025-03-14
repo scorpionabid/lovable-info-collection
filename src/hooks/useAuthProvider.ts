@@ -180,11 +180,17 @@ export const useAuthProvider = () => {
             },
           });
           
-          if (error) throw error;
+          if (error) {
+            setLoading(false); // Ensure loading is set to false if there's an error
+            throw error;
+          }
+          
           toast({
             title: "Giriş linki göndərildi",
             description: "E-poçt ünvanınızı yoxlayın və giriş linkini tıklayın",
           });
+          
+          setLoading(false); // Set loading to false after successful OTP send
           return;
         }
       } else {
@@ -214,10 +220,13 @@ export const useAuthProvider = () => {
           variant: "destructive",
         });
         
+        setLoading(false); // Ensure loading is set to false if there's an error
         throw error;
       }
       
       if (data.user) {
+        // handleUserLoggedIn will be called by the auth listener
+        // But we set loading to false explicitly here to ensure it happens
         toast({
           title: "Uğurlu giriş",
           description: "Sistemə uğurla daxil oldunuz",
@@ -226,11 +235,13 @@ export const useAuthProvider = () => {
         // Redirect to dashboard after successful login
         navigate("/dashboard");
       }
+      
+      // Always set loading to false regardless of outcome
+      setLoading(false);
     } catch (error: any) {
       console.error('Login error:', error);
+      setLoading(false); // Ensure loading is set to false if there's an exception
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -240,6 +251,7 @@ export const useAuthProvider = () => {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Logout error:', error);
+        setLoading(false); // Set loading to false on error
         throw error;
       }
       handleUserLoggedOut();
@@ -250,13 +262,14 @@ export const useAuthProvider = () => {
       });
     } catch (error: any) {
       console.error('Logout error:', error);
+      setLoading(false); // Ensure loading is set to false if there's an exception
       toast({
         title: "Çıxış xətası",
         description: error.message || "Çıxış zamanı xəta baş verdi",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoading(false); // Always set loading to false
     }
   };
 
