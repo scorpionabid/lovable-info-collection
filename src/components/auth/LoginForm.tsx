@@ -8,7 +8,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth, LoginCredentials } from '@/contexts/AuthContext';
-import { LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast';
 
 // Validation schema
 const loginSchema = z.object({
@@ -21,6 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export const LoginForm = () => {
   const { login, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize form
   const form = useForm<LoginFormValues>({
@@ -34,14 +37,27 @@ export const LoginForm = () => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
+      setIsSubmitting(true);
+      
       // Ensure we have a value for each required field
       const credentials: LoginCredentials = {
         email: data.email,
         password: data.password,
       };
+      
       await login(credentials);
-    } catch (err) {
-      setError("Daxil etdiyiniz məlumatlar yanlışdır");
+      // Login success is handled in AuthContext
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || "Daxil etdiyiniz məlumatlar yanlışdır");
+      
+      toast({
+        title: "Giriş xətası",
+        description: err.message || "Daxil etdiyiniz məlumatlar yanlışdır",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -74,7 +90,11 @@ export const LoginForm = () => {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="email@example.com" {...field} />
+                  <Input 
+                    placeholder="email@example.com" 
+                    {...field} 
+                    disabled={isSubmitting}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -88,22 +108,35 @@ export const LoginForm = () => {
               <FormItem>
                 <FormLabel>Şifrə</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="********" {...field} />
+                  <Input 
+                    type="password" 
+                    placeholder="********" 
+                    {...field} 
+                    disabled={isSubmitting}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
           
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && (
+            <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
+              <AlertTitle className="text-sm font-medium">Xəta</AlertTitle>
+              <AlertDescription className="text-xs">{error}</AlertDescription>
+            </Alert>
+          )}
           
           <Button 
             type="submit" 
             className="w-full bg-infoline-blue hover:bg-infoline-dark-blue"
-            disabled={loading}
+            disabled={isSubmitting || loading}
           >
-            {loading ? (
-              "Giriş edilir..."
+            {(isSubmitting || loading) ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Giriş edilir...
+              </>
             ) : (
               <>
                 <LogIn className="mr-2 h-4 w-4" />
@@ -135,6 +168,7 @@ export const LoginForm = () => {
               variant="outline"
               className="text-xs justify-start"
               onClick={() => fillCredentials(cred.email, cred.password)}
+              disabled={isSubmitting || loading}
             >
               <span className="mr-2 font-medium">{cred.role}:</span>
               {cred.email}

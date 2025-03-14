@@ -9,13 +9,24 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 // This is a placeholder - use environment variables in production
 const supabaseServiceKey = "";
 
-// Create a standard client (with anonymous access)
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Create a standard client (with anonymous access) with proper options
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
 
 // Create an admin client (with service role for bypassing RLS)
 // Only initialize if service key is available
 export const supabaseAdmin = supabaseServiceKey ? 
-  createClient<Database>(supabaseUrl, supabaseServiceKey) : 
+  createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true
+    }
+  }) : 
   supabase;
 
 // Custom type definitions

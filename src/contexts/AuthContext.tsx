@@ -9,6 +9,7 @@ import React, {
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { getNormalizedRole } from "@/components/users/utils/userUtils";
+import { toast } from "@/hooks/use-toast";
 
 export type UserRole =
   | "super-admin"
@@ -20,11 +21,11 @@ interface AuthContextProps {
   user: any | null;
   userRole: UserRole | undefined;
   loading: boolean;
-  isLoading: boolean; // Adding this property
-  isAuthenticated: boolean; // Adding this property
-  login: (email: string | LoginCredentials) => Promise<void>;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string | LoginCredentials, password?: string) => Promise<void>;
   logout: () => Promise<void>;
-  permissions?: string[]; // Adding this property for Unauthorized page
+  permissions?: string[];
 }
 
 // Add LoginCredentials interface for proper typing
@@ -61,57 +62,157 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const loadUser = async () => {
-      const {
-        data: { user: supabaseUser },
-      } = await supabase.auth.getUser();
-      handleUserLoggedIn(supabaseUser);
+      try {
+        setLoading(true);
+        // Get the current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setLoading(false);
+          return;
+        }
+        
+        if (session) {
+          const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+          
+          if (userError) {
+            console.error('User fetch error:', userError);
+            setLoading(false);
+            return;
+          }
+          
+          if (supabaseUser) {
+            await handleUserLoggedIn(supabaseUser);
+          } else {
+            handleUserLoggedOut();
+          }
+        } else {
+          handleUserLoggedOut();
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        handleUserLoggedOut();
+      }
     };
 
     loadUser();
 
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN") {
-        handleUserLoggedIn(session?.user);
-      } else if (event === "SIGNED_OUT") {
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      if (event === "SIGNED_IN" && session) {
+        await handleUserLoggedIn(session.user);
+      } else if (event === "SIGNED_OUT" || event === "USER_DELETED") {
         handleUserLoggedOut();
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        // Session was refreshed, no need to fetch user data again if we already have it
+        if (!user) {
+          await handleUserLoggedIn(session.user);
+        }
       }
     });
+
+    // Cleanup auth listener
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (emailOrCredentials: string | LoginCredentials) => {
+  const login = async (emailOrCredentials: string | LoginCredentials, password?: string) => {
     try {
+      setLoading(true);
+      let email: string;
+      let pwd: string;
+      
       if (typeof emailOrCredentials === 'string') {
         // Handle email-only login (OTP)
-        const { error } = await supabase.auth.signInWithOtp({
-          email: emailOrCredentials,
-          options: {
-            shouldCreateUser: false,
-            emailRedirectTo: `${window.location.origin}/dashboard`,
-          },
-        });
-        if (error) throw error;
-        alert("Check your email for the login link!");
+        email = emailOrCredentials;
+        pwd = password || '';
+        
+        if (!pwd) {
+          const { error } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+              shouldCreateUser: false,
+              emailRedirectTo: `${window.location.origin}/dashboard`,
+            },
+          });
+          
+          if (error) throw error;
+          toast({
+            title: "Giriş linki göndərildi",
+            description: "E-poçt ünvanınızı yoxlayın və giriş linkini tıklayın",
+          });
+          return;
+        }
       } else {
         // Handle credentials login
-        const { error } = await supabase.auth.signInWithPassword({
-          email: emailOrCredentials.email,
-          password: emailOrCredentials.password,
+        email = emailOrCredentials.email;
+        pwd = emailOrCredentials.password;
+      }
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pwd,
+      });
+      
+      if (error) {
+        console.error('Login error:', error);
+        let errorMessage = "Giriş zamanı xəta baş verdi";
+        
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = "E-poçt və ya şifrə yanlışdır";
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = "E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu yoxlayın";
+        }
+        
+        toast({
+          title: "Giriş xətası",
+          description: errorMessage,
+          variant: "destructive",
         });
-        if (error) throw error;
+        
+        throw error;
+      }
+      
+      if (data.user) {
+        toast({
+          title: "Uğurlu giriş",
+          description: "Sistemə uğurla daxil oldunuz",
+        });
       }
     } catch (error: any) {
-      alert(error.error_description || error.message);
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        console.error('Logout error:', error);
+        throw error;
+      }
       handleUserLoggedOut();
-      navigate("/");
+      navigate("/login");
+      toast({
+        title: "Çıxış edildi",
+        description: "Sistemdən uğurla çıxış edildi",
+      });
     } catch (error: any) {
-      alert(error.error_description || error.message);
+      console.error('Logout error:', error);
+      toast({
+        title: "Çıxış xətası",
+        description: error.message || "Çıxış zamanı xəta baş verdi",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,35 +222,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   };
 
-  const handleUserLoggedIn = (userData: any) => {
+  const handleUserLoggedIn = async (userData: any) => {
     if (!userData) {
       setUser(null);
       setLoading(false);
       return;
     }
 
-    // Normalize user data to avoid TypeScript errors
-    const normalizedUser = {
-      id: userData.id,
-      email: userData.email,
-      first_name: userData.first_name || userData.firstName || "",
-      last_name: userData.last_name || userData.lastName || "",
-      role_id: userData.role_id || "",
-      region_id: userData.region_id || "",
-      sector_id: userData.sector_id || "",
-      school_id: userData.school_id || "",
-      is_active: userData.is_active !== undefined ? userData.is_active : true,
-      roles: userData.roles || {
-        id: "",
-        name: userData.role || "",
-        permissions: []
-      },
-      role: userData.role || (userData.roles ? userData.roles.name : ""),
-    };
+    try {
+      // Get user data from the users table to get role information
+      const { data: userProfile, error: userError } = await supabase
+        .from('users')
+        .select(`
+          *,
+          roles:role_id (
+            id,
+            name,
+            description,
+            permissions
+          )
+        `)
+        .eq('id', userData.id)
+        .single();
 
-    setUser(normalizedUser);
-    setUserRole(getNormalizedRole(normalizedUser.role));
-    setLoading(false);
+      if (userError) {
+        console.error('Error fetching user profile:', userError);
+        // If we can't get the profile, still use the auth data
+      }
+
+      // Normalize user data to avoid TypeScript errors
+      const normalizedUser = {
+        id: userData.id,
+        email: userData.email,
+        first_name: userProfile?.first_name || userData.user_metadata?.first_name || "",
+        last_name: userProfile?.last_name || userData.user_metadata?.last_name || "",
+        role_id: userProfile?.role_id || userData.user_metadata?.role_id || "",
+        region_id: userProfile?.region_id || userData.user_metadata?.region_id || "",
+        sector_id: userProfile?.sector_id || userData.user_metadata?.sector_id || "",
+        school_id: userProfile?.school_id || userData.user_metadata?.school_id || "",
+        is_active: userProfile?.is_active !== undefined ? userProfile.is_active : true,
+        roles: userProfile?.roles || {
+          id: "",
+          name: userProfile?.roles?.name || userData.user_metadata?.role || "",
+          permissions: userProfile?.roles?.permissions || []
+        },
+        role: userProfile?.roles?.name || userData.user_metadata?.role || "",
+      };
+
+      setUser(normalizedUser);
+      setUserRole(getNormalizedRole(normalizedUser.role));
+    } catch (error) {
+      console.error('Error in handleUserLoggedIn:', error);
+      // If there's an error, use basic user data
+      const basicUser = {
+        id: userData.id,
+        email: userData.email,
+        first_name: userData.user_metadata?.first_name || "",
+        last_name: userData.user_metadata?.last_name || "",
+        role: userData.user_metadata?.role || "",
+      };
+      
+      setUser(basicUser);
+      setUserRole(getNormalizedRole(basicUser.role));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value = { 
