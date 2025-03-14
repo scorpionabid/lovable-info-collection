@@ -1,7 +1,5 @@
-import { 
-  PostgrestFilterBuilder, 
-  PostgrestQueryBuilder 
-} from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/integrations/supabase/types';
 
 // Mock data store for our mock Supabase instance
 interface MockDataStore {
@@ -15,10 +13,10 @@ const mockData: MockDataStore = {
   schools: [],
   categories: [],
   roles: [
-    { id: 'role-1', name: 'super_admin', description: 'Super Admin', permissions: ['all'] },
-    { id: 'role-2', name: 'region_admin', description: 'Region Admin', permissions: ['region:read', 'region:write'] },
-    { id: 'role-3', name: 'sector_admin', description: 'Sector Admin', permissions: ['sector:read', 'sector:write'] },
-    { id: 'role-4', name: 'school_admin', description: 'School Admin', permissions: ['school:read', 'school:write'] }
+    { id: 'role-1', name: 'super-admin', description: 'Super Admin', permissions: ['all'] },
+    { id: 'role-2', name: 'region-admin', description: 'Region Admin', permissions: ['region:read', 'region:write'] },
+    { id: 'role-3', name: 'sector-admin', description: 'Sector Admin', permissions: ['sector:read', 'sector:write'] },
+    { id: 'role-4', name: 'school-admin', description: 'School Admin', permissions: ['school:read', 'school:write'] }
   ]
 };
 
@@ -116,8 +114,8 @@ export const mockSupabaseClient = {
     };
   }),
   auth: {
-    signIn: jest.fn(() => Promise.resolve({ 
-      data: { user: { id: 'mock-user-id' } }, 
+    signInWithPassword: jest.fn(() => Promise.resolve({ 
+      data: { user: { id: 'mock-user-id' }, session: { access_token: 'mock-token' } }, 
       error: null 
     })),
     signUp: jest.fn(() => Promise.resolve({ 
@@ -173,6 +171,9 @@ export const mockSupabase = () => {
     mockSupabaseClient._reset();
     jest.clearAllMocks();
   });
+
+  // Return the mock for direct access
+  return { supabase: mockSupabaseClient };
 };
 
 export const seedMockData = (table: string, data: any[]) => {

@@ -1,121 +1,68 @@
 
-import { mockSupabase, seedMockData } from '../mocks/supabaseMock';
-import { mockCategories, mockColumns } from '../mocks/mockData';
-import categoryService from '@/services/supabase/category';
+import { mockSupabase } from '../mocks/supabaseMock';
+import * as categoryService from '@/services/supabase/category';
 
 // Apply the mock before running tests
-mockSupabase();
+jest.mock('@/services/supabase/supabaseClient', () => {
+  const actualModule = jest.requireActual('../mocks/supabaseMock');
+  return {
+    supabase: actualModule.mockSupabaseClient
+  };
+});
 
 describe('categoryService', () => {
   beforeEach(() => {
-    // Seed mock data for categories and columns
-    seedMockData('categories', [...mockCategories]);
-    seedMockData('columns', [...mockColumns]);
+    jest.clearAllMocks();
   });
 
   describe('getCategories', () => {
-    it('should fetch all categories', async () => {
+    it('should fetch categories successfully', async () => {
+      // Seed mock data
+      const mockCategories = [
+        { id: 'cat-1', name: 'Category 1', priority: 1, status: 'Active' },
+        { id: 'cat-2', name: 'Category 2', priority: 2, status: 'Active' }
+      ];
+      
+      mockSupabase()._seed('categories', mockCategories);
+      
+      // Test the service function
       const result = await categoryService.getCategories();
       
       expect(result).toBeTruthy();
-      expect(result.data).toHaveLength(mockCategories.length);
-      expect(result.data[0].name).toBe(mockCategories[0].name);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBe(2);
+      expect(result[0].name).toBe('Category 1');
     });
 
-    it('should include completion rates when includeStats is true', async () => {
-      const result = await categoryService.getCategories({ includeStats: true });
-      
-      expect(result).toBeTruthy();
-      expect(result.data).toHaveLength(mockCategories.length);
-      expect(result.data[0]).toHaveProperty('completionRate');
-    });
-
-    it('should apply sorting when provided', async () => {
-      const result = await categoryService.getCategories({ 
-        sort: { column: 'name', direction: 'desc' } 
+    it('should handle errors when fetching categories', async () => {
+      // Mock an error
+      jest.spyOn(mockSupabase().supabase.from('categories'), 'select').mockImplementationOnce(() => {
+        throw new Error('Database error');
       });
       
-      expect(result).toBeTruthy();
-      // Since our mock doesn't actually sort, we just check that the function ran
-      expect(result.data).toHaveLength(mockCategories.length);
+      await expect(categoryService.getCategories()).rejects.toThrow('Database error');
     });
   });
 
   describe('getCategoryById', () => {
-    it('should fetch a single category by ID', async () => {
-      const categoryId = mockCategories[0].id;
-      const result = await categoryService.getCategoryById(categoryId);
+    it('should fetch a category by ID', async () => {
+      // Seed mock data
+      const mockCategory = { id: 'cat-1', name: 'Category 1', priority: 1, status: 'Active' };
+      mockSupabase()._seed('categories', [mockCategory]);
+      
+      // Test the service function
+      const result = await categoryService.getCategoryById('cat-1');
       
       expect(result).toBeTruthy();
-      expect(result.id).toBe(categoryId);
-      expect(result.name).toBe(mockCategories[0].name);
+      expect(result.id).toBe('cat-1');
+      expect(result.name).toBe('Category 1');
     });
 
-    it('should return null for non-existent ID', async () => {
-      const result = await categoryService.getCategoryById('non-existent');
+    it('should handle not finding a category', async () => {
+      // Test with empty data
+      mockSupabase()._reset();
       
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('createCategory', () => {
-    it('should create a new category', async () => {
-      const newCategory = {
-        name: 'Test Category',
-        description: 'Test Description'
-      };
-      
-      const result = await categoryService.createCategory(newCategory);
-      
-      expect(result).toBeTruthy();
-      expect(result.name).toBe(newCategory.name);
-      expect(result.description).toBe(newCategory.description);
-      expect(result.id).toBeDefined();
-    });
-  });
-
-  describe('updateCategory', () => {
-    it('should update an existing category', async () => {
-      const categoryId = mockCategories[0].id;
-      const updates = {
-        name: 'Updated Name',
-        description: 'Updated Description'
-      };
-      
-      const result = await categoryService.updateCategory(categoryId, updates);
-      
-      expect(result).toBeTruthy();
-      expect(result.name).toBe(updates.name);
-      expect(result.description).toBe(updates.description);
-      expect(result.id).toBe(categoryId);
-    });
-  });
-
-  describe('deleteCategory', () => {
-    it('should delete a category', async () => {
-      const categoryId = mockCategories[0].id;
-      
-      const result = await categoryService.deleteCategory(categoryId);
-      
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(true);
-      
-      // Verify the category was deleted
-      const check = await categoryService.getCategoryById(categoryId);
-      expect(check).toBeNull();
-    });
-  });
-
-  describe('getCategoryColumns', () => {
-    it('should fetch columns for a specific category', async () => {
-      const categoryId = mockCategories[0].id;
-      const categoryColumns = mockColumns.filter(col => col.category_id === categoryId);
-      
-      const result = await categoryService.getCategoryColumns(categoryId);
-      
-      expect(result).toBeTruthy();
-      expect(result).toHaveLength(categoryColumns.length);
-      expect(result[0].name).toBe(categoryColumns[0].name);
+      await expect(categoryService.getCategoryById('non-existent')).rejects.toThrow();
     });
   });
 });

@@ -7,7 +7,9 @@ export const createTestQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
       retry: false,
-      cacheTime: 0,
+      // Remove cacheTime that doesn't exist in the newer version
+      // and use gcTime instead
+      gcTime: 0,
       staleTime: 0
     },
   },

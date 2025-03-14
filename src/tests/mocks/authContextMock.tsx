@@ -1,6 +1,9 @@
 
 import React, { ReactNode } from 'react';
-import { AuthContext, UserRole } from '@/contexts/AuthContext';
+import { AuthContext } from '@/contexts/AuthContext';
+
+// Define UserRole type to match what's in the context
+type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';
 
 interface AuthContextMockProps {
   children: ReactNode;
@@ -11,7 +14,7 @@ interface AuthContextMockProps {
 
 export const AuthContextMock = ({ 
   children, 
-  userRole = 'super_admin', 
+  userRole = 'super-admin', 
   isAuthenticated = true,
   user = {
     id: 'test-user-id',
@@ -24,9 +27,9 @@ export const AuthContextMock = ({
   const contextValue = {
     isAuthenticated,
     user,
-    login: jest.fn(() => Promise.resolve({ success: true })),
-    logout: jest.fn(() => Promise.resolve()),
-    resetPassword: jest.fn(() => Promise.resolve({ success: true })),
+    login: jest.fn(() => Promise.resolve({ token: 'mock-token', user })),
+    logout: jest.fn(() => Promise.resolve(true)),
+    resetPassword: jest.fn(() => Promise.resolve(true)),
     loading: false,
     error: null
   };

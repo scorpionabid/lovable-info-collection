@@ -1,6 +1,7 @@
 
 import { getTableQuery } from '../utils/tableOperations';
 import { safeQuery } from '../utils/helpers';
+import { Database } from '@/integrations/supabase/types';
 
 // Type-safe querying with hardcoded table names to prevent errors
 export const fetchItems = async (
@@ -60,8 +61,10 @@ export const createItem = async (tableName: string, item: any) => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
     
-    // Use .insert with an array and let Supabase handle it
-    const { data, error } = await query.insert(item).select();
+    // Ensure we're using an array for insert
+    const itemsArray = Array.isArray(item) ? item : [item];
+    
+    const { data, error } = await query.insert(itemsArray).select();
     
     // Return the first item from the array if successful
     return { 
@@ -77,8 +80,10 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
     // Get the query builder for this table
     const query = getTableQuery(tableName);
     
-    // Use .update with the item and let Supabase handle it
-    const { data, error } = await query.update(item).eq('id', id).select();
+    // Ensure we're updating a single item (not an array)
+    const singleItem = Array.isArray(item) ? item[0] : item;
+    
+    const { data, error } = await query.update(singleItem).eq('id', id).select();
     
     // Return the first item from the array if successful
     return { 

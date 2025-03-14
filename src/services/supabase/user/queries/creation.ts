@@ -15,13 +15,15 @@ export const createUser = async (userData: CreateUserDto) => {
       school_id: userData.school_id,
       phone: userData.phone,
       utis_code: userData.utis_code,
-      is_active: userData.is_active !== undefined ? userData.is_active : true
+      is_active: userData.is_active !== undefined ? userData.is_active : true,
+      // Include id if it's provided
+      ...(userData.id ? { id: userData.id } : {})
     };
     
     // Insert the user with the correct array format
     const { data, error } = await supabase
       .from('users')
-      .insert([userDataForInsert]) // Wrap in array for proper insertion
+      .insert([userDataForInsert])
       .select(`
         *,
         roles (

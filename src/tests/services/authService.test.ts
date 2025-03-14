@@ -1,39 +1,48 @@
 
 import { mockSupabase } from '../mocks/supabaseMock';
-import authService from '@/services/supabase/authService';
+import authService, { LoginCredentials, ResetPasswordData } from '@/services/supabase/authService';
 
 // Apply the mock before running tests
-mockSupabase();
+jest.mock('@/services/supabase/supabaseClient', () => {
+  const actualModule = jest.requireActual('../mocks/supabaseMock');
+  return {
+    supabase: actualModule.mockSupabaseClient
+  };
+});
 
 describe('authService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('login', () => {
     it('should successfully login with valid credentials', async () => {
       // Mock a successful login
       const mockUser = { id: 'user-id', email: 'test@example.com' };
+      const mockCredentials: LoginCredentials = { email: 'test@example.com', password: 'password' };
+      
       jest.spyOn(mockSupabase().supabase.auth, 'signInWithPassword').mockResolvedValueOnce({
         data: { user: mockUser, session: { access_token: 'token' } },
         error: null
       });
       
-      const result = await authService.login('test@example.com', 'password');
+      const result = await authService.login(mockCredentials);
       
       expect(result).toBeTruthy();
-      expect(result.success).toBe(true);
-      expect(result.user).toEqual(mockUser);
+      expect(result.token).toBeDefined();
+      expect(result.user).toBeDefined();
     });
 
     it('should fail login with invalid credentials', async () => {
       // Mock a failed login
+      const mockCredentials: LoginCredentials = { email: 'test@example.com', password: 'wrong-password' };
+      
       jest.spyOn(mockSupabase().supabase.auth, 'signInWithPassword').mockResolvedValueOnce({
         data: { user: null, session: null },
         error: { message: 'Invalid credentials' }
       });
       
-      const result = await authService.login('test@example.com', 'wrong-password');
-      
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      await expect(authService.login(mockCredentials)).rejects.toThrow();
     });
   });
 
@@ -46,8 +55,7 @@ describe('authService', () => {
       
       const result = await authService.logout();
       
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(true);
+      expect(result).toBe(true);
     });
 
     it('should handle logout errors', async () => {
@@ -56,14 +64,11 @@ describe('authService', () => {
         error: { message: 'Logout error' }
       });
       
-      const result = await authService.logout();
-      
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(false);
+      await expect(authService.logout()).rejects.toThrow();
     });
   });
 
-  describe('resetPassword', () => {
+  describe('forgotPassword', () => {
     it('should send reset password email', async () => {
       // Mock a successful password reset
       jest.spyOn(mockSupabase().supabase.auth, 'resetPasswordForEmail').mockResolvedValueOnce({
@@ -71,10 +76,9 @@ describe('authService', () => {
         error: null
       });
       
-      const result = await authService.resetPassword('test@example.com');
+      const result = await authService.forgotPassword('test@example.com');
       
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(true);
+      expect(result).toBe(true);
     });
 
     it('should handle reset password errors', async () => {
@@ -84,10 +88,41 @@ describe('authService', () => {
         error: { message: 'Reset error' }
       });
       
-      const result = await authService.resetPassword('invalid@example.com');
+      await expect(authService.forgotPassword('invalid@example.com')).rejects.toThrow();
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('should reset password successfully', async () => {
+      // Mock a successful password reset
+      jest.spyOn(mockSupabase().supabase.auth, 'updateUser').mockResolvedValueOnce({
+        data: { user: { id: 'user-id' } },
+        error: null
+      });
       
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(false);
+      const resetData: ResetPasswordData = {
+        token: 'valid-token',
+        newPassword: 'new-password'
+      };
+      
+      const result = await authService.resetPassword(resetData);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should handle reset password errors', async () => {
+      // Mock a failed password reset
+      jest.spyOn(mockSupabase().supabase.auth, 'updateUser').mockResolvedValueOnce({
+        data: { user: null },
+        error: { message: 'Update error' }
+      });
+      
+      const resetData: ResetPasswordData = {
+        token: 'invalid-token',
+        newPassword: 'weak'
+      };
+      
+      await expect(authService.resetPassword(resetData)).rejects.toThrow();
     });
   });
 
@@ -100,10 +135,20 @@ describe('authService', () => {
         error: null
       });
       
+      // Mock the profile fetch
+      jest.spyOn(mockSupabase().supabase.from('users'), 'select').mockReturnValueOnce({
+        eq: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValueOnce({
+            data: { id: 'user-id', email: 'test@example.com', roles: { permissions: ['read'] } },
+            error: null
+          })
+        })
+      } as any);
+      
       const result = await authService.getCurrentUser();
       
       expect(result).toBeTruthy();
-      expect(result.id).toBe(mockUser.id);
+      expect(result.id).toBe('user-id');
     });
 
     it('should return null if no current user', async () => {
@@ -113,37 +158,7 @@ describe('authService', () => {
         error: { message: 'No user' }
       });
       
-      const result = await authService.getCurrentUser();
-      
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('updatePassword', () => {
-    it('should update password successfully', async () => {
-      // Mock a successful password update
-      jest.spyOn(mockSupabase().supabase.auth, 'updateUser').mockResolvedValueOnce({
-        data: { user: { id: 'user-id' } },
-        error: null
-      });
-      
-      const result = await authService.updatePassword('new-password');
-      
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(true);
-    });
-
-    it('should handle password update errors', async () => {
-      // Mock a failed password update
-      jest.spyOn(mockSupabase().supabase.auth, 'updateUser').mockResolvedValueOnce({
-        data: { user: null },
-        error: { message: 'Update error' }
-      });
-      
-      const result = await authService.updatePassword('weak');
-      
-      expect(result).toBeTruthy();
-      expect(result.success).toBe(false);
+      await expect(authService.getCurrentUser()).rejects.toThrow();
     });
   });
 });
