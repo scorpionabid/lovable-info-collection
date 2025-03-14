@@ -1,6 +1,7 @@
 
 import { getTableQuery } from '../utils/tableOperations';
 import { safeQuery } from '../utils/helpers';
+import { simplifyQueryBuilder } from '../utils/typeHelpers';
 
 // Type-safe querying with hardcoded table names to prevent errors
 export const fetchItems = async (
@@ -12,8 +13,8 @@ export const fetchItems = async (
   sortDirection = 'asc'
 ) => {
   return safeQuery(async () => {
-    // Get the query builder for this table
-    let query = getTableQuery(tableName).select('*');
+    // Get the query builder for this table and simplify it for TypeScript
+    let query = simplifyQueryBuilder(getTableQuery(tableName).select('*'));
 
     // Apply pagination
     const start = (page - 1) * pageSize;
@@ -38,8 +39,8 @@ export const fetchItems = async (
       });
     }
 
-    // Use type assertion to avoid deep instantiation error
-    const result = await (query as any);
+    // Execute the query
+    const result = await query;
     return { data: result.data, count: result.count || 0, error: result.error };
   });
 };
@@ -48,23 +49,23 @@ export const getItemById = async (tableName: string, id: string) => {
   if (!id) return { data: null, error: 'No ID provided' };
 
   return safeQuery(async () => {
-    // Get the query builder for this table
-    const query = getTableQuery(tableName).select('*');
-    const { data, error } = await (query as any).eq('id', id).single();
+    // Get the query builder for this table and simplify it for TypeScript
+    const query = simplifyQueryBuilder(getTableQuery(tableName).select('*'));
+    const { data, error } = await query.eq('id', id).single();
     return { data, error };
   });
 };
 
 export const createItem = async (tableName: string, item: any) => {
   return safeQuery(async () => {
-    // Get the query builder for this table
-    const query = getTableQuery(tableName);
+    // Get the query builder for this table and simplify it for TypeScript
+    const query = simplifyQueryBuilder(getTableQuery(tableName));
     
     // Ensure we're using an array for insert
     const itemsArray = Array.isArray(item) ? item : [item];
     
-    // Use a more generic type to avoid TypeScript errors
-    const { data, error } = await (query as any).insert(itemsArray).select();
+    // Execute the query
+    const { data, error } = await query.insert(itemsArray).select();
     
     // Return the first item from the array if successful
     return { 
@@ -77,14 +78,14 @@ export const createItem = async (tableName: string, item: any) => {
 
 export const updateItem = async (tableName: string, id: string, item: any) => {
   return safeQuery(async () => {
-    // Get the query builder for this table
-    const query = getTableQuery(tableName);
+    // Get the query builder for this table and simplify it for TypeScript
+    const query = simplifyQueryBuilder(getTableQuery(tableName));
     
     // Ensure we're updating a single item (not an array)
     const singleItem = Array.isArray(item) ? item[0] : item;
     
-    // Use simple type assertion to bypass TypeScript errors
-    const { data, error } = await (query as any)
+    // Execute the query
+    const { data, error } = await query
       .update(singleItem)
       .eq('id', id)
       .select();
@@ -100,9 +101,9 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
 
 export const deleteItem = async (tableName: string, id: string) => {
   return safeQuery(async () => {
-    // Get the query builder for this table
-    const query = getTableQuery(tableName);
-    const { error } = await (query as any).delete().eq('id', id);
+    // Get the query builder for this table and simplify it for TypeScript
+    const query = simplifyQueryBuilder(getTableQuery(tableName));
+    const { error } = await query.delete().eq('id', id);
     return { success: !error, data: null, error };
   });
 };

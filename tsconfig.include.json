@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    // Increase the max type inference limit
+    "tsNodeMaxTypeInferenceLimit": 10000000,
+    "maxNodeModuleJsDepth": 5,
+    // Other options that help with complex type systems
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true
+  }
+}
