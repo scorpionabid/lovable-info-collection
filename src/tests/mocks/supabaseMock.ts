@@ -1,4 +1,3 @@
-import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
 
 // Mock data store for our mock Supabase instance
@@ -139,21 +138,22 @@ export const mockSupabaseClient = {
         error: null 
       }))
     }
-  },
-  // Function to reset mock data
-  _reset: () => {
-    for (const table in mockData) {
-      if (table === 'roles') {
-        // Keep the default roles
-        continue;
-      }
-      mockData[table] = [];
-    }
-  },
-  // Function to seed mock data
-  _seed: (table: string, data: any[]) => {
-    mockData[table] = [...data];
   }
+};
+
+// Add the seed and reset methods directly to the mock object
+mockSupabaseClient._reset = () => {
+  for (const table in mockData) {
+    if (table === 'roles') {
+      // Keep the default roles
+      continue;
+    }
+    mockData[table] = [];
+  }
+};
+
+mockSupabaseClient._seed = (table: string, data: any[]) => {
+  mockData[table] = [...data];
 };
 
 // Helper to mock Supabase
@@ -166,16 +166,10 @@ export const mockSupabase = () => {
     supabase: mockSupabaseClient
   }));
   
-  // Reset mock data before each test
-  beforeEach(() => {
-    mockSupabaseClient._reset();
-    jest.clearAllMocks();
-  });
-
   // Return the mock for direct access
-  return { supabase: mockSupabaseClient };
+  return mockSupabaseClient;
 };
 
 export const seedMockData = (table: string, data: any[]) => {
-  mockSupabaseClient._seed(table, data);
+  mockData[table] = [...data];
 };

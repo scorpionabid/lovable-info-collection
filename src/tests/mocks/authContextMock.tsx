@@ -1,6 +1,8 @@
 
-import React, { ReactNode } from 'react';
-import { AuthContext } from '@/contexts/AuthContext';
+import React, { ReactNode, createContext } from 'react';
+
+// Create a local version of AuthContext for testing
+export const AuthContext = createContext<any>(null);
 
 // Define UserRole type to match what's in the context
 type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin';

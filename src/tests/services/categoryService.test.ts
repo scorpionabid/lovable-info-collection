@@ -4,15 +4,16 @@ import * as categoryService from '@/services/supabase/category';
 
 // Apply the mock before running tests
 jest.mock('@/services/supabase/supabaseClient', () => {
-  const actualModule = jest.requireActual('../mocks/supabaseMock');
   return {
-    supabase: actualModule.mockSupabaseClient
+    supabase: mockSupabase()
   };
 });
 
 describe('categoryService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset mock data
+    mockSupabase._reset();
   });
 
   describe('getCategories', () => {
@@ -23,7 +24,7 @@ describe('categoryService', () => {
         { id: 'cat-2', name: 'Category 2', priority: 2, status: 'Active' }
       ];
       
-      mockSupabase()._seed('categories', mockCategories);
+      mockSupabase._seed('categories', mockCategories);
       
       // Test the service function
       const result = await categoryService.getCategories();
@@ -36,7 +37,7 @@ describe('categoryService', () => {
 
     it('should handle errors when fetching categories', async () => {
       // Mock an error
-      jest.spyOn(mockSupabase().supabase.from('categories'), 'select').mockImplementationOnce(() => {
+      jest.spyOn(mockSupabase.from('categories'), 'select').mockImplementationOnce(() => {
         throw new Error('Database error');
       });
       
@@ -48,7 +49,7 @@ describe('categoryService', () => {
     it('should fetch a category by ID', async () => {
       // Seed mock data
       const mockCategory = { id: 'cat-1', name: 'Category 1', priority: 1, status: 'Active' };
-      mockSupabase()._seed('categories', [mockCategory]);
+      mockSupabase._seed('categories', [mockCategory]);
       
       // Test the service function
       const result = await categoryService.getCategoryById('cat-1');
@@ -60,7 +61,7 @@ describe('categoryService', () => {
 
     it('should handle not finding a category', async () => {
       // Test with empty data
-      mockSupabase()._reset();
+      mockSupabase._reset();
       
       await expect(categoryService.getCategoryById('non-existent')).rejects.toThrow();
     });
