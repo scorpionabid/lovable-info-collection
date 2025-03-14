@@ -26,13 +26,24 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
  * Add connection monitoring to detect timeouts and connection issues
  */
 export const setupConnectionMonitoring = () => {
-  // Add monitoring for connection errors
-  supabase.realtime.onError((error) => {
-    console.error('Supabase realtime connection error:', error);
-  });
+  // Create a channel for monitoring connection status
+  const channel = supabase.channel('system');
   
-  // Log reconnection attempts
-  supabase.realtime.onConnected(() => {
-    console.log('Supabase realtime connection established');
-  });
+  // Log connection status changes
+  channel
+    .on('system', { event: 'disconnect' }, (payload) => {
+      console.error('Supabase realtime disconnected:', payload);
+    })
+    .on('system', { event: 'reconnect' }, () => {
+      console.log('Supabase realtime attempting to reconnect');
+    })
+    .on('system', { event: 'connected' }, () => {
+      console.log('Supabase realtime connection established');
+    })
+    .subscribe((status) => {
+      console.log(`Supabase realtime subscription status: ${status}`);
+    });
+    
+  // Additional diagnostic information
+  console.log(`Supabase realtime connection status: ${supabase.realtime.getConnectionStatus()}`);
 };
