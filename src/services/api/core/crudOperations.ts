@@ -14,7 +14,7 @@ export const fetchItems = async (
 ) => {
   return safeQuery(async () => {
     // Get the query builder for this table and simplify it for TypeScript
-    let query = simplifyQueryBuilder(getTableQuery(tableName).select('*'));
+    let query = simplifyQueryBuilder((getTableQuery(tableName) as any).select('*'));
 
     // Apply pagination
     const start = (page - 1) * pageSize;
@@ -50,7 +50,7 @@ export const getItemById = async (tableName: string, id: string) => {
 
   return safeQuery(async () => {
     // Get the query builder for this table and simplify it for TypeScript
-    const query = simplifyQueryBuilder(getTableQuery(tableName).select('*'));
+    const query = simplifyQueryBuilder((getTableQuery(tableName) as any).select('*'));
     const { data, error } = await query.eq('id', id).single();
     return { data, error };
   });
@@ -59,7 +59,7 @@ export const getItemById = async (tableName: string, id: string) => {
 export const createItem = async (tableName: string, item: any) => {
   return safeQuery(async () => {
     // Get the query builder for this table and simplify it for TypeScript
-    const query = simplifyQueryBuilder(getTableQuery(tableName));
+    const query = simplifyQueryBuilder(getTableQuery(tableName) as any);
     
     // Ensure we're using an array for insert
     const itemsArray = Array.isArray(item) ? item : [item];
@@ -79,7 +79,7 @@ export const createItem = async (tableName: string, item: any) => {
 export const updateItem = async (tableName: string, id: string, item: any) => {
   return safeQuery(async () => {
     // Get the query builder for this table and simplify it for TypeScript
-    const query = simplifyQueryBuilder(getTableQuery(tableName));
+    const query = simplifyQueryBuilder(getTableQuery(tableName) as any);
     
     // Ensure we're updating a single item (not an array)
     const singleItem = Array.isArray(item) ? item[0] : item;
@@ -102,7 +102,7 @@ export const updateItem = async (tableName: string, id: string, item: any) => {
 export const deleteItem = async (tableName: string, id: string) => {
   return safeQuery(async () => {
     // Get the query builder for this table and simplify it for TypeScript
-    const query = simplifyQueryBuilder(getTableQuery(tableName));
+    const query = simplifyQueryBuilder(getTableQuery(tableName) as any);
     const { error } = await query.delete().eq('id', id);
     return { success: !error, data: null, error };
   });

@@ -30,7 +30,7 @@ export const getTableQuery = (tableName: string) => {
     case 'columns':
       return supabase.from('columns');
     default:
-      console.error(`Unknown table: ${tableName}`);
-      throw new Error(`Unknown table: ${tableName}`);
+      // For unknown tables, use a type assertion to bypass TypeScript's strict checking
+      return (supabase.from as any)(tableName);
   }
 };

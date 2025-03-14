@@ -59,7 +59,9 @@ export function simplifyQueryBuilder(query: any): SimplifiedQueryBuilder {
 
 /**
  * Get a simplified query builder for a table
+ * Using as any to bypass TypeScript's strict table name checking
  */
 export function getSimplifiedTableQuery(tableName: KnownTable | string): SimplifiedQueryBuilder {
-  return simplifyQueryBuilder(supabase.from(tableName));
+  // Use type assertion to bypass TypeScript's strict table name checking
+  return simplifyQueryBuilder((supabase.from as any)(tableName));
 }
