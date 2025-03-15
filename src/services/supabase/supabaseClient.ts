@@ -6,6 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 // Re-export the supabase client
 export { supabase };
 
+// Export supabaseAdmin as an alias to the regular supabase client
+// This is needed for backward compatibility with code that uses supabaseAdmin
+export const supabaseAdmin = supabase;
+
 // If there were any other exports from the original supabaseClient.ts,
 // they would need to be recreated or imported here
 export type DataEntry = any;
