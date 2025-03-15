@@ -60,13 +60,13 @@ export const getRoleName = (user: User): string => {
 export const getEntityName = (user: User): string => {
   const role = getRoleName(user).toLowerCase();
   
-  if (role.includes('super')) {
+  if (role.includes("super")) {
     return 'Sistem';
-  } else if (role.includes('region') && user.region_id) {
+  } else if (role.includes("region") && user.region_id) {
     return `Region: ${user.region_id}`;
-  } else if (role.includes('sector') && user.sector_id) {
+  } else if (role.includes("sector") && user.sector_id) {
     return `Sektor: ${user.sector_id}`;
-  } else if (role.includes('school') && user.school_id) {
+  } else if (role.includes("school") && user.school_id) {
     return `Məktəb: ${user.school_id}`;
   }
   
