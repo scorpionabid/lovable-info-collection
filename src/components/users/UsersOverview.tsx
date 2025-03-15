@@ -1,89 +1,44 @@
-import { useState, useEffect } from 'react';
-import { toast } from "sonner";
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Edit, Trash2, FileDown } from "lucide-react";
-import { UserTablePagination } from "./table/UserTablePagination";
-import { UserTableToolbar } from "./table/UserTableToolbar";
-import { UserForm } from "./modals/UserForm";
-import { sortUsers, getRoleName, getEntityName } from "./utils/userUtils";
-import { useUserExport } from "./hooks/useUserExport";
-import { confirm } from "@/components/ui/confirm";
-import userService from "@/services/api/userService";
-import { User } from '@/services/supabase/user/types';
 
-interface UserApiResponse {
-  data: User[];
-  count: number;
-}
+import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { UsersList } from './components/UsersList';
+import { UserTableToolbar } from "./table/UserTableToolbar";
+import { UserTablePagination } from "./table/UserTablePagination";
+import { UserForm } from "./modals/UserForm";
+import { useUserExport } from "./hooks/useUserExport";
+import { useUsersData } from './hooks/useUsersData';
 
 export const UsersOverview = () => {
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
-  const [search, setSearch] = useState('');
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [users, setUsers] = useState<User[] | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { exportUsers } = useUserExport();
+  
+  // Use our custom hook for user data and state management
+  const {
+    users,
+    isLoading,
+    page,
+    perPage,
+    search,
+    sortColumn,
+    sortOrder,
+    usersData,
+    refetch,
+    handleSearchChange,
+    handleSort,
+    setPage,
+    setPerPage,
+  } = useUsersData();
 
-  const { data: usersData, refetch } = useQuery({
-    queryKey: ['users', page, perPage, search, sortColumn, sortOrder],
-    queryFn: () => userService.getUsers({
-      sortBy: sortColumn || undefined,
-      sortOrder: sortOrder,
-      search: search || undefined,
-      pageSize: perPage,
-      page: page,
-    })
-  });
+  // User form state
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
-  useEffect(() => {
-    setIsLoading(true);
-    if (usersData) {
-      handleFetchSuccess(usersData);
-    }
-  }, [usersData]);
-
-  useEffect(() => {
-    if ((usersData as any)?.error) {
-      toast(`İstifadəçiləri yükləyərkən xəta baş verdi: ${(usersData as any).error?.toString()}`);
-      setIsLoading(false);
-    }
-  }, [(usersData as any)?.error]);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
-
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortOrder('asc');
-    }
-  };
-
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: any) => {
     setSelectedUser(user);
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (user: User) => {
+  const handleDelete = async (user: any) => {
     const confirmed = await confirm({
       title: "Silmək istədiyinizə əminsiniz?",
       description: "Bu əməliyyatı geri almaq mümkün deyil",
@@ -114,41 +69,6 @@ export const UsersOverview = () => {
     exportUsers(users as any);
   };
 
-  // Fix the adaptUserData function to properly map role/roles
-  const adaptUserData = (userData: any): User => {
-    return {
-      id: userData.id,
-      email: userData.email,
-      first_name: userData.first_name,
-      last_name: userData.last_name,
-      role_id: userData.role_id || '', 
-      region_id: userData.region_id,
-      sector_id: userData.sector_id,
-      school_id: userData.school_id,
-      phone: userData.phone,
-      utis_code: userData.utis_code,
-      is_active: userData.is_active,
-      created_at: userData.created_at,
-      updated_at: userData.updated_at,
-      last_login: userData.last_login,
-      roles: userData.roles,
-      role: userData.roles ? userData.roles.name : undefined
-    };
-  };
-
-  // Fix the sortUsers call by adapting the data
-  const sortedUsers = users ? sortUsers(users, sortColumn, sortOrder) : [];
-
-  // Fix the setUsers call by using the adapter
-  const handleFetchSuccess = (data: any) => {
-    if (Array.isArray(data)) {
-      setUsers(data.map(adaptUserData));
-    } else if (data && 'data' in data && Array.isArray(data.data)) {
-      setUsers(data.data.map(adaptUserData));
-    }
-    setIsLoading(false);
-  };
-
   return (
     <div className="container mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
@@ -163,65 +83,15 @@ export const UsersOverview = () => {
         onAddUser={() => setIsFormOpen(true)}
       />
 
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead onClick={() => handleSort('name')} className="cursor-pointer">
-                Ad Soyad
-                {sortColumn === 'name' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('email')} className="cursor-pointer">
-                Email
-                {sortColumn === 'email' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('role')} className="cursor-pointer">
-                Rol
-                {sortColumn === 'role' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('entity')} className="cursor-pointer">
-                Qurum
-                {sortColumn === 'entity' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('lastActive')} className="cursor-pointer">
-                Son aktivlik
-                {sortColumn === 'lastActive' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-              </TableHead>
-              <TableHead onClick={() => handleSort('status')} className="cursor-pointer">
-                Status
-                {sortColumn === 'status' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-              </TableHead>
-              <TableHead className="text-right">Əməliyyatlar</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">Yüklənir...</TableCell>
-              </TableRow>
-            ) : sortedUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">Məlumat tapılmadı</TableCell>
-              </TableRow>
-            ) : (
-              sortedUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.first_name} {user.last_name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{getRoleName(user)}</TableCell>
-                  <TableCell>{getEntityName(user)}</TableCell>
-                  <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString() : 'Heç vaxt'}</TableCell>
-                  <TableCell>{user.is_active ? 'Aktiv' : 'Deaktiv'}</TableCell>
-                  <TableCell className="text-right">
-                    <Button onClick={() => handleEdit(user)} variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                    <Button onClick={() => handleDelete(user)} variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <UsersList
+        users={users}
+        isLoading={isLoading}
+        sortColumn={sortColumn}
+        sortOrder={sortOrder}
+        onEditUser={handleEdit}
+        onDeleteUser={handleDelete}
+        onSort={handleSort}
+      />
 
       <UserTablePagination
         page={page}
@@ -240,3 +110,9 @@ export const UsersOverview = () => {
     </div>
   );
 };
+
+// Make sure we include the necessary imports at the top
+import { useState } from 'react';
+import { toast } from "sonner";
+import { confirm } from "@/components/ui/confirm";
+import userService from "@/services/api/userService";
