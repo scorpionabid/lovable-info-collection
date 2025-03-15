@@ -1,5 +1,5 @@
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/hooks/types/authTypes';
@@ -16,11 +16,22 @@ export const ProtectedRoute = ({
   const { user, userRole, isAuthenticated, isLoading, authInitialized } = useAuth();
   const location = useLocation();
 
+  useEffect(() => {
+    console.log('ProtectedRoute state:', { 
+      isAuthenticated, 
+      isLoading, 
+      authInitialized, 
+      userRole,
+      pathname: location.pathname
+    });
+  }, [isAuthenticated, isLoading, authInitialized, userRole, location.pathname]);
+
   // Show loading state while checking authentication
   if (isLoading || !authInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+        <div className="ml-3">Yüklənir...</div>
       </div>
     );
   }

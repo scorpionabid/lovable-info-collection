@@ -33,6 +33,15 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const auth = useAuthProvider();
   
+  React.useEffect(() => {
+    console.log("AuthProvider state updated:", { 
+      isAuthenticated: !!auth.user, 
+      isLoading: auth.isLoading,
+      authInitialized: auth.authInitialized,
+      userRole: auth.userRole 
+    });
+  }, [auth.user, auth.isLoading, auth.authInitialized, auth.userRole]);
+  
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 };
 

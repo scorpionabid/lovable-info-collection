@@ -32,7 +32,7 @@ export const useAuthProvider = () => {
   );
   
   // Compute derived values
-  const isAuthenticated = !!user;
+  const isAuthenticated = Boolean(user);
   const isLoading = loading && !authInitialized;
   const permissions = user?.roles?.permissions || [];
 

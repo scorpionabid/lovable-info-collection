@@ -20,6 +20,8 @@ export const useAuthListener = (
         if (sessionError) {
           console.error('Session error:', sessionError);
           handleUserLoggedOut();
+          setAuthInitialized(true);
+          setLoading(false);
           return;
         }
         
@@ -30,6 +32,8 @@ export const useAuthListener = (
           if (userError) {
             console.error('User fetch error:', userError);
             handleUserLoggedOut();
+            setAuthInitialized(true);
+            setLoading(false);
             return;
           }
           
@@ -59,7 +63,12 @@ export const useAuthListener = (
       console.log('Auth state changed:', event);
       if (event === "SIGNED_IN" && session) {
         console.log("User signed in, updating state");
-        await handleUserLoggedIn(session.user);
+        setLoading(true); // Set loading to true while we process the login
+        try {
+          await handleUserLoggedIn(session.user);
+        } finally {
+          setLoading(false); // Always set loading to false when done
+        }
       } else if (event === "SIGNED_OUT") {
         console.log("User signed out, updating state");
         handleUserLoggedOut();
@@ -67,7 +76,12 @@ export const useAuthListener = (
         console.log("Token refreshed, checking user state");
         // Only update if user state is empty
         if (!user) {
-          await handleUserLoggedIn(session.user);
+          setLoading(true);
+          try {
+            await handleUserLoggedIn(session.user);
+          } finally {
+            setLoading(false);
+          }
         }
       }
     });

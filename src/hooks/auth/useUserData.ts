@@ -41,6 +41,7 @@ export const useUserData = () => {
 
       if (userError) {
         console.error('Error fetching user profile:', userError);
+        // Don't exit early on error, continue with basic user data
       }
 
       // Normalize user data to avoid TypeScript errors
@@ -73,9 +74,10 @@ export const useUserData = () => {
         email: userData.email,
         first_name: userData.user_metadata?.first_name || "",
         last_name: userData.user_metadata?.last_name || "",
-        role: userData.user_metadata?.role || "",
+        role: userData.user_metadata?.role || "super-admin", // Provide a default role
       };
       
+      console.log("Using basic user data due to error:", basicUser);
       setUser(basicUser);
       setUserRole(getNormalizedRole(basicUser.role));
     } finally {

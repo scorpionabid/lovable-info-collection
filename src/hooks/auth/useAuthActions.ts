@@ -89,7 +89,7 @@ export const useAuthActions = (
         });
         
         // Redirect to dashboard after successful login
-        navigate("/dashboard");
+        navigate("/");
       }
     } catch (error: any) {
       console.error('Login error:', error);
