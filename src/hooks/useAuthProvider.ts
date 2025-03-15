@@ -1,290 +1,40 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { getNormalizedRole } from "@/components/users/utils/userUtils";
-import { toast } from "@/hooks/use-toast";
+import { useAuthActions } from "./auth/useAuthActions";
+import { useUserData } from "./auth/useUserData";
+import { useAuthListener } from "./auth/useAuthListener";
+import { UserRole, LoginCredentials } from "./types/authTypes";
 
-export type UserRole =
-  | "super-admin"
-  | "region-admin"
-  | "sector-admin"
-  | "school-admin";
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+export type { UserRole, LoginCredentials };
 
 export const useAuthProvider = () => {
-  const [user, setUser] = useState<any | null>(null);
-  const [userRole, setUserRole] = useState<UserRole | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const [authInitialized, setAuthInitialized] = useState(false);
-  const navigate = useNavigate();
+  // Setup user data state management
+  const {
+    user,
+    userRole,
+    loading,
+    setLoading,
+    authInitialized,
+    setAuthInitialized,
+    handleUserLoggedIn,
+    handleUserLoggedOut
+  } = useUserData();
+
+  // Setup auth actions
+  const { login, logout } = useAuthActions(handleUserLoggedIn, handleUserLoggedOut);
+
+  // Setup auth listener
+  useAuthListener(
+    handleUserLoggedIn,
+    handleUserLoggedOut,
+    setLoading,
+    setAuthInitialized,
+    user
+  );
   
   // Compute derived values
   const isAuthenticated = !!user;
   const isLoading = loading && !authInitialized;
   const permissions = user?.roles?.permissions || [];
-
-  const handleUserLoggedOut = useCallback(() => {
-    setUser(null);
-    setUserRole(undefined);
-    setLoading(false);
-  }, []);
-
-  const handleUserLoggedIn = useCallback(async (userData: any) => {
-    if (!userData) {
-      handleUserLoggedOut();
-      return;
-    }
-
-    try {
-      console.log("Handling user logged in for:", userData.email);
-      // Get user data from the users table to get role information
-      const { data: userProfile, error: userError } = await supabase
-        .from('users')
-        .select(`
-          *,
-          roles:role_id (
-            id,
-            name,
-            description,
-            permissions
-          )
-        `)
-        .eq('id', userData.id)
-        .single();
-
-      if (userError) {
-        console.error('Error fetching user profile:', userError);
-      }
-
-      // Normalize user data to avoid TypeScript errors
-      const normalizedUser = {
-        id: userData.id,
-        email: userData.email,
-        first_name: userProfile?.first_name || userData.user_metadata?.first_name || "",
-        last_name: userProfile?.last_name || userData.user_metadata?.last_name || "",
-        role_id: userProfile?.role_id || userData.user_metadata?.role_id || "",
-        region_id: userProfile?.region_id || userData.user_metadata?.region_id || "",
-        sector_id: userProfile?.sector_id || userData.user_metadata?.sector_id || "",
-        school_id: userProfile?.school_id || userData.user_metadata?.school_id || "",
-        is_active: userProfile?.is_active !== undefined ? userProfile.is_active : true,
-        roles: userProfile?.roles || {
-          id: "",
-          name: userProfile?.roles?.name || userData.user_metadata?.role || "",
-          permissions: userProfile?.roles?.permissions || []
-        },
-        role: userProfile?.roles?.name || userData.user_metadata?.role || "",
-      };
-
-      console.log("Setting normalized user:", normalizedUser);
-      setUser(normalizedUser);
-      setUserRole(getNormalizedRole(normalizedUser.role));
-    } catch (error) {
-      console.error('Error in handleUserLoggedIn:', error);
-      // If there's an error, use basic user data
-      const basicUser = {
-        id: userData.id,
-        email: userData.email,
-        first_name: userData.user_metadata?.first_name || "",
-        last_name: userData.user_metadata?.last_name || "",
-        role: userData.user_metadata?.role || "",
-      };
-      
-      setUser(basicUser);
-      setUserRole(getNormalizedRole(basicUser.role));
-    } finally {
-      setLoading(false);
-    }
-  }, [handleUserLoggedOut]);
-
-  // Initialize auth state
-  useEffect(() => {
-    console.log("Initializing auth state");
-    const loadUser = async () => {
-      try {
-        setLoading(true);
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          handleUserLoggedOut();
-          return;
-        }
-        
-        if (session) {
-          console.log("Found existing session, fetching user");
-          const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
-          
-          if (userError) {
-            console.error('User fetch error:', userError);
-            handleUserLoggedOut();
-            return;
-          }
-          
-          if (supabaseUser) {
-            await handleUserLoggedIn(supabaseUser);
-          } else {
-            handleUserLoggedOut();
-          }
-        } else {
-          console.log("No session found, user is logged out");
-          handleUserLoggedOut();
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        handleUserLoggedOut();
-      } finally {
-        console.log("Auth initialization complete");
-        setAuthInitialized(true);
-      }
-    };
-
-    loadUser();
-
-    // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      if (event === "SIGNED_IN" && session) {
-        console.log("User signed in, updating state");
-        await handleUserLoggedIn(session.user);
-      } else if (event === "SIGNED_OUT") {
-        console.log("User signed out, updating state");
-        handleUserLoggedOut();
-      } else if (event === "TOKEN_REFRESHED" && session) {
-        console.log("Token refreshed, checking user state");
-        // Only update if user state is empty
-        if (!user) {
-          await handleUserLoggedIn(session.user);
-        }
-      }
-    });
-
-    // Cleanup auth listener
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [handleUserLoggedIn, handleUserLoggedOut, user]);
-
-  const login = async (emailOrCredentials: string | LoginCredentials, password?: string) => {
-    setLoading(true);
-    try {
-      let email: string;
-      let pwd: string;
-      
-      if (typeof emailOrCredentials === 'string') {
-        // Handle email-only login (OTP)
-        email = emailOrCredentials;
-        pwd = password || '';
-        
-        if (!pwd) {
-          console.log("Attempting OTP login");
-          const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-              shouldCreateUser: false,
-              emailRedirectTo: `${window.location.origin}/dashboard`,
-            },
-          });
-          
-          if (error) {
-            console.error("OTP login error:", error);
-            toast({
-              title: "Giriş xətası",
-              description: error.message || "Giriş linki göndərilə bilmədi",
-              variant: "destructive",
-            });
-            throw error;
-          }
-          
-          toast({
-            title: "Giriş linki göndərildi",
-            description: "E-poçt ünvanınızı yoxlayın və giriş linkini tıklayın",
-          });
-          
-          setLoading(false);
-          return;
-        }
-      } else {
-        // Handle credentials login
-        email = emailOrCredentials.email;
-        pwd = emailOrCredentials.password;
-      }
-      
-      console.log("Attempting password login for:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pwd,
-      });
-      
-      if (error) {
-        console.error('Login error:', error);
-        let errorMessage = "Giriş zamanı xəta baş verdi";
-        
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = "E-poçt və ya şifrə yanlışdır";
-        } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = "E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu yoxlayın";
-        }
-        
-        toast({
-          title: "Giriş xətası",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        
-        throw error;
-      }
-      
-      if (data.user) {
-        console.log("Login successful for:", data.user.email);
-        // We will automatically get the handleUserLoggedIn call from the auth listener
-        toast({
-          title: "Uğurlu giriş",
-          description: "Sistemə uğurla daxil oldunuz",
-        });
-        
-        // Redirect to dashboard after successful login
-        navigate("/dashboard");
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      throw error;
-    } finally {
-      // Ensure loading state is always reset
-      setLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      setLoading(true);
-      console.log("Logging out user");
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
-        throw error;
-      }
-      handleUserLoggedOut();
-      navigate("/login");
-      toast({
-        title: "Çıxış edildi",
-        description: "Sistemdən uğurla çıxış edildi",
-      });
-    } catch (error: any) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Çıxış xətası",
-        description: error.message || "Çıxış zamanı xəta baş verdi",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return { 
     user, 
