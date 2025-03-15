@@ -7,6 +7,8 @@ import { UserTablePagination } from "./table/UserTablePagination";
 import { UserForm } from "./modals/UserForm";
 import { useUserExport } from "./hooks/useUserExport";
 import { useUsersData } from './hooks/useUsersData';
+import { useUserFormHandling } from './hooks/useUserFormHandling';
+import { toast } from "sonner";
 
 export const UsersOverview = () => {
   const navigate = useNavigate();
@@ -29,37 +31,16 @@ export const UsersOverview = () => {
     setPerPage,
   } = useUsersData();
 
-  // User form state
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
-
-  const handleEdit = (user: any) => {
-    setSelectedUser(user);
-    setIsFormOpen(true);
-  };
-
-  const handleDelete = async (user: any) => {
-    const confirmed = await confirm({
-      title: "Silmək istədiyinizə əminsiniz?",
-      description: "Bu əməliyyatı geri almaq mümkün deyil",
-    });
-
-    if (!confirmed) return;
-
-    try {
-      await userService.deleteUser(user.id);
-      toast("İstifadəçi uğurla silindi");
-      refetch();
-    } catch (error) {
-      toast("İstifadəçini silərkən xəta baş verdi");
-    }
-  };
-
-  const handleFormSuccess = () => {
-    setIsFormOpen(false);
-    setSelectedUser(null);
-    refetch();
-  };
+  // Use our custom hook for form handling
+  const {
+    isFormOpen,
+    selectedUser,
+    handleAddUser,
+    handleEdit,
+    handleDelete,
+    handleFormSuccess,
+    setIsFormOpen
+  } = useUserFormHandling(refetch);
 
   const handleExport = () => {
     if (!users) {
@@ -80,7 +61,7 @@ export const UsersOverview = () => {
         search={search}
         onSearchChange={handleSearchChange}
         onExport={handleExport}
-        onAddUser={() => setIsFormOpen(true)}
+        onAddUser={handleAddUser}
       />
 
       <UsersList
@@ -110,9 +91,3 @@ export const UsersOverview = () => {
     </div>
   );
 };
-
-// Make sure we include the necessary imports at the top
-import { useState } from 'react';
-import { toast } from "sonner";
-import { confirm } from "@/components/ui/confirm";
-import userService from "@/services/api/userService";
