@@ -67,7 +67,13 @@ export const useUserData = () => {
       setUser(normalizedUser);
       
       // Ensure we set a proper role even if data is missing
-      const role = getNormalizedRole(normalizedUser.role);
+      // Extract the role name string from the user data
+      const roleName = normalizedUser.role || 
+                       (normalizedUser.roles && typeof normalizedUser.roles === 'object' && 'name' in normalizedUser.roles) 
+                       ? normalizedUser.roles.name 
+                       : 'super-admin';
+                       
+      const role = getNormalizedRole(roleName);
       console.log("Setting normalized role:", role);
       setUserRole(role);
     } catch (error) {

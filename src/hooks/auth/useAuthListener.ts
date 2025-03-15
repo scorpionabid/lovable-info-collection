@@ -39,20 +39,24 @@ export const useAuthListener = (
           
           if (supabaseUser) {
             await handleUserLoggedIn(supabaseUser);
+            // Only set authInitialized to true after user data is fully processed
+            setAuthInitialized(true);
           } else {
             handleUserLoggedOut();
+            setAuthInitialized(true);
           }
         } else {
           console.log("No session found, user is logged out");
           handleUserLoggedOut();
+          setAuthInitialized(true);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         handleUserLoggedOut();
+        setAuthInitialized(true);
       } finally {
         console.log("Auth initialization complete");
-        setAuthInitialized(true);
-        setLoading(false); // Ensure loading state is set to false here
+        setLoading(false);
       }
     };
 
@@ -66,6 +70,7 @@ export const useAuthListener = (
         setLoading(true); // Set loading to true while we process the login
         try {
           await handleUserLoggedIn(session.user);
+          setAuthInitialized(true); // Ensure authInitialized is set to true after successful login
         } catch (error) {
           console.error("Error handling user login:", error);
           handleUserLoggedOut(); // Fallback to logged out state on error
@@ -82,6 +87,7 @@ export const useAuthListener = (
           setLoading(true);
           try {
             await handleUserLoggedIn(session.user);
+            setAuthInitialized(true);
           } catch (error) {
             console.error("Error handling token refresh:", error);
           } finally {

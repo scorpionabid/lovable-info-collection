@@ -5,13 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoadingState } from '@/components/users/modals/LoadingState';
 
 const Index = () => {
-  const { user, userRole, isLoading } = useAuth();
+  const { user, userRole, isLoading, authInitialized } = useAuth();
   
   useEffect(() => {
-    console.log("Index page rendered with user:", user?.email, "role:", userRole, "loading:", isLoading);
-  }, [user, userRole, isLoading]);
+    console.log("Index page rendered with user:", user?.email, "role:", userRole, "loading:", isLoading, "initialized:", authInitialized);
+  }, [user, userRole, isLoading, authInitialized]);
 
-  if (isLoading) {
+  if (isLoading || !authInitialized || !userRole) {
     return <LoadingState message="Səhifə yüklənir..." />;
   }
 

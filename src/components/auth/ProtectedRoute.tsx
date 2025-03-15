@@ -3,6 +3,7 @@ import { ReactNode, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/hooks/types/authTypes';
+import { LoadingState } from '../users/modals/LoadingState';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -30,8 +31,7 @@ export const ProtectedRoute = ({
   if (isLoading || !authInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
-        <div className="ml-3">Yüklənir...</div>
+        <LoadingState message="Autentifikasiya yoxlanılır..." />
       </div>
     );
   }
@@ -50,6 +50,14 @@ export const ProtectedRoute = ({
       console.log(`Access denied. User role: ${userRole}. Allowed roles:`, allowedRoles);
       return <Navigate to="/unauthorized" replace />;
     }
+  } else {
+    // If user exists but userRole is undefined, show loading state
+    console.log("User exists but role is undefined, showing loading state");
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <LoadingState message="İstifadəçi rolunu yoxlayırıq..." />
+      </div>
+    );
   }
 
   // Render children if authenticated and authorized
