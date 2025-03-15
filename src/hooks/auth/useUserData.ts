@@ -41,7 +41,7 @@ export const useUserData = () => {
 
       if (userError) {
         console.error('Error fetching user profile:', userError);
-        // Don't exit early on error, continue with basic user data
+        // Don't exit early on error, continue with basic user data from auth
       }
 
       // Normalize user data to avoid TypeScript errors
@@ -57,15 +57,19 @@ export const useUserData = () => {
         is_active: userProfile?.is_active !== undefined ? userProfile.is_active : true,
         roles: userProfile?.roles || {
           id: "",
-          name: userProfile?.roles?.name || userData.user_metadata?.role || "",
+          name: userProfile?.roles?.name || userData.user_metadata?.role || "super-admin",
           permissions: userProfile?.roles?.permissions || []
         },
-        role: userProfile?.roles?.name || userData.user_metadata?.role || "",
+        role: userProfile?.roles?.name || userData.user_metadata?.role || "super-admin",
       };
 
       console.log("Setting normalized user:", normalizedUser);
       setUser(normalizedUser);
-      setUserRole(getNormalizedRole(normalizedUser.role));
+      
+      // Ensure we set a proper role even if data is missing
+      const role = getNormalizedRole(normalizedUser.role);
+      console.log("Setting normalized role:", role);
+      setUserRole(role);
     } catch (error) {
       console.error('Error in handleUserLoggedIn:', error);
       // If there's an error, use basic user data
@@ -81,6 +85,7 @@ export const useUserData = () => {
       setUser(basicUser);
       setUserRole(getNormalizedRole(basicUser.role));
     } finally {
+      console.log("User login handling completed");
       setLoading(false);
     }
   }, [handleUserLoggedOut]);

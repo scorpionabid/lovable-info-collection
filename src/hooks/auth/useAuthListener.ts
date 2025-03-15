@@ -66,6 +66,9 @@ export const useAuthListener = (
         setLoading(true); // Set loading to true while we process the login
         try {
           await handleUserLoggedIn(session.user);
+        } catch (error) {
+          console.error("Error handling user login:", error);
+          handleUserLoggedOut(); // Fallback to logged out state on error
         } finally {
           setLoading(false); // Always set loading to false when done
         }
@@ -79,6 +82,8 @@ export const useAuthListener = (
           setLoading(true);
           try {
             await handleUserLoggedIn(session.user);
+          } catch (error) {
+            console.error("Error handling token refresh:", error);
           } finally {
             setLoading(false);
           }
