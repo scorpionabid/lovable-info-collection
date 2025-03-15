@@ -38,10 +38,11 @@ export const useAuthListener = (
           }
           
           if (supabaseUser) {
+            console.log("User found in session, processing login");
             await handleUserLoggedIn(supabaseUser);
-            // Only set authInitialized after user data is fully processed
             if (isComponentMounted) setAuthInitialized(true);
           } else {
+            console.log("No user in session, logging out");
             handleUserLoggedOut();
             if (isComponentMounted) setAuthInitialized(true);
           }
@@ -65,15 +66,16 @@ export const useAuthListener = (
     // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
+      
       if (event === "SIGNED_IN" && session && isComponentMounted) {
         console.log("User signed in, updating state");
-        setLoading(true); // Set loading to true while we process the login
+        setLoading(true); 
         try {
           await handleUserLoggedIn(session.user);
-          if (isComponentMounted) setAuthInitialized(true); // Ensure authInitialized is set after login
+          if (isComponentMounted) setAuthInitialized(true);
         } catch (error) {
           console.error("Error handling user login:", error);
-          handleUserLoggedOut(); // Fallback to logged out state on error
+          handleUserLoggedOut();
         } finally {
           if (isComponentMounted) setLoading(false);
         }
@@ -82,17 +84,17 @@ export const useAuthListener = (
         handleUserLoggedOut();
       } else if (event === "TOKEN_REFRESHED" && session && isComponentMounted) {
         console.log("Token refreshed, checking user state");
-        // Only update if user state is empty
-        if (!user) {
-          setLoading(true);
-          try {
-            await handleUserLoggedIn(session.user);
-            if (isComponentMounted) setAuthInitialized(true);
-          } catch (error) {
-            console.error("Error handling token refresh:", error);
-          } finally {
-            if (isComponentMounted) setLoading(false);
-          }
+        // Always update state on token refresh, regardless of current user state
+        setLoading(true);
+        try {
+          console.log("Token refreshed, updating user data");
+          await handleUserLoggedIn(session.user);
+          if (isComponentMounted) setAuthInitialized(true);
+        } catch (error) {
+          console.error("Error handling token refresh:", error);
+          // Don't log out on token refresh error, just maintain current state
+        } finally {
+          if (isComponentMounted) setLoading(false);
         }
       }
     });

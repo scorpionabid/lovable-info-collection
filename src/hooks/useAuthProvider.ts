@@ -33,6 +33,8 @@ export const useAuthProvider = () => {
   
   // Compute derived values
   const isAuthenticated = Boolean(user);
+  
+  // Only show as loading if we're still initializing auth AND loading user data
   const isLoading = loading && !authInitialized;
 
   // Handle permissions with fallback

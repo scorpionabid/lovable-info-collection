@@ -11,6 +11,7 @@ export const useUserData = () => {
   const [authInitialized, setAuthInitialized] = useState(false);
 
   const handleUserLoggedOut = useCallback(() => {
+    console.log("Handling user logged out");
     setUser(null);
     setUserRole(undefined);
     setLoading(false);
@@ -18,12 +19,14 @@ export const useUserData = () => {
 
   const handleUserLoggedIn = useCallback(async (userData: any) => {
     if (!userData) {
+      console.log("No user data provided, logging out");
       handleUserLoggedOut();
       return;
     }
 
     try {
       console.log("Handling user logged in for:", userData.email);
+      
       // Get user data from the users table to get role information
       const { data: userProfile, error: userError } = await supabase
         .from('users')
@@ -41,21 +44,32 @@ export const useUserData = () => {
 
       if (userError) {
         console.error('Error fetching user profile:', userError);
-        // Continue with basic user data, don't exit early
+        console.log("Will attempt to continue with basic user data");
       }
+
+      console.log("User profile query result:", userProfile);
 
       // Determine if we have valid user profile data
       const hasValidUserProfile = userProfile && Object.keys(userProfile).length > 0;
       console.log("Valid user profile:", hasValidUserProfile, userProfile);
 
       // Get role name with appropriate fallbacks
-      let roleName = 'super-admin'; // Default role
+      let roleName: string;
 
       if (hasValidUserProfile && userProfile.roles && 
           typeof userProfile.roles === 'object' && 'name' in userProfile.roles) {
         roleName = userProfile.roles.name;
+        console.log("Role from profile.roles:", roleName);
       } else if (userData.user_metadata?.role) {
         roleName = userData.user_metadata.role;
+        console.log("Role from user_metadata:", roleName);
+      } else if (hasValidUserProfile && userProfile.role) {
+        roleName = userProfile.role;
+        console.log("Role from profile.role:", roleName);
+      } else {
+        // Default role as fallback
+        roleName = 'super-admin';
+        console.log("Using default role:", roleName);
       }
 
       // Normalize user data to avoid TypeScript errors
@@ -69,11 +83,7 @@ export const useUserData = () => {
         sector_id: hasValidUserProfile ? userProfile?.sector_id : userData.user_metadata?.sector_id || "",
         school_id: hasValidUserProfile ? userProfile?.school_id : userData.user_metadata?.school_id || "",
         is_active: hasValidUserProfile ? (userProfile?.is_active !== undefined ? userProfile.is_active : true) : true,
-        roles: hasValidUserProfile ? userProfile?.roles || {
-          id: "",
-          name: roleName,
-          permissions: []
-        } : {
+        roles: hasValidUserProfile && userProfile?.roles ? userProfile.roles : {
           id: "",
           name: roleName,
           permissions: []
@@ -101,7 +111,11 @@ export const useUserData = () => {
       
       console.log("Using basic user data due to error:", basicUser);
       setUser(basicUser);
-      setUserRole(getNormalizedRole(basicUser.role));
+      
+      // Always ensure a role is set
+      const defaultRole = getNormalizedRole(basicUser.role);
+      console.log("Setting default role:", defaultRole);
+      setUserRole(defaultRole);
     } finally {
       console.log("User login handling completed");
       setLoading(false);

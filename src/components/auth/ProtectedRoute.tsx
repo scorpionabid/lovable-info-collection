@@ -17,6 +17,7 @@ export const ProtectedRoute = ({
   const { user, userRole, isAuthenticated, isLoading, authInitialized } = useAuth();
   const location = useLocation();
   const [longLoading, setLongLoading] = useState(false);
+  const [veryLongLoading, setVeryLongLoading] = useState(false);
 
   useEffect(() => {
     console.log('ProtectedRoute state:', { 
@@ -24,33 +25,61 @@ export const ProtectedRoute = ({
       isLoading, 
       authInitialized, 
       userRole,
-      pathname: location.pathname
+      pathname: location.pathname,
+      user: user?.email
     });
     
-    // Set a timeout to show a different message if loading takes too long
+    // Set timeouts to show different messages if loading takes too long
     let timeoutId: NodeJS.Timeout;
-    if (isLoading || !authInitialized) {
+    let longTimeoutId: NodeJS.Timeout;
+    
+    if (isLoading || !authInitialized || !userRole) {
       timeoutId = setTimeout(() => {
         setLongLoading(true);
-      }, 5000); // Show different message after 5 seconds
+      }, 3000); // Show different message after 3 seconds
+      
+      longTimeoutId = setTimeout(() => {
+        setVeryLongLoading(true);
+        console.warn("Auth loading is taking too long, might be an issue");
+      }, 10000); // Show warning message after 10 seconds
     } else {
       setLongLoading(false);
+      setVeryLongLoading(false);
     }
     
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
+      if (longTimeoutId) clearTimeout(longTimeoutId);
     };
-  }, [isAuthenticated, isLoading, authInitialized, userRole, location.pathname]);
+  }, [isAuthenticated, isLoading, authInitialized, userRole, location.pathname, user?.email]);
 
   // Show loading state while checking authentication
   if (isLoading || !authInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
         <LoadingState 
-          message={longLoading 
-            ? "Autentifikasiya uzun çəkir, bir az gözləyin..." 
-            : "Autentifikasiya yoxlanılır..."} 
+          message={
+            veryLongLoading 
+              ? "Autentifikasiya çox uzun çəkir. Səhifəni yeniləməyi sınayın..." 
+              : longLoading 
+                ? "Autentifikasiya uzun çəkir, bir az gözləyin..." 
+                : "Autentifikasiya yoxlanılır..."
+          } 
         />
+      </div>
+    );
+  }
+
+  // If user exists but userRole is undefined, we need to wait
+  if (user && !userRole) {
+    console.log("User exists but role is undefined, showing loading state");
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <LoadingState message={
+          longLoading 
+            ? "İstifadəçi rolunu yoxlamaq uzun çəkir..." 
+            : "İstifadəçi rolunu yoxlayırıq..."
+        } />
       </div>
     );
   }
@@ -62,21 +91,13 @@ export const ProtectedRoute = ({
   }
 
   // If user doesn't have required role, redirect to unauthorized page
-  if (user && userRole) {
+  if (userRole) {
     const hasRequiredRole = allowedRoles.some(allowedRole => userRole === allowedRole);
 
     if (!hasRequiredRole) {
       console.log(`Access denied. User role: ${userRole}. Allowed roles:`, allowedRoles);
       return <Navigate to="/unauthorized" replace />;
     }
-  } else {
-    // If user exists but userRole is undefined, show loading state
-    console.log("User exists but role is undefined, showing loading state");
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <LoadingState message="İstifadəçi rolunu yoxlayırıq..." />
-      </div>
-    );
   }
 
   // Render children if authenticated and authorized

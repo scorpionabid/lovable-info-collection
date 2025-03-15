@@ -9,7 +9,12 @@ const Index = () => {
   const [pageLoading, setPageLoading] = useState(true);
   
   useEffect(() => {
-    console.log("Index page rendered with user:", user?.email, "role:", userRole, "loading:", isLoading, "initialized:", authInitialized);
+    console.log("Index page rendered with:", { 
+      email: user?.email, 
+      role: userRole, 
+      loading: isLoading, 
+      initialized: authInitialized 
+    });
     
     // If authentication is done and we have a user role, stop loading
     if (authInitialized && userRole) {
@@ -17,6 +22,9 @@ const Index = () => {
         setPageLoading(false);
       }, 300); // Small delay to ensure everything is ready
       return () => clearTimeout(timer);
+    } else if (authInitialized && !userRole && user) {
+      // If auth is initialized but we don't have a role yet
+      console.warn("Auth initialized but role not set yet for user:", user.email);
     }
   }, [user, userRole, isLoading, authInitialized]);
 
