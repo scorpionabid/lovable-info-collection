@@ -1,5 +1,6 @@
 
 import { UserRole } from '@/hooks/types/authTypes';
+import { User } from '@/services/api/userService';
 
 /**
  * Normalizes a role string to a valid UserRole type
@@ -27,4 +28,80 @@ export const getNormalizedRole = (role?: string): UserRole => {
     default:
       return 'super-admin'; // Default to super-admin as fallback
   }
+};
+
+/**
+ * Gets the display name for a user's role
+ */
+export const getRoleName = (user: User): string => {
+  if (user.roles && user.roles.name) {
+    return user.roles.name;
+  }
+  if (user.role) {
+    return user.role;
+  }
+  return 'Rol təyin edilməyib';
+};
+
+/**
+ * Gets the entity name (region, sector, or school) based on user's role
+ */
+export const getEntityName = (user: User): string => {
+  const role = getRoleName(user).toLowerCase();
+  
+  if (role.includes('super')) {
+    return 'Sistem';
+  } else if (role.includes('region') && user.region_id) {
+    return `Region: ${user.region_id}`;
+  } else if (role.includes('sector') && user.sector_id) {
+    return `Sektor: ${user.sector_id}`;
+  } else if (role.includes('school') && user.school_id) {
+    return `Məktəb: ${user.school_id}`;
+  }
+  
+  return 'N/A';
+};
+
+/**
+ * Sorts users by different criteria
+ */
+export const sortUsers = (users: User[], column: string | null, direction: 'asc' | 'desc'): User[] => {
+  if (!column) return users;
+  
+  return [...users].sort((a, b) => {
+    let valueA, valueB;
+    
+    switch (column) {
+      case 'name':
+        valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'email':
+        valueA = a.email.toLowerCase();
+        valueB = b.email.toLowerCase();
+        break;
+      case 'role':
+        valueA = getRoleName(a).toLowerCase();
+        valueB = getRoleName(b).toLowerCase();
+        break;
+      case 'entity':
+        valueA = getEntityName(a).toLowerCase();
+        valueB = getEntityName(b).toLowerCase();
+        break;
+      case 'lastActive':
+        valueA = a.last_login || '';
+        valueB = b.last_login || '';
+        break;
+      case 'status':
+        valueA = a.is_active ? 'active' : 'inactive';
+        valueB = b.is_active ? 'active' : 'inactive';
+        break;
+      default:
+        return 0;
+    }
+    
+    if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+    if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 };
