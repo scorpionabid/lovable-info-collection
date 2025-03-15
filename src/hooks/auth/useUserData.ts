@@ -27,6 +27,9 @@ export const useUserData = () => {
     try {
       console.log("Handling user logged in for:", userData.email);
       
+      // Default role fallback to ensure we always have a role
+      const defaultRole: UserRole = "super-admin";
+      
       // Get user data from the users table to get role information
       const { data: userProfile, error: userError } = await supabase
         .from('users')
@@ -55,7 +58,7 @@ export const useUserData = () => {
       console.log("Valid user profile:", hasValidUserProfile, userProfile);
 
       // Get role name with appropriate fallbacks
-      let roleName: string = 'super-admin'; // Default fallback role
+      let roleName: string = defaultRole; // Always have a default fallback role
 
       if (hasValidUserProfile && userProfile.roles && 
           typeof userProfile.roles === 'object' && 'name' in userProfile.roles) {
@@ -67,7 +70,7 @@ export const useUserData = () => {
       } else if (hasValidUserProfile && userProfile.role_id) {
         // If we have a role_id but no roles object, use a default based on role_id
         console.log("Using role_id as fallback:", userProfile.role_id);
-        roleName = 'super-admin'; // Default to super-admin for safety
+        // We still use the default role here for safety
       } else {
         // Default role as fallback
         console.log("Using default role:", roleName);
@@ -100,27 +103,40 @@ export const useUserData = () => {
       const role = getNormalizedRole(roleName);
       console.log("Setting normalized role:", role);
       setUserRole(role);
+      
+      // Always ensure auth is initialized and loading is finished
+      setLoading(false);
+      
     } catch (error) {
       console.error('Error in handleUserLoggedIn:', error);
+      
       // If there's an error, use basic user data with default role
+      const defaultRole: UserRole = "super-admin";
       const basicUser = {
         id: userData.id,
         email: userData.email,
         first_name: userData.user_metadata?.first_name || "",
         last_name: userData.user_metadata?.last_name || "",
-        roleName: userData.user_metadata?.role || "super-admin", // Provide a default role
+        roleName: userData.user_metadata?.role || defaultRole,
+        roles: {
+          id: "",
+          name: userData.user_metadata?.role || defaultRole,
+          permissions: []
+        }
       };
       
       console.log("Using basic user data due to error:", basicUser);
       setUser(basicUser);
       
-      // Always ensure a role is set
-      const defaultRole = getNormalizedRole(basicUser.roleName);
-      console.log("Setting default role:", defaultRole);
-      setUserRole(defaultRole);
+      // Always ensure a role is set, even in error cases
+      const role = getNormalizedRole(basicUser.roleName);
+      console.log("Setting default role:", role);
+      setUserRole(role);
+      
+      // Always finish loading on error too
+      setLoading(false);
     } finally {
       console.log("User login handling completed");
-      setLoading(false);
     }
   }, [handleUserLoggedOut]);
 

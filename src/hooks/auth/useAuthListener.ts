@@ -67,35 +67,25 @@ export const useAuthListener = (
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
       
-      if (event === "SIGNED_IN" && session && isComponentMounted) {
-        console.log("User signed in, updating state");
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session && isComponentMounted) {
+        console.log(`User ${event === "SIGNED_IN" ? "signed in" : "token refreshed"}, updating state`);
         setLoading(true); 
         try {
           await handleUserLoggedIn(session.user);
           if (isComponentMounted) setAuthInitialized(true);
         } catch (error) {
-          console.error("Error handling user login:", error);
-          handleUserLoggedOut();
+          console.error(`Error handling user ${event}:`, error);
+          // Don't log out on token refresh error, just maintain current state if possible
+          if (event === "SIGNED_IN") {
+            handleUserLoggedOut();
+          }
         } finally {
           if (isComponentMounted) setLoading(false);
         }
       } else if (event === "SIGNED_OUT" && isComponentMounted) {
         console.log("User signed out, updating state");
         handleUserLoggedOut();
-      } else if (event === "TOKEN_REFRESHED" && session && isComponentMounted) {
-        console.log("Token refreshed, checking user state");
-        // Always update state on token refresh, regardless of current user state
-        setLoading(true);
-        try {
-          console.log("Token refreshed, updating user data");
-          await handleUserLoggedIn(session.user);
-          if (isComponentMounted) setAuthInitialized(true);
-        } catch (error) {
-          console.error("Error handling token refresh:", error);
-          // Don't log out on token refresh error, just maintain current state
-        } finally {
-          if (isComponentMounted) setLoading(false);
-        }
+        if (isComponentMounted) setAuthInitialized(true);
       }
     });
 
