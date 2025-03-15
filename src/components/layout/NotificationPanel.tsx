@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import notificationService from '@/services/api/notificationService';
 import { Notification } from '@/services/supabase/supabaseClient';
-import { supabase } from '@/services/supabase/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 

@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Notification } from '../supabase/supabaseClient';
+import { Notification } from '@/services/supabase/supabaseClient';
 
 export const getNotifications = async (userId: string, limit = 10, offset = 0) => {
   try {
