@@ -18,6 +18,6 @@ export interface AuthState {
   isAuthenticated: boolean;
   login: (email: string | LoginCredentials, password?: string) => Promise<void>;
   logout: () => Promise<void>;
-  permissions?: string[];
+  permissions: string[];
   authInitialized: boolean;
 }

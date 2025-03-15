@@ -1,10 +1,20 @@
 
 import React, { createContext, useContext, ReactNode } from "react";
 import { useAuthProvider } from "@/hooks/useAuthProvider";
-import { UserRole, LoginCredentials, AuthState } from "@/hooks/types/authTypes";
+import { UserRole, LoginCredentials } from "@/hooks/types/authTypes";
 
 // Create the auth context with default values
-const AuthContext = createContext<AuthState>({
+const AuthContext = createContext<{
+  user: any | null;
+  userRole: UserRole | undefined;
+  loading: boolean;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string | LoginCredentials, password?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  permissions: string[];
+  authInitialized: boolean;
+}>({
   user: null,
   userRole: undefined,
   loading: true,

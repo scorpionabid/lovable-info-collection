@@ -48,6 +48,7 @@ export const useAuthListener = (
       } finally {
         console.log("Auth initialization complete");
         setAuthInitialized(true);
+        setLoading(false); // Ensure loading state is set to false here
       }
     };
 
@@ -73,6 +74,7 @@ export const useAuthListener = (
 
     // Cleanup auth listener
     return () => {
+      console.log("Cleaning up auth listener");
       authListener.subscription.unsubscribe();
     };
   }, [handleUserLoggedIn, handleUserLoggedOut, setLoading, setAuthInitialized, user]);

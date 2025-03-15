@@ -1,5 +1,4 @@
-
-import { supabase } from '../../supabase/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 export type LoginCredentials = {
   email: string;
