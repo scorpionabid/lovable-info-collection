@@ -32,7 +32,7 @@ export const useUserData = () => {
         .from('users')
         .select(`
           *,
-          roles:role_id (
+          roles (
             id,
             name,
             description,
@@ -40,8 +40,9 @@ export const useUserData = () => {
           )
         `)
         .eq('id', userData.id)
-        .single();
+        .maybeSingle();
 
+      // Log results for debugging
       if (userError) {
         console.error('Error fetching user profile:', userError);
         console.log("Will attempt to continue with basic user data");
@@ -54,7 +55,7 @@ export const useUserData = () => {
       console.log("Valid user profile:", hasValidUserProfile, userProfile);
 
       // Get role name with appropriate fallbacks
-      let roleName: string;
+      let roleName: string = 'super-admin'; // Default fallback role
 
       if (hasValidUserProfile && userProfile.roles && 
           typeof userProfile.roles === 'object' && 'name' in userProfile.roles) {
@@ -63,13 +64,12 @@ export const useUserData = () => {
       } else if (userData.user_metadata?.role) {
         roleName = userData.user_metadata.role;
         console.log("Role from user_metadata:", roleName);
-      } else if (hasValidUserProfile && userProfile.roles && typeof userProfile.roles === 'object') {
-        // Access name property safely from roles object
-        roleName = 'name' in userProfile.roles ? userProfile.roles.name : 'super-admin';
-        console.log("Role from profile.roles object:", roleName);
+      } else if (hasValidUserProfile && userProfile.role_id) {
+        // If we have a role_id but no roles object, use a default based on role_id
+        console.log("Using role_id as fallback:", userProfile.role_id);
+        roleName = 'super-admin'; // Default to super-admin for safety
       } else {
         // Default role as fallback
-        roleName = 'super-admin';
         console.log("Using default role:", roleName);
       }
 
@@ -102,7 +102,7 @@ export const useUserData = () => {
       setUserRole(role);
     } catch (error) {
       console.error('Error in handleUserLoggedIn:', error);
-      // If there's an error, use basic user data
+      // If there's an error, use basic user data with default role
       const basicUser = {
         id: userData.id,
         email: userData.email,

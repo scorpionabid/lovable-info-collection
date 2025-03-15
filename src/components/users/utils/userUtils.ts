@@ -40,17 +40,21 @@ export const getNormalizedRole = (role?: string): UserRole => {
  * Gets the display name for a user's role
  */
 export const getRoleName = (user: User): string => {
-  if (user.roles && user.roles.name) {
+  // First check if user has roles object with name property
+  if (user.roles && typeof user.roles === 'object' && 'name' in user.roles) {
     return user.roles.name;
   }
-  // Check for roleName property first (our new property)
-  if ('roleName' in user) {
+  
+  // Check for roleName property (our new property)
+  if ('roleName' in user && user.roleName) {
     return user.roleName as string;
   }
+  
   // Backward compatibility
-  if ('role' in user) {
+  if ('role' in user && user.role) {
     return user.role as string;
   }
+  
   return 'Rol təyin edilməyib';
 };
 
