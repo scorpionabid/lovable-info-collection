@@ -6,9 +6,14 @@ import { User } from '@/services/api/userService';
  * Normalizes a role string to a valid UserRole type
  */
 export const getNormalizedRole = (role?: string): UserRole => {
-  if (!role) return "super-admin";
+  if (!role || typeof role !== 'string') {
+    console.log('No role provided, defaulting to super-admin');
+    return "super-admin";
+  }
   
-  switch(role.toLowerCase()) {
+  const normalizedRole = role.toLowerCase().trim();
+  
+  switch(normalizedRole) {
     case 'super-admin':
     case 'superadmin':
     case 'super_admin':
@@ -26,6 +31,7 @@ export const getNormalizedRole = (role?: string): UserRole => {
     case 'school_admin':
       return 'school-admin';
     default:
+      console.warn(`Unknown role format: "${role}", defaulting to super-admin`);
       return 'super-admin'; // Default to super-admin as fallback
   }
 };

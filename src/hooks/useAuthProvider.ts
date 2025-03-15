@@ -34,6 +34,8 @@ export const useAuthProvider = () => {
   // Compute derived values
   const isAuthenticated = Boolean(user);
   const isLoading = loading && !authInitialized;
+
+  // Handle permissions with fallback
   const permissions = user?.roles?.permissions || [];
 
   return { 

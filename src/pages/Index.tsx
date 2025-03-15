@@ -1,17 +1,27 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingState } from '@/components/users/modals/LoadingState';
 
 const Index = () => {
   const { user, userRole, isLoading, authInitialized } = useAuth();
+  const [pageLoading, setPageLoading] = useState(true);
   
   useEffect(() => {
     console.log("Index page rendered with user:", user?.email, "role:", userRole, "loading:", isLoading, "initialized:", authInitialized);
+    
+    // If authentication is done and we have a user role, stop loading
+    if (authInitialized && userRole) {
+      const timer = setTimeout(() => {
+        setPageLoading(false);
+      }, 300); // Small delay to ensure everything is ready
+      return () => clearTimeout(timer);
+    }
   }, [user, userRole, isLoading, authInitialized]);
 
-  if (isLoading || !authInitialized || !userRole) {
+  // Show loading state if still loading auth or page
+  if (isLoading || !authInitialized || !userRole || pageLoading) {
     return <LoadingState message="Səhifə yüklənir..." />;
   }
 

@@ -41,38 +41,50 @@ export const useUserData = () => {
 
       if (userError) {
         console.error('Error fetching user profile:', userError);
-        // Don't exit early on error, continue with basic user data from auth
+        // Continue with basic user data, don't exit early
+      }
+
+      // Determine if we have valid user profile data
+      const hasValidUserProfile = userProfile && Object.keys(userProfile).length > 0;
+      console.log("Valid user profile:", hasValidUserProfile, userProfile);
+
+      // Get role name with appropriate fallbacks
+      let roleName = 'super-admin'; // Default role
+
+      if (hasValidUserProfile && userProfile.roles && 
+          typeof userProfile.roles === 'object' && 'name' in userProfile.roles) {
+        roleName = userProfile.roles.name;
+      } else if (userData.user_metadata?.role) {
+        roleName = userData.user_metadata.role;
       }
 
       // Normalize user data to avoid TypeScript errors
       const normalizedUser = {
         id: userData.id,
         email: userData.email,
-        first_name: userProfile?.first_name || userData.user_metadata?.first_name || "",
-        last_name: userProfile?.last_name || userData.user_metadata?.last_name || "",
-        role_id: userProfile?.role_id || userData.user_metadata?.role_id || "",
-        region_id: userProfile?.region_id || userData.user_metadata?.region_id || "",
-        sector_id: userProfile?.sector_id || userData.user_metadata?.sector_id || "",
-        school_id: userProfile?.school_id || userData.user_metadata?.school_id || "",
-        is_active: userProfile?.is_active !== undefined ? userProfile.is_active : true,
-        roles: userProfile?.roles || {
+        first_name: hasValidUserProfile ? userProfile?.first_name : userData.user_metadata?.first_name || "",
+        last_name: hasValidUserProfile ? userProfile?.last_name : userData.user_metadata?.last_name || "",
+        role_id: hasValidUserProfile ? userProfile?.role_id : userData.user_metadata?.role_id || "",
+        region_id: hasValidUserProfile ? userProfile?.region_id : userData.user_metadata?.region_id || "",
+        sector_id: hasValidUserProfile ? userProfile?.sector_id : userData.user_metadata?.sector_id || "",
+        school_id: hasValidUserProfile ? userProfile?.school_id : userData.user_metadata?.school_id || "",
+        is_active: hasValidUserProfile ? (userProfile?.is_active !== undefined ? userProfile.is_active : true) : true,
+        roles: hasValidUserProfile ? userProfile?.roles || {
           id: "",
-          name: userProfile?.roles?.name || userData.user_metadata?.role || "super-admin",
-          permissions: userProfile?.roles?.permissions || []
+          name: roleName,
+          permissions: []
+        } : {
+          id: "",
+          name: roleName,
+          permissions: []
         },
-        role: userProfile?.roles?.name || userData.user_metadata?.role || "super-admin",
+        role: roleName,
       };
 
       console.log("Setting normalized user:", normalizedUser);
       setUser(normalizedUser);
       
-      // Ensure we set a proper role even if data is missing
-      // Extract the role name string from the user data
-      const roleName = normalizedUser.role || 
-                       (normalizedUser.roles && typeof normalizedUser.roles === 'object' && 'name' in normalizedUser.roles) 
-                       ? normalizedUser.roles.name 
-                       : 'super-admin';
-                       
+      // Set a properly normalized role
       const role = getNormalizedRole(roleName);
       console.log("Setting normalized role:", role);
       setUserRole(role);

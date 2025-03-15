@@ -12,6 +12,8 @@ export const useAuthListener = (
   // Initialize auth state and set up listeners
   useEffect(() => {
     console.log("Initializing auth state");
+    let isComponentMounted = true;
+    
     const loadUser = async () => {
       try {
         setLoading(true);
@@ -20,8 +22,7 @@ export const useAuthListener = (
         if (sessionError) {
           console.error('Session error:', sessionError);
           handleUserLoggedOut();
-          setAuthInitialized(true);
-          setLoading(false);
+          if (isComponentMounted) setAuthInitialized(true);
           return;
         }
         
@@ -32,31 +33,30 @@ export const useAuthListener = (
           if (userError) {
             console.error('User fetch error:', userError);
             handleUserLoggedOut();
-            setAuthInitialized(true);
-            setLoading(false);
+            if (isComponentMounted) setAuthInitialized(true);
             return;
           }
           
           if (supabaseUser) {
             await handleUserLoggedIn(supabaseUser);
-            // Only set authInitialized to true after user data is fully processed
-            setAuthInitialized(true);
+            // Only set authInitialized after user data is fully processed
+            if (isComponentMounted) setAuthInitialized(true);
           } else {
             handleUserLoggedOut();
-            setAuthInitialized(true);
+            if (isComponentMounted) setAuthInitialized(true);
           }
         } else {
           console.log("No session found, user is logged out");
           handleUserLoggedOut();
-          setAuthInitialized(true);
+          if (isComponentMounted) setAuthInitialized(true);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         handleUserLoggedOut();
-        setAuthInitialized(true);
+        if (isComponentMounted) setAuthInitialized(true);
       } finally {
         console.log("Auth initialization complete");
-        setLoading(false);
+        if (isComponentMounted) setLoading(false);
       }
     };
 
@@ -65,41 +65,42 @@ export const useAuthListener = (
     // Listen for auth state changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
-      if (event === "SIGNED_IN" && session) {
+      if (event === "SIGNED_IN" && session && isComponentMounted) {
         console.log("User signed in, updating state");
         setLoading(true); // Set loading to true while we process the login
         try {
           await handleUserLoggedIn(session.user);
-          setAuthInitialized(true); // Ensure authInitialized is set to true after successful login
+          if (isComponentMounted) setAuthInitialized(true); // Ensure authInitialized is set after login
         } catch (error) {
           console.error("Error handling user login:", error);
           handleUserLoggedOut(); // Fallback to logged out state on error
         } finally {
-          setLoading(false); // Always set loading to false when done
+          if (isComponentMounted) setLoading(false);
         }
-      } else if (event === "SIGNED_OUT") {
+      } else if (event === "SIGNED_OUT" && isComponentMounted) {
         console.log("User signed out, updating state");
         handleUserLoggedOut();
-      } else if (event === "TOKEN_REFRESHED" && session) {
+      } else if (event === "TOKEN_REFRESHED" && session && isComponentMounted) {
         console.log("Token refreshed, checking user state");
         // Only update if user state is empty
         if (!user) {
           setLoading(true);
           try {
             await handleUserLoggedIn(session.user);
-            setAuthInitialized(true);
+            if (isComponentMounted) setAuthInitialized(true);
           } catch (error) {
             console.error("Error handling token refresh:", error);
           } finally {
-            setLoading(false);
+            if (isComponentMounted) setLoading(false);
           }
         }
       }
     });
 
-    // Cleanup auth listener
+    // Cleanup auth listener and prevent state updates after unmount
     return () => {
       console.log("Cleaning up auth listener");
+      isComponentMounted = false;
       authListener.subscription.unsubscribe();
     };
   }, [handleUserLoggedIn, handleUserLoggedOut, setLoading, setAuthInitialized, user]);

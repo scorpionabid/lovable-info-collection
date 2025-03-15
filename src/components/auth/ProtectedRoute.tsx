@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/hooks/types/authTypes';
@@ -16,6 +16,7 @@ export const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user, userRole, isAuthenticated, isLoading, authInitialized } = useAuth();
   const location = useLocation();
+  const [longLoading, setLongLoading] = useState(false);
 
   useEffect(() => {
     console.log('ProtectedRoute state:', { 
@@ -25,13 +26,31 @@ export const ProtectedRoute = ({
       userRole,
       pathname: location.pathname
     });
+    
+    // Set a timeout to show a different message if loading takes too long
+    let timeoutId: NodeJS.Timeout;
+    if (isLoading || !authInitialized) {
+      timeoutId = setTimeout(() => {
+        setLongLoading(true);
+      }, 5000); // Show different message after 5 seconds
+    } else {
+      setLongLoading(false);
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isAuthenticated, isLoading, authInitialized, userRole, location.pathname]);
 
   // Show loading state while checking authentication
   if (isLoading || !authInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <LoadingState message="Autentifikasiya yoxlanılır..." />
+        <LoadingState 
+          message={longLoading 
+            ? "Autentifikasiya uzun çəkir, bir az gözləyin..." 
+            : "Autentifikasiya yoxlanılır..."} 
+        />
       </div>
     );
   }
