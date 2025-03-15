@@ -29,6 +29,7 @@ export const LoginForm = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("User is authenticated, redirecting to dashboard");
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
@@ -46,6 +47,7 @@ export const LoginForm = () => {
     try {
       setError(null);
       setIsSubmitting(true);
+      console.log("Form submitted, attempting login");
       
       // Ensure we have a value for each required field
       const credentials: LoginCredentials = {
@@ -56,7 +58,7 @@ export const LoginForm = () => {
       await login(credentials);
       // Login success is handled in useAuthProvider (navigation and toast notification)
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error('Login form error:', err);
       setError(err.message || "Daxil etdiyiniz məlumatlar yanlışdır");
       
       toast({

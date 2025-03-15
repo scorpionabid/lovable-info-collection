@@ -25,7 +25,7 @@ export const useAuthProvider = () => {
   
   // Compute derived values
   const isAuthenticated = !!user;
-  const isLoading = loading;
+  const isLoading = loading && !authInitialized;
   const permissions = user?.roles?.permissions || [];
 
   const handleUserLoggedOut = useCallback(() => {
@@ -41,6 +41,7 @@ export const useAuthProvider = () => {
     }
 
     try {
+      console.log("Handling user logged in for:", userData.email);
       // Get user data from the users table to get role information
       const { data: userProfile, error: userError } = await supabase
         .from('users')
@@ -79,6 +80,7 @@ export const useAuthProvider = () => {
         role: userProfile?.roles?.name || userData.user_metadata?.role || "",
       };
 
+      console.log("Setting normalized user:", normalizedUser);
       setUser(normalizedUser);
       setUserRole(getNormalizedRole(normalizedUser.role));
     } catch (error) {
@@ -101,6 +103,7 @@ export const useAuthProvider = () => {
 
   // Initialize auth state
   useEffect(() => {
+    console.log("Initializing auth state");
     const loadUser = async () => {
       try {
         setLoading(true);
@@ -108,11 +111,12 @@ export const useAuthProvider = () => {
         
         if (sessionError) {
           console.error('Session error:', sessionError);
-          setLoading(false);
+          handleUserLoggedOut();
           return;
         }
         
         if (session) {
+          console.log("Found existing session, fetching user");
           const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
           
           if (userError) {
@@ -127,12 +131,14 @@ export const useAuthProvider = () => {
             handleUserLoggedOut();
           }
         } else {
+          console.log("No session found, user is logged out");
           handleUserLoggedOut();
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         handleUserLoggedOut();
       } finally {
+        console.log("Auth initialization complete");
         setAuthInitialized(true);
       }
     };
@@ -143,11 +149,14 @@ export const useAuthProvider = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
       if (event === "SIGNED_IN" && session) {
+        console.log("User signed in, updating state");
         await handleUserLoggedIn(session.user);
       } else if (event === "SIGNED_OUT") {
+        console.log("User signed out, updating state");
         handleUserLoggedOut();
       } else if (event === "TOKEN_REFRESHED" && session) {
-        // Session was refreshed, no need to fetch user data again if we already have it
+        console.log("Token refreshed, checking user state");
+        // Only update if user state is empty
         if (!user) {
           await handleUserLoggedIn(session.user);
         }
@@ -172,6 +181,7 @@ export const useAuthProvider = () => {
         pwd = password || '';
         
         if (!pwd) {
+          console.log("Attempting OTP login");
           const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
@@ -181,7 +191,7 @@ export const useAuthProvider = () => {
           });
           
           if (error) {
-            setLoading(false);
+            console.error("OTP login error:", error);
             toast({
               title: "Giriş xətası",
               description: error.message || "Giriş linki göndərilə bilmədi",
@@ -204,6 +214,7 @@ export const useAuthProvider = () => {
         pwd = emailOrCredentials.password;
       }
       
+      console.log("Attempting password login for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: pwd,
@@ -225,12 +236,12 @@ export const useAuthProvider = () => {
           variant: "destructive",
         });
         
-        setLoading(false);
         throw error;
       }
       
       if (data.user) {
-        // handleUserLoggedIn will be called by the auth listener
+        console.log("Login successful for:", data.user.email);
+        // We will automatically get the handleUserLoggedIn call from the auth listener
         toast({
           title: "Uğurlu giriş",
           description: "Sistemə uğurla daxil oldunuz",
@@ -241,7 +252,6 @@ export const useAuthProvider = () => {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      setLoading(false);
       throw error;
     } finally {
       // Ensure loading state is always reset
@@ -252,10 +262,10 @@ export const useAuthProvider = () => {
   const logout = async () => {
     try {
       setLoading(true);
+      console.log("Logging out user");
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Logout error:', error);
-        setLoading(false);
         throw error;
       }
       handleUserLoggedOut();
@@ -266,7 +276,6 @@ export const useAuthProvider = () => {
       });
     } catch (error: any) {
       console.error('Logout error:', error);
-      setLoading(false);
       toast({
         title: "Çıxış xətası",
         description: error.message || "Çıxış zamanı xəta baş verdi",

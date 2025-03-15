@@ -11,6 +11,7 @@ interface AuthContextProps {
   login: (email: string | LoginCredentials, password?: string) => Promise<void>;
   logout: () => Promise<void>;
   permissions?: string[];
+  authInitialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextProps>({
   login: async () => {},
   logout: async () => {},
   permissions: [],
+  authInitialized: false,
 });
 
 interface AuthProviderProps {
