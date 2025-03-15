@@ -6,7 +6,7 @@ import { UserRoleBadge } from "./components/UserRoleBadge";
 import { UserStatusBadge } from "./components/UserStatusBadge";
 import { UserLastLogin } from "./components/UserLastLogin";
 import { UserActionMenu } from "./components/UserActionMenu";
-import { getEntityName } from "./utils/userTableUtils";
+import { getEntityName } from "../utils/userUtils";
 
 interface UserTableRowProps {
   user: User;
