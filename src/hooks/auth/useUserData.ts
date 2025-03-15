@@ -63,9 +63,10 @@ export const useUserData = () => {
       } else if (userData.user_metadata?.role) {
         roleName = userData.user_metadata.role;
         console.log("Role from user_metadata:", roleName);
-      } else if (hasValidUserProfile && userProfile.role) {
-        roleName = userProfile.role;
-        console.log("Role from profile.role:", roleName);
+      } else if (hasValidUserProfile && userProfile.roles && typeof userProfile.roles === 'object') {
+        // Access name property safely from roles object
+        roleName = 'name' in userProfile.roles ? userProfile.roles.name : 'super-admin';
+        console.log("Role from profile.roles object:", roleName);
       } else {
         // Default role as fallback
         roleName = 'super-admin';
@@ -88,7 +89,8 @@ export const useUserData = () => {
           name: roleName,
           permissions: []
         },
-        role: roleName,
+        // Store roleName separately for backward compatibility
+        roleName: roleName,
       };
 
       console.log("Setting normalized user:", normalizedUser);
@@ -106,14 +108,14 @@ export const useUserData = () => {
         email: userData.email,
         first_name: userData.user_metadata?.first_name || "",
         last_name: userData.user_metadata?.last_name || "",
-        role: userData.user_metadata?.role || "super-admin", // Provide a default role
+        roleName: userData.user_metadata?.role || "super-admin", // Provide a default role
       };
       
       console.log("Using basic user data due to error:", basicUser);
       setUser(basicUser);
       
       // Always ensure a role is set
-      const defaultRole = getNormalizedRole(basicUser.role);
+      const defaultRole = getNormalizedRole(basicUser.roleName);
       console.log("Setting default role:", defaultRole);
       setUserRole(defaultRole);
     } finally {

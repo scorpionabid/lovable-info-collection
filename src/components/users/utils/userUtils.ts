@@ -43,8 +43,13 @@ export const getRoleName = (user: User): string => {
   if (user.roles && user.roles.name) {
     return user.roles.name;
   }
-  if (user.role) {
-    return user.role;
+  // Check for roleName property first (our new property)
+  if ('roleName' in user) {
+    return user.roleName as string;
+  }
+  // Backward compatibility
+  if ('role' in user) {
+    return user.role as string;
   }
   return 'Rol təyin edilməyib';
 };
