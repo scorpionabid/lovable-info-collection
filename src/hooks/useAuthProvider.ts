@@ -1,4 +1,3 @@
-
 import { useAuthActions } from "./auth/useAuthActions";
 import { useUserData } from "./auth/useUserData";
 import { useAuthListener } from "./auth/useAuthListener";
@@ -16,7 +15,8 @@ export const useAuthProvider = () => {
     authInitialized,
     setAuthInitialized,
     handleUserLoggedIn,
-    handleUserLoggedOut
+    handleUserLoggedOut,
+    sessionExists
   } = useUserData();
 
   // Setup auth actions
@@ -31,11 +31,14 @@ export const useAuthProvider = () => {
     user
   );
   
-  // Compute derived values
-  const isAuthenticated = Boolean(user);
+  // İstifadəçi mövcuddursa və ya sessiya mövcuddursa, həmişə autentifikasiya olunmuş sayaq
+  const isAuthenticated = Boolean(user) || sessionExists;
   
-  // Only show as loading if we're still initializing auth AND loading user data
-  const isLoading = loading && !authInitialized;
+  // Yüklənmə vəziyyətini təyin edərkən sessiya və istifadəçi nəzərə alaq
+  const isLoading = loading && !user && !sessionExists;
+  
+  // Daha sadə və açıq bir şəkildə isUserReady dəyişənini təyin edək
+  const isUserReady = Boolean(user) || sessionExists;
 
   // Handle permissions with fallback
   const permissions = user?.roles?.permissions || [];
@@ -49,6 +52,8 @@ export const useAuthProvider = () => {
     login, 
     logout,
     permissions,
-    authInitialized
+    authInitialized,
+    sessionExists,
+    isUserReady
   };
 };

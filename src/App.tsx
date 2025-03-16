@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import Index from "./pages/Index";
 
+
 // Admin Pages
 import Users from "./pages/Users";
 import Regions from "./pages/Regions";
@@ -50,6 +51,8 @@ const App = () => (
                 <Index />
               </ProtectedRoute>
             } />
+            {/* Dashboard yönləndirməsi */}
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             
             {/* Super Admin Routes */}
             <Route path="/users" element={

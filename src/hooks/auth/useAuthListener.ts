@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,37 +26,55 @@ export const useAuthListener = (
         }
         
         if (session) {
+          // Əgər sessiya mövcuddursa, user da mövcud sayılmalıdır
+          // Məlumatları gözləmədən əvvəlcədən authInitialized=true təyin edək
+          if (isComponentMounted) {
+            setAuthInitialized(true);
+          }
+          
           console.log("Found existing session, fetching user");
           const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
           
           if (userError) {
             console.error('User fetch error:', userError);
             handleUserLoggedOut();
-            if (isComponentMounted) setAuthInitialized(true);
+            if (isComponentMounted) {
+              setAuthInitialized(true);
+              setLoading(false);
+            }
             return;
           }
           
           if (supabaseUser) {
             console.log("User found in session, processing login");
             await handleUserLoggedIn(supabaseUser);
-            if (isComponentMounted) setAuthInitialized(true);
+            if (isComponentMounted) {
+              setAuthInitialized(true);
+              setLoading(false);
+            }
           } else {
             console.log("No user in session, logging out");
             handleUserLoggedOut();
-            if (isComponentMounted) setAuthInitialized(true);
+            if (isComponentMounted) {
+              setAuthInitialized(true);
+              setLoading(false);
+            }
           }
         } else {
           console.log("No session found, user is logged out");
           handleUserLoggedOut();
-          if (isComponentMounted) setAuthInitialized(true);
+          if (isComponentMounted) {
+            setAuthInitialized(true);
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         handleUserLoggedOut();
-        if (isComponentMounted) setAuthInitialized(true);
-      } finally {
-        console.log("Auth initialization complete");
-        if (isComponentMounted) setLoading(false);
+        if (isComponentMounted) {
+          setAuthInitialized(true);
+          setLoading(false);
+        }
       }
     };
 
@@ -67,29 +84,53 @@ export const useAuthListener = (
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
       
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session && isComponentMounted) {
-        console.log(`User ${event === "SIGNED_IN" ? "signed in" : "token refreshed"}, updating state`);
+      if (event === "SIGNED_IN" && session && isComponentMounted) {
+        console.log("User signed in, updating state");
         setLoading(true); 
+        
+        // İlk öncə authInitialized-i true olaraq təyin et
+        if (isComponentMounted) setAuthInitialized(true);
+        
         try {
           await handleUserLoggedIn(session.user);
-          if (isComponentMounted) setAuthInitialized(true);
         } catch (error) {
-          console.error(`Error handling user ${event}:`, error);
-          // Don't log out on token refresh error, just maintain current state if possible
-          if (event === "SIGNED_IN") {
-            handleUserLoggedOut();
-          }
+          console.error('Error handling user sign in:', error);
+          handleUserLoggedOut();
         } finally {
           if (isComponentMounted) setLoading(false);
         }
-      } else if (event === "SIGNED_OUT" && isComponentMounted) {
+      } 
+      else if (event === "TOKEN_REFRESHED" && session && isComponentMounted) {
+        console.log("Token refreshed, handling auth update");
+        
+        // Əvvəlcə sessiyaya görə autentifikasiyanı təyin edək
+        if (isComponentMounted) setAuthInitialized(true);
+        
+        // Əgər sessiyadakı istifadəçi təyin olunmayıbsa
+        if (!user && session.user) {
+          setLoading(true);
+          try {
+            await handleUserLoggedIn(session.user);
+          } catch (error) {
+            console.error("Error handling token refresh:", error);
+          } finally {
+            if (isComponentMounted) setLoading(false);
+          }
+        } else {
+          // User artıq mövcuddursa, sadəcə yükləməni dayandır
+          if (isComponentMounted) setLoading(false);
+        }
+      } 
+      else if (event === "SIGNED_OUT" && isComponentMounted) {
         console.log("User signed out, updating state");
         handleUserLoggedOut();
-        if (isComponentMounted) setAuthInitialized(true);
+        if (isComponentMounted) {
+          setAuthInitialized(true);
+          setLoading(false);
+        }
       }
     });
 
-    // Cleanup auth listener and prevent state updates after unmount
     return () => {
       console.log("Cleaning up auth listener");
       isComponentMounted = false;

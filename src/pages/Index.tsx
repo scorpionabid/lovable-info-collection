@@ -29,7 +29,7 @@ const Index = () => {
   }, [user, userRole, isLoading, authInitialized]);
 
   // Show loading state if still loading auth or page
-  if (isLoading || !authInitialized || !userRole || pageLoading) {
+  if (isLoading || !authInitialized || pageLoading) {
     return <LoadingState message="Səhifə yüklənir..." />;
   }
 

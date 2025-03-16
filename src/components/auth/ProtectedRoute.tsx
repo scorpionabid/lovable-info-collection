@@ -1,5 +1,4 @@
-
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/hooks/types/authTypes';
@@ -14,127 +13,65 @@ export const ProtectedRoute = ({
   children, 
   allowedRoles = ['super-admin', 'region-admin', 'sector-admin', 'school-admin'] 
 }: ProtectedRouteProps) => {
-  const { user, userRole, isAuthenticated, isLoading, authInitialized } = useAuth();
+  const { 
+    user,
+    userRole,
+    isAuthenticated, 
+    isLoading,
+    sessionExists,
+    isUserReady
+  } = useAuth();
+  
   const location = useLocation();
-  const [longLoading, setLongLoading] = useState(false);
-  const [veryLongLoading, setVeryLongLoading] = useState(false);
-  const [reloadTriggered, setReloadTriggered] = useState(false);
-
+  const [loadingScreenShown, setLoadingScreenShown] = useState(false);
+  
+  // useMemo ilə hesablama effektivliyini artırırıq və təkrarlanmalardan qaçırıq
+  const isAllowed = useMemo(() => {
+    // Əgər icazələr varsa, onları yoxlayırıq
+    if (allowedRoles && allowedRoles.length > 0 && userRole) {
+      return allowedRoles.includes(userRole);
+    }
+    
+    // İcazələrdən asılı olmayaraq, əsas autentifikasiya yoxlanışı
+    return isUserReady || isAuthenticated || sessionExists || Boolean(user);
+  }, [isUserReady, isAuthenticated, sessionExists, user, userRole, allowedRoles]);
+  
+  // Lazım olmayan yenidən renderləri və log çıxışlarını azaltmaq üçün
   useEffect(() => {
-    console.log('ProtectedRoute state:', { 
-      isAuthenticated, 
-      isLoading, 
-      authInitialized, 
-      userRole,
-      pathname: location.pathname,
-      user: user?.email
-    });
-    
-    // Set timeouts to show different messages if loading takes too long
-    let timeoutId: NodeJS.Timeout;
-    let longTimeoutId: NodeJS.Timeout;
-    let reloadTimeoutId: NodeJS.Timeout;
-    
-    if (isLoading || !authInitialized) {
-      timeoutId = setTimeout(() => {
-        setLongLoading(true);
-      }, 3000); // Show different message after 3 seconds
-      
-      longTimeoutId = setTimeout(() => {
-        setVeryLongLoading(true);
-        console.warn("Auth loading is taking too long, might be an issue");
-      }, 10000); // Show warning message after 10 seconds
-      
-      // After 20 seconds with no auth, offer to reload the page
-      reloadTimeoutId = setTimeout(() => {
-        if (!reloadTriggered && (isLoading || !authInitialized)) {
-          setReloadTriggered(true);
-        }
-      }, 20000);
-    } else {
-      setLongLoading(false);
-      setVeryLongLoading(false);
+    const pathname = location.pathname;
+    // Yalnız kritik dəyərlər dəyişdikdə log çıxaraq
+    if (!loadingScreenShown) {
+      console.log(`ProtectedRoute state for ${pathname}:`, { 
+        isAuthenticated, 
+        isLoading,
+        sessionExists,
+        isUserReady,
+        userRole,
+        isAllowed
+      });
+      setLoadingScreenShown(true);
     }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (longTimeoutId) clearTimeout(longTimeoutId);
-      if (reloadTimeoutId) clearTimeout(reloadTimeoutId);
-    };
-  }, [isAuthenticated, isLoading, authInitialized, userRole, location.pathname, user?.email, reloadTriggered]);
+  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname]);
 
-  // Function to handle manual page reload
-  const handleReload = () => {
-    window.location.reload();
-  };
-
-  // Show loading state while checking authentication
-  if (isLoading || !authInitialized) {
+  // Ən sadə şərt sistemi - əvvəlcə icazə yoxlaması
+  if (isAllowed) {
+    return <>{children}</>;
+  }
+  
+  // Əgər hələ yüklənirsə, gözləmə ekranını göstər
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
-        <LoadingState 
-          message={
-            reloadTriggered
-              ? "Autentifikasiya çox uzun çəkir. Səhifəni yeniləməyi sınayın..."
-              : veryLongLoading 
-                ? "Autentifikasiya çox uzun çəkir. Biraz gözləyin..." 
-                : longLoading 
-                  ? "Autentifikasiya uzun çəkir, bir az gözləyin..." 
-                  : "Autentifikasiya yoxlanılır..."
-          } 
-        />
-        
-        {reloadTriggered && (
-          <button 
-            onClick={handleReload}
-            className="mt-6 px-4 py-2 bg-infoline-light-blue text-white rounded hover:bg-infoline-dark-blue transition-colors"
-          >
-            Səhifəni yeniləmək
-          </button>
-        )}
+        <LoadingState message="Autentifikasiya yoxlanılır..." />
       </div>
     );
   }
-
-  // If user exists but userRole is undefined, we need to wait
-  if (user && !userRole) {
-    console.log("User exists but role is undefined, showing loading state");
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <LoadingState message={
-          longLoading 
-            ? "İstifadəçi rolunu yoxlamaq uzun çəkir..." 
-            : "İstifadəçi rolunu yoxlayırıq..."
-        } />
-        
-        {veryLongLoading && (
-          <button 
-            onClick={handleReload}
-            className="mt-6 px-4 py-2 bg-infoline-light-blue text-white rounded hover:bg-infoline-dark-blue transition-colors"
-          >
-            Səhifəni yeniləmək
-          </button>
-        )}
-      </div>
-    );
+  
+  // İstifadəçi var amma icazəsi yoxdursa, Unauthorized səhifəsinə yönləndir
+  if (user && userRole && !isAllowed) {
+    return <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 
-  // If not authenticated, redirect to login
-  if (!isAuthenticated) {
-    console.log("User not authenticated, redirecting to login");
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // If user doesn't have required role, redirect to unauthorized page
-  if (userRole) {
-    const hasRequiredRole = allowedRoles.some(allowedRole => userRole === allowedRole);
-
-    if (!hasRequiredRole) {
-      console.log(`Access denied. User role: ${userRole}. Allowed roles:`, allowedRoles);
-      return <Navigate to="/unauthorized" replace />;
-    }
-  }
-
-  // Render children if authenticated and authorized
-  return <>{children}</>;
+  // Digər bütün hallarda login səhifəsinə yönləndir
+  return <Navigate to="/login" state={{ from: location }} replace />;
 };
