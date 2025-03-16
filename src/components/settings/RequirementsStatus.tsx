@@ -15,6 +15,10 @@ interface RequirementCategory {
   items: RequirementItem[];
 }
 
+interface RequirementsStatusProps {
+  simplified?: boolean; // For simplified view on dashboard
+}
+
 const requirementsList: RequirementCategory[] = [
   {
     title: "Autentifikasiya və İstifadəçi İdarəetməsi",
@@ -82,7 +86,7 @@ const requirementsList: RequirementCategory[] = [
   }
 ];
 
-export const RequirementsStatus: React.FC = () => {
+export const RequirementsStatus: React.FC<RequirementsStatusProps> = ({ simplified = false }) => {
   const calculateProgress = (items: RequirementItem[]): number => {
     const completed = items.filter(item => item.status === 'completed').length;
     return Math.round((completed / items.length) * 100);
@@ -105,6 +109,32 @@ export const RequirementsStatus: React.FC = () => {
         return <Badge>Naməlum</Badge>;
     }
   };
+  
+  if (simplified) {
+    return (
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-sm font-medium">Ümumi tamamlanma:</span>
+            <span className="text-sm font-medium">{getTotalProgress()}%</span>
+          </div>
+          <Progress value={getTotalProgress()} className="h-2" />
+        </div>
+        
+        <div className="grid grid-cols-1 gap-2 mt-4">
+          {requirementsList.map((category, index) => (
+            <div key={index} className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span>{category.title}</span>
+                <span>{calculateProgress(category.items)}%</span>
+              </div>
+              <Progress value={calculateProgress(category.items)} className="h-1.5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">

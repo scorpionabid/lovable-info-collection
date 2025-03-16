@@ -31,12 +31,17 @@ export const ProtectedRoute = ({
   
   // Use useMemo to improve calculation efficiency and avoid repetition
   const isAllowed = useMemo(() => {
-    // If roles are specified, check them
+    // If allowedRoles is not specified, consider all authenticated users allowed
+    if (!allowedRoles || allowedRoles.length === 0) {
+      return isUserReady || isAuthenticated || sessionExists || Boolean(user);
+    }
+    
+    // If roles are specified and we have a userRole, check them
     if (allowedRoles && allowedRoles.length > 0 && userRole) {
       return allowedRoles.includes(userRole);
     }
     
-    // İcazələrdən asılı olmayaraq, əsas autentifikasiya yoxlanışı
+    // Default case - require auth but no specific role
     return isUserReady || isAuthenticated || sessionExists || Boolean(user);
   }, [isUserReady, isAuthenticated, sessionExists, user, userRole, allowedRoles]);
   
@@ -50,11 +55,12 @@ export const ProtectedRoute = ({
         sessionExists,
         isUserReady,
         userRole,
+        allowedRoles,
         isAllowed
       });
       setLoadingScreenShown(true);
     }
-  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname, isUserReady, sessionExists, userRole]);
+  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname, isUserReady, sessionExists, userRole, allowedRoles]);
 
   // Set long loading state after 5 seconds to show refresh option
   useEffect(() => {

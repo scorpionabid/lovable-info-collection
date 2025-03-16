@@ -2,7 +2,7 @@
 import React from 'react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, Building, Briefcase, ListChecks, Settings, AlertTriangle } from 'lucide-react';
+import { Home, Users, Building, Briefcase, ListChecks, Settings, AlertTriangle, BarChart4 } from 'lucide-react';
 
 const Sidebar = ({ userRole }: { userRole?: UserRole }) => {
   const { userRole: contextUserRole } = useAuth();
@@ -10,9 +10,11 @@ const Sidebar = ({ userRole }: { userRole?: UserRole }) => {
   
   // Use provided userRole or fall back to context
   const role = userRole || contextUserRole;
+  
+  console.log("Sidebar rendered with role:", role);
 
   const isActive = (path: string) => {
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
   return (
@@ -78,7 +80,7 @@ const Sidebar = ({ userRole }: { userRole?: UserRole }) => {
           </li>
           <li>
             <Link to="/reports" className={`flex items-center px-6 py-3 hover:bg-gray-100 rounded-md ${isActive('/reports') ? 'bg-gray-100 font-medium' : ''}`}>
-              <AlertTriangle className="mr-2 h-4 w-4" />
+              <BarChart4 className="mr-2 h-4 w-4" />
               Hesabatlar
             </Link>
           </li>

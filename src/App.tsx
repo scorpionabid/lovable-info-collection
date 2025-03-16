@@ -30,7 +30,15 @@ import CategoryDetails from "./pages/CategoryDetails";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -58,6 +66,17 @@ const App = () => (
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['super-admin']}>
                 <Users />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/categories" element={
+              <ProtectedRoute allowedRoles={['super-admin']}>
+                <Categories />
+              </ProtectedRoute>
+            } />
+            <Route path="/categories/:id" element={
+              <ProtectedRoute allowedRoles={['super-admin']}>
+                <CategoryDetails />
               </ProtectedRoute>
             } />
             
@@ -94,16 +113,6 @@ const App = () => (
             <Route path="/schools/:id" element={
               <ProtectedRoute>
                 <SchoolDetails />
-              </ProtectedRoute>
-            } />
-            <Route path="/categories" element={
-              <ProtectedRoute allowedRoles={['super-admin']}>
-                <Categories />
-              </ProtectedRoute>
-            } />
-            <Route path="/categories/:id" element={
-              <ProtectedRoute allowedRoles={['super-admin']}>
-                <CategoryDetails />
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
