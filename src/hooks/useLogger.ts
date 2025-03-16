@@ -4,19 +4,35 @@
  */
 export const useLogger = (componentName: string) => {
   const info = (message: string, data?: any) => {
-    console.info(`[${componentName}] ${message}`, data || '');
+    if (data) {
+      console.info(`[${componentName}] ${message}`, data);
+    } else {
+      console.info(`[${componentName}] ${message}`);
+    }
   };
   
   const error = (message: string, error?: any) => {
-    console.error(`[${componentName}] ${message}`, error || '');
+    if (error) {
+      console.error(`[${componentName}] ${message}`, error);
+    } else {
+      console.error(`[${componentName}] ${message}`);
+    }
   };
   
   const warn = (message: string, data?: any) => {
-    console.warn(`[${componentName}] ${message}`, data || '');
+    if (data) {
+      console.warn(`[${componentName}] ${message}`, data);
+    } else {
+      console.warn(`[${componentName}] ${message}`);
+    }
   };
   
   const debug = (message: string, data?: any) => {
-    console.debug(`[${componentName}] ${message}`, data || '');
+    if (data) {
+      console.debug(`[${componentName}] ${message}`, data);
+    } else {
+      console.debug(`[${componentName}] ${message}`);
+    }
   };
   
   return {

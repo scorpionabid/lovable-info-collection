@@ -54,7 +54,7 @@ export function useUsersData() {
     setError(null);
 
     if (usersData) {
-      logger.info('Processing users data');
+      logger.info('Processing users data', { dataType: typeof usersData, isArray: Array.isArray(usersData) });
       handleFetchSuccess(usersData);
     }
   }, [usersData]);
@@ -70,18 +70,19 @@ export function useUsersData() {
 
   // Adapter function to normalize user data
   const adaptUserData = (userData: any): User => {
+    logger.debug('Adapting user data', { userData });
     return {
       id: userData.id,
       email: userData.email,
-      first_name: userData.first_name,
-      last_name: userData.last_name,
+      first_name: userData.first_name || '',
+      last_name: userData.last_name || '',
       role_id: userData.role_id || '', 
       region_id: userData.region_id,
       sector_id: userData.sector_id,
       school_id: userData.school_id,
       phone: userData.phone,
       utis_code: userData.utis_code,
-      is_active: userData.is_active,
+      is_active: userData.is_active !== undefined ? userData.is_active : true,
       created_at: userData.created_at,
       updated_at: userData.updated_at,
       last_login: userData.last_login,
@@ -93,12 +94,21 @@ export function useUsersData() {
   // Handle successful data fetch
   const handleFetchSuccess = (data: any) => {
     try {
+      logger.info('Raw data received', { data: JSON.stringify(data).substring(0, 200) + '...' });
+      
       if (Array.isArray(data)) {
         setUsers(data.map(adaptUserData));
-      } else if (data && 'data' in data && Array.isArray(data.data)) {
-        setUsers(data.data.map(adaptUserData));
+      } else if (data && typeof data === 'object') {
+        // Handle if it's an object with a data property
+        if ('data' in data && Array.isArray(data.data)) {
+          setUsers(data.data.map(adaptUserData));
+        } else {
+          // Try to handle it as a single user object
+          logger.warn('Unexpected data format', { data: JSON.stringify(data).substring(0, 200) + '...' });
+          setUsers([]);
+        }
       } else {
-        logger.warn('Unexpected data format', { data });
+        logger.warn('Unexpected data type', { type: typeof data });
         setUsers([]);
       }
     } catch (e) {
