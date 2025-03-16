@@ -45,7 +45,7 @@ export const ProtectedRoute = ({
     return isUserReady || isAuthenticated || sessionExists || Boolean(user);
   }, [isUserReady, isAuthenticated, sessionExists, user, userRole, allowedRoles]);
   
-  // Show log outputs only once per page load
+  // Show log outputs for debugging
   useEffect(() => {
     const pathname = location.pathname;
     if (!loadingScreenShown) {
@@ -108,6 +108,6 @@ export const ProtectedRoute = ({
     return <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 
-  // Digər bütün hallarda login səhifəsinə yönləndir
+  // For all other cases, redirect to login page
   return <Navigate to="/login" state={{ from: location }} replace />;
 };

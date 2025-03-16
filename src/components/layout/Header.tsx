@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { 
   Bell, 
@@ -36,11 +37,15 @@ export const Header = ({ onToggleSidebar }: HeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 bg-white border-b border-infoline-light-gray z-20">
+    <header className="sticky top-0 bg-white border-b border-infoline-light-gray z-20 h-16 w-full">
       <div className="flex items-center h-16 px-4">
-        <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
+        <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="lg:hidden">
           <Menu className="h-5 w-5 text-infoline-dark-gray" />
         </Button>
+        
+        <div className="hidden lg:block ml-4 text-xl font-semibold text-infoline-dark-blue">
+          InfoLine
+        </div>
         
         <div className="flex items-center ml-auto gap-2">
           <Button
@@ -57,12 +62,14 @@ export const Header = ({ onToggleSidebar }: HeaderProps) => {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-5 w-5 text-infoline-dark-gray" />
+              <Button variant="ghost" size="icon" className="ml-2">
+                <User className="h-5 w-5 text-infoline-dark-gray" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Profil Ayarları</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {user?.first_name} {user?.last_name}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />

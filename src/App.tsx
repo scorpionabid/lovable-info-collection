@@ -16,7 +16,6 @@ import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import Index from "./pages/Index";
 
-
 // Admin Pages
 import Users from "./pages/Users";
 import Regions from "./pages/Regions";
@@ -30,12 +29,14 @@ import CategoryDetails from "./pages/CategoryDetails";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 
+// Create a QueryClient with improved configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
+      refetchOnMount: true,
     },
   },
 });
@@ -59,7 +60,8 @@ const App = () => (
                 <Index />
               </ProtectedRoute>
             } />
-            {/* Dashboard yönləndirməsi */}
+            
+            {/* Dashboard redirect */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
             
             {/* Super Admin Routes */}
