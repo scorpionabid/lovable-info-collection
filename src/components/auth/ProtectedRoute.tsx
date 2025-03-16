@@ -1,8 +1,11 @@
+
 import { ReactNode, useEffect, useState, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/hooks/types/authTypes';
 import { LoadingState } from '../users/modals/LoadingState';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -24,10 +27,11 @@ export const ProtectedRoute = ({
   
   const location = useLocation();
   const [loadingScreenShown, setLoadingScreenShown] = useState(false);
+  const [longLoading, setLongLoading] = useState(false);
   
-  // useMemo ilə hesablama effektivliyini artırırıq və təkrarlanmalardan qaçırıq
+  // Use useMemo to improve calculation efficiency and avoid repetition
   const isAllowed = useMemo(() => {
-    // Əgər icazələr varsa, onları yoxlayırıq
+    // If roles are specified, check them
     if (allowedRoles && allowedRoles.length > 0 && userRole) {
       return allowedRoles.includes(userRole);
     }
@@ -36,10 +40,9 @@ export const ProtectedRoute = ({
     return isUserReady || isAuthenticated || sessionExists || Boolean(user);
   }, [isUserReady, isAuthenticated, sessionExists, user, userRole, allowedRoles]);
   
-  // Lazım olmayan yenidən renderləri və log çıxışlarını azaltmaq üçün
+  // Show log outputs only once per page load
   useEffect(() => {
     const pathname = location.pathname;
-    // Yalnız kritik dəyərlər dəyişdikdə log çıxaraq
     if (!loadingScreenShown) {
       console.log(`ProtectedRoute state for ${pathname}:`, { 
         isAuthenticated, 
@@ -51,23 +54,50 @@ export const ProtectedRoute = ({
       });
       setLoadingScreenShown(true);
     }
-  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname]);
+  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname, isUserReady, sessionExists, userRole]);
 
-  // Ən sadə şərt sistemi - əvvəlcə icazə yoxlaması
+  // Set long loading state after 5 seconds to show refresh option
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setLongLoading(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setLongLoading(false);
+    }
+  }, [isLoading]);
+
+  // Handle page refresh
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
+  // Simplest condition system - check permission first
   if (isAllowed) {
     return <>{children}</>;
   }
   
-  // Əgər hələ yüklənirsə, gözləmə ekranını göstər
+  // If still loading, show loading screen
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <LoadingState message="Autentifikasiya yoxlanılır..." />
+        
+        {longLoading && (
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 mb-4">Yüklənmə gözlənildiyindən çox vaxt aparır.</p>
+            <Button onClick={handleRefresh} variant="outline" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Səhifəni yeniləyin
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
   
-  // İstifadəçi var amma icazəsi yoxdursa, Unauthorized səhifəsinə yönləndir
+  // If user exists but doesn't have permission, redirect to Unauthorized
   if (user && userRole && !isAllowed) {
     return <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
