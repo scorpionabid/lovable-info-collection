@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { NotificationPanel } from './NotificationPanel';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useLogger } from '@/hooks/useLogger';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -26,18 +28,33 @@ interface HeaderProps {
 export const Header = ({ onToggleSidebar }: HeaderProps) => {
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState(false);
+  const navigate = useNavigate();
+  const logger = useLogger('Header');
 
   const toggleNotifications = () => {
     setNotifications(!notifications);
+    logger.info('Notifications panel toggled', { newState: !notifications });
   };
 
   // Add a logout handler
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    logger.info('User logging out', { email: user?.email });
+    await logout();
+    navigate('/login');
+  };
+
+  const handleProfileClick = () => {
+    logger.info('Navigating to profile page');
+    navigate('/settings?tab=profile');
+  };
+
+  const handleSettingsClick = () => {
+    logger.info('Navigating to settings page');
+    navigate('/settings');
   };
 
   return (
-    <header className="sticky top-0 bg-white border-b border-infoline-light-gray z-20 h-16 w-full">
+    <header className="fixed top-0 left-0 right-0 bg-white border-b border-infoline-light-gray z-30 h-16 w-full shadow-sm">
       <div className="flex items-center h-16 px-4">
         <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="lg:hidden">
           <Menu className="h-5 w-5 text-infoline-dark-gray" />
@@ -71,11 +88,11 @@ export const Header = ({ onToggleSidebar }: HeaderProps) => {
                 {user?.first_name} {user?.last_name}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleProfileClick}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Mənim profilim</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSettingsClick}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Parametrlər</span>
               </DropdownMenuItem>

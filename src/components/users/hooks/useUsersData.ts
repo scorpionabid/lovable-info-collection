@@ -4,41 +4,69 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
 import { User } from '@/services/api/userService';
 import userService from "@/services/api/userService";
+import { useLogger } from '@/hooks/useLogger';
 
 export function useUsersData() {
+  const logger = useLogger('useUsersData');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [search, setSearch] = useState('');
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortColumn, setSortColumn] = useState<string | null>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [users, setUsers] = useState<User[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  // User data query
-  const { data: usersData, refetch } = useQuery({
+  // User data query with improved caching and error handling
+  const { 
+    data: usersData, 
+    refetch,
+    isError,
+    error: queryError
+  } = useQuery({
     queryKey: ['users', page, perPage, search, sortColumn, sortOrder],
-    queryFn: () => userService.getUsers({
-      sortBy: sortColumn || undefined,
-      sortOrder: sortOrder,
-      search: search || undefined,
-      pageSize: perPage,
-      page: page,
-    })
+    queryFn: async () => {
+      logger.info('Fetching users', { page, perPage, search, sortColumn, sortOrder });
+      
+      try {
+        const data = await userService.getUsers({
+          sortBy: sortColumn || undefined,
+          sortOrder: sortOrder,
+          search: search || undefined,
+          pageSize: perPage,
+          page: page,
+        });
+        
+        logger.info('Users fetched successfully', { count: data?.data?.length || 0 });
+        return data;
+      } catch (error) {
+        logger.error('Error fetching users', error);
+        throw error;
+      }
+    },
+    staleTime: 30000, // 30 seconds
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000)
   });
 
   useEffect(() => {
     setIsLoading(true);
+    setError(null);
+
     if (usersData) {
+      logger.info('Processing users data');
       handleFetchSuccess(usersData);
     }
   }, [usersData]);
 
   useEffect(() => {
-    if ((usersData as any)?.error) {
-      toast(`İstifadəçiləri yükləyərkən xəta baş verdi: ${(usersData as any).error?.toString()}`);
+    if (isError && queryError) {
+      setError(queryError as Error);
       setIsLoading(false);
+      logger.error('Query error in useUsersData', queryError);
+      toast.error(`İstifadəçiləri yükləyərkən xəta baş verdi: ${(queryError as Error).message}`);
     }
-  }, [(usersData as any)?.error]);
+  }, [isError, queryError]);
 
   // Adapter function to normalize user data
   const adaptUserData = (userData: any): User => {
@@ -64,16 +92,27 @@ export function useUsersData() {
 
   // Handle successful data fetch
   const handleFetchSuccess = (data: any) => {
-    if (Array.isArray(data)) {
-      setUsers(data.map(adaptUserData));
-    } else if (data && 'data' in data && Array.isArray(data.data)) {
-      setUsers(data.data.map(adaptUserData));
+    try {
+      if (Array.isArray(data)) {
+        setUsers(data.map(adaptUserData));
+      } else if (data && 'data' in data && Array.isArray(data.data)) {
+        setUsers(data.data.map(adaptUserData));
+      } else {
+        logger.warn('Unexpected data format', { data });
+        setUsers([]);
+      }
+    } catch (e) {
+      logger.error('Error processing users data', e);
+      setError(e as Error);
+      toast.error('İstifadəçi məlumatları işlənərkən xəta baş verdi');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
+    setPage(1); // Reset to first page when search changes
   };
 
   const handleSort = (column: string) => {
@@ -83,11 +122,13 @@ export function useUsersData() {
       setSortColumn(column);
       setSortOrder('asc');
     }
+    setPage(1); // Reset to first page when sorting changes
   };
 
   return {
     users,
     isLoading,
+    error,
     page,
     perPage,
     search,

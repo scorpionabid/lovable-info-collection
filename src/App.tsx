@@ -35,9 +35,18 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: import.meta.env.PROD, // Only in production
       refetchOnMount: true,
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      onError: (error) => {
+        console.error('Query error:', error);
+      }
     },
+    mutations: {
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      }
+    }
   },
 });
 

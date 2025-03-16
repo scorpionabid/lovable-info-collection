@@ -1,98 +1,90 @@
 
-import { User } from '@/services/api/userService';
-import { sortUsers, getRoleName, getEntityName } from '../utils/userUtils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+import React from 'react';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { User } from "@/services/api/userService";
+import { UserTable } from '../UserTable';
+import { BarLoader } from "react-spinners";
+import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface UsersListProps {
   users: User[] | null;
   isLoading: boolean;
+  error?: any;
   sortColumn: string | null;
   sortOrder: 'asc' | 'desc';
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
   onSort: (column: string) => void;
+  onRetry?: () => void;
+  selectedRows?: string[];
+  onSelectedRowsChange?: (rows: string[]) => void;
+  onRefetch?: () => void;
 }
 
-export const UsersList = ({
-  users,
-  isLoading,
-  sortColumn,
-  sortOrder,
-  onEditUser,
-  onDeleteUser,
-  onSort
-}: UsersListProps) => {
-  // Sort users based on current sort settings
-  const sortedUsers = users ? sortUsers(users, sortColumn, sortOrder) : [];
+export const UsersList: React.FC<UsersListProps> = ({ 
+  users, 
+  isLoading, 
+  error,
+  sortColumn, 
+  sortOrder, 
+  onEditUser, 
+  onDeleteUser, 
+  onSort,
+  onRetry,
+  selectedRows = [],
+  onSelectedRowsChange = () => {},
+  onRefetch = () => {}
+}) => {
+  if (isLoading) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center p-12 bg-white rounded-lg shadow-sm">
+        <BarLoader color="#2563eb" width={150} />
+        <p className="mt-4 text-infoline-dark-gray">İstifadəçilər yüklənir...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center p-12 bg-white rounded-lg shadow-sm text-center">
+        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Xəta baş verdi</h3>
+        <p className="text-infoline-dark-gray mb-4">
+          İstifadəçi məlumatları yüklənərkən xəta: {error.message || 'Bilinməyən xəta'}
+        </p>
+        {onRetry && (
+          <Button onClick={onRetry} variant="outline">
+            Yenidən cəhd edin
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (!users || users.length === 0) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center p-12 bg-white rounded-lg shadow-sm">
+        <p className="text-infoline-dark-gray">İstifadəçilər tapılmadı</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead onClick={() => onSort('name')} className="cursor-pointer">
-              Ad Soyad
-              {sortColumn === 'name' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-            </TableHead>
-            <TableHead onClick={() => onSort('email')} className="cursor-pointer">
-              Email
-              {sortColumn === 'email' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-            </TableHead>
-            <TableHead onClick={() => onSort('role')} className="cursor-pointer">
-              Rol
-              {sortColumn === 'role' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-            </TableHead>
-            <TableHead onClick={() => onSort('entity')} className="cursor-pointer">
-              Qurum
-              {sortColumn === 'entity' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-            </TableHead>
-            <TableHead onClick={() => onSort('lastActive')} className="cursor-pointer">
-              Son aktivlik
-              {sortColumn === 'lastActive' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-            </TableHead>
-            <TableHead onClick={() => onSort('status')} className="cursor-pointer">
-              Status
-              {sortColumn === 'status' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
-            </TableHead>
-            <TableHead className="text-right">Əməliyyatlar</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-4">Yüklənir...</TableCell>
-            </TableRow>
-          ) : sortedUsers.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-4">Məlumat tapılmadı</TableCell>
-            </TableRow>
-          ) : (
-            sortedUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.first_name} {user.last_name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{getRoleName(user)}</TableCell>
-                <TableCell>{getEntityName(user)}</TableCell>
-                <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString() : 'Heç vaxt'}</TableCell>
-                <TableCell>{user.is_active ? 'Aktiv' : 'Deaktiv'}</TableCell>
-                <TableCell className="text-right">
-                  <Button onClick={() => onEditUser(user)} variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                  <Button onClick={() => onDeleteUser(user)} variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <UserTable 
+        users={users} 
+        selectedRows={selectedRows}
+        onSelectedRowsChange={onSelectedRowsChange}
+        onRefetch={onRefetch}
+      />
     </div>
   );
 };

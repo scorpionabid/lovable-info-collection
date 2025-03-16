@@ -6,6 +6,7 @@ import type { UserRole } from '@/hooks/types/authTypes';
 import { LoadingState } from '../users/modals/LoadingState';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { useLogger } from '@/hooks/useLogger';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -28,6 +29,7 @@ export const ProtectedRoute = ({
   const location = useLocation();
   const [loadingScreenShown, setLoadingScreenShown] = useState(false);
   const [longLoading, setLongLoading] = useState(false);
+  const logger = useLogger('ProtectedRoute');
   
   // Use useMemo to improve calculation efficiency and avoid repetition
   const isAllowed = useMemo(() => {
@@ -49,7 +51,7 @@ export const ProtectedRoute = ({
   useEffect(() => {
     const pathname = location.pathname;
     if (!loadingScreenShown) {
-      console.log(`ProtectedRoute state for ${pathname}:`, { 
+      logger.info(`Route access check for ${pathname}`, { 
         isAuthenticated, 
         isLoading,
         sessionExists,
@@ -66,6 +68,7 @@ export const ProtectedRoute = ({
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
+        logger.warn('Authentication taking longer than expected');
         setLongLoading(true);
       }, 5000);
       return () => clearTimeout(timer);
@@ -76,11 +79,13 @@ export const ProtectedRoute = ({
 
   // Handle page refresh
   const handleRefresh = () => {
+    logger.info('Manual page refresh triggered by user');
     window.location.reload();
   };
 
   // Simplest condition system - check permission first
   if (isAllowed) {
+    logger.info(`Access granted to ${location.pathname} for role ${userRole}`);
     return <>{children}</>;
   }
   
@@ -105,9 +110,11 @@ export const ProtectedRoute = ({
   
   // If user exists but doesn't have permission, redirect to Unauthorized
   if (user && userRole && !isAllowed) {
+    logger.warn(`Unauthorized access attempt to ${location.pathname} by ${user.email} with role ${userRole}`);
     return <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 
   // For all other cases, redirect to login page
+  logger.info(`Redirecting unauthenticated user from ${location.pathname} to login`);
   return <Navigate to="/login" state={{ from: location }} replace />;
 };
