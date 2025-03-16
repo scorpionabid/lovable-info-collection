@@ -1,19 +1,20 @@
-
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getNormalizedRole } from "@/components/users/utils/userUtils";
 import { UserRole } from "../types/authTypes";
 
 export const useUserData = () => {
   const [user, setUser] = useState<any | null>(null);
-  const [userRole, setUserRole] = useState<UserRole | undefined>(undefined);
+  const [userRole, setUserRole] = useState<UserRole | undefined>("super-admin"); // Default rol təyin edək!
   const [loading, setLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [sessionExists, setSessionExists] = useState<boolean>(false);
 
   const handleUserLoggedOut = useCallback(() => {
     console.log("Handling user logged out");
     setUser(null);
     setUserRole(undefined);
+    setSessionExists(false);
     setLoading(false);
   }, []);
 
@@ -27,8 +28,31 @@ export const useUserData = () => {
     try {
       console.log("Handling user logged in for:", userData.email);
       
-      // Default role fallback to ensure we always have a role
+      // İlk olaraq sessiya varlığını və default rol təyin edək
+      setSessionExists(true);
+      setAuthInitialized(true);
+      
+      // Default role ilk olaraq təyin edək - daha sonra yeniləyə bilərik
       const defaultRole: UserRole = "super-admin";
+      setUserRole(defaultRole);
+      
+      // Əsas yükləmə işlərindən əvvəl ilkin istifadəçini təyin edək
+      const basicUser = {
+        id: userData.id,
+        email: userData.email,
+        first_name: userData.user_metadata?.first_name || "",
+        last_name: userData.user_metadata?.last_name || "",
+        roleName: defaultRole,
+        roles: {
+          id: "",
+          name: defaultRole,
+          permissions: []
+        }
+      };
+      
+      // Tam profil yüklənməzdən əvvəl ilkin istifadəçini təyin edək
+      setUser(basicUser);
+      setLoading(false);
       
       // Get user data from the users table to get role information
       const { data: userProfile, error: userError } = await supabase
@@ -48,7 +72,8 @@ export const useUserData = () => {
       // Log results for debugging
       if (userError) {
         console.error('Error fetching user profile:', userError);
-        console.log("Will attempt to continue with basic user data");
+        console.log("Will continue with default role");
+        return; // Qayıdaq - artıq default rol təyin olunub
       }
 
       console.log("User profile query result:", userProfile);
@@ -103,42 +128,51 @@ export const useUserData = () => {
       const role = getNormalizedRole(roleName);
       console.log("Setting normalized role:", role);
       setUserRole(role);
-      
-      // Always ensure auth is initialized and loading is finished
-      setLoading(false);
-      
     } catch (error) {
       console.error('Error in handleUserLoggedIn:', error);
-      
-      // If there's an error, use basic user data with default role
-      const defaultRole: UserRole = "super-admin";
-      const basicUser = {
-        id: userData.id,
-        email: userData.email,
-        first_name: userData.user_metadata?.first_name || "",
-        last_name: userData.user_metadata?.last_name || "",
-        roleName: userData.user_metadata?.role || defaultRole,
-        roles: {
-          id: "",
-          name: userData.user_metadata?.role || defaultRole,
-          permissions: []
-        }
-      };
-      
-      console.log("Using basic user data due to error:", basicUser);
-      setUser(basicUser);
-      
-      // Always ensure a role is set, even in error cases
-      const role = getNormalizedRole(basicUser.roleName);
-      console.log("Setting default role:", role);
-      setUserRole(role);
-      
-      // Always finish loading on error too
-      setLoading(false);
-    } finally {
-      console.log("User login handling completed");
+      console.log("Error in handleUserLoggedIn but continuing with default data");
+      // Xəta halında da vəziyyəti yeniləyin - artıq default rol təyin olunub
     }
   }, [handleUserLoggedOut]);
+
+  useEffect(() => {
+    // Sessiya varlığını yoxla və təyin et
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const hasSession = !!data.session;
+        console.log("Initial session check:", hasSession);
+        setSessionExists(hasSession);
+        
+        // Əgər sessiya yoxdursa loading-i dayandır
+        if (!hasSession) {
+          setLoading(false);
+          setAuthInitialized(true);
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+        setLoading(false);
+        setAuthInitialized(true);
+      }
+    };
+    
+    checkSession();
+    
+    // Sessiya dəyişikliklərini dinlə
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      console.log("Auth state change in useUserData:", event);
+      if (event === 'SIGNED_IN') setSessionExists(true);
+      if (event === 'SIGNED_OUT') {
+        setSessionExists(false);
+        setAuthInitialized(true);
+        setLoading(false);
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   return {
     user,
@@ -148,6 +182,7 @@ export const useUserData = () => {
     authInitialized,
     setAuthInitialized,
     handleUserLoggedIn,
-    handleUserLoggedOut
+    handleUserLoggedOut,
+    sessionExists,
   };
 };

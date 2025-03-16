@@ -21,14 +21,7 @@ export const Layout = ({
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // If userRole is undefined, show loading state
-  if (!userRole) {
-    return (
-      <div className="min-h-screen bg-infoline-lightest-gray flex items-center justify-center">
-        <LoadingState message="İstifadəçi məlumatları yüklənir..." />
-      </div>
-    );
-  }
+  // If userRol
 
   return (
     <div className="min-h-screen bg-infoline-lightest-gray">

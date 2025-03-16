@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from "react";
 import { useAuthProvider } from "@/hooks/useAuthProvider";
 import { UserRole, LoginCredentials } from "@/hooks/types/authTypes";
@@ -14,6 +13,8 @@ const AuthContext = createContext<{
   logout: () => Promise<void>;
   permissions: string[];
   authInitialized: boolean;
+  isUserReady: boolean;
+  sessionExists: boolean;
 }>({
   user: null,
   userRole: undefined,
@@ -24,6 +25,8 @@ const AuthContext = createContext<{
   logout: async () => {},
   permissions: [],
   authInitialized: false,
+  isUserReady: false,
+  sessionExists: false
 });
 
 interface AuthProviderProps {
@@ -35,12 +38,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   React.useEffect(() => {
     console.log("AuthProvider state updated:", { 
-      isAuthenticated: !!auth.user, 
+      isAuthenticated: auth.isAuthenticated, 
       isLoading: auth.isLoading,
       authInitialized: auth.authInitialized,
-      userRole: auth.userRole 
+      userRole: auth.userRole,
+      isUserReady: auth.isUserReady,
+      sessionExists: auth.sessionExists
     });
-  }, [auth.user, auth.isLoading, auth.authInitialized, auth.userRole]);
+  }, [auth.user, auth.isLoading, auth.authInitialized, auth.userRole, auth.isUserReady, auth.sessionExists]);
   
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 };
