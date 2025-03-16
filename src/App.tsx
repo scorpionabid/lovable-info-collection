@@ -37,7 +37,7 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: import.meta.env.PROD, // Only in production
       refetchOnMount: true,
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes - replaced cacheTime with gcTime
       onError: (error) => {
         console.error('Query error:', error);
       }

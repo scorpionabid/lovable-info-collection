@@ -37,7 +37,7 @@ export function useUsersData() {
           page: page,
         });
         
-        logger.info('Users fetched successfully', { count: data?.data?.length || 0 });
+        logger.info('Users fetched successfully', { count: data?.length || 0 });
         return data;
       } catch (error) {
         logger.error('Error fetching users', error);
