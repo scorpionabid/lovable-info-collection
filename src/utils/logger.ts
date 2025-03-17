@@ -135,4 +135,7 @@ export const createLogger = (componentName: string) => {
 };
 
 // Export a default logger for general use
-export const logger = createLogger('app');
+export const logger = {
+  createLogger,
+  ...createLogger('app')
+};
