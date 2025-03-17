@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
-import { exportDataToExcel } from '@/utils/fileExport';
+import { fileExport } from '@/utils/fileExport';
 
 // Create a logger for the report service
 const reportLogger = logger.createLogger('reportService');
@@ -119,21 +119,12 @@ export const exportReportData = async (
       recordCount: data.length 
     });
     
-    // For now, we only support Excel export
-    if (format === 'xlsx') {
-      await exportDataToExcel(data, fileName);
-      return true;
-    } else if (format === 'csv') {
-      // CSV export would be implemented here
-      console.warn('CSV export not yet implemented');
-      return false;
-    } else if (format === 'pdf') {
-      // PDF export would be implemented here
-      console.warn('PDF export not yet implemented');
-      return false;
-    }
-    
-    return false;
+    // Use the fileExport function from fileExport.ts
+    return await fileExport({ 
+      data, 
+      fileName, 
+      fileType: format 
+    });
   } catch (error) {
     reportLogger.error(`Export failed for ${format} format`, { error, fileName });
     return false;
