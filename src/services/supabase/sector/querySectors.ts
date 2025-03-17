@@ -65,7 +65,23 @@ export const getSectors = async (
         pagination
       });
 
-      const { data, error, count } = await query;
+      // Execute the query with timeout protection
+      const queryPromise = query;
+      
+      // Add a timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Query timeout after 10 seconds")), 10000);
+      });
+      
+      // Race between the query and the timeout
+      const result = await Promise.race([queryPromise, timeoutPromise])
+        .catch(error => {
+          sectorLogger.error(`Query timeout or error for ${endpoint}`, error);
+          throw error;
+        });
+      
+      // Destructure the result after ensuring it exists
+      const { data, error, count } = result || { data: null, error: new Error("Empty result"), count: null };
       
       if (error) {
         const duration = Date.now() - startTime;

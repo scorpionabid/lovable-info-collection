@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -149,6 +148,18 @@ export const SectorTable = ({
     );
   }
 
+  if (!sectors || sectors.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+        <p className="text-infoline-dark-gray mb-4">Heç bir sektor tapılmadı</p>
+        <Button onClick={onRefresh} className="flex items-center gap-2">
+          <RefreshCw size={16} />
+          Yenilə
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -266,12 +277,6 @@ export const SectorTable = ({
           </tbody>
         </table>
       </div>
-      
-      {sectors.length === 0 && !isLoading && (
-        <div className="py-12 text-center">
-          <p className="text-infoline-dark-gray">Nəticə tapılmadı</p>
-        </div>
-      )}
       
       {totalPages > 1 && (
         <div className="flex justify-center p-4">
