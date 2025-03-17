@@ -69,7 +69,7 @@ export const getSectors = async (
       const queryPromise = query;
       
       // Add a timeout to prevent hanging requests
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise<{data: null, error: Error, count: null}>((_, reject) => {
         setTimeout(() => reject(new Error("Query timeout after 10 seconds")), 10000);
       });
       
@@ -81,7 +81,7 @@ export const getSectors = async (
         });
       
       // Destructure the result after ensuring it exists
-      const { data, error, count } = result || { data: null, error: new Error("Empty result"), count: null };
+      const { data, error, count } = result;
       
       if (error) {
         const duration = Date.now() - startTime;

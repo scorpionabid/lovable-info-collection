@@ -12,7 +12,10 @@ export interface SectorData {
 }
 
 export interface SectorWithStats extends SectorData {
-  regions?: Tables<'regions'>;
+  regions?: {
+    id: string;
+    name: string;
+  };
   regionName: string;
   schoolCount: number;
   completionRate: number;
