@@ -1,39 +1,10 @@
 
-import { supabase } from './baseClient';
+import { supabase, checkConnection } from './baseClient';
 import { FilterParams, PaginationParams, SectorWithStats, SortParams } from './types';
 import { useLogger } from '@/hooks/useLogger';
 
 // Create a logger for this service
-const logger = {
-  ...useLogger('sectorService'),
-  // Bəzi browser-only funksiyalar SSR kontekstində işləmir, bu səbəbdən boş funksiyalar əlavə edirik
-  apiRequest: (endpoint: string, params?: any) => {
-    try {
-      console.info(`[API] Request to ${endpoint}`, { params });
-    } catch (e) {
-      // İstisnaları udur
-    }
-  },
-  apiResponse: (endpoint: string, response: any, duration?: number) => {
-    try {
-      console.info(`[API] Response from ${endpoint} in ${duration || '?'}ms`, {
-        status: 'success',
-        dataSnapshot: typeof response === 'object' 
-          ? JSON.stringify(response).substring(0, 200) + '...'
-          : response
-      });
-    } catch (e) {
-      // İstisnaları udur
-    }
-  },
-  apiError: (endpoint: string, error: any) => {
-    try {
-      console.error(`[API] Error from ${endpoint}`, error);
-    } catch (e) {
-      // İstisnaları udur
-    }
-  }
-};
+const logger = useLogger('sectorService');
 
 /**
  * Get sectors with optional pagination, sorting and filtering
@@ -45,9 +16,15 @@ export const getSectors = async (
 ): Promise<{ data: SectorWithStats[]; count: number }> => {
   const startTime = Date.now();
   const endpoint = 'sectors/getSectors';
-  logger.apiRequest(endpoint, { pagination, sort, filters });
+  const requestId = logger.apiRequest(endpoint, { pagination, sort, filters });
 
   try {
+    // Check connection first
+    const isConnected = await checkConnection();
+    if (!isConnected) {
+      throw new Error('Database connection test failed');
+    }
+
     let query = supabase
       .from('sectors')
       .select('*, regions!inner(id, name)', { count: 'exact' });
@@ -85,6 +62,13 @@ export const getSectors = async (
       query = query.range(from, to);
     }
 
+    // Log the constructed query for debugging
+    logger.debug(`Constructed Supabase query for ${endpoint}`, {
+      filters,
+      sort,
+      pagination
+    });
+
     const { data, error, count } = await query;
     
     if (error) {
@@ -96,16 +80,23 @@ export const getSectors = async (
         hint: error.hint,
         code: error.code,
         duration
-      });
+      }, requestId);
       throw error;
     }
 
+    // Log the raw response data
+    logger.debug(`Raw response data from ${endpoint}`, {
+      data,
+      count,
+      responseTime: Date.now() - startTime
+    });
+
     if (!data) {
-      logger.warn(`${endpoint}: No data returned`);
+      logger.warn(`${endpoint}: No data returned`, { requestId });
       return { data: [], count: 0 };
     }
 
-    // Transform data to include region name
+    // Transform data to include region name and stats
     const sectorsWithStats: SectorWithStats[] = await Promise.all(
       data.map(async (sector) => {
         try {
@@ -152,7 +143,7 @@ export const getSectors = async (
       count,
       dataLength: sectorsWithStats.length,
       sampleData: sectorsWithStats.length > 0 ? sectorsWithStats[0] : null
-    }, duration);
+    }, requestId, duration);
 
     return { 
       data: sectorsWithStats, 
@@ -160,9 +151,10 @@ export const getSectors = async (
     };
   } catch (error) {
     const duration = Date.now() - startTime;
-    logger.apiError(endpoint, error);
+    logger.apiError(endpoint, error, requestId);
     
     // Return safe empty result instead of throwing to improve UI resilience
+    logger.warn('Returning empty result set due to error', { endpoint, error });
     return { data: [], count: 0 };
   }
 };
@@ -173,9 +165,15 @@ export const getSectors = async (
 export const getSectorById = async (id: string) => {
   const endpoint = `sectors/getSectorById/${id}`;
   const startTime = Date.now();
-  logger.apiRequest(endpoint, { id });
+  const requestId = logger.apiRequest(endpoint, { id });
 
   try {
+    // First verify connection
+    const isConnected = await checkConnection();
+    if (!isConnected) {
+      throw new Error('Database connection test failed');
+    }
+    
     const { data, error } = await supabase
       .from('sectors')
       .select('*, regions!inner(id, name)')
@@ -190,14 +188,16 @@ export const getSectorById = async (id: string) => {
         details: error.details,
         code: error.code,
         duration
-      });
+      }, requestId);
       throw error;
     }
 
     if (!data) {
-      logger.warn(`${endpoint}: No sector found with ID ${id}`);
+      logger.warn(`${endpoint}: No sector found with ID ${id}`, { requestId });
       throw new Error(`Sector with ID ${id} not found`);
     }
+
+    logger.debug(`Raw sector data`, { data });
 
     // Get school count for this sector
     const { data: schoolsData, error: schoolsError } = await supabase
@@ -240,12 +240,12 @@ export const getSectorById = async (id: string) => {
     };
 
     const duration = Date.now() - startTime;
-    logger.apiResponse(endpoint, result, duration);
+    logger.apiResponse(endpoint, result, requestId, duration);
 
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
-    logger.apiError(endpoint, error);
+    logger.apiError(endpoint, error, requestId);
     throw error;
   }
 };
@@ -256,9 +256,15 @@ export const getSectorById = async (id: string) => {
 export const getSectorSchools = async (sectorId: string) => {
   const endpoint = `sectors/getSectorSchools/${sectorId}`;
   const startTime = Date.now();
-  logger.apiRequest(endpoint, { sectorId });
+  const requestId = logger.apiRequest(endpoint, { sectorId });
 
   try {
+    // Check connection
+    const isConnected = await checkConnection();
+    if (!isConnected) {
+      throw new Error('Database connection test failed');
+    }
+    
     const { data, error } = await supabase
       .from('schools')
       .select('*')
@@ -272,14 +278,16 @@ export const getSectorSchools = async (sectorId: string) => {
         details: error.details,
         code: error.code,
         duration
-      });
+      }, requestId);
       throw error;
     }
 
     if (!data) {
-      logger.warn(`${endpoint}: No schools found for sector ${sectorId}`);
+      logger.warn(`${endpoint}: No schools found for sector ${sectorId}`, { requestId });
       return [];
     }
+
+    logger.debug(`Raw schools data for sector ${sectorId}`, { count: data.length });
 
     // Add mock student counts and completion rates for schools
     const schoolsWithStats = data.map(school => {
@@ -299,12 +307,15 @@ export const getSectorSchools = async (sectorId: string) => {
     logger.apiResponse(endpoint, {
       count: schoolsWithStats.length,
       sampleData: schoolsWithStats.length > 0 ? schoolsWithStats[0] : null
-    }, duration);
+    }, requestId, duration);
 
     return schoolsWithStats;
   } catch (error) {
     const duration = Date.now() - startTime;
-    logger.apiError(endpoint, error);
-    throw error;
+    logger.apiError(endpoint, error, requestId);
+    
+    // Return empty array instead of throwing
+    logger.warn('Returning empty schools array due to error', { endpoint, error });
+    return [];
   }
 };

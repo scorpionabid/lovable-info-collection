@@ -55,29 +55,48 @@ export const SectorsOverview = () => {
   } = useQuery({
     queryKey: ['sectors', currentPage, pageSize, sortColumn, sortDirection, filters],
     queryFn: async () => {
-      logger.apiRequest('getSectors', { 
+      const reqId = logger.apiRequest('getSectors', { 
         pagination: { page: currentPage, pageSize },
         sort: { column: sortColumn, direction: sortDirection },
         filters: { ...filters, searchQuery }
       });
       
       try {
-        // Direct call to the service function instead of using the module
+        // Explicitly log the request parameters again for clarity
+        logger.debug('Sending getSectors request with parameters', {
+          reqId,
+          pagination: { page: currentPage, pageSize },
+          sort: { column: sortColumn, direction: sortDirection },
+          filters: { ...filters, searchQuery }
+        });
+        
+        // Direct call to the service function with all parameters
         const response = await getSectors(
           { page: currentPage, pageSize },
           { column: sortColumn, direction: sortDirection },
           { ...filters, searchQuery }
         );
         
+        // Log response details for debugging
         logger.apiResponse('getSectors', {
+          reqId,
           receivedData: !!response,
+          hasData: !!response?.data,
           dataCount: response?.data?.length || 0,
-          totalCount: response?.count || 0
+          totalCount: response?.count || 0,
+          success: true
         });
+        
+        // Return null instead of empty array to trigger empty state UI
+        if (!response || (response.data.length === 0 && response.count === 0)) {
+          logger.info('No sectors found, returning explicit empty result');
+          return { data: [], count: 0 };
+        }
         
         return response;
       } catch (err) {
-        logger.apiError('getSectors', err);
+        logger.apiError('getSectors', err, reqId);
+        // Rethrow to let React Query handle it
         throw err;
       }
     },
@@ -98,10 +117,19 @@ export const SectorsOverview = () => {
     
     if (isError && error) {
       logger.error('Error fetching sectors', error);
+      
+      // Show error toast only if not a network/connection error (those are handled in the table)
+      if (!(error instanceof Error && error.message.includes('connection'))) {
+        toast({
+          title: "Sektor məlumatları yüklənərkən xəta baş verdi",
+          description: error instanceof Error ? error.message : 'Naməlum xəta',
+          variant: "destructive",
+        });
+      }
     }
-  }, [status, sectorsResponse, isLoading, isError, error]);
+  }, [status, sectorsResponse, isLoading, isError, error, toast]);
 
-  // Handle search input changes
+  // Handle search input changes with debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setSearchQuery(newValue);
@@ -143,17 +171,34 @@ export const SectorsOverview = () => {
     }
   };
 
-  // Handle refresh
+  // Handle refresh with proper loading state
   const handleRefresh = () => {
     logger.info('Manual refresh triggered');
-    refetch();
+    
+    // Show loading toast
     toast({
-      title: "Məlumatlar yeniləndi",
-      description: "Sektor siyahısı yeniləndi",
+      title: "Məlumatlar yenilənir",
+      description: "Sektor siyahısı yenilənir...",
+    });
+    
+    // Force refetch with invalidation
+    queryClient.invalidateQueries({ queryKey: ['sectors'] });
+    refetch().then(() => {
+      toast({
+        title: "Məlumatlar yeniləndi",
+        description: "Sektor siyahısı uğurla yeniləndi",
+      });
+    }).catch(err => {
+      logger.error('Error during manual refresh', err);
+      toast({
+        title: "Yeniləmə zamanı xəta",
+        description: err instanceof Error ? err.message : 'Naməlum xəta',
+        variant: "destructive",
+      });
     });
   };
 
-  // Handle export
+  // Handle export with proper data validation
   const handleExport = () => {
     if (!sectorsResponse || !sectorsResponse.data || sectorsResponse.data.length === 0) {
       logger.warn('Export attempted with no data');
@@ -167,25 +212,34 @@ export const SectorsOverview = () => {
 
     logger.info(`Exporting ${sectorsResponse.data.length} sectors`);
     
-    const exportData = sectorsResponse.data.map(sector => ({
-      'Ad': sector.name,
-      'Təsvir': sector.description || '',
-      'Region': sector.regionName || '',
-      'Məktəb sayı': sector.schoolCount,
-      'Doldurma faizi': `${sector.completionRate}%`,
-      'Yaradılma tarixi': new Date(sector.created_at).toLocaleDateString('az-AZ')
-    }));
+    try {
+      const exportData = sectorsResponse.data.map(sector => ({
+        'Ad': sector.name || 'N/A',
+        'Təsvir': sector.description || '',
+        'Region': sector.regionName || '',
+        'Məktəb sayı': sector.schoolCount || 0,
+        'Doldurma faizi': `${sector.completionRate || 0}%`,
+        'Yaradılma tarixi': sector.created_at ? new Date(sector.created_at).toLocaleDateString('az-AZ') : 'N/A'
+      }));
 
-    fileExport({
-      data: exportData,
-      fileName: 'Sektorlar',
-      fileType: 'xlsx'
-    });
+      fileExport({
+        data: exportData,
+        fileName: 'Sektorlar',
+        fileType: 'xlsx'
+      });
 
-    toast({
-      title: "İxrac əməliyyatı uğurla tamamlandı",
-      description: "Məlumatlar Excel formatında ixrac edildi",
-    });
+      toast({
+        title: "İxrac əməliyyatı uğurla tamamlandı",
+        description: "Məlumatlar Excel formatında ixrac edildi",
+      });
+    } catch (err) {
+      logger.error('Error exporting sectors', err);
+      toast({
+        title: "İxrac zamanı xəta",
+        description: err instanceof Error ? err.message : 'Naməlum xəta',
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle import (placeholder for now)
@@ -197,9 +251,12 @@ export const SectorsOverview = () => {
     });
   };
 
+  // Simplified JSX structure
   return (
     <div className="space-y-4">
+      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
+        {/* Search */}
         <div className="relative flex-1">
           <Input
             placeholder="Axtarış..."
@@ -216,6 +273,7 @@ export const SectorsOverview = () => {
           </div>
         </div>
         
+        {/* Action buttons */}
         <div className="flex flex-wrap gap-2">
           <Button 
             variant="outline" 
@@ -230,8 +288,9 @@ export const SectorsOverview = () => {
             variant="outline" 
             className="flex items-center gap-2"
             onClick={handleRefresh}
+            disabled={isLoading}
           >
-            <RefreshCcw size={16} />
+            <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
             Yenilə
           </Button>
           
@@ -239,6 +298,7 @@ export const SectorsOverview = () => {
             variant="outline" 
             className="flex items-center gap-2"
             onClick={handleExport}
+            disabled={isLoading || !sectorsResponse?.data?.length}
           >
             <Download size={16} />
             İxrac et
@@ -263,6 +323,7 @@ export const SectorsOverview = () => {
         </div>
       </div>
       
+      {/* Filter panel */}
       {showFilters && (
         <SectorFilterPanel 
           onClose={() => setShowFilters(false)} 
@@ -271,6 +332,7 @@ export const SectorsOverview = () => {
         />
       )}
       
+      {/* Table component */}
       <SectorTable 
         sectors={sectorsResponse?.data || []}
         isLoading={isLoading}
@@ -286,6 +348,7 @@ export const SectorsOverview = () => {
         onRefresh={refetch}
       />
       
+      {/* Create sector modal */}
       <SectorModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 

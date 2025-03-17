@@ -8,9 +8,34 @@ export const useLogger = (componentName: string) => {
     return `[${timestamp}] [${level}] [${componentName}] ${message}`;
   };
 
+  // Helper to safely stringify objects (handles circular references)
+  const safeStringify = (obj: any, maxDepth = 3, depth = 0): string => {
+    if (depth >= maxDepth) return '[Object]';
+    
+    try {
+      if (typeof obj !== 'object' || obj === null) {
+        return typeof obj === 'string' ? obj : JSON.stringify(obj);
+      }
+      
+      // Handle circular references and deep objects
+      const seen = new WeakSet();
+      return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return '[Circular]';
+          seen.add(value);
+          if (depth + 1 >= maxDepth) return '[Object]';
+        }
+        return value;
+      }, 2);
+    } catch (e) {
+      return '[Unstringifiable Object]';
+    }
+  };
+
   const info = (message: string, data?: any) => {
     if (data) {
-      console.info(formatLog('INFO', message), data);
+      console.info(formatLog('INFO', message), 
+        typeof data === 'object' ? safeStringify(data) : data);
     } else {
       console.info(formatLog('INFO', message));
     }
@@ -33,7 +58,8 @@ export const useLogger = (componentName: string) => {
   
   const warn = (message: string, data?: any) => {
     if (data) {
-      console.warn(formatLog('WARN', message), data);
+      console.warn(formatLog('WARN', message), 
+        typeof data === 'object' ? safeStringify(data) : data);
     } else {
       console.warn(formatLog('WARN', message));
     }
@@ -41,36 +67,59 @@ export const useLogger = (componentName: string) => {
   
   const debug = (message: string, data?: any) => {
     if (data) {
-      console.debug(formatLog('DEBUG', message), data);
+      console.debug(formatLog('DEBUG', message), 
+        typeof data === 'object' ? safeStringify(data) : data);
     } else {
       console.debug(formatLog('DEBUG', message));
     }
   };
 
-  // Specific API logging methods
+  // Enhanced API logging methods
   const apiRequest = (endpoint: string, params?: any) => {
-    console.info(formatLog('API', `Request to ${endpoint}`), { params });
+    const logData = {
+      endpoint,
+      params,
+      timestamp: new Date().toISOString(),
+      requestId: `req_${Math.random().toString(36).substring(2, 12)}`
+    };
+    
+    console.info(formatLog('API', `Request to ${endpoint}`), safeStringify(logData));
+    return logData.requestId; // Return request ID for correlation
   };
   
-  const apiResponse = (endpoint: string, response: any, duration?: number) => {
-    console.info(formatLog('API', `Response from ${endpoint} in ${duration || '?'}ms`), {
+  const apiResponse = (endpoint: string, response: any, requestId?: string, duration?: number) => {
+    const logData = {
+      endpoint,
+      requestId,
+      duration: duration || '?',
       status: 'success',
       dataType: typeof response,
       isArray: Array.isArray(response),
-      dataSnapshot: typeof response === 'object' 
-        ? JSON.stringify(response).substring(0, 500) 
-        : response
-    });
+      hasData: !!response,
+      dataCount: Array.isArray(response) ? response.length : 
+                (response && typeof response === 'object' && response.data ? 
+                  (Array.isArray(response.data) ? response.data.length : 'object') : 
+                  'not-array'),
+      dataSnapshot: typeof response === 'object' ? safeStringify(response).substring(0, 500) + 
+                   (safeStringify(response).length > 500 ? '...' : '') : response
+    };
+    
+    console.info(formatLog('API', `Response from ${endpoint} in ${duration || '?'}ms`), safeStringify(logData));
   };
   
-  const apiError = (endpoint: string, error: any, params?: any) => {
-    console.error(formatLog('API', `Error from ${endpoint}`), {
-      error,
+  const apiError = (endpoint: string, error: any, requestId?: string, params?: any) => {
+    const logData = {
+      endpoint,
+      requestId,
       params,
       errorMessage: error?.message || 'Unknown error',
       errorCode: error?.code || 'UNKNOWN',
-      errorDetails: error?.details || null
-    });
+      errorDetails: error?.details || null,
+      stack: error?.stack,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.error(formatLog('API', `Error from ${endpoint}`), safeStringify(logData));
   };
   
   return {
@@ -80,6 +129,7 @@ export const useLogger = (componentName: string) => {
     debug,
     apiRequest,
     apiResponse,
-    apiError
+    apiError,
+    safeStringify
   };
 };
