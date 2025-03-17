@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { SectorModal } from './SectorModal';
-import { Eye, Edit, Archive, MoreHorizontal, Download, ArrowUpDown } from "lucide-react";
+import { Eye, Edit, Archive, MoreHorizontal, Download, ArrowUpDown, AlertCircle, RefreshCw } from "lucide-react";
 import { SectorWithStats } from '@/services/supabase/sector/types';
 import { useToast } from "@/hooks/use-toast";
-import sectorService from '@/services/supabase/sectorService';
+import { archiveSector } from '@/services/supabase/sector/crudOperations';
+import { useLogger } from '@/hooks/useLogger';
 import { 
   Pagination, 
   PaginationContent, 
@@ -27,6 +28,7 @@ interface SectorTableProps {
   sectors: SectorWithStats[];
   isLoading: boolean;
   isError: boolean;
+  errorDetails?: string;
   totalCount: number;
   currentPage: number;
   pageSize: number;
@@ -41,6 +43,7 @@ export const SectorTable = ({
   sectors, 
   isLoading,
   isError,
+  errorDetails = 'Yüklənərkən xəta baş verdi',
   totalCount,
   currentPage,
   pageSize,
@@ -53,17 +56,30 @@ export const SectorTable = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const logger = useLogger('SectorTable');
   const [selectedSector, setSelectedSector] = useState<SectorWithStats | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
+  // Log table state on props change
+  logger.debug('SectorTable rendered', {
+    sectorsCount: sectors?.length || 0,
+    isLoading,
+    isError,
+    totalCount,
+    currentPage,
+    totalPages
+  });
+
   const handleView = (sector: SectorWithStats) => {
+    logger.info(`Navigating to sector details: ${sector.id}`);
     navigate(`/sectors/${sector.id}`);
   };
 
   const handleEdit = (sector: SectorWithStats, event: React.MouseEvent) => {
     event.stopPropagation();
+    logger.info(`Opening edit modal for sector: ${sector.id}`);
     setSelectedSector(sector);
     setIsEditModalOpen(true);
   };
@@ -71,13 +87,19 @@ export const SectorTable = ({
   const handleArchive = async (sector: SectorWithStats, event: React.MouseEvent) => {
     event.stopPropagation();
     try {
-      await sectorService.archiveSector(sector.id);
+      logger.info(`Archiving sector: ${sector.id}`);
+      await archiveSector(sector.id);
+      
       toast({
         title: "Sektor arxivləşdirildi",
         description: `${sector.name} uğurla arxivləşdirildi`,
       });
+      
+      logger.info(`Sector archived successfully: ${sector.id}`);
       onRefresh();
     } catch (error) {
+      logger.error(`Error archiving sector: ${sector.id}`, error);
+      
       toast({
         title: "Xəta baş verdi",
         description: "Sektor arxivləşdirilə bilmədi",
@@ -88,6 +110,8 @@ export const SectorTable = ({
 
   const handleExport = (sector: SectorWithStats, event: React.MouseEvent) => {
     event.stopPropagation();
+    logger.info(`Exporting single sector: ${sector.id}`);
+    
     // This would typically generate and download an export file
     toast({
       title: "Sektor ixrac edilir",
@@ -114,8 +138,13 @@ export const SectorTable = ({
   if (isError) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+        <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
         <p className="text-red-500 mb-2">Məlumatlar yüklənərkən xəta baş verdi</p>
-        <Button onClick={onRefresh}>Yenidən cəhd edin</Button>
+        <p className="text-red-400 text-sm mb-4">{errorDetails}</p>
+        <Button onClick={onRefresh} className="flex items-center gap-2">
+          <RefreshCw size={16} />
+          Yenidən cəhd edin
+        </Button>
       </div>
     );
   }
@@ -184,9 +213,9 @@ export const SectorTable = ({
                 className="border-b border-infoline-light-gray hover:bg-infoline-lightest-gray transition-colors cursor-pointer"
                 onClick={() => handleView(sector)}
               >
-                <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{sector.name}</td>
+                <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{sector.name || '-'}</td>
                 <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.description || '-'}</td>
-                <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.regionName}</td>
+                <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.regionName || '-'}</td>
                 <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{sector.schoolCount}</td>
                 <td className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center">
@@ -203,7 +232,7 @@ export const SectorTable = ({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">
-                  {new Date(sector.created_at).toLocaleDateString('az-AZ')}
+                  {sector.created_at ? new Date(sector.created_at).toLocaleDateString('az-AZ') : '-'}
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
@@ -250,7 +279,12 @@ export const SectorTable = ({
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious 
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  onClick={() => {
+                    if (currentPage > 1) {
+                      logger.info(`Pagination: moving to previous page (${currentPage - 1})`);
+                      setCurrentPage(currentPage - 1);
+                    }
+                  }}
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
@@ -259,7 +293,10 @@ export const SectorTable = ({
                 <PaginationItem key={i + 1}>
                   <PaginationLink 
                     isActive={currentPage === i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
+                    onClick={() => {
+                      logger.info(`Pagination: moving to page ${i + 1}`);
+                      setCurrentPage(i + 1);
+                    }}
                   >
                     {i + 1}
                   </PaginationLink>
@@ -268,7 +305,12 @@ export const SectorTable = ({
               
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() => {
+                    if (currentPage < totalPages) {
+                      logger.info(`Pagination: moving to next page (${currentPage + 1})`);
+                      setCurrentPage(currentPage + 1);
+                    }
+                  }}
                   className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
@@ -284,6 +326,7 @@ export const SectorTable = ({
           mode="edit"
           sector={selectedSector}
           onSuccess={() => {
+            logger.info(`Sector ${selectedSector.id} updated successfully, invalidating query cache`);
             queryClient.invalidateQueries({ queryKey: ['sectors'] });
             setIsEditModalOpen(false);
             toast({

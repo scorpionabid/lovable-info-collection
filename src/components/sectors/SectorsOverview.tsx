@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SectorTable } from './SectorTable';
 import { SectorFilterPanel } from './SectorFilterPanel';
@@ -7,13 +7,16 @@ import { SectorModal } from './SectorModal';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
-import sectorService, { FilterParams } from "@/services/supabase/sectorService";
+import { FilterParams } from "@/services/supabase/sector/types";
+import { getSectors } from "@/services/supabase/sector/querySectors";
 import { useToast } from "@/hooks/use-toast";
 import { fileExport } from "@/utils/fileExport";
+import { useLogger } from '@/hooks/useLogger';
 
 export const SectorsOverview = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const logger = useLogger('SectorsOverview');
   
   // State for UI controls
   const [showFilters, setShowFilters] = useState(false);
@@ -31,29 +34,95 @@ export const SectorsOverview = () => {
     completionRate: 'all'
   });
 
+  // Log component initialization
+  useEffect(() => {
+    logger.info('SectorsOverview component initialized', {
+      initialPage: currentPage,
+      sortColumn,
+      sortDirection,
+      filtersApplied: Object.keys(filters).filter(key => !!filters[key as keyof FilterParams]).length > 0
+    });
+  }, []);
+
   // Query to fetch sectors with filters
-  const { data: sectorsData, isLoading, isError, refetch } = useQuery({
+  const { 
+    data: sectorsResponse, 
+    isLoading, 
+    isError, 
+    error,
+    refetch,
+    status
+  } = useQuery({
     queryKey: ['sectors', currentPage, pageSize, sortColumn, sortDirection, filters],
-    queryFn: () => sectorService.getSectors(
-      { page: currentPage, pageSize },
-      { column: sortColumn, direction: sortDirection },
-      { ...filters, searchQuery }
-    ),
+    queryFn: async () => {
+      logger.apiRequest('getSectors', { 
+        pagination: { page: currentPage, pageSize },
+        sort: { column: sortColumn, direction: sortDirection },
+        filters: { ...filters, searchQuery }
+      });
+      
+      try {
+        // Direct call to the service function instead of using the module
+        const response = await getSectors(
+          { page: currentPage, pageSize },
+          { column: sortColumn, direction: sortDirection },
+          { ...filters, searchQuery }
+        );
+        
+        logger.apiResponse('getSectors', {
+          receivedData: !!response,
+          dataCount: response?.data?.length || 0,
+          totalCount: response?.count || 0
+        });
+        
+        return response;
+      } catch (err) {
+        logger.apiError('getSectors', err);
+        throw err;
+      }
+    },
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000,  // 5 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000)
   });
+
+  // Log data status changes
+  useEffect(() => {
+    logger.info(`Query status changed: ${status}`, {
+      hasData: !!sectorsResponse,
+      dataCount: sectorsResponse?.data?.length || 0,
+      isLoading,
+      isError
+    });
+    
+    if (isError && error) {
+      logger.error('Error fetching sectors', error);
+    }
+  }, [status, sectorsResponse, isLoading, isError, error]);
 
   // Handle search input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+    const newValue = e.target.value;
+    setSearchQuery(newValue);
+    
     // Debounce filter application
     const timeoutId = setTimeout(() => {
-      setFilters(prev => ({ ...prev, searchQuery: e.target.value }));
+      logger.info(`Search filter applied: "${newValue}"`);
+      setFilters(prev => ({ ...prev, searchQuery: newValue }));
       setCurrentPage(1); // Reset to first page when search changes
     }, 300);
+    
     return () => clearTimeout(timeoutId);
   };
 
   // Handle filter application
   const handleApplyFilters = (newFilters: FilterParams) => {
+    logger.info('Applying new filters', { 
+      previousFilters: filters,
+      newFilters 
+    });
+    
     setFilters(newFilters);
     setCurrentPage(1); // Reset to first page when filters change
     setShowFilters(false);
@@ -61,16 +130,22 @@ export const SectorsOverview = () => {
 
   // Handle sorting change
   const handleSortChange = (column: string) => {
+    logger.info(`Sorting changed: column=${column}, current=${sortColumn}, direction=${sortDirection}`);
+    
     if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      setSortDirection(newDirection);
+      logger.info(`Sort direction changed to ${newDirection}`);
     } else {
       setSortColumn(column);
       setSortDirection('asc');
+      logger.info(`Sort column changed to ${column} (asc)`);
     }
   };
 
   // Handle refresh
   const handleRefresh = () => {
+    logger.info('Manual refresh triggered');
     refetch();
     toast({
       title: "Məlumatlar yeniləndi",
@@ -80,7 +155,8 @@ export const SectorsOverview = () => {
 
   // Handle export
   const handleExport = () => {
-    if (!sectorsData || sectorsData.data.length === 0) {
+    if (!sectorsResponse || !sectorsResponse.data || sectorsResponse.data.length === 0) {
+      logger.warn('Export attempted with no data');
       toast({
         title: "İxrac ediləcək məlumat yoxdur",
         description: "Sektor siyahısında məlumat tapılmadı",
@@ -89,7 +165,9 @@ export const SectorsOverview = () => {
       return;
     }
 
-    const exportData = sectorsData.data.map(sector => ({
+    logger.info(`Exporting ${sectorsResponse.data.length} sectors`);
+    
+    const exportData = sectorsResponse.data.map(sector => ({
       'Ad': sector.name,
       'Təsvir': sector.description || '',
       'Region': sector.regionName || '',
@@ -112,6 +190,7 @@ export const SectorsOverview = () => {
 
   // Handle import (placeholder for now)
   const handleImport = () => {
+    logger.info('Import function triggered (not implemented)');
     toast({
       title: "İdxal funksiyası",
       description: "Bu funksiya hazırda işləmə mərhələsindədir",
@@ -193,10 +272,11 @@ export const SectorsOverview = () => {
       )}
       
       <SectorTable 
-        sectors={sectorsData?.data || []}
+        sectors={sectorsResponse?.data || []}
         isLoading={isLoading}
         isError={isError}
-        totalCount={sectorsData?.count || 0}
+        errorDetails={error instanceof Error ? error.message : 'Unknown error'} 
+        totalCount={sectorsResponse?.count || 0}
         currentPage={currentPage}
         pageSize={pageSize}
         setCurrentPage={setCurrentPage}
@@ -211,6 +291,7 @@ export const SectorsOverview = () => {
         onClose={() => setIsCreateModalOpen(false)} 
         mode="create"
         onSuccess={() => {
+          logger.info('New sector created successfully, invalidating query cache');
           queryClient.invalidateQueries({ queryKey: ['sectors'] });
           toast({
             title: "Sektor uğurla yaradıldı",
