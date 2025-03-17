@@ -1,6 +1,6 @@
 
 import { supabase, withRetry } from '@/integrations/supabase/client';
-import { SectorInput, SectorWithStats } from './types';
+import { SectorData, SectorWithStats } from './types';
 import { logger } from '@/utils/logger';
 import { getSectors } from './querySectors';
 
@@ -10,7 +10,7 @@ const sectorLogger = logger.createLogger('sectorCrudOperations');
 /**
  * Create a new sector
  */
-export const createSector = async (sectorData: SectorInput): Promise<SectorWithStats> => {
+export const createSector = async (sectorData: SectorData): Promise<SectorWithStats> => {
   const endpoint = 'sectors/createSector';
   const startTime = Date.now();
   const requestId = sectorLogger.apiRequest(endpoint, sectorData);
@@ -18,7 +18,7 @@ export const createSector = async (sectorData: SectorInput): Promise<SectorWithS
   try {
     // Use withRetry to handle potential connection issues
     return await withRetry(async () => {
-      sectorLogger.info('Creating new sector', { name: sectorData.name, regionId: sectorData.regionId });
+      sectorLogger.info('Creating new sector', { name: sectorData.name, regionId: sectorData.region_id });
       
       // Insert the sector
       const { data, error } = await supabase
@@ -26,7 +26,7 @@ export const createSector = async (sectorData: SectorInput): Promise<SectorWithS
         .insert({
           name: sectorData.name,
           description: sectorData.description,
-          region_id: sectorData.regionId
+          region_id: sectorData.region_id
         })
         .select('*, regions(id, name)')
         .single();
@@ -66,7 +66,7 @@ export const createSector = async (sectorData: SectorInput): Promise<SectorWithS
 /**
  * Update an existing sector
  */
-export const updateSector = async (id: string, sectorData: Partial<SectorInput>): Promise<SectorWithStats> => {
+export const updateSector = async (id: string, sectorData: Partial<SectorData>): Promise<SectorWithStats> => {
   const endpoint = `sectors/updateSector/${id}`;
   const startTime = Date.now();
   const requestId = sectorLogger.apiRequest(endpoint, { id, ...sectorData });
@@ -80,7 +80,7 @@ export const updateSector = async (id: string, sectorData: Partial<SectorInput>)
       const updateData: any = {};
       if (sectorData.name !== undefined) updateData.name = sectorData.name;
       if (sectorData.description !== undefined) updateData.description = sectorData.description;
-      if (sectorData.regionId !== undefined) updateData.region_id = sectorData.regionId;
+      if (sectorData.region_id !== undefined) updateData.region_id = sectorData.region_id;
 
       // Update the sector
       const { data, error } = await supabase
