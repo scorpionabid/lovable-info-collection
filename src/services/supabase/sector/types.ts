@@ -14,6 +14,13 @@ export interface SectorWithStats extends Sector {
   completionRate: number;
 }
 
+// Add the missing SectorData interface used in crudOperations.ts
+export interface SectorData {
+  name: string;
+  description?: string;
+  region_id: string;
+}
+
 // Pagination parameters
 export interface PaginationParams {
   page: number;
