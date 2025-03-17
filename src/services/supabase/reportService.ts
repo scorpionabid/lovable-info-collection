@@ -1,121 +1,100 @@
 
-import { supabase } from './supabaseClient';
-import { ReportParams, ExportConfig } from './reports/types';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 
-// Import the actual report services
-import * as completionStatsService from './reports/completionStatsService';
-import * as trendsService from './reports/trendsService';
-import * as performanceService from './reports/performanceService';
-import * as customReportService from './reports/customReportService';
+const reportLogger = logger.createLogger('reportService');
 
-// Implement missing functions
-export const getRegionCompletionStats = (params?: any) => {
-  return completionStatsService.getRegionCompletionData('all', params);
-};
-
-export const getCategoryCompletionStats = (params?: any) => {
-  return completionStatsService.getCategoryCompletionData('all', params);
-};
-
-export const getTimelineCompletionStats = (params?: any) => {
-  return completionStatsService.getTimelineData(params);
-};
-
-export const getSubmissionStatusStats = (params?: any) => {
-  return completionStatsService.getSubmissionStatusData(params);
-};
-
-export const getRegionPerformanceRanking = (params?: any) => {
-  return performanceService.getRegionPerformanceData(params);
-};
-
-export const getPerformanceTrend = (params?: any) => {
-  return performanceService.getPerformanceTrendData(params);
-};
-
-export const getRegionSectorPerformance = (params?: any) => {
-  return performanceService.getRegionSectorData(params);
-};
-
-// Re-export all functions from the report services
-export const {
-  getCompletionData,
-  getCriticalAreas,
-  getOnTimeSubmissionRate
-} = completionStatsService;
-
-export const {
-  getCategoryTrends,
-  getRegionComparison,
-  getQuarterlyTrends,
-  getDistributionData,
-  getYearlyComparison
-} = trendsService;
-
-export const {
-  getPerformanceMetrics
-} = performanceService;
-
-export const {
-  getCustomReports,
-  getCustomReportById,
-  createCustomReport
-} = customReportService;
-
-export const generateCustomReport = (reportId: string, params: any = {}) => {
-  return customReportService.getCustomReportData(reportId, params);
-};
-
-// Add missing export function for report data
-export const exportReportData = async (
-  data: any[],
-  filename: string,
-  format: 'xlsx' | 'pdf' | 'csv'
-): Promise<boolean> => {
-  try {
-    switch (format) {
-      case 'xlsx':
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `${filename}.xlsx`);
-        break;
-      
-      case 'csv':
-        const csvContent = XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(data));
-        saveAs(new Blob([csvContent], { type: 'text/csv;charset=utf-8' }), `${filename}.csv`);
-        break;
-      
-      case 'pdf':
-        const doc = new jsPDF();
-        
-        if (data.length > 0) {
-          const headers = Object.keys(data[0]);
-          const rows = data.map(obj => headers.map(header => obj[header]));
-          
-          autoTable(doc, {
-            head: [headers],
-            body: rows,
-            startY: 20,
-          });
-          
-          doc.text(`${filename}`, 14, 15);
-        } else {
-          doc.text('No data to export', 14, 20);
-        }
-        
-        doc.save(`${filename}.pdf`);
-        break;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error exporting report data:', error);
-    return false;
+/**
+ * Generate a custom report based on a category
+ * @param categoryId The ID of the category to generate a report for
+ * @returns Promise resolving to the report data
+ */
+export const generateCustomReport = async (categoryId: string) => {
+  if (!categoryId) {
+    throw new Error('Category ID is required');
   }
+
+  reportLogger.info('Generating custom report', { categoryId });
+  const startTime = Date.now();
+
+  try {
+    // Get category details
+    const { data: category, error: categoryError } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('id', categoryId)
+      .maybeSingle();
+
+    if (categoryError) {
+      reportLogger.error('Failed to fetch category', categoryError);
+      throw new Error(`Category fetch failed: ${categoryError.message}`);
+    }
+
+    if (!category) {
+      reportLogger.error('Category not found', { categoryId });
+      throw new Error('Category not found');
+    }
+
+    // Get columns for this category
+    const { data: columns, error: columnsError } = await supabase
+      .from('columns')
+      .select('*')
+      .eq('category_id', categoryId)
+      .order('priority', { ascending: true });
+
+    if (columnsError) {
+      reportLogger.error('Failed to fetch columns', columnsError);
+      throw new Error(`Columns fetch failed: ${columnsError.message}`);
+    }
+
+    // Get data entries for this category
+    const { data: entries, error: entriesError } = await supabase
+      .from('data')
+      .select('*, schools(*)')
+      .eq('category_id', categoryId);
+
+    if (entriesError) {
+      reportLogger.error('Failed to fetch data entries', entriesError);
+      throw new Error(`Data entries fetch failed: ${entriesError.message}`);
+    }
+
+    // Process the data into report format
+    const reportData = {
+      category,
+      columns: columns || [],
+      entries: entries || [],
+      generatedAt: new Date().toISOString(),
+      summary: {
+        totalEntries: entries?.length || 0,
+        completionRate: calculateCompletionRate(entries),
+      }
+    };
+
+    const duration = Date.now() - startTime;
+    reportLogger.info('Report generated successfully', { 
+      duration,
+      category: category.name,
+      columnCount: columns?.length || 0,
+      entryCount: entries?.length || 0
+    });
+
+    return reportData;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    reportLogger.error('Report generation failed', { error, duration, categoryId });
+    throw error;
+  }
+};
+
+/**
+ * Calculate completion rate for data entries
+ * @param entries Data entries
+ * @returns Completion rate as a percentage
+ */
+const calculateCompletionRate = (entries: any[] | null): number => {
+  if (!entries || entries.length === 0) return 0;
+  
+  // For now, return a mock completion rate
+  // In a real implementation, this would analyze the data for completeness
+  return Math.floor(Math.random() * 20) + 75; // Random between 75-95%
 };

@@ -1,8 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { useLogger } from '@/hooks/useLogger';
+import { logger } from '@/utils/logger';
 
-const logger = useLogger('connectionMonitor');
+const connectionLogger = logger.createLogger('connectionMonitor');
 
 /**
  * Check if Supabase connection is working
@@ -16,14 +16,14 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     const duration = Date.now() - start;
     
     if (error) {
-      logger.error('Supabase connection error', { error, duration });
+      connectionLogger.error('Supabase connection error', { error, duration });
       return false;
     }
     
-    logger.debug('Supabase connection check successful', { duration });
+    connectionLogger.debug('Supabase connection check successful', { duration });
     return true;
   } catch (err) {
-    logger.error('Supabase connection check failed', err);
+    connectionLogger.error('Supabase connection check failed', err);
     return false;
   }
 };
@@ -46,13 +46,13 @@ export const withRetry = async <T>(
   while (retries <= maxRetries) {
     try {
       if (retries > 0) {
-        logger.info(`Retry attempt ${retries}/${maxRetries}`);
+        connectionLogger.info(`Retry attempt ${retries}/${maxRetries}`);
       }
       
       const result = await queryFn();
       
       if (retries > 0) {
-        logger.info(`Retry successful after ${retries} attempts`);
+        connectionLogger.info(`Retry successful after ${retries} attempts`);
       }
       
       return result;
@@ -69,7 +69,7 @@ export const withRetry = async <T>(
       // Calculate exponential backoff with jitter
       const delay = initialRetryDelay * Math.pow(2, retries - 1) * (0.5 + Math.random() * 0.5);
       
-      logger.warn(`Query failed, retrying in ${Math.round(delay)}ms`, {
+      connectionLogger.warn(`Query failed, retrying in ${Math.round(delay)}ms`, {
         error,
         attempt: retries,
         maxRetries
@@ -80,7 +80,7 @@ export const withRetry = async <T>(
     }
   }
   
-  logger.error(`Query failed after ${maxRetries} retry attempts`, lastError);
+  connectionLogger.error(`Query failed after ${maxRetries} retry attempts`, lastError);
   throw lastError;
 };
 
@@ -94,25 +94,25 @@ export const setupConnectionMonitoring = () => {
   // Log connection status changes
   channel
     .on('system', { event: 'disconnect' }, (payload) => {
-      logger.error('Supabase realtime disconnected', payload);
+      connectionLogger.error('Supabase realtime disconnected', payload);
     })
     .on('system', { event: 'reconnect' }, () => {
-      logger.info('Supabase realtime attempting to reconnect');
+      connectionLogger.info('Supabase realtime attempting to reconnect');
     })
     .on('system', { event: 'connected' }, () => {
-      logger.info('Supabase realtime connection established');
+      connectionLogger.info('Supabase realtime connection established');
     })
     .subscribe((status) => {
-      logger.info(`Supabase realtime subscription status: ${status}`);
+      connectionLogger.info(`Supabase realtime subscription status: ${status}`);
     });
     
   // Additional diagnostic information
-  logger.info(`Supabase realtime connection status: ${supabase.realtime.connectionState}`);
+  connectionLogger.info(`Supabase realtime connection status: ${supabase.realtime.connectionState}`);
   
   // Set up periodic connection checks
   const checkInterval = setInterval(async () => {
     const isConnected = await checkSupabaseConnection();
-    logger.debug(`Periodic connection check: ${isConnected ? 'Connected' : 'Disconnected'}`);
+    connectionLogger.debug(`Periodic connection check: ${isConnected ? 'Connected' : 'Disconnected'}`);
   }, 60000); // Check every minute
   
   // Return cleanup function
