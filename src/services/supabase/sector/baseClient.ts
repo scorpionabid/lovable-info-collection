@@ -2,7 +2,7 @@
 import { supabase, checkConnection, withRetry } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
 
-// Create a logger for Supabase operations
+// Create a logger for Supabase operations using the createLogger function (not a hook)
 const sectorLogger = logger.createLogger('sectorClient');
 
 // Log connection status
