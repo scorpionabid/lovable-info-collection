@@ -113,7 +113,9 @@ const reportService = {
     
     // Make sure data exists and is an array before processing
     if (data && Array.isArray(data)) {
-      data.forEach(item => {
+      data.forEach((item) => {
+        if (item === null) return; // Skip null items
+        
         // Safely access the status property with a default value
         const status = (item && typeof item === 'object' && 'status' in item) 
           ? String(item.status) || 'unknown' 
