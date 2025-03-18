@@ -116,6 +116,9 @@ const reportService = {
       data.forEach((item) => {
         if (item === null) return; // Skip null items
         
+        // Ensure item is not null before accessing properties
+        if (!item) return;
+        
         // Safely access the status property with a default value
         const status = (item && typeof item === 'object' && 'status' in item) 
           ? String(item.status) || 'unknown' 
