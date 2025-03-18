@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SectorTable } from './SectorTable';
@@ -44,7 +43,7 @@ export const SectorsOverview = () => {
     });
   }, []);
 
-  // Query to fetch sectors with filters
+  // Query to fetch sectors with filters - simplified approach
   const { 
     data: sectorsResponse, 
     isLoading, 
@@ -53,57 +52,34 @@ export const SectorsOverview = () => {
     refetch,
     status
   } = useQuery({
-    queryKey: ['sectors', currentPage, pageSize, sortColumn, sortDirection, filters],
+    queryKey: ['sectors', currentPage, pageSize, sortColumn, sortDirection, filters, searchQuery],
     queryFn: async () => {
-      const reqId = logger.apiRequest('getSectors', { 
+      logger.info('Fetching sectors with params', { 
         pagination: { page: currentPage, pageSize },
         sort: { column: sortColumn, direction: sortDirection },
         filters: { ...filters, searchQuery }
       });
       
       try {
-        // Explicitly log the request parameters again for clarity
-        logger.debug('Sending getSectors request with parameters', {
-          reqId,
-          pagination: { page: currentPage, pageSize },
-          sort: { column: sortColumn, direction: sortDirection },
-          filters: { ...filters, searchQuery }
-        });
-        
-        // Direct call to the service function with all parameters
         const response = await getSectors(
           { page: currentPage, pageSize },
           { column: sortColumn, direction: sortDirection },
           { ...filters, searchQuery }
         );
         
-        // Log response details for debugging
-        logger.apiResponse('getSectors', {
-          reqId,
-          receivedData: !!response,
-          hasData: !!response?.data,
-          dataCount: response?.data?.length || 0,
-          totalCount: response?.count || 0,
-          success: true
+        logger.info('Sectors fetched successfully', {
+          count: response?.count || 0,
+          dataLength: response?.data?.length || 0
         });
-        
-        // Return null instead of empty array to trigger empty state UI
-        if (!response || (response.data.length === 0 && response.count === 0)) {
-          logger.info('No sectors found, returning explicit empty result');
-          return { data: [], count: 0 };
-        }
         
         return response;
       } catch (err) {
-        logger.apiError('getSectors', err, reqId);
-        // Rethrow to let React Query handle it
+        logger.error('Error fetching sectors', err);
         throw err;
       }
     },
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000,  // 5 minutes
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000)
+    staleTime: 5000, // Reduced stale time for more frequent refreshes during development
+    retry: 1, // Reduced retry count to avoid excessive requests on failure
   });
 
   // Log data status changes
@@ -118,14 +94,11 @@ export const SectorsOverview = () => {
     if (isError && error) {
       logger.error('Error fetching sectors', error);
       
-      // Show error toast only if not a network/connection error (those are handled in the table)
-      if (!(error instanceof Error && error.message.includes('connection'))) {
-        toast({
-          title: "Sektor məlumatları yüklənərkən xəta baş verdi",
-          description: error instanceof Error ? error.message : 'Naməlum xəta',
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Sektor məlumatları yüklənərkən xəta baş verdi",
+        description: error instanceof Error ? error.message : 'Naməlum xəta',
+        variant: "destructive",
+      });
     }
   }, [status, sectorsResponse, isLoading, isError, error, toast]);
 
@@ -133,15 +106,6 @@ export const SectorsOverview = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setSearchQuery(newValue);
-    
-    // Debounce filter application
-    const timeoutId = setTimeout(() => {
-      logger.info(`Search filter applied: "${newValue}"`);
-      setFilters(prev => ({ ...prev, searchQuery: newValue }));
-      setCurrentPage(1); // Reset to first page when search changes
-    }, 300);
-    
-    return () => clearTimeout(timeoutId);
   };
 
   // Handle filter application
@@ -163,11 +127,9 @@ export const SectorsOverview = () => {
     if (sortColumn === column) {
       const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       setSortDirection(newDirection);
-      logger.info(`Sort direction changed to ${newDirection}`);
     } else {
       setSortColumn(column);
       setSortDirection('asc');
-      logger.info(`Sort column changed to ${column} (asc)`);
     }
   };
 
