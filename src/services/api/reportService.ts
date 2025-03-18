@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { getSimplifiedTableQuery } from './utils/typeHelpers';
+import { serviceLogger } from '@/utils/serviceLogger';
 
 export interface ReportFilter {
   regionId?: string;
@@ -114,20 +115,24 @@ const reportService = {
     // Make sure data exists and is an array before processing
     if (data && Array.isArray(data)) {
       data.forEach((item) => {
-        if (item === null) return; // Skip null items
+        // Skip if item is null or undefined
+        if (item === null || item === undefined) return;
         
-        // Ensure item is not null before accessing properties
-        if (!item) return;
-        
-        // Safely access the status property with a default value
-        const status = (item && typeof item === 'object' && 'status' in item) 
-          ? String(item.status) || 'unknown' 
-          : 'unknown';
+        // Type guard to ensure item is an object with a status property
+        if (typeof item === 'object' && item !== null && 'status' in item) {
+          const status = String(item.status) || 'unknown';
           
-        if (!statusGroups[status]) {
-          statusGroups[status] = [];
+          if (!statusGroups[status]) {
+            statusGroups[status] = [];
+          }
+          statusGroups[status].push(item);
+        } else {
+          // If item doesn't have a status property, categorize as unknown
+          if (!statusGroups['unknown']) {
+            statusGroups['unknown'] = [];
+          }
+          statusGroups['unknown'].push(item);
         }
-        statusGroups[status].push(item);
       });
     }
     
