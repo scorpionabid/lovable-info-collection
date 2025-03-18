@@ -1,4 +1,3 @@
-
 import { PostgrestError } from '@supabase/supabase-js';
 import { SectorWithStats, SortParams, FilterParams, PaginationParams } from './types';
 import { supabase } from '@/integrations/supabase/client';
@@ -89,7 +88,6 @@ export const getSectors = async (
         id: sector.id,
         name: sector.name || 'N/A',
         description: sector.description || '',
-        regionId: sector.region_id,
         region_id: sector.region_id,
         regionName: regionName,
         created_at: sector.created_at,
@@ -176,8 +174,7 @@ export const getSectorById = async (id: string): Promise<SectorWithStats> => {
       id: data.id,
       name: data.name || 'N/A',
       description: data.description || '',
-      regionId: data.region_id,
-      region_id: data.region_id,
+      region_id: data.region_id,  // Using region_id instead of regionId
       regionName: data.regions?.name || 'N/A',
       created_at: data.created_at,
       schoolCount: 0, // Will be populated separately if needed

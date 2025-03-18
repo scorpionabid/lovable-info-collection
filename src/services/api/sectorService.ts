@@ -1,4 +1,3 @@
-
 import api from './index';
 import { getSectors as getSupabaseSectors, getSectorById, getSectorSchools } from '@/services/supabase/sector/querySectors';
 import { createSector as createSupabaseSector, updateSector as updateSupabaseSector, deleteSector as deleteSupabaseSector } from '@/services/supabase/sector/crudOperations';
@@ -9,7 +8,7 @@ export interface SectorData {
   id?: string;
   name: string;
   description?: string;
-  regionId: string;
+  regionId: string;  // Note: We keep this as regionId here for API compatibility
 }
 
 export interface SectorFilter {
@@ -82,7 +81,7 @@ const sectorService = {
         const result = await createSupabaseSector({
           name: sectorData.name,
           description: sectorData.description || '',
-          region_id: sectorData.regionId
+          region_id: sectorData.regionId  // Convert regionId to region_id for Supabase
         });
         
         logger.info('sectorService.createSector succeeded', { sectorId: result.id });
@@ -133,7 +132,7 @@ const sectorService = {
         const result = await updateSupabaseSector(id, {
           name: sectorData.name,
           description: sectorData.description,
-          region_id: sectorData.regionId
+          region_id: sectorData.regionId  // Convert regionId to region_id for Supabase
         });
         
         logger.info('sectorService.updateSector succeeded', { sectorId: id });
