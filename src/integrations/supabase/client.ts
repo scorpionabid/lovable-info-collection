@@ -7,16 +7,23 @@ import { logger } from '@/utils/logger';
 const SUPABASE_URL = "https://wxkaasjwpavlwrpvsuia.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4a2Fhc2p3cGF2bHdycHZzdWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODA3NzAsImV4cCI6MjA1NTk1Njc3MH0.Sy0ktssGHAMNtU4kCrEKuFNf8Yf5R280uqwpsMcZpuM";
 
-// Create the Supabase client with options
+// Create the Supabase client with optimized options
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
   },
+  global: {
+    fetch: fetch.bind(globalThis),
+    headers: { 'x-application-name': 'infoLine' }
+  },
+  db: {
+    schema: 'public'
+  },
   realtime: {
     params: {
-      eventsPerSecond: 10
+      eventsPerSecond: 5 // Azaldılmış realtime events limiti
     }
   }
 });
@@ -26,11 +33,22 @@ supabase.auth.onAuthStateChange((event, session) => {
   logger.info('Supabase auth event:', {event, isAuthenticated: !!session});
 });
 
-// Check connection health
+// Check connection health with timeout
 export const checkConnection = async (): Promise<boolean> => {
   try {
     const start = Date.now();
-    const { data, error } = await supabase.from('sectors').select('count').limit(1);
+    
+    // Timeout promise for faster feedback
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Connection check timeout (3s)')), 3000);
+    });
+    
+    // Minimal query for connection check
+    const queryPromise = supabase.from('sectors').select('count', { head: true, count: 'exact' }).limit(1);
+    
+    // Race between query and timeout
+    await Promise.race([queryPromise, timeoutPromise]);
+    const { error } = await queryPromise;
     const duration = Date.now() - start;
     
     if (error) {
@@ -41,7 +59,7 @@ export const checkConnection = async (): Promise<boolean> => {
     logger.info('Supabase connection check successful', { duration });
     return true;
   } catch (err) {
-    logger.error('Supabase connection exception', err);
+    logger.error('Supabase connection exception', { error: err });
     return false;
   }
 };

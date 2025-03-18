@@ -1,40 +1,64 @@
-
-import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { SectorTable } from './SectorTable';
 import { SectorFilterPanel } from './SectorFilterPanel';
 import { SectorModal } from './SectorModal';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
+import { Plus, Filter, RefreshCcw, Download, Upload, AlertTriangle } from "lucide-react";
 import { FilterParams } from "@/services/supabase/sector/types";
 import { getSectors } from "@/services/supabase/sector/querySectors";
 import { useToast } from "@/hooks/use-toast";
 import { fileExport } from "@/utils/fileExport";
 import { useLogger } from '@/hooks/useLogger';
+import { useDebounce } from '@/hooks/useDebounce';
+import { checkConnection } from '@/integrations/supabase/client';
+import { useQueryWithPerformance } from '@/hooks/useQueryWithPerformance';
+
+// Sabit dəyərlər üçün genişləndirilə bilən konstant obyekt
+const CONSTANTS = {
+  INITIAL_PAGE: 1,
+  PAGE_SIZE: 5, // Daha az məlumat yükləmək üçün azaldılıb
+  DEFAULT_SORT_COLUMN: 'name',
+  DEFAULT_SORT_DIRECTION: 'asc' as const,
+  STALE_TIME: 5 * 60 * 1000, // 5 dəqiqə - daha uzun stale time
+  CACHE_TIME: 10 * 60 * 1000, // 10 dəqiqə - daha uzun cache time
+  RETRY_COUNT: 1,
+  DEBOUNCE_DELAY: 300,
+  INITIAL_FETCH_SIZE: 5, // İlk yükləmə üçün daha az məlumat
+};
+
+// Filtr üçün başlanğıc dəyərlər
+const INITIAL_FILTERS: FilterParams = {
+  searchQuery: '',
+  regionId: '',
+  dateFrom: '',
+  dateTo: '',
+  completionRate: 'all',
+};
 
 export const SectorsOverview = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const logger = useLogger('SectorsOverview');
   
-  // State for UI controls
+  // Reducer əvəzinə useState istifadə edirik, amma daha təşkilatlı şəkildə
+  // UI controls
   const [showFilters, setShowFilters] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [sortColumn, setSortColumn] = useState('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [filters, setFilters] = useState<FilterParams>({
-    searchQuery: '',
-    regionId: '',
-    dateFrom: '',
-    dateTo: '',
-    completionRate: 'all'
-  });
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useDebounce(searchQuery, CONSTANTS.DEBOUNCE_DELAY);
+  
+  // Pagination və sorting
+  const [currentPage, setCurrentPage] = useState(CONSTANTS.INITIAL_PAGE);
+  const [pageSize] = useState(CONSTANTS.PAGE_SIZE);
+  const [sortColumn, setSortColumn] = useState(CONSTANTS.DEFAULT_SORT_COLUMN);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(CONSTANTS.DEFAULT_SORT_DIRECTION);
+  
+  // Filtrlər
+  const [filters, setFilters] = useState<FilterParams>(INITIAL_FILTERS);
 
-  // Log component initialization
+  // useEffect yerinə useLogger hook istifadə edə bilərik
   useEffect(() => {
     logger.info('SectorsOverview component initialized', {
       initialPage: currentPage,
@@ -42,48 +66,73 @@ export const SectorsOverview = () => {
       sortDirection,
       filtersApplied: Object.keys(filters).filter(key => !!filters[key as keyof FilterParams]).length > 0
     });
+    
+    // Bu useEffect yalnız komponent mount olduqda işləməlidir
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Query to fetch sectors with filters - simplified approach
+  // Sorğu açarını useMemo ilə optimallaşdırırıq - daha strukturlu şəkildə
+  const queryKey = useMemo(() => [
+    'sectors', 
+    {
+      pagination: { page: currentPage, pageSize },
+      sort: { column: sortColumn, direction: sortDirection },
+      filters: { ...filters, searchQuery: debouncedSearchQuery }
+    }
+  ], [currentPage, pageSize, sortColumn, sortDirection, filters, debouncedSearchQuery]);
+
+  // Query funksiyasını useCallback ilə optimallaşdırırıq
+  const queryFn = useCallback(async () => {
+    logger.info('Fetching sectors with params', { 
+      pagination: { page: currentPage, pageSize },
+      sort: { column: sortColumn, direction: sortDirection },
+      filters: { ...filters, searchQuery: debouncedSearchQuery }
+    });
+    
+    try {
+      return await getSectors(
+        { page: currentPage, pageSize },
+        { column: sortColumn, direction: sortDirection },
+        { ...filters, searchQuery: debouncedSearchQuery }
+      );
+    } catch (err) {
+      logger.error('Error fetching sectors', err);
+      throw err;
+    }
+  }, [currentPage, pageSize, sortColumn, sortDirection, filters, debouncedSearchQuery, logger]);
+
+  // Yüklənmə vəziyyəti üçün skeleton komponent - useMemo ilə optimallaşdırılıb
+  const LoadingSkeleton = useMemo(() => {
+    return () => (
+      <div className="space-y-2">
+        {Array(CONSTANTS.PAGE_SIZE).fill(0).map((_, i) => (
+          <div key={i} className="h-12 bg-gray-200 animate-pulse rounded-md" />
+        ))}
+      </div>
+    );
+  }, []);
+
+  // Performans monitorinqi ilə genişləndirilmiş React Query hook
   const { 
     data: sectorsResponse, 
     isLoading, 
     isError, 
     error,
     refetch,
-    status
-  } = useQuery({
-    queryKey: ['sectors', currentPage, pageSize, sortColumn, sortDirection, filters, searchQuery],
-    queryFn: async () => {
-      logger.info('Fetching sectors with params', { 
-        pagination: { page: currentPage, pageSize },
-        sort: { column: sortColumn, direction: sortDirection },
-        filters: { ...filters, searchQuery }
-      });
-      
-      try {
-        const response = await getSectors(
-          { page: currentPage, pageSize },
-          { column: sortColumn, direction: sortDirection },
-          { ...filters, searchQuery }
-        );
-        
-        logger.info('Sectors fetched successfully', {
-          count: response?.count || 0,
-          dataLength: response?.data?.length || 0
-        });
-        
-        return response;
-      } catch (err) {
-        logger.error('Error fetching sectors', err);
-        throw err;
-      }
-    },
-    staleTime: 30000, // 30 seconds - increased to reduce frequent refetches
-    retry: 1, // Reduced retry count to avoid excessive requests on failure
+    status,
+    isFetching
+  } = useQueryWithPerformance('getSectors', {
+    queryKey,
+    queryFn,
+    staleTime: CONSTANTS.STALE_TIME,
+    gcTime: CONSTANTS.CACHE_TIME, // cacheTime əvəzinə gcTime istifadə edilir
+    retry: 2, // Retry sayını artırırıq
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Eksponensial gecikmə ilə yenidən cəhd
+    refetchOnWindowFocus: false, // Pəncərə fokusunda avtomatik yeniləməni söndürmək
+    placeholderData: (previousData) => previousData, // keepPreviousData əvəzinə placeholderData istifadə edilir
   });
 
-  // Log data status changes
+  // Xəta və status dəyişliklərini izləmək
   useEffect(() => {
     logger.info(`Query status changed: ${status}`, {
       hasData: !!sectorsResponse,
@@ -95,74 +144,89 @@ export const SectorsOverview = () => {
     if (isError && error) {
       logger.error('Error fetching sectors', error);
       
-      toast({
-        title: "Sektor məlumatları yüklənərkən xəta baş verdi",
-        description: error instanceof Error ? error.message : 'Naməlum xəta',
-        variant: "destructive",
-      });
+      // Bağlantı xətasını yoxlayaq
+      checkConnection()
+        .then(isConnected => {
+          if (!isConnected) {
+            toast({
+              title: "Supabase bağlantısı mövcud deyil",
+              description: "Serverin bağlantısını yoxlayın və yenidən cəhd edin",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Sektor məlumatları yüklənərkən xəta baş verdi",
+              description: error instanceof Error ? error.message : 'Naməlum xəta',
+              variant: "destructive",
+            });
+          }
+        });
     }
-  }, [status, sectorsResponse, isLoading, isError, error, toast]);
+  }, [status, sectorsResponse, isLoading, isError, error, toast, logger]);
 
-  // Handle search input changes with debounce
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setSearchQuery(newValue);
-  };
+  // Event handler'ları useCallback ilə optimallaşdırırıq
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  }, []);
 
-  // Handle filter application
-  const handleApplyFilters = (newFilters: FilterParams) => {
+  const handleApplyFilters = useCallback((newFilters: FilterParams) => {
     logger.info('Applying new filters', { 
       previousFilters: filters,
       newFilters 
     });
     
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(CONSTANTS.INITIAL_PAGE); // Reset to first page when filters change
     setShowFilters(false);
-  };
+  }, [filters, logger]);
 
-  // Handle sorting change
-  const handleSortChange = (column: string) => {
+  const handleSortChange = useCallback((column: string) => {
     logger.info(`Sorting changed: column=${column}, current=${sortColumn}, direction=${sortDirection}`);
     
-    if (sortColumn === column) {
-      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-      setSortDirection(newDirection);
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
-  };
+    setSortColumn(prevColumn => {
+      if (prevColumn === column) {
+        // Direction dəyişir əgər eyni sütundursa
+        setSortDirection(prevDirection => prevDirection === 'asc' ? 'desc' : 'asc');
+        return prevColumn;
+      } else {
+        // Yeni sütun, standard 'asc' yönü
+        setSortDirection('asc');
+        return column;
+      }
+    });
+  }, [sortColumn, sortDirection, logger]);
 
-  // Handle refresh with proper loading state
-  const handleRefresh = () => {
+  // Yeniləmə, toast ilə birlikdə
+  const handleRefresh = useCallback(() => {
     logger.info('Manual refresh triggered');
     
     // Show loading toast
-    toast({
+    const toastId = toast({
       title: "Məlumatlar yenilənir",
       description: "Sektor siyahısı yenilənir...",
     });
     
     // Force refetch with invalidation
     queryClient.invalidateQueries({ queryKey: ['sectors'] });
-    refetch().then(() => {
-      toast({
-        title: "Məlumatlar yeniləndi",
-        description: "Sektor siyahısı uğurla yeniləndi",
+    refetch()
+      .then(() => {
+        toast({
+          title: "Məlumatlar yeniləndi",
+          description: "Sektor siyahısı uğurla yeniləndi",
+        });
+      })
+      .catch(err => {
+        logger.error('Error during manual refresh', err);
+        toast({
+          title: "Yeniləmə zamanı xəta",
+          description: err instanceof Error ? err.message : 'Naməlum xəta',
+          variant: "destructive",
+        });
       });
-    }).catch(err => {
-      logger.error('Error during manual refresh', err);
-      toast({
-        title: "Yeniləmə zamanı xəta",
-        description: err instanceof Error ? err.message : 'Naməlum xəta',
-        variant: "destructive",
-      });
-    });
-  };
+  }, [queryClient, refetch, toast, logger]);
 
-  // Handle export with proper data validation
-  const handleExport = () => {
+  // Data export funksiyası
+  const handleExport = useCallback(() => {
     if (!sectorsResponse || !sectorsResponse.data || sectorsResponse.data.length === 0) {
       logger.warn('Export attempted with no data');
       toast({
@@ -182,7 +246,9 @@ export const SectorsOverview = () => {
         'Region': sector.regionName || '',
         'Məktəb sayı': sector.schoolCount || 0,
         'Doldurma faizi': `${sector.completionRate || 0}%`,
-        'Yaradılma tarixi': sector.created_at ? new Date(sector.created_at).toLocaleDateString('az-AZ') : 'N/A'
+        'Yaradılma tarixi': sector.created_at 
+          ? new Date(sector.created_at).toLocaleDateString('az-AZ') 
+          : 'N/A'
       }));
 
       fileExport({
@@ -203,22 +269,69 @@ export const SectorsOverview = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [sectorsResponse, toast, logger]);
 
-  // Handle import (placeholder for now)
-  const handleImport = () => {
+  // Import funksiyası (hələ implementasiya edilməyib)
+  const handleImport = useCallback(() => {
     logger.info('Import function triggered (not implemented)');
     toast({
       title: "İdxal funksiyası",
       description: "Bu funksiya hazırda işləmə mərhələsindədir",
     });
-  };
+  }, [toast, logger]);
 
-  // Simplified JSX structure
+  // Supabase bağlantısını yoxlamaq üçün funksiya
+  const testSupabaseConnection = useCallback(async () => {
+    logger.info('Testing Supabase connection');
+    
+    toast({
+      title: "Supabase bağlantısı yoxlanılır",
+      description: "Zəhmət olmasa gözləyin...",
+    });
+    
+    try {
+      const isConnected = await checkConnection();
+      
+      if (isConnected) {
+        logger.info('Supabase connection test successful');
+        toast({
+          title: "Bağlantı uğurludur",
+          description: "Supabase ilə bağlantı uğurla quruldu",
+        });
+      } else {
+        logger.error('Supabase connection test failed');
+        toast({
+          title: "Bağlantı xətası",
+          description: "Supabase ilə bağlantı qurula bilmədi",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      logger.error('Error during Supabase connection test', error);
+      toast({
+        title: "Bağlantı xətası",
+        description: error instanceof Error ? error.message : "Naməlum xəta",
+        variant: "destructive",
+      });
+    }
+  }, [toast, logger]);
+
+  // Yeni sektor yaratmaq üçün modal açma
+  const handleCreateSectorSuccess = useCallback(() => {
+    logger.info('New sector created successfully, invalidating query cache');
+    queryClient.invalidateQueries({ queryKey: ['sectors'] });
+    setIsCreateModalOpen(false);
+    toast({
+      title: "Sektor uğurla yaradıldı",
+      description: "Yeni sektor məlumatları sistemə əlavə edildi",
+    });
+  }, [queryClient, toast, logger]);
+
+  // JSX strukturu - daha yaxşı təşkil edilmiş
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
+      <div className="flex flex-col md:flex-row justify-between gap-4">
         {/* Search */}
         <div className="relative flex-1">
           <Input
@@ -226,6 +339,7 @@ export const SectorsOverview = () => {
             value={searchQuery}
             onChange={handleSearchChange}
             className="pl-10"
+            aria-label="Sektorlar üzrə axtarış"
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-infoline-dark-gray">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
@@ -237,11 +351,13 @@ export const SectorsOverview = () => {
         </div>
         
         {/* Action buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-end">
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
             onClick={() => setShowFilters(!showFilters)}
+            aria-expanded={showFilters}
+            aria-label="Filter göstər/gizlət"
           >
             <Filter size={16} />
             Filtrlər
@@ -252,6 +368,7 @@ export const SectorsOverview = () => {
             className="flex items-center gap-2"
             onClick={handleRefresh}
             disabled={isLoading}
+            aria-label="Məlumatları yenilə"
           >
             <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} />
             Yenilə
@@ -260,8 +377,19 @@ export const SectorsOverview = () => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
+            onClick={testSupabaseConnection}
+            aria-label="Bağlantını yoxla"
+          >
+            <AlertTriangle size={16} />
+            Bağlantını yoxla
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
             onClick={handleExport}
             disabled={isLoading || !sectorsResponse?.data?.length}
+            aria-label="Məlumatları ixrac et"
           >
             <Download size={16} />
             İxrac et
@@ -271,6 +399,7 @@ export const SectorsOverview = () => {
             variant="outline" 
             className="flex items-center gap-2"
             onClick={handleImport}
+            aria-label="Məlumatları idxal et"
           >
             <Upload size={16} />
             İdxal et
@@ -279,6 +408,7 @@ export const SectorsOverview = () => {
           <Button 
             className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2"
             onClick={() => setIsCreateModalOpen(true)}
+            aria-label="Yeni sektor əlavə et"
           >
             <Plus size={16} />
             Yeni Sektor
@@ -296,34 +426,31 @@ export const SectorsOverview = () => {
       )}
       
       {/* Table component */}
-      <SectorTable 
-        sectors={sectorsResponse?.data || []}
-        isLoading={isLoading}
-        isError={isError}
-        errorDetails={error instanceof Error ? error.message : 'Unknown error'} 
-        totalCount={sectorsResponse?.count || 0}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        setCurrentPage={setCurrentPage}
-        sortColumn={sortColumn}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
-        onRefresh={refetch}
-      />
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : (
+        <SectorTable 
+          sectors={sectorsResponse?.data || []}
+          isLoading={false} // Skeleton istifadə etdiyimiz üçün isLoading=false veririk
+          isError={isError}
+          errorDetails={error instanceof Error ? error.message : 'Naməlum xəta'} 
+          totalCount={sectorsResponse?.count || 0}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          setCurrentPage={setCurrentPage}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
+          onRefresh={refetch}
+        />
+      )}
       
       {/* Create sector modal */}
       <SectorModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
         mode="create"
-        onSuccess={() => {
-          logger.info('New sector created successfully, invalidating query cache');
-          queryClient.invalidateQueries({ queryKey: ['sectors'] });
-          toast({
-            title: "Sektor uğurla yaradıldı",
-            description: "Yeni sektor məlumatları sistemə əlavə edildi",
-          });
-        }}
+        onSuccess={handleCreateSectorSuccess}
       />
     </div>
   );
