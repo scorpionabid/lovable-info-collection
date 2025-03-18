@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { getSimplifiedTableQuery } from './utils/typeHelpers';
@@ -103,8 +102,7 @@ const reportService = {
       query = query.lte('created_at', filters.endDate);
     }
     
-    // As Supabase's PostgrestFilterBuilder doesn't have a direct group method,
-    // we need to adapt our approach for getting grouped data
+    // Execute the query
     const { data, error, count } = await query;
     
     if (error) throw error;
@@ -120,18 +118,23 @@ const reportService = {
         
         // Type guard to ensure item is an object with a status property
         if (typeof item === 'object' && item !== null && 'status' in item) {
+          // Now TypeScript knows item is a non-null object with a status property
           const status = String(item.status) || 'unknown';
           
           if (!statusGroups[status]) {
             statusGroups[status] = [];
           }
+          // Since we've verified item is not null, we can safely push it
           statusGroups[status].push(item);
         } else {
           // If item doesn't have a status property, categorize as unknown
           if (!statusGroups['unknown']) {
             statusGroups['unknown'] = [];
           }
-          statusGroups['unknown'].push(item);
+          // Ensure item is not null before pushing
+          if (item !== null) {
+            statusGroups['unknown'].push(item);
+          }
         }
       });
     }
@@ -266,3 +269,4 @@ const reportService = {
 };
 
 export default reportService;
+
