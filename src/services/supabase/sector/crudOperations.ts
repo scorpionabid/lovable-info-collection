@@ -1,4 +1,5 @@
 
+import { PostgrestError } from '@supabase/supabase-js';
 import { supabase, withRetry } from '@/integrations/supabase/client';
 import { SectorData, SectorWithStats } from './types';
 import { logger } from '@/utils/logger';

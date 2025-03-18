@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { FilterParams } from '@/services/supabase/sectorService';
+import { FilterParams } from '@/services/supabase/sector/types';
 import sectorService from '@/services/supabase/sectorService';
 
 interface SectorFilterPanelProps {

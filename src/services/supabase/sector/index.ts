@@ -1,6 +1,7 @@
 
 import { SectorWithStats, SortParams, FilterParams, PaginationParams, SectorData } from './types';
 import { supabase, withRetry } from '@/integrations/supabase/client';
+import { PostgrestError } from '@supabase/supabase-js';
 import { logger } from '@/utils/logger';
 import { measurePerformance } from '@/utils/performanceMonitor';
 

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,7 +18,7 @@ import {
 import { SectorSchoolTable } from './SectorSchoolTable';
 import { SectorModal } from './SectorModal';
 import { useToast } from "@/hooks/use-toast";
-import { SectorWithStats } from '@/services/supabase/sectorService';
+import { SectorWithStats } from '@/services/supabase/sector/types';
 
 interface SectorDetailProps {
   sector: SectorWithStats & { userCount?: number; regionName?: string };
