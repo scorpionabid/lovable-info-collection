@@ -1,3 +1,4 @@
+
 import { useQuery, UseQueryOptions, UseQueryResult, QueryFunction } from '@tanstack/react-query';
 import { performanceMonitor } from '@/utils/performanceMonitor';
 import { useLogger } from './useLogger';
@@ -28,16 +29,23 @@ export function useQueryWithPerformance<
   if (originalQueryFn) {
     options.queryFn = async (context) => {
       try {
-        // Sorğunu performans monitorinqi ilə icra edirik
-        return await performanceMonitor.measure(
-          `query:${queryName}`,
-          async () => {
-            return await originalQueryFn(context);
-          },
-          {
-            queryKey: options.queryKey,
-          }
-        );
+        // Add timeout protection for queries
+        const result = await Promise.race([
+          performanceMonitor.measure(
+            `query:${queryName}`,
+            async () => {
+              return await originalQueryFn(context);
+            },
+            {
+              queryKey: options.queryKey,
+            }
+          ),
+          new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error(`Query '${queryName}' timeout (30s)`)), 30000);
+          })
+        ]);
+        
+        return result;
       } catch (error) {
         // Xətanı loqa yazırıq
         logger.error(`Error in query ${queryName}`, { error });
@@ -46,11 +54,18 @@ export function useQueryWithPerformance<
     };
   }
   
-  // Sorğu tamamlandıqda və ya xəta baş verdikdə loqa yazmaq üçün
-  // React Query-nin callback funksiyalarını əhatə edə bilmərik,
-  // çünki bu funksiyalar UseQueryOptions tipində mövcud deyil.
-  // Bunun əvəzinə, sorğunun nəticəsini izləmək üçün useEffect istifadə edəcəyik
-  // Bu, SectorsOverview komponentində artıq mövcuddur.
+  // Apply some reasonable defaults if not specified
+  if (options.retry === undefined) {
+    options.retry = 1;
+  }
+  
+  if (options.refetchOnWindowFocus === undefined) {
+    options.refetchOnWindowFocus = false;
+  }
+  
+  if (options.staleTime === undefined) {
+    options.staleTime = 5 * 60 * 1000; // 5 minutes
+  }
   
   // Standart useQuery funksiyasını çağırırıq
   return useQuery<TQueryFnData, TError, TData, TQueryKey>(options);

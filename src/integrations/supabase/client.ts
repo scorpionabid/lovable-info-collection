@@ -15,7 +15,20 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     detectSessionInUrl: true
   },
   global: {
-    fetch: fetch.bind(globalThis),
+    fetch: (...args) => {
+      // Add fetch timeout to prevent hanging requests
+      const fetchWithTimeout = async (resource: RequestInfo, options: RequestInit = {}) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const response = await fetch(resource, {
+          ...options,
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+      };
+      return fetchWithTimeout(args[0] as RequestInfo, args[1] as RequestInit);
+    },
     headers: { 'x-application-name': 'infoLine' }
   },
   db: {
@@ -23,7 +36,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   },
   realtime: {
     params: {
-      eventsPerSecond: 5 // Azaldılmış realtime events limiti
+      eventsPerSecond: 1 // Reduce realtime events limit
     }
   }
 });
@@ -33,22 +46,18 @@ supabase.auth.onAuthStateChange((event, session) => {
   logger.info('Supabase auth event:', {event, isAuthenticated: !!session});
 });
 
-// Check connection health with timeout
+// Improved connection check with proper timeout management
 export const checkConnection = async (): Promise<boolean> => {
   try {
     const start = Date.now();
     
-    // Timeout promise for faster feedback
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Connection check timeout (3s)')), 3000);
-    });
+    // Simple query to check connection
+    const { data, error } = await supabase
+      .from('regions')
+      .select('id, name')
+      .limit(1)
+      .maybeSingle();
     
-    // Minimal query for connection check
-    const queryPromise = supabase.from('sectors').select('count', { head: true, count: 'exact' }).limit(1);
-    
-    // Race between query and timeout
-    await Promise.race([queryPromise, timeoutPromise]);
-    const { error } = await queryPromise;
     const duration = Date.now() - start;
     
     if (error) {
@@ -56,7 +65,7 @@ export const checkConnection = async (): Promise<boolean> => {
       return false;
     }
     
-    logger.info('Supabase connection check successful', { duration });
+    logger.info('Supabase connection check successful', { duration, hasData: !!data });
     return true;
   } catch (err) {
     logger.error('Supabase connection exception', { error: err });
@@ -64,11 +73,11 @@ export const checkConnection = async (): Promise<boolean> => {
   }
 };
 
-// Configure retry logic
+// Simplified retry logic with better error handling
 export const withRetry = async <T>(
   queryFn: () => Promise<T>, 
-  maxRetries = 3, 
-  initialRetryDelay = 500
+  maxRetries = 2, 
+  initialRetryDelay = 1000
 ): Promise<T> => {
   let retries = 0;
   let lastError: any;
@@ -79,13 +88,7 @@ export const withRetry = async <T>(
         logger.info(`Retry attempt ${retries}/${maxRetries}`);
       }
       
-      const result = await queryFn();
-      
-      if (retries > 0) {
-        logger.info(`Retry successful after ${retries} attempts`);
-      }
-      
-      return result;
+      return await queryFn();
     } catch (error) {
       lastError = error;
       
@@ -97,7 +100,7 @@ export const withRetry = async <T>(
       retries++;
       
       // Calculate exponential backoff with jitter
-      const delay = initialRetryDelay * Math.pow(2, retries - 1) * (0.5 + Math.random() * 0.5);
+      const delay = initialRetryDelay * Math.pow(1.5, retries - 1) * (0.9 + Math.random() * 0.2);
       
       logger.warn(`Query failed, retrying in ${Math.round(delay)}ms`, {
         error,
