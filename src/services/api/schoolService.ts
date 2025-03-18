@@ -5,15 +5,17 @@ import { Tables } from '@/integrations/supabase/types';
 export interface SchoolData {
   id?: string;
   name: string;
-  code: string;
-  address: string;
-  phone: string;
-  email: string;
+  address?: string;
+  phone?: string;
+  email?: string;
   website?: string;
-  region_id: string;
-  sector_id: string;
-  type_id: string;
-  status: 'active' | 'inactive';
+  region_id?: string;
+  sector_id?: string;
+  type_id?: string;
+  status?: 'active' | 'inactive';
+  director?: string;
+  student_count?: number;
+  teacher_count?: number;
 }
 
 export interface SchoolFilter {
@@ -46,7 +48,7 @@ const buildQuery = (query: any, filters: SchoolFilter) => {
   }
   
   if (filters.search) {
-    modifiedQuery = modifiedQuery.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%`);
+    modifiedQuery = modifiedQuery.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
   }
   
   return modifiedQuery;
@@ -132,19 +134,17 @@ const schoolService = {
       
     if (uploadError) throw uploadError;
     
-    // Trigger processing function (can be implemented as Edge Function in Supabase)
-    const { error: processError } = await supabase.functions.invoke('process-school-import', {
-      body: { filePath: fileName }
-    });
-    
-    if (processError) throw processError;
-    
-    return { success: true, message: 'File uploaded and processing started' };
+    // Instead of using edge functions which we can't access directly,
+    // return the file path for further processing
+    return { 
+      success: true, 
+      message: 'File uploaded successfully', 
+      filePath: fileName 
+    };
   },
   
   exportSchools: async (filters: SchoolFilter = {}) => {
-    // This would typically generate a file with school data
-    // For now, we'll just fetch the data that would be exported
+    // Fetch the data directly for export
     let query = supabase
       .from('schools')
       .select('*');
@@ -156,7 +156,6 @@ const schoolService = {
     
     if (error) throw error;
     
-    // In a real implementation, this might return a file or trigger a download
     return data;
   }
 };

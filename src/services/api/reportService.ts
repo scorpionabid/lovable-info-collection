@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface ReportFilter {
   regionId?: string;
@@ -14,86 +15,212 @@ export interface ReportFilter {
 const reportService = {
   getDashboardData: async () => {
     // Get summary statistics for dashboard
-    const { data: stats, error: statsError } = await supabase.rpc('get_dashboard_statistics');
+    // Since we can't use RPC, let's get basic statistics directly
     
-    if (statsError) throw statsError;
+    // Get total counts of key entities
+    const [regionsResult, sectorsResult, schoolsResult, categoriesResult, activitiesResult] = await Promise.all([
+      supabase.from('regions').select('id', { count: 'exact' }),
+      supabase.from('sectors').select('id', { count: 'exact' }),
+      supabase.from('schools').select('id', { count: 'exact' }),
+      supabase.from('categories').select('id', { count: 'exact' }),
+      supabase.from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5)
+    ]);
     
-    // Get recent activity
-    const { data: activities, error: activitiesError } = await supabase
-      .from('audit_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5);
+    // Handle potential errors
+    if (regionsResult.error) throw regionsResult.error;
+    if (sectorsResult.error) throw sectorsResult.error;
+    if (schoolsResult.error) throw schoolsResult.error;
+    if (categoriesResult.error) throw categoriesResult.error;
+    if (activitiesResult.error) throw activitiesResult.error;
     
-    if (activitiesError) throw activitiesError;
+    // Create a stats object similar to what the RPC would have returned
+    const stats = {
+      regions_count: regionsResult.count || 0,
+      sectors_count: sectorsResult.count || 0,
+      schools_count: schoolsResult.count || 0,
+      categories_count: categoriesResult.count || 0,
+      completion_rate: 0 // Calculating this would require additional queries
+    };
     
     return {
       stats,
-      activities
+      activities: activitiesResult.data
     };
   },
   
   getCompletionStats: async (filters: ReportFilter = {}) => {
-    // Build filters for RPC call
-    const filterParams: Record<string, any> = {};
+    // Build query to get completion statistics based on filters
+    let query = supabase.from('data')
+      .select('category_id, school_id, status, count(*)', { count: 'exact' });
     
-    if (filters.regionId) filterParams.p_region_id = filters.regionId;
-    if (filters.sectorId) filterParams.p_sector_id = filters.sectorId;
-    if (filters.schoolId) filterParams.p_school_id = filters.schoolId;
-    if (filters.categoryId) filterParams.p_category_id = filters.categoryId;
-    if (filters.startDate) filterParams.p_start_date = filters.startDate;
-    if (filters.endDate) filterParams.p_end_date = filters.endDate;
+    // Apply filters
+    if (filters.regionId) {
+      const schoolsInRegion = await supabase
+        .from('schools')
+        .select('id')
+        .eq('region_id', filters.regionId);
+      
+      if (schoolsInRegion.error) throw schoolsInRegion.error;
+      const schoolIds = schoolsInRegion.data.map(s => s.id);
+      
+      if (schoolIds.length > 0) {
+        query = query.in('school_id', schoolIds);
+      }
+    }
     
-    // Call Supabase function to get completion statistics
-    const { data, error } = await supabase.rpc(
-      'get_completion_statistics', 
-      filterParams
-    );
+    if (filters.sectorId) {
+      const schoolsInSector = await supabase
+        .from('schools')
+        .select('id')
+        .eq('sector_id', filters.sectorId);
+      
+      if (schoolsInSector.error) throw schoolsInSector.error;
+      const schoolIds = schoolsInSector.data.map(s => s.id);
+      
+      if (schoolIds.length > 0) {
+        query = query.in('school_id', schoolIds);
+      }
+    }
+    
+    if (filters.schoolId) {
+      query = query.eq('school_id', filters.schoolId);
+    }
+    
+    if (filters.categoryId) {
+      query = query.eq('category_id', filters.categoryId);
+    }
+    
+    if (filters.startDate) {
+      query = query.gte('created_at', filters.startDate);
+    }
+    
+    if (filters.endDate) {
+      query = query.lte('created_at', filters.endDate);
+    }
+    
+    // Group by status
+    query = query.group('category_id, school_id, status');
+    
+    const { data, error } = await query;
     
     if (error) throw error;
-    return data;
+    
+    // Transform the data to match the expected format
+    const result = {
+      completion_by_status: data || [],
+      total_entries: data?.length || 0
+    };
+    
+    return result;
   },
   
   getComparisonData: async (filters: ReportFilter = {}) => {
-    // Build filters for RPC call
-    const filterParams: Record<string, any> = {};
+    // For comparison data, we need to build a query based on groupBy
+    let queryTable = 'data';
+    let selectFields = 'id, category_id, school_id, status';
     
-    if (filters.regionId) filterParams.p_region_id = filters.regionId;
-    if (filters.sectorId) filterParams.p_sector_id = filters.sectorId;
-    if (filters.schoolId) filterParams.p_school_id = filters.schoolId;
-    if (filters.categoryId) filterParams.p_category_id = filters.categoryId;
-    if (filters.startDate) filterParams.p_start_date = filters.startDate;
-    if (filters.endDate) filterParams.p_end_date = filters.endDate;
-    if (filters.groupBy) filterParams.p_group_by = filters.groupBy;
+    if (filters.groupBy === 'region') {
+      queryTable = 'schools';
+      selectFields = 'id, name, region_id';
+    } else if (filters.groupBy === 'sector') {
+      queryTable = 'schools';
+      selectFields = 'id, name, sector_id';
+    } else if (filters.groupBy === 'category') {
+      queryTable = 'categories';
+      selectFields = 'id, name';
+    }
     
-    // Call Supabase function to get comparison data
-    const { data, error } = await supabase.rpc(
-      'get_comparison_data', 
-      filterParams
-    );
+    const { data, error } = await supabase
+      .from(queryTable)
+      .select(selectFields);
     
     if (error) throw error;
-    return data;
+    
+    // Transform the data to match the expected format
+    // This is a simplified version and would need more complex processing
+    // for a complete implementation
+    return data || [];
   },
   
   exportReport: async (reportType: string, filters: ReportFilter = {}) => {
-    // This would typically generate a report file
-    // Since file generation is complex, we'll use an RPC function
-    const filterParams: Record<string, any> = {
-      p_report_type: reportType,
-      ...filters
-    };
+    // For export functionality, we need to gather the appropriate data
+    // Let's implement a simple version
     
-    // Call Supabase function to generate report
-    const { data, error } = await supabase.rpc(
-      'generate_report_file', 
-      filterParams
-    );
+    let query;
+    
+    if (reportType === 'completion') {
+      query = supabase.from('data')
+        .select(`
+          id,
+          category_id,
+          school_id,
+          status,
+          created_at,
+          updated_at,
+          schools(name),
+          categories(name)
+        `);
+    } else if (reportType === 'comparison') {
+      query = supabase.from('data')
+        .select(`
+          id,
+          category_id,
+          school_id,
+          status,
+          data,
+          schools(name, region_id, sector_id),
+          categories(name)
+        `);
+    } else {
+      throw new Error('Unsupported report type');
+    }
+    
+    // Apply filters
+    if (filters.regionId) {
+      const schoolsInRegion = await supabase
+        .from('schools')
+        .select('id')
+        .eq('region_id', filters.regionId);
+      
+      if (schoolsInRegion.error) throw schoolsInRegion.error;
+      const schoolIds = schoolsInRegion.data.map(s => s.id);
+      
+      if (schoolIds.length > 0) {
+        query = query.in('school_id', schoolIds);
+      }
+    }
+    
+    if (filters.sectorId) {
+      const schoolsInSector = await supabase
+        .from('schools')
+        .select('id')
+        .eq('sector_id', filters.sectorId);
+      
+      if (schoolsInSector.error) throw schoolsInSector.error;
+      const schoolIds = schoolsInSector.data.map(s => s.id);
+      
+      if (schoolIds.length > 0) {
+        query = query.in('school_id', schoolIds);
+      }
+    }
+    
+    if (filters.schoolId) {
+      query = query.eq('school_id', filters.schoolId);
+    }
+    
+    if (filters.categoryId) {
+      query = query.eq('category_id', filters.categoryId);
+    }
+    
+    const { data, error } = await query;
     
     if (error) throw error;
     
-    // In a real implementation, this might return a file URL or trigger a download
-    return data;
+    // Return the data for export processing
+    return data || [];
   }
 };
 

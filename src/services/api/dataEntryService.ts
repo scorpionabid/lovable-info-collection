@@ -10,7 +10,7 @@ export interface DataEntryFilter {
 const dataEntryService = {
   getData: async (categoryId: string, schoolId: string) => {
     const { data, error } = await supabase
-      .from('data_entries')
+      .from('data')
       .select('*')
       .eq('category_id', categoryId)
       .eq('school_id', schoolId);
@@ -22,7 +22,7 @@ const dataEntryService = {
   submitData: async (categoryId: string, schoolId: string, formData: Record<string, any>) => {
     // Create a new data entry
     const { data, error } = await supabase
-      .from('data_entries')
+      .from('data')
       .insert({
         category_id: categoryId,
         school_id: schoolId,
@@ -38,7 +38,7 @@ const dataEntryService = {
   
   updateData: async (dataId: string, formData: Record<string, any>) => {
     const { data, error } = await supabase
-      .from('data_entries')
+      .from('data')
       .update({ data: formData })
       .eq('id', dataId)
       .select()
@@ -74,22 +74,21 @@ const dataEntryService = {
       
     if (uploadError) throw uploadError;
     
-    // Trigger processing function (can be implemented as Edge Function in Supabase)
-    const { error: processError } = await supabase.functions.invoke('process-data-import', {
-      body: { filePath: fileName }
-    });
-    
-    if (processError) throw processError;
-    
-    return { success: true, message: 'File uploaded and processing started' };
+    // We can't directly call an Edge Function as in the original code
+    // Instead, return the file path for further processing
+    return { 
+      success: true, 
+      message: 'File uploaded successfully', 
+      filePath: fileName 
+    };
   },
   
   getHistory: async (dataId: string) => {
     const { data, error } = await supabase
-      .from('data_entry_history')
+      .from('data_history')
       .select('*')
-      .eq('data_entry_id', dataId)
-      .order('created_at', { ascending: false });
+      .eq('data_id', dataId)
+      .order('changed_at', { ascending: false });
       
     if (error) throw error;
     return data;
