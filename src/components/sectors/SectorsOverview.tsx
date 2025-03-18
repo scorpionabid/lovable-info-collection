@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SectorTable } from './SectorTable';
@@ -78,7 +79,7 @@ export const SectorsOverview = () => {
         throw err;
       }
     },
-    staleTime: 5000, // Reduced stale time for more frequent refreshes during development
+    staleTime: 30000, // 30 seconds - increased to reduce frequent refetches
     retry: 1, // Reduced retry count to avoid excessive requests on failure
   });
 

@@ -38,4 +38,5 @@ export interface FilterParams {
   dateFrom?: string;
   dateTo?: string;
   completionRate?: string;
+  archived?: string;
 }
