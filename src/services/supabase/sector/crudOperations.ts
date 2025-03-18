@@ -3,44 +3,39 @@ import { PostgrestError } from '@supabase/supabase-js';
 import { supabase, withRetry } from '@/integrations/supabase/client';
 import { SectorData, SectorWithStats } from './types';
 import { logger } from '@/utils/logger';
-import { getSectors } from './querySectors';
+import { measurePerformance } from '@/utils/performanceMonitor';
 
 // Create a logger for CRUD operations
-const sectorLogger = logger.createLogger('sectorCrudOperations');
+const sectorCrudLogger = logger.createLogger('sectorCrudOperations');
 
 /**
- * Create a new sector
+ * Yeni sektor yaratmaq
  */
 export const createSector = async (sectorData: SectorData): Promise<SectorWithStats> => {
-  const endpoint = 'sectors/createSector';
-  const startTime = Date.now();
-  const requestId = sectorLogger.apiRequest(endpoint, sectorData);
-
-  try {
-    // Use withRetry to handle potential connection issues
-    return await withRetry(async () => {
-      sectorLogger.info('Creating new sector', { name: sectorData.name, regionId: sectorData.region_id });
+  return measurePerformance('sectorService.createSector', async () => {
+    try {
+      sectorCrudLogger.info('Creating new sector', { name: sectorData.name, region_id: sectorData.region_id });
       
       // Insert the sector
-      const { data, error } = await supabase
-        .from('sectors')
-        .insert({
-          name: sectorData.name,
-          description: sectorData.description,
-          region_id: sectorData.region_id
-        })
-        .select('*, regions(id, name)')
-        .single();
+      const { data, error } = await withRetry(async () => {
+        return await supabase
+          .from('sectors')
+          .insert({
+            name: sectorData.name,
+            description: sectorData.description,
+            region_id: sectorData.region_id
+          })
+          .select('*, regions(id, name)')
+          .single();
+      });
       
       if (error) {
-        const duration = Date.now() - startTime;
-        sectorLogger.apiError(endpoint, error, requestId, sectorData);
+        sectorCrudLogger.error('Error creating sector', { error });
         throw error;
       }
 
       if (!data) {
-        const duration = Date.now() - startTime;
-        sectorLogger.error('No data returned after creating sector', { requestId, duration });
+        sectorCrudLogger.error('No data returned after creating sector');
         throw new Error('Failed to create sector: No data returned');
       }
 
@@ -52,30 +47,31 @@ export const createSector = async (sectorData: SectorData): Promise<SectorWithSt
         completionRate: 0
       };
 
-      const duration = Date.now() - startTime;
-      sectorLogger.apiResponse(endpoint, response, requestId, duration);
-      
+      sectorCrudLogger.info('Successfully created sector', { sectorId: response.id });
       return response;
-    });
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    sectorLogger.apiError(endpoint, error, requestId);
-    throw error;
-  }
+    } catch (error) {
+      const errorInfo: any = {
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+      
+      // Add PostgrestError details if available
+      if (error instanceof Object && 'details' in error) {
+        errorInfo.details = (error as PostgrestError).details;
+      }
+      
+      sectorCrudLogger.error('Error creating sector', { error: errorInfo });
+      throw error;
+    }
+  });
 };
 
 /**
- * Update an existing sector
+ * Mövcud sektoru yeniləmək
  */
 export const updateSector = async (id: string, sectorData: Partial<SectorData>): Promise<SectorWithStats> => {
-  const endpoint = `sectors/updateSector/${id}`;
-  const startTime = Date.now();
-  const requestId = sectorLogger.apiRequest(endpoint, { id, ...sectorData });
-
-  try {
-    // Use withRetry to handle potential connection issues
-    return await withRetry(async () => {
-      sectorLogger.info(`Updating sector ${id}`, sectorData);
+  return measurePerformance('sectorService.updateSector', async () => {
+    try {
+      sectorCrudLogger.info(`Updating sector ${id}`, sectorData);
       
       // Prepare update data
       const updateData: any = {};
@@ -84,22 +80,22 @@ export const updateSector = async (id: string, sectorData: Partial<SectorData>):
       if (sectorData.region_id !== undefined) updateData.region_id = sectorData.region_id;
 
       // Update the sector
-      const { data, error } = await supabase
-        .from('sectors')
-        .update(updateData)
-        .eq('id', id)
-        .select('*, regions(id, name)')
-        .single();
+      const { data, error } = await withRetry(async () => {
+        return await supabase
+          .from('sectors')
+          .update(updateData)
+          .eq('id', id)
+          .select('*, regions(id, name)')
+          .single();
+      });
       
       if (error) {
-        const duration = Date.now() - startTime;
-        sectorLogger.apiError(endpoint, error, requestId);
+        sectorCrudLogger.error(`Error updating sector ${id}`, { error });
         throw error;
       }
 
       if (!data) {
-        const duration = Date.now() - startTime;
-        sectorLogger.error('No data returned after updating sector', { requestId, duration });
+        sectorCrudLogger.error(`No data returned after updating sector ${id}`);
         throw new Error(`Failed to update sector ${id}: No data returned`);
       }
 
@@ -110,7 +106,7 @@ export const updateSector = async (id: string, sectorData: Partial<SectorData>):
         .eq('sector_id', id);
 
       if (schoolsError) {
-        sectorLogger.error(`Error fetching schools for sector ${id}`, schoolsError);
+        sectorCrudLogger.error(`Error fetching schools for sector ${id}`, schoolsError);
       }
 
       // Extract sector data with stats
@@ -121,84 +117,96 @@ export const updateSector = async (id: string, sectorData: Partial<SectorData>):
         completionRate: schoolsData?.length ? Math.floor(Math.random() * 30) + 65 : 0
       };
 
-      const duration = Date.now() - startTime;
-      sectorLogger.apiResponse(endpoint, response, requestId, duration);
-      
+      sectorCrudLogger.info(`Successfully updated sector ${id}`);
       return response;
-    });
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    sectorLogger.apiError(endpoint, error, requestId);
-    throw error;
-  }
+    } catch (error) {
+      const errorInfo: any = {
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+      
+      // Add PostgrestError details if available
+      if (error instanceof Object && 'details' in error) {
+        errorInfo.details = (error as PostgrestError).details;
+      }
+      
+      sectorCrudLogger.error(`Error updating sector ${id}`, { error: errorInfo });
+      throw error;
+    }
+  });
 };
 
 /**
- * Archive a sector (soft delete)
+ * Sektoru arxivləmək (yumşaq silmə)
  */
 export const archiveSector = async (id: string): Promise<void> => {
-  const endpoint = `sectors/archiveSector/${id}`;
-  const startTime = Date.now();
-  const requestId = sectorLogger.apiRequest(endpoint, { id });
-
-  try {
-    // Use withRetry to handle potential connection issues
-    await withRetry(async () => {
-      sectorLogger.info(`Archiving sector ${id}`);
+  return measurePerformance('sectorService.archiveSector', async () => {
+    try {
+      sectorCrudLogger.info(`Archiving sector ${id}`);
       
       // Update the sector to archived state
-      const { error } = await supabase
-        .from('sectors')
-        .update({ archived: true })
-        .eq('id', id);
+      const { error } = await withRetry(async () => {
+        return await supabase
+          .from('sectors')
+          .update({ archived: true })
+          .eq('id', id);
+      });
       
       if (error) {
-        const duration = Date.now() - startTime;
-        sectorLogger.apiError(endpoint, error, requestId);
+        sectorCrudLogger.error(`Error archiving sector ${id}`, { error });
         throw error;
       }
 
-      const duration = Date.now() - startTime;
-      sectorLogger.apiResponse(endpoint, { success: true, id }, requestId, duration);
-    });
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    sectorLogger.apiError(endpoint, error, requestId);
-    throw error;
-  }
+      sectorCrudLogger.info(`Successfully archived sector ${id}`);
+    } catch (error) {
+      const errorInfo: any = {
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+      
+      // Add PostgrestError details if available
+      if (error instanceof Object && 'details' in error) {
+        errorInfo.details = (error as PostgrestError).details;
+      }
+      
+      sectorCrudLogger.error(`Error archiving sector ${id}`, { error: errorInfo });
+      throw error;
+    }
+  });
 };
 
 /**
- * Permanently delete a sector (hard delete)
+ * Sektoru tamamilə silmək (sərt silmə)
  */
 export const deleteSector = async (id: string): Promise<void> => {
-  const endpoint = `sectors/deleteSector/${id}`;
-  const startTime = Date.now();
-  const requestId = sectorLogger.apiRequest(endpoint, { id });
-
-  try {
-    // Use withRetry to handle potential connection issues
-    await withRetry(async () => {
-      sectorLogger.info(`Deleting sector ${id}`);
+  return measurePerformance('sectorService.deleteSector', async () => {
+    try {
+      sectorCrudLogger.info(`Deleting sector ${id}`);
       
       // Delete the sector
-      const { error } = await supabase
-        .from('sectors')
-        .delete()
-        .eq('id', id);
+      const { error } = await withRetry(async () => {
+        return await supabase
+          .from('sectors')
+          .delete()
+          .eq('id', id);
+      });
       
       if (error) {
-        const duration = Date.now() - startTime;
-        sectorLogger.apiError(endpoint, error, requestId);
+        sectorCrudLogger.error(`Error deleting sector ${id}`, { error });
         throw error;
       }
 
-      const duration = Date.now() - startTime;
-      sectorLogger.apiResponse(endpoint, { success: true, id }, requestId, duration);
-    });
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    sectorLogger.apiError(endpoint, error, requestId);
-    throw error;
-  }
+      sectorCrudLogger.info(`Successfully deleted sector ${id}`);
+    } catch (error) {
+      const errorInfo: any = {
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
+      
+      // Add PostgrestError details if available
+      if (error instanceof Object && 'details' in error) {
+        errorInfo.details = (error as PostgrestError).details;
+      }
+      
+      sectorCrudLogger.error(`Error deleting sector ${id}`, { error: errorInfo });
+      throw error;
+    }
+  });
 };

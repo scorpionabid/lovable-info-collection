@@ -1,5 +1,5 @@
 
-// Import all the functions from the individual modules and re-export
+// Import all the functions from the sector module and re-export
 import * as sectorOperations from './sector';
 import { getRegionsForDropdown, getSectorsByRegionId } from './sector/helperFunctions';
 

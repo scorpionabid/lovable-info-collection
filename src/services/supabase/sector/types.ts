@@ -1,42 +1,63 @@
 
-import { Tables } from '@/integrations/supabase/types';
-
-export interface SectorData {
-  id?: string;
-  name: string;
-  description?: string;
-  region_id: string;  // region_id - Supabase DB ilə uyğunlaşdırılmış
-  created_at?: string;
-  updated_at?: string;
-  archived?: boolean;
+// Sorğu filtrləri
+export interface FilterParams {
+  searchQuery?: string;
+  regionId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  completionRate?: 'all' | 'high' | 'medium' | 'low';
+  archived?: string;
+  [key: string]: any; // Allow additional filter parameters
 }
 
-export interface SectorWithStats extends SectorData {
-  regions?: {
-    id: string;
-    name: string;
-  };
-  regionName: string;
-  schoolCount: number;
-  completionRate: number;
-}
-
-export interface PaginationParams {
-  page: number;
-  pageSize: number;
-}
-
+// Sıralama parametrləri
 export interface SortParams {
   column: string;
   direction: 'asc' | 'desc';
 }
 
-export interface FilterParams {
-  [key: string]: string | number | boolean | undefined;
-  searchQuery?: string;
-  regionId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  completionRate?: string;
-  archived?: string;
+// Səhifələmə parametrləri
+export interface PaginationParams {
+  page: number;
+  pageSize: number;
+}
+
+// Sektor yaratmaq üçün məlumatlar
+export interface SectorData {
+  name: string;
+  description?: string;
+  region_id: string;
+}
+
+// Cədvəl və UI üçün sektor məlumatları
+export interface SectorWithStats {
+  id: string;
+  name: string;
+  description: string;
+  region_id: string;
+  regionName: string;
+  created_at: string;
+  schoolCount: number;
+  completionRate: number;
+  archived: boolean;
+}
+
+// Sektor əlavə etmə nəticəsi
+export interface SectorCreationResult {
+  success: boolean;
+  data?: SectorWithStats;
+  error?: string;
+}
+
+// Sektor yeniləmə nəticəsi
+export interface SectorUpdateResult {
+  success: boolean;
+  data?: SectorWithStats;
+  error?: string;
+}
+
+// Sektor silmə nəticəsi
+export interface SectorDeletionResult {
+  success: boolean;
+  error?: string;
 }
