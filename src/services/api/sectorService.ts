@@ -1,8 +1,7 @@
-import api from './index';
-import { getSectors as getSupabaseSectors, getSectorById, getSectorSchools } from '@/services/supabase/sector/querySectors';
-import { createSector as createSupabaseSector, updateSector as updateSupabaseSector, deleteSector as deleteSupabaseSector } from '@/services/supabase/sector/crudOperations';
+
+import { getSectors, getSectorById, getSectorSchools, createSector, updateSector, deleteSector } from '@/services/supabase/sector';
+import { SectorWithStats } from '@/services/supabase/sector/types';
 import { logger } from '@/utils/logger';
-import { measurePerformance } from '@/utils/performanceMonitor';
 
 export interface SectorData {
   id?: string;
@@ -22,9 +21,9 @@ export interface SectorFilter {
 }
 
 /**
- * Sektor servisi - həm RESTful API, həm də birbaşa Supabase sorğularını dəstəkləyir
- * 
- * Əsas istifadə: sektorlar üçün CRUD əməliyyatları
+ * Sektor servisi - artıq birbaşa Supabase funksiyalarına müraciət edir
+ * Bu fayl köhnə kodun işləməsi üçün saxlanılır, amma birbaşa olaraq 
+ * "@/services/supabase/sector" istifadə etmək tövsiyə olunur
  */
 const sectorService = {
   /**
@@ -33,39 +32,29 @@ const sectorService = {
    * @returns Sektorlar siyahısı və ümumi say
    */
   getSectors: async (filters: SectorFilter = {}) => {
-    // Performans monitorinqi ilə əhatə edirik
-    return measurePerformance('sectorService.getSectors', async () => {
-      try {
-        // Birbaşa Supabase sorğusu istifadə et - getSectors artıq özü performans monitorinqi ilə əhatə olunub
-        const result = await getSupabaseSectors(
-          { 
-            page: filters.page || 1, 
-            pageSize: filters.limit || 10 
-          },
-          { 
-            column: filters.sortColumn || 'name', 
-            direction: filters.sortDirection || 'asc' 
-          },
-          { 
-            searchQuery: filters.search || '',
-            regionId: filters.regionId || '',
-            dateFrom: '',
-            dateTo: '',
-            completionRate: 'all'
-          }
-        );
-        
-        logger.info('sectorService.getSectors succeeded', { count: result.count });
-        return result;
-      } catch (error) {
-        logger.error('sectorService.getSectors failed', error);
-        
-        // Fallback olaraq RESTful API istifadə et
-        logger.info('Falling back to RESTful API call');
-        const response = await api.get('/sectors', { params: filters });
-        return response.data;
-      }
-    }, { filters });
+    try {
+      // Birbaşa Supabase sorğusu istifadə et
+      return await getSectors(
+        { 
+          page: filters.page || 1, 
+          pageSize: filters.limit || 10 
+        },
+        { 
+          column: filters.sortColumn || 'name', 
+          direction: filters.sortDirection || 'asc' 
+        },
+        { 
+          searchQuery: filters.search || '',
+          regionId: filters.regionId || '',
+          dateFrom: '',
+          dateTo: '',
+          completionRate: 'all'
+        }
+      );
+    } catch (error) {
+      logger.error('sectorService.getSectors failed', error);
+      throw error;
+    }
   },
   
   /**
@@ -74,26 +63,17 @@ const sectorService = {
    * @returns Yaradılmış sektor
    */
   createSector: async (sectorData: SectorData) => {
-    // Performans monitorinqi ilə əhatə edirik
-    return measurePerformance('sectorService.createSector', async () => {
-      try {
-        // Birbaşa Supabase sorğusu istifadə et
-        const result = await createSupabaseSector({
-          name: sectorData.name,
-          description: sectorData.description || '',
-          region_id: sectorData.regionId  // Convert regionId to region_id for Supabase
-        });
-        
-        logger.info('sectorService.createSector succeeded', { sectorId: result.id });
-        return result;
-      } catch (error) {
-        logger.error('sectorService.createSector failed', error);
-        
-        // Fallback olaraq RESTful API istifadə et
-        const response = await api.post('/sectors', sectorData);
-        return response.data;
-      }
-    }, { sectorData: { name: sectorData.name, regionId: sectorData.regionId } });
+    try {
+      // regionId -> region_id çevrilib Supabase sorğusu istifadə et
+      return await createSector({
+        name: sectorData.name,
+        description: sectorData.description || '',
+        region_id: sectorData.regionId  // Convert regionId to region_id for Supabase
+      });
+    } catch (error) {
+      logger.error('sectorService.createSector failed', error);
+      throw error;
+    }
   },
   
   /**
@@ -101,21 +81,13 @@ const sectorService = {
    * @param id Sektor ID
    * @returns Sektor məlumatları
    */
-  getSector: async (id: string) => {
-    // Performans monitorinqi ilə əhatə edirik
-    return measurePerformance('sectorService.getSector', async () => {
-      try {
-        // Birbaşa Supabase sorğusu istifadə et - getSectorById artıq özü performans monitorinqi ilə əhatə olunub
-        const result = await getSectorById(id);
-        return result;
-      } catch (error) {
-        logger.error('sectorService.getSector failed', error);
-        
-        // Fallback olaraq RESTful API istifadə et
-        const response = await api.get(`/sectors/${id}`);
-        return response.data;
-      }
-    }, { sectorId: id });
+  getSector: async (id: string): Promise<SectorWithStats> => {
+    try {
+      return await getSectorById(id);
+    } catch (error) {
+      logger.error('sectorService.getSector failed', error);
+      throw error;
+    }
   },
   
   /**
@@ -125,26 +97,17 @@ const sectorService = {
    * @returns Yenilənmiş sektor
    */
   updateSector: async (id: string, sectorData: Partial<SectorData>) => {
-    // Performans monitorinqi ilə əhatə edirik
-    return measurePerformance('sectorService.updateSector', async () => {
-      try {
-        // Birbaşa Supabase sorğusu istifadə et
-        const result = await updateSupabaseSector(id, {
-          name: sectorData.name,
-          description: sectorData.description,
-          region_id: sectorData.regionId  // Convert regionId to region_id for Supabase
-        });
-        
-        logger.info('sectorService.updateSector succeeded', { sectorId: id });
-        return result;
-      } catch (error) {
-        logger.error('sectorService.updateSector failed', error);
-        
-        // Fallback olaraq RESTful API istifadə et
-        const response = await api.put(`/sectors/${id}`, sectorData);
-        return response.data;
-      }
-    }, { sectorId: id, sectorData: { name: sectorData.name, regionId: sectorData.regionId } });
+    try {
+      // regionId -> region_id çevrilib Supabase sorğusu istifadə et
+      return await updateSector(id, {
+        name: sectorData.name,
+        description: sectorData.description,
+        region_id: sectorData.regionId  // Convert regionId to region_id for Supabase
+      });
+    } catch (error) {
+      logger.error('sectorService.updateSector failed', error);
+      throw error;
+    }
   },
   
   /**
@@ -153,22 +116,13 @@ const sectorService = {
    * @returns Silmə əməliyyatının nəticəsi
    */
   deleteSector: async (id: string) => {
-    // Performans monitorinqi ilə əhatə edirik
-    return measurePerformance('sectorService.deleteSector', async () => {
-      try {
-        // Birbaşa Supabase sorğusu istifadə et
-        const result = await deleteSupabaseSector(id);
-        
-        logger.info('sectorService.deleteSector succeeded', { sectorId: id });
-        return result;
-      } catch (error) {
-        logger.error('sectorService.deleteSector failed', error);
-        
-        // Fallback olaraq RESTful API istifadə et
-        const response = await api.delete(`/sectors/${id}`);
-        return response.data;
-      }
-    }, { sectorId: id });
+    try {
+      await deleteSector(id);
+      return { success: true };
+    } catch (error) {
+      logger.error('sectorService.deleteSector failed', error);
+      throw error;
+    }
   },
   
   /**
@@ -177,20 +131,12 @@ const sectorService = {
    * @returns Sektor məktəbləri
    */
   getSectorSchools: async (id: string) => {
-    // Performans monitorinqi ilə əhatə edirik
-    return measurePerformance('sectorService.getSectorSchools', async () => {
-      try {
-        // Birbaşa Supabase sorğusu istifadə et - getSectorSchools artıq özü performans monitorinqi ilə əhatə olunub
-        const result = await getSectorSchools(id);
-        return result;
-      } catch (error) {
-        logger.error('sectorService.getSectorSchools failed', error);
-        
-        // Fallback olaraq RESTful API istifadə et
-        const response = await api.get(`/sectors/${id}/schools`);
-        return response.data;
-      }
-    }, { sectorId: id });
+    try {
+      return await getSectorSchools(id);
+    } catch (error) {
+      logger.error('sectorService.getSectorSchools failed', error);
+      throw error;
+    }
   }
 };
 

@@ -5,7 +5,7 @@ export interface SectorData {
   id?: string;
   name: string;
   description?: string;
-  region_id: string;
+  region_id: string;  // region_id - Supabase DB ilə uyğunlaşdırılmış
   created_at?: string;
   updated_at?: string;
   archived?: boolean;

@@ -1,4 +1,3 @@
-
 import { isId } from '../utils/helpers';
 import { 
   fetchItems,
@@ -7,34 +6,33 @@ import {
   updateItem,
   deleteItem 
 } from './crudOperations';
-import { getSectors, getSectorById } from '@/services/supabase/sector/querySectors';
+import { getSectors, getSectorById } from '@/services/supabase/sector';
 import { logger } from '@/utils/logger';
 import { measurePerformance } from '@/utils/performanceMonitor';
 
-// Enhanced API interface that supports both traditional and axios-like calls
+// API interfeysi təkmilləşdirilib və birbaşa Supabase sorğuları ilə əvəz ediləcək
 export const enhancedApi = {
-  // Original methods
+  // Əsas metodlar
   fetchItems,
   getItemById,
   createItem,
   updateItem,
   deleteItem,
   
-  // Enhanced methods that can handle both traditional and config-style parameters
+  // Təkmilləşdirilmiş metodlar
   get: async (tableNameOrConfig: string | any, id?: string | any) => {
-    // Performans monitorinqi ilə bütün API sorğularını əhatə edirik
+    // Performans monitorinqi
     return measurePerformance('api.get', async () => {
-      // Handle URL string with config object pattern for RESTful API calls
+      // URL string və config obyekt paterni
       if (typeof tableNameOrConfig === 'string' && tableNameOrConfig.startsWith('/')) {
         const url = tableNameOrConfig;
         const params = id && typeof id === 'object' ? id.params : {};
         
         logger.info('API GET request', { url, params });
         
-        // Route to appropriate Supabase query based on endpoint
+        // Endpoint əsasında müvafiq Supabase sorğusuna yönləndir
         if (url === '/sectors') {
           try {
-            // getSectors artıq özü performans monitorinqi ilə əhatə olunub
             const result = await getSectors(
               { 
                 page: params?.page || 1, 
@@ -60,7 +58,7 @@ export const enhancedApi = {
           }
         }
         
-        // Specific sector by ID
+        // ID ilə müəyyən sektor
         if (url.startsWith('/sectors/') && url.length > 9) {
           try {
             const sectorId = url.substring(9);
@@ -72,23 +70,23 @@ export const enhancedApi = {
           }
         }
       
-        // For other endpoints, log warning and return empty result
+        // Digər endpointlər üçün xəbərdarlıq və boş nəticə
         logger.warn(`Unhandled API endpoint: ${url}`);
         return { data: null, error: new Error(`Unhandled API endpoint: ${url}`) };
       }
     
-      // Handle axios-style config object where the first param is the config
+      // axios-style config obyekti
       if (!isId(tableNameOrConfig) && !id) {
         const config = tableNameOrConfig;
         const url = config.url || '';
         
         logger.info('API GET request with config', { url, config });
         
-        // Add handling for specific endpoints as needed
+        // Lazım olduqda digər endpointlər əlavə edin
         return { data: null, error: new Error('Unimplemented config-style API call') };
       }
       
-      // Handle traditional call pattern
+      // Ənənəvi çağırış paterni
       return isId(id) 
         ? getItemById(tableNameOrConfig as string, id)
         : { data: null, error: new Error('Invalid ID parameter') };
