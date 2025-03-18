@@ -117,7 +117,7 @@ const reportService = {
         if (item === null || item === undefined) return;
         
         // Type guard to ensure item is an object with a status property
-        if (typeof item === 'object' && item !== null && 'status' in item) {
+        if (typeof item === 'object' && 'status' in item) {
           // Now TypeScript knows item is a non-null object with a status property
           const status = String(item.status) || 'unknown';
           
@@ -132,9 +132,7 @@ const reportService = {
             statusGroups['unknown'] = [];
           }
           // Ensure item is not null before pushing
-          if (item !== null) {
-            statusGroups['unknown'].push(item);
-          }
+          statusGroups['unknown'].push(item);
         }
       });
     }
@@ -269,4 +267,3 @@ const reportService = {
 };
 
 export default reportService;
-
