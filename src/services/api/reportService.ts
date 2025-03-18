@@ -110,13 +110,21 @@ const reportService = {
     
     // Process the results to simulate grouping by status
     const statusGroups: Record<string, any[]> = {};
-    data?.forEach(item => {
-      const status = item.status || 'unknown';
-      if (!statusGroups[status]) {
-        statusGroups[status] = [];
-      }
-      statusGroups[status].push(item);
-    });
+    
+    // Make sure data exists and is an array before processing
+    if (data && Array.isArray(data)) {
+      data.forEach(item => {
+        // Safely access the status property with a default value
+        const status = (item && typeof item === 'object' && 'status' in item) 
+          ? String(item.status) || 'unknown' 
+          : 'unknown';
+          
+        if (!statusGroups[status]) {
+          statusGroups[status] = [];
+        }
+        statusGroups[status].push(item);
+      });
+    }
     
     // Transform the data to match the expected format
     const result = {
