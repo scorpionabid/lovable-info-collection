@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { getSimplifiedTableQuery } from './utils/typeHelpers';
 
 export interface ReportFilter {
   regionId?: string;
@@ -101,48 +102,70 @@ const reportService = {
       query = query.lte('created_at', filters.endDate);
     }
     
-    // Group by status
-    query = query.group('category_id, school_id, status');
-    
-    const { data, error } = await query;
+    // As Supabase's PostgrestFilterBuilder doesn't have a direct group method,
+    // we need to adapt our approach for getting grouped data
+    const { data, error, count } = await query;
     
     if (error) throw error;
     
+    // Process the results to simulate grouping by status
+    const statusGroups: Record<string, any[]> = {};
+    data?.forEach(item => {
+      const status = item.status || 'unknown';
+      if (!statusGroups[status]) {
+        statusGroups[status] = [];
+      }
+      statusGroups[status].push(item);
+    });
+    
     // Transform the data to match the expected format
     const result = {
-      completion_by_status: data || [],
-      total_entries: data?.length || 0
+      completion_by_status: Object.entries(statusGroups).map(([status, items]) => ({
+        status,
+        count: items.length
+      })),
+      total_entries: count || 0
     };
     
     return result;
   },
   
   getComparisonData: async (filters: ReportFilter = {}) => {
-    // For comparison data, we need to build a query based on groupBy
-    let queryTable = 'data';
-    let selectFields = 'id, category_id, school_id, status';
+    // For comparison data, we need to handle different tables based on groupBy
+    let data: any[] = [];
+    let error = null;
     
+    // Handle each group by case separately to satisfy TypeScript
     if (filters.groupBy === 'region') {
-      queryTable = 'schools';
-      selectFields = 'id, name, region_id';
+      const result = await supabase
+        .from('schools')
+        .select('id, name, region_id');
+      error = result.error;
+      data = result.data || [];
     } else if (filters.groupBy === 'sector') {
-      queryTable = 'schools';
-      selectFields = 'id, name, sector_id';
+      const result = await supabase
+        .from('schools')
+        .select('id, name, sector_id');
+      error = result.error;
+      data = result.data || [];
     } else if (filters.groupBy === 'category') {
-      queryTable = 'categories';
-      selectFields = 'id, name';
+      const result = await supabase
+        .from('categories')
+        .select('id, name');
+      error = result.error;
+      data = result.data || [];
+    } else {
+      // Default case - fetch data entries
+      const result = await supabase
+        .from('data')
+        .select('id, category_id, school_id, status');
+      error = result.error;
+      data = result.data || [];
     }
-    
-    const { data, error } = await supabase
-      .from(queryTable)
-      .select(selectFields);
     
     if (error) throw error;
     
-    // Transform the data to match the expected format
-    // This is a simplified version and would need more complex processing
-    // for a complete implementation
-    return data || [];
+    return data;
   },
   
   exportReport: async (reportType: string, filters: ReportFilter = {}) => {
