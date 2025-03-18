@@ -66,12 +66,11 @@ export const getSectors = async (
     query = query.range(from, to);
 
     // Execute query with timeout
-    const result = await Promise.race([
-      query,
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout (10s)')), QUERY_TIMEOUT_MS);
-      })
-    ]);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout (10s)')), QUERY_TIMEOUT_MS);
+    });
+
+    const result = await Promise.race([query, timeoutPromise]);
 
     // Cast result to the actual response type
     const { data, count, error } = result as any;
@@ -91,6 +90,7 @@ export const getSectors = async (
         name: sector.name || 'N/A',
         description: sector.description || '',
         regionId: sector.region_id,
+        region_id: sector.region_id,
         regionName: regionName,
         created_at: sector.created_at,
         // Placeholder data since we're not fetching these in the initial query
@@ -125,6 +125,125 @@ export const getSectors = async (
     }
     
     sectorLogger.error('Error fetching sectors', { error: errorInfo });
+    throw error;
+  }
+};
+
+/**
+ * Get a single sector by ID
+ * @param id Sector ID
+ * @returns Promise with the sector data
+ */
+export const getSectorById = async (id: string): Promise<SectorWithStats> => {
+  try {
+    sectorLogger.info('Fetching sector by ID', { id });
+    
+    const query = supabase
+      .from('sectors')
+      .select(`
+        *,
+        regions!left (
+          id,
+          name
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    // Execute query with timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout (10s)')), QUERY_TIMEOUT_MS);
+    });
+
+    const result = await Promise.race([query, timeoutPromise]);
+    
+    // Handle result
+    const { data, error } = result as any;
+    
+    if (error) {
+      sectorLogger.error('Error fetching sector by ID', { id, error });
+      throw error;
+    }
+    
+    if (!data) {
+      const notFoundError = new Error(`Sector with ID ${id} not found`);
+      sectorLogger.error('Sector not found', { id });
+      throw notFoundError;
+    }
+    
+    // Process the sector data
+    const sector: SectorWithStats = {
+      id: data.id,
+      name: data.name || 'N/A',
+      description: data.description || '',
+      regionId: data.region_id,
+      region_id: data.region_id,
+      regionName: data.regions?.name || 'N/A',
+      created_at: data.created_at,
+      schoolCount: 0, // Will be populated separately if needed
+      completionRate: 0, // Will be populated separately if needed
+      archived: data.archived || false
+    };
+    
+    sectorLogger.info('Successfully fetched sector by ID', { id });
+    return sector;
+  } catch (error) {
+    const errorInfo: any = {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    };
+    
+    // Handle Postgrest-specific error details if available
+    if (error instanceof Object && 'details' in error) {
+      errorInfo.details = (error as PostgrestError).details;
+    }
+    
+    sectorLogger.error('Error fetching sector by ID', { id, error: errorInfo });
+    throw error;
+  }
+};
+
+/**
+ * Get all schools for a specific sector
+ * @param sectorId Sector ID
+ * @returns Promise with the schools data
+ */
+export const getSectorSchools = async (sectorId: string): Promise<any[]> => {
+  try {
+    sectorLogger.info('Fetching schools for sector', { sectorId });
+    
+    const query = supabase
+      .from('schools')
+      .select('*')
+      .eq('sector_id', sectorId);
+    
+    // Execute query with timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout (10s)')), QUERY_TIMEOUT_MS);
+    });
+
+    const result = await Promise.race([query, timeoutPromise]);
+    
+    // Handle result
+    const { data, error } = result as any;
+    
+    if (error) {
+      sectorLogger.error('Error fetching schools for sector', { sectorId, error });
+      throw error;
+    }
+    
+    sectorLogger.info(`Successfully fetched ${data?.length || 0} schools for sector`, { sectorId });
+    return data || [];
+  } catch (error) {
+    const errorInfo: any = {
+      message: error instanceof Error ? error.message : 'Unknown error'
+    };
+    
+    // Handle Postgrest-specific error details if available
+    if (error instanceof Object && 'details' in error) {
+      errorInfo.details = (error as PostgrestError).details;
+    }
+    
+    sectorLogger.error('Error fetching schools for sector', { sectorId, error: errorInfo });
     throw error;
   }
 };
