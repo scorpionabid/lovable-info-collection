@@ -2,6 +2,7 @@
 import { supabase, withRetry } from '@/integrations/supabase/client';
 import { FilterParams, PaginationParams, SectorWithStats, SortParams } from './types';
 import { logger } from '@/utils/logger';
+import { PostgrestError } from '@supabase/supabase-js';
 
 // Create a logger for this service
 const sectorLogger = logger.createLogger('sectorQueries');
@@ -85,14 +86,18 @@ export const getSectors = async (
       
       if (error) {
         const duration = Date.now() - startTime;
-        sectorLogger.apiError(endpoint, {
+        const errorInfo: Record<string, any> = {
           error,
           message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
           duration
-        }, requestId);
+        };
+        
+        // Add PostgrestError specific fields if they exist
+        if ('details' in error) errorInfo.details = (error as PostgrestError).details;
+        if ('hint' in error) errorInfo.hint = (error as PostgrestError).hint;
+        if ('code' in error) errorInfo.code = (error as PostgrestError).code;
+        
+        sectorLogger.apiError(endpoint, errorInfo, requestId);
         throw error;
       }
 
