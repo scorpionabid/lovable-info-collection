@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { getSimplifiedTableQuery } from './utils/typeHelpers';
@@ -131,8 +132,11 @@ const reportService = {
           if (!statusGroups['unknown']) {
             statusGroups['unknown'] = [];
           }
-          // Ensure item is not null before pushing
-          statusGroups['unknown'].push(item);
+          // At this point, we know item is not null or undefined because we checked at the start of the loop
+          // But to satisfy TypeScript, we'll add an explicit check
+          if (item !== null) {
+            statusGroups['unknown'].push(item);
+          }
         }
       });
     }
