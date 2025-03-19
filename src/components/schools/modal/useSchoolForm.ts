@@ -20,6 +20,7 @@ const schoolFormSchema = z.object({
   director: z.string().optional(),
   student_count: z.number().min(0).optional(),
   teacher_count: z.number().min(0).optional(),
+  status: z.string().optional(),
 });
 
 export type SchoolFormValues = z.infer<typeof schoolFormSchema>;
@@ -45,6 +46,7 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
       director: '',
       student_count: 0,
       teacher_count: 0,
+      status: 'Aktiv',
     }
   });
 
@@ -62,7 +64,6 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
 
         // If editing, fetch the school data
         if (schoolId) {
-          // Use try-catch to handle potential errors
           try {
             const { data: school, error } = await supabase
               .from('schools')
@@ -73,7 +74,7 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
             if (error) throw error;
 
             if (school) {
-              // Set form values
+              // Set form values with optional fields handled safely
               form.reset({
                 name: school.name || '',
                 sector_id: school.sector_id || '',
@@ -86,6 +87,7 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
                 director: school.director || '',
                 student_count: school.student_count || 0,
                 teacher_count: school.teacher_count || 0,
+                status: school.status || 'Aktiv',
               });
 
               // Set the selected region to load sectors
@@ -156,6 +158,7 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
         director: values.director || null,
         student_count: values.student_count || 0,
         teacher_count: values.teacher_count || 0,
+        status: values.status || 'Aktiv',
       };
 
       let result;

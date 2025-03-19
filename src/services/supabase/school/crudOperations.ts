@@ -1,5 +1,5 @@
 
-import { supabase } from './baseClient';
+import { supabase } from '../supabaseClient';
 import { CreateSchoolDto, UpdateSchoolDto } from './types';
 
 /**
