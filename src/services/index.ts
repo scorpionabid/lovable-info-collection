@@ -8,7 +8,7 @@ export { default as authService } from './authService';
 export { default as dataService } from './dataService';
 export { default as categoryService } from './categoryService';
 export { default as userService } from './userService';
-export { default as regionService } from './regionService';
+export * as regionService from './regionService'; // Changed from regionService to export all named exports
 export { default as notificationService } from './notificationService';
 export { default as auditLogService } from './auditLogService';
 export { default as metricService } from './metricService';

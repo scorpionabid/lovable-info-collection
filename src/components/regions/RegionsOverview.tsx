@@ -50,16 +50,18 @@ export const RegionsOverview = () => {
 
   // Convert region data to ensure it matches the RegionWithStats type
   const convertedRegionsData = regionsData ? {
-    data: regionsData.data.map(region => ({
-      ...region,
-      sectors_count: (region as any).sectors_count || (region as any).sectorCount || 0,
-      schools_count: (region as any).schools_count || (region as any).schoolCount || 0,
-      completion_rate: (region as any).completion_rate || (region as any).completionRate || 0,
-      // Backward compatibility
-      sectorCount: (region as any).sectors_count || (region as any).sectorCount || 0,
-      schoolCount: (region as any).schools_count || (region as any).schoolCount || 0,
-      completionRate: (region as any).completion_rate || (region as any).completionRate || 0
-    } as RegionWithStats)),
+    data: regionsData.data.map(region => {
+      // Ensure all required properties are present
+      return {
+        ...region,
+        sectorCount: region.sectorCount || (region as any).sectors_count || 0,
+        schoolCount: region.schoolCount || (region as any).schools_count || 0,
+        completionRate: region.completionRate || (region as any).completion_rate || 0,
+        studentCount: region.studentCount || 0,
+        teacherCount: region.teacherCount || 0,
+        description: region.description || ''
+      } as RegionWithStats;
+    }),
     count: regionsData.count
   } : { data: [], count: 0 };
 

@@ -14,12 +14,12 @@ export const RegionCharts = ({ region }: RegionChartsProps) => {
     { name: 'Mar', value: Math.floor(Math.random() * 35) + 65 },
     { name: 'Apr', value: Math.floor(Math.random() * 35) + 65 },
     { name: 'May', value: Math.floor(Math.random() * 35) + 65 },
-    { name: 'İyn', value: region.completion_rate || region.completionRate || 0 },
+    { name: 'İyn', value: region.completionRate || 0 },
   ];
   
   const distributionData = [
-    { name: 'Məktəblər', value: region.schools_count || region.schoolCount || 0 },
-    { name: 'Sektorlar', value: region.sectors_count || region.sectorCount || 0 },
+    { name: 'Məktəblər', value: region.schoolCount || 0 },
+    { name: 'Sektorlar', value: region.sectorCount || 0 },
     { name: 'İstifadəçilər', value: region.userCount || 0 },
   ];
 

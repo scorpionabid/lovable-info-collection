@@ -39,6 +39,7 @@ export const getRegionById = async (id: string): Promise<RegionWithStats | null>
     
     return {
       ...data,
+      description: data.description || '', // Add required description field
       sectorCount: sectorCount || 0,
       schoolCount: schoolCount || 0,
       studentCount,
@@ -67,6 +68,7 @@ export const getRegions = async (): Promise<RegionWithStats[]> => {
     // In a real app, you would calculate actual stats for each region
     const regionsWithStats = (data || []).map(region => ({
       ...region,
+      description: region.description || '', // Add required description field
       sectorCount: 0,
       schoolCount: 0,
       studentCount: 0,
@@ -96,6 +98,7 @@ export const createRegion = async (name: string): Promise<RegionWithStats | null
     
     return {
       ...data,
+      description: data.description || '', // Add required description field
       sectorCount: 0,
       schoolCount: 0,
       studentCount: 0,
@@ -128,6 +131,7 @@ export const updateRegion = async (id: string, name: string): Promise<RegionWith
     
     return {
       ...data,
+      description: data.description || '', // Add required description field
       sectorCount: 0,
       schoolCount: 0,
       studentCount: 0,
@@ -140,21 +144,10 @@ export const updateRegion = async (id: string, name: string): Promise<RegionWith
   }
 };
 
-// Delete a region
-export const deleteRegion = async (id: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('regions')
-      .delete()
-      .eq('id', id);
-      
-    if (error) {
-      throw error;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error deleting region:', error);
-    return false;
-  }
+// Export the existing functions
+export default {
+  getRegionById,
+  getRegions,
+  createRegion,
+  updateRegion
 };

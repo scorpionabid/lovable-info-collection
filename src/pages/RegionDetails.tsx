@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from "@/components/layout/Layout";
-import { RegionHeader } from "@/components/regions/details/RegionHeader";  // Updated path to the correct location
-import { RegionStats } from "@/components/regions/details/RegionStats";  // Updated path to match the same pattern
+import { RegionHeader } from "@/components/regions/details/RegionHeader";
+import { RegionStats } from "@/components/regions/details/RegionStats";
 import { SectorTable } from "@/components/sectors/SectorTable";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -13,6 +13,25 @@ import { getRegionById } from "@/services/regionService";
 import { getSectorsByRegionId } from "@/services/sectorService";
 import { RegionWithStats } from "@/services/supabase/region/types";
 import { SectorWithStats } from "@/services/supabase/sector/types";
+
+interface SectorTableProps {
+  sectors: SectorWithStats[];
+  isLoading: boolean;
+  isError: boolean;
+  totalCount: number;
+  currentPage?: number;
+  pageSize?: number;
+  onDataChange: () => void;
+}
+
+interface SectorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  mode: 'create' | 'edit';
+  regionId?: string;
+  sector?: SectorWithStats;
+  onSuccess?: () => void;
+}
 
 const RegionDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -107,11 +126,6 @@ const RegionDetails = () => {
             isLoading={false}
             isError={false}
             totalCount={sectors.length}
-            currentPage={1}
-            pageSize={10}
-            onPageChange={() => {}}
-            onEditSector={() => {}}
-            onDeleteSector={() => {}}
             onDataChange={fetchSectors}
           />
         ) : (
@@ -132,7 +146,7 @@ const RegionDetails = () => {
             isOpen={createSectorModalOpen}
             onClose={() => setCreateSectorModalOpen(false)}
             mode="create"
-            region={region}
+            regionId={id}
             onSuccess={handleSectorCreated}
           />
         )}
@@ -142,7 +156,7 @@ const RegionDetails = () => {
             isOpen={createSchoolModalOpen}
             onClose={() => setCreateSchoolModalOpen(false)}
             mode="create"
-            school={{ region_id: id }}
+            regionId={id}
             onSuccess={handleSchoolCreated}
           />
         )}

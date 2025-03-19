@@ -12,13 +12,13 @@ export const RegionStats = ({ region }: RegionStatsProps) => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard 
         title="Sektorlar" 
-        value={region.sectors_count || region.sectorCount || 0} 
+        value={region.sectorCount || 0} 
         icon={<Layers className="h-5 w-5" />}
         color="blue"
       />
       <StatCard 
         title="Məktəblər" 
-        value={region.schools_count || region.schoolCount || 0} 
+        value={region.schoolCount || 0} 
         icon={<School className="h-5 w-5" />}
         color="green"
       />
@@ -30,7 +30,7 @@ export const RegionStats = ({ region }: RegionStatsProps) => {
       />
       <StatCard 
         title="Doldurulma faizi" 
-        value={`${region.completion_rate || region.completionRate || 0}%`} 
+        value={`${region.completionRate || 0}%`} 
         icon={<PieChart className="h-5 w-5" />}
         color="yellow"
         change={5}

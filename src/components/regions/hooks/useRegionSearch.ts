@@ -15,16 +15,16 @@ export const useRegionSearch = () => {
         setIsSearching(true);
         try {
           const results = await regionService.searchRegions(debouncedSearchTerm);
-          // Convert Region[] to RegionWithStats[]
+          // Convert to RegionWithStats and add missing required properties
           const regionsWithStats = results.map(region => ({
             ...region,
-            sectors_count: 0,
-            schools_count: 0,
-            completion_rate: 0,
             sectorCount: 0,
             schoolCount: 0,
-            completionRate: 0
-          }));
+            completionRate: 0,
+            studentCount: 0, // Add required fields
+            teacherCount: 0, // Add required fields
+            description: region.description || '' // Add required field
+          } as RegionWithStats));
           setSearchResults(regionsWithStats);
         } catch (error) {
           console.error('Error searching regions:', error);

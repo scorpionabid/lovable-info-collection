@@ -39,8 +39,7 @@ export const getSectorsByRegionId = async (regionId: string): Promise<SectorWith
         regionName: regionData?.name || '',
         schoolCount: schoolCount || 0,
         completionRate,
-        created_at: sector.created_at || new Date().toISOString(),
-        updated_at: sector.updated_at || new Date().toISOString(),
+        description: sector.description || "", // Add required description field
       } as SectorWithStats;
     }));
     
@@ -82,8 +81,7 @@ export const getSectorById = async (id: string): Promise<SectorWithStats | null>
       regionName: data.regions?.name || '',
       schoolCount: schoolCount || 0,
       completionRate,
-      created_at: data.created_at || new Date().toISOString(),
-      updated_at: data.updated_at || new Date().toISOString(),
+      description: data.description || "", // Add required description field
     };
   } catch (error) {
     console.error('Error fetching sector by ID:', error);
@@ -98,7 +96,8 @@ export const createSector = async (name: string, regionId: string): Promise<Sect
       .from('sectors')
       .insert({
         name,
-        region_id: regionId
+        region_id: regionId,
+        description: "", // Add required description field
       })
       .select()
       .single();
@@ -119,8 +118,7 @@ export const createSector = async (name: string, regionId: string): Promise<Sect
       regionName: regionData?.name || '',
       schoolCount: 0,
       completionRate: 0,
-      created_at: data.created_at || new Date().toISOString(),
-      updated_at: data.updated_at || new Date().toISOString(),
+      description: "", // Add required description field
     };
   } catch (error) {
     console.error('Error creating sector:', error);
@@ -163,8 +161,7 @@ export const updateSector = async (id: string, name: string, regionId: string): 
       regionName: regionData?.name || '',
       schoolCount: schoolCount || 0,
       completionRate: Math.floor(Math.random() * 100),
-      created_at: data.created_at || new Date().toISOString(),
-      updated_at: data.updated_at || new Date().toISOString(),
+      description: data.description || "", // Add required description field
     };
   } catch (error) {
     console.error('Error updating sector:', error);
@@ -189,4 +186,12 @@ export const deleteSector = async (id: string): Promise<boolean> => {
     console.error('Error deleting sector:', error);
     return false;
   }
+};
+
+export default {
+  getSectorsByRegionId,
+  getSectorById,
+  createSector,
+  updateSector,
+  deleteSector
 };

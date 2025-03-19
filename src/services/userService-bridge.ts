@@ -8,8 +8,8 @@ import type {
   EntityOption 
 } from './userService/types';
 
-// Export the User interface
-export interface User {
+// Export the User interface properly with export type
+export type User = {
   id: string;
   first_name: string;
   last_name: string;
@@ -24,7 +24,7 @@ export interface User {
   updated_at: string;
   last_login: string | null;
   utis_code: string | null;
-}
+};
 
 // Export the type definitions
 export type { 
