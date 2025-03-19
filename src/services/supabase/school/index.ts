@@ -47,6 +47,24 @@ import {
   generateSchoolCode
 } from './helperFunctions';
 
+// Import school stats
+import {
+  getSchoolStats as fetchSchoolStats
+} from './queries/statsQueries';
+
+// Custom functions for school activities
+export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => {
+  return fetchSchoolStats(schoolId);
+};
+
+export const getSchoolActivities = async (schoolId: string): Promise<any[]> => {
+  // Placeholder implementation
+  return [
+    { id: '1', type: 'data_entry', date: new Date().toISOString(), user: 'Admin', description: 'Updated school data' },
+    { id: '2', type: 'login', date: new Date(Date.now() - 86400000).toISOString(), user: 'Teacher', description: 'Logged in' }
+  ];
+};
+
 // Re-export everything
 export {
   // Queries
@@ -82,5 +100,9 @@ export default {
   
   // Helper functions
   getSchoolTypes,
-  generateSchoolCode
+  generateSchoolCode,
+  
+  // Stats and activities
+  getSchoolStats,
+  getSchoolActivities
 };

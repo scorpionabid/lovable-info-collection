@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { getRegionById } from "@/services/supabase/region/queries";
 import { getSectorsByRegion } from "@/services/supabase/region/sectorQueries";
 import { getSchoolsByRegion } from "@/services/supabase/school/queries/schoolQueries";
-import { RegionWithStats, Sector } from "@/services/supabase/region/types";
+import { RegionWithStats, SectorWithStats } from "@/services/supabase/region/types";
 import { School } from "@/services/supabase/school/types";
 
 export default function RegionDetails() {
@@ -39,7 +39,18 @@ export default function RegionDetails() {
         // Fetch region details
         const regionData = await getRegionById(id);
         if (regionData) {
-          setRegion(regionData);
+          // Convert Region to RegionWithStats if needed
+          const regionWithStats: RegionWithStats = {
+            ...regionData,
+            sectors_count: 0,
+            schools_count: 0,
+            completion_rate: 0,
+            // Backward compatibility
+            sectorCount: 0,
+            schoolCount: 0,
+            completionRate: 0
+          };
+          setRegion(regionWithStats);
           
           // Fetch sectors in this region
           const sectorsData = await getSectorsByRegion(id);
@@ -48,9 +59,12 @@ export default function RegionDetails() {
             const processedSectors = sectorsData.map((sector) => {
               return {
                 ...sector,
-                schoolCount: sector.schools_count,
-                completionRate: sector.completion_rate,
-                regionName: sector.region?.name || 'Unknown'
+                schools_count: sector.schools_count || 0,
+                completion_rate: sector.completion_rate || 0,
+                regionName: sector.region?.name || 'Unknown',
+                // Backward compatibility
+                schoolCount: sector.schools_count || 0,
+                completionRate: sector.completion_rate || 0
               } as SectorWithStats;
             });
             setSectors(processedSectors);
@@ -81,13 +95,30 @@ export default function RegionDetails() {
         getSectorsByRegion(id),
         getSchoolsByRegion(id)
       ]).then(([regionData, sectorsData, schoolsData]) => {
-        if (regionData) setRegion(regionData);
+        if (regionData) {
+          // Convert Region to RegionWithStats if needed
+          const regionWithStats: RegionWithStats = {
+            ...regionData,
+            sectors_count: 0,
+            schools_count: 0,
+            completion_rate: 0,
+            // Backward compatibility
+            sectorCount: 0,
+            schoolCount: 0,
+            completionRate: 0
+          };
+          setRegion(regionWithStats);
+        }
         if (sectorsData) {
           const processedSectors = sectorsData.map(sector => ({
             ...sector,
-            schoolCount: sector.schools_count,
-            completionRate: sector.completion_rate
-          }));
+            schools_count: sector.schools_count || 0,
+            completion_rate: sector.completion_rate || 0,
+            regionName: sector.region?.name || 'Unknown',
+            // Backward compatibility
+            schoolCount: sector.schools_count || 0,
+            completionRate: sector.completion_rate || 0
+          } as SectorWithStats));
           setSectors(processedSectors);
         }
         if (schoolsData) setSchools(schoolsData);
@@ -98,6 +129,10 @@ export default function RegionDetails() {
       });
     }
   };
+
+  // Empty handleEditSchool and handleDeleteSchool for SchoolTable
+  const handleEditSchool = () => {};
+  const handleDeleteSchool = () => {};
 
   if (isLoading && !region) {
     return (
@@ -159,7 +194,6 @@ export default function RegionDetails() {
           
           <SectorTable 
             sectors={sectors} 
-            regionId={id || ''} 
             onDataChange={handleDataChange} 
           />
         </TabsContent>
@@ -176,9 +210,8 @@ export default function RegionDetails() {
           <SchoolTable 
             schools={schools} 
             isLoading={false}
-            onEditSchool={() => {}}
-            onDeleteSchool={() => {}}
-            onDataChange={handleDataChange} 
+            onEditSchool={handleEditSchool}
+            onDeleteSchool={handleDeleteSchool}
           />
         </TabsContent>
       </Tabs>
@@ -188,7 +221,6 @@ export default function RegionDetails() {
           isOpen={isSectorModalOpen}
           onClose={() => setIsSectorModalOpen(false)}
           mode="create"
-          region={region}
           onSuccess={handleDataChange}
         />
       )}

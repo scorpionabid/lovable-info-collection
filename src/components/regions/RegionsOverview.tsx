@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useRegionsData } from './hooks/useRegions';
+import { useRegionData } from './hooks/useRegionData';
 import { useRegionFilters } from './hooks/useRegionFilters';
 import { useRegionSort } from './hooks/useRegionSort';
 import { useRegionActions } from './hooks/useRegionActions';
@@ -9,6 +9,7 @@ import { RegionTable } from './table/RegionTable';
 import { RegionToolbar } from './toolbar/RegionToolbar';
 import { RegionFilterPanel } from './RegionFilterPanel';
 import { RegionModal } from './RegionModal';
+import { RegionWithStats } from '@/services/supabase/region/types';
 
 export const RegionsOverview = () => {
   const [pageSize, setPageSize] = useState(10);
@@ -21,7 +22,7 @@ export const RegionsOverview = () => {
     toggleFilters 
   } = useRegionFilters();
 
-  // Data fetching - yeni universal Supabase hook-u ilə
+  // Data fetching
   const { 
     data: regionsData, 
     isLoading, 
@@ -29,7 +30,7 @@ export const RegionsOverview = () => {
     refetch,
     searchTerm,
     setSearchTerm
-  } = useRegionsData({ 
+  } = useRegionData({ 
     page: currentPage, 
     pageSize, 
     sortColumn, 
@@ -47,16 +48,31 @@ export const RegionsOverview = () => {
     handleCreateSuccess
   } = useRegionActions(refetch);
 
+  // Convert region data to ensure it matches the RegionWithStats type
+  const convertedRegionsData = regionsData ? {
+    data: regionsData.data.map(region => ({
+      ...region,
+      sectors_count: (region as any).sectors_count || (region as any).sectorCount || 0,
+      schools_count: (region as any).schools_count || (region as any).schoolCount || 0,
+      completion_rate: (region as any).completion_rate || (region as any).completionRate || 0,
+      // Backward compatibility
+      sectorCount: (region as any).sectors_count || (region as any).sectorCount || 0,
+      schoolCount: (region as any).schools_count || (region as any).schoolCount || 0,
+      completionRate: (region as any).completion_rate || (region as any).completionRate || 0
+    } as RegionWithStats)),
+    count: regionsData.count
+  } : { data: [], count: 0 };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <RegionToolbar 
         searchQuery={searchTerm || searchQuery}
         onSearchChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           setSearchTerm(e.target.value);
-          handleSearchChange(e); // Burada orijinal event-i ötürük
+          handleSearchChange(e);
         }}
         onRefresh={handleRefresh}
-        onExport={() => handleExport(regionsData)}
+        onExport={() => handleExport(convertedRegionsData)}
         onImport={handleImport}
         onCreateRegion={() => setIsCreateModalOpen(true)}
         onToggleFilters={toggleFilters}
@@ -71,8 +87,8 @@ export const RegionsOverview = () => {
       )}
       
       <RegionTable 
-        regions={regionsData?.data || []}
-        totalCount={regionsData?.count || 0}
+        regions={convertedRegionsData.data}
+        totalCount={convertedRegionsData.count}
         currentPage={currentPage}
         pageSize={pageSize}
         setCurrentPage={setCurrentPage}

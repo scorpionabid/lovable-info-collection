@@ -4,6 +4,7 @@ export interface Region {
   id: string;
   name: string;
   code?: string;
+  description?: string; // Added description field
   created_at?: string;
   updated_at?: string;
 }
@@ -12,6 +13,7 @@ export interface RegionWithStats extends Region {
   sectors_count: number;
   schools_count: number;
   completion_rate: number;
+  userCount?: number; // Add userCount for RegionCharts
   // Backward compatibility for old components
   sectorCount?: number;
   schoolCount?: number;
@@ -23,6 +25,7 @@ export interface Sector {
   name: string;
   region_id: string;
   code?: string;
+  description?: string; // Added description field
   region?: {
     id: string;
     name: string;
@@ -49,6 +52,9 @@ export interface SectorWithStats extends Sector {
 
 export interface FilterParams {
   searchQuery?: string;
+  name?: string; // Added name filter
+  code?: string; // Added code filter
+  status?: string; // Added status filter
   dateFrom?: string;
   dateTo?: string;
   completionRate?: 'all' | 'high' | 'medium' | 'low';
@@ -62,4 +68,5 @@ export interface PaginationParams {
 export interface SortConfig {
   field: string;
   direction: 'asc' | 'desc';
+  column?: string; // Add column for backward compatibility
 }

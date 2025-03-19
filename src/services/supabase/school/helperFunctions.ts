@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient';
 
 /**
@@ -91,4 +90,14 @@ export const getSchoolsBySector = async (sectorId: string) => {
     console.error(`Error fetching schools for sector ${sectorId}:`, error);
     return [];
   }
+};
+
+/**
+ * Generate a unique school code
+ * @returns The generated school code
+ */
+export const generateSchoolCode = (): string => {
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `SCH-${timestamp}-${random}`;
 };

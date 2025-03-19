@@ -8,6 +8,9 @@ import {
   EntityOption 
 } from './userService/types';
 
+// Re-export User type
+export type { User };
+
 // Mock implementation of userService for development
 const userService = {
   // Basic user operations
@@ -107,6 +110,11 @@ const userService = {
   
   resetPassword: async (id: string): Promise<boolean> => {
     console.log('Resetting password for user:', id);
+    return true;
+  },
+  
+  resetUserPassword: async (id: string, newPassword: string): Promise<boolean> => {
+    console.log('Resetting user password:', id);
     return true;
   },
   
