@@ -8,7 +8,7 @@ import { useSchoolData } from './hooks/useSchoolData';
 import { useSchoolFilters } from './hooks/useSchoolFilters';
 import { useSchoolSort } from './hooks/useSchoolSort';
 import { useSchoolActions } from './hooks/useSchoolActions';
-import { School, SchoolWithStats } from '@/services/supabase/school/types';
+import { School } from '@/services/supabase/school/types';
 
 export const SchoolsOverview = () => {
   const [pageSize, setPageSize] = useState(10);

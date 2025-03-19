@@ -1,47 +1,47 @@
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { SchoolFilter } from '@/services/supabase/school/types';
 
-// Default empty filter
-const defaultFilters: SchoolFilter = {
-  search: '',
-  region_id: '',
-  sector_id: '',
-  type_id: '',
-  status: 'all',
-  min_student_count: '',
-  max_student_count: ''
-};
-
-export const useSchoolFilters = (initialFilters: SchoolFilter = defaultFilters) => {
+export const useSchoolFilters = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<SchoolFilter>(initialFilters);
-
-  // Handler for search input changes
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<SchoolFilter>({});
+  
+  // Debounce search input to reduce API calls
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  
+  // Update filters when debounced search changes
+  useState(() => {
+    if (debouncedSearch) {
+      setFilters(prev => ({ ...prev, search: debouncedSearch }));
+      setCurrentPage(1); // Reset to first page on search
+    } else {
+      setFilters(prev => {
+        const newFilters = { ...prev };
+        delete newFilters.search;
+        return newFilters;
+      });
+    }
+  });
+  
+  const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setCurrentPage(1); // Reset page when search changes
-    
-    // Update filters with search
+  };
+  
+  const handleApplyFilters = (newFilters: SchoolFilter) => {
     setFilters(prev => ({
       ...prev,
-      search: value
+      ...newFilters
     }));
-  }, []);
-
-  // Handler for applying filters
-  const handleApplyFilters = useCallback((newFilters: SchoolFilter) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset page when filters change
-  }, []);
-
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+  
   return {
     currentPage,
+    setCurrentPage,
     searchQuery,
     filters,
-    setCurrentPage,
     handleSearchChange,
     handleApplyFilters
   };

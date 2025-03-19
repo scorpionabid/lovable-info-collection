@@ -1,12 +1,13 @@
 
 import { supabase } from '../supabaseClient';
+import { SchoolActivity } from './types';
 
 /**
  * Retrieves the recent activities for a specific school
  * @param schoolId - The ID of the school
  * @returns An array of activities for the specified school
  */
-export const getSchoolActivities = async (schoolId: string) => {
+export const getSchoolActivities = async (schoolId: string): Promise<SchoolActivity[]> => {
   try {
     const { data, error } = await supabase
       .from('audit_logs')

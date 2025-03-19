@@ -1,148 +1,110 @@
+
 import { supabase } from '../supabaseClient';
+import { School } from './types';
 
 /**
- * Get school types from the database.
- * This is a direct method that doesn't depend on Table row existence
+ * Calculate completion rate for a school based on data submission
  */
-export const getSchoolTypes = async (): Promise<{ id: string; name: string }[]> => {
+export const calculateCompletionRate = async (schoolId: string): Promise<number> => {
   try {
-    // Try to use the get_school_types() function if it exists
-    const { data: fnData, error: fnError } = await supabase.rpc('get_school_types');
-    
-    if (!fnError && fnData) {
-      return fnData;
-    }
-    
-    // Otherwise, fetch directly from the table
+    // This is a placeholder implementation
+    // In a real application, you would check how many required data entries
+    // have been submitted by the school
+    return Math.floor(Math.random() * 40) + 60; // Random between 60-100
+  } catch (error) {
+    console.error(`Error calculating completion rate for school ${schoolId}:`, error);
+    return 0;
+  }
+};
+
+/**
+ * Get regions for school selection
+ */
+export const getRegions = async (): Promise<any[]> => {
+  try {
     const { data, error } = await supabase
-      .rpc('get_school_types');
+      .from('regions')
+      .select('id, name')
+      .order('name');
     
-    if (error) {
-      console.error('Error fetching school types:', error);
-      
-      // Fallback to hardcoded types if the database query fails
-      return [
-        { id: '1', name: 'Tam orta məktəb' },
-        { id: '2', name: 'Ümumi orta məktəb' },
-        { id: '3', name: 'İbtidai məktəb' },
-        { id: '4', name: 'Lisey' },
-        { id: '5', name: 'Gimnaziya' }
-      ];
-    }
-    
+    if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error in getSchoolTypes:', error);
-    
-    // Return dummy data in case of error
-    return [
-      { id: '1', name: 'Tam orta məktəb' },
-      { id: '2', name: 'Ümumi orta məktəb' },
-      { id: '3', name: 'İbtidai məktəb' },
-      { id: '4', name: 'Lisey' },
-      { id: '5', name: 'Gimnaziya' }
-    ];
+    console.error('Error fetching regions:', error);
+    return [];
   }
 };
 
 /**
- * Check if a school with the given name already exists.
+ * Get sectors for a specific region
  */
-export const schoolNameExists = async (name: string, excludeId?: string): Promise<boolean> => {
-  try {
-    let query = supabase
-      .from('schools')
-      .select('id')
-      .ilike('name', name);
-    
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error checking if school name exists:', error);
-      return false;
-    }
-    
-    return (data || []).length > 0;
-  } catch (error) {
-    console.error('Error in schoolNameExists:', error);
-    return false;
-  }
-};
-
-/**
- * Get all schools by region ID
- */
-export const getSchoolsByRegion = async (regionId: string) => {
+export const getSectorsByRegion = async (regionId: string): Promise<any[]> => {
   try {
     const { data, error } = await supabase
-      .from('schools')
-      .select(`
-        id,
-        name,
-        type_id,
-        address,
-        region_id,
-        sector_id,
-        email,
-        phone,
-        director,
-        student_count,
-        teacher_count,
-        status
-      `)
+      .from('sectors')
+      .select('id, name')
       .eq('region_id', regionId)
       .order('name');
-      
+    
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error(`Error fetching schools for region ${regionId}:`, error);
+    console.error(`Error fetching sectors for region ${regionId}:`, error);
     return [];
   }
 };
 
 /**
- * Get all schools by sector ID
+ * Get school types for selection
  */
-export const getSchoolsBySector = async (sectorId: string) => {
+export const getSchoolTypes = async (): Promise<any[]> => {
   try {
     const { data, error } = await supabase
-      .from('schools')
-      .select(`
-        id,
-        name,
-        type_id,
-        address,
-        region_id,
-        sector_id,
-        email,
-        phone,
-        director,
-        student_count,
-        teacher_count,
-        status
-      `)
-      .eq('sector_id', sectorId)
+      .from('school_types')
+      .select('id, name')
       .order('name');
-      
+    
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error(`Error fetching schools for sector ${sectorId}:`, error);
+    console.error('Error fetching school types:', error);
     return [];
   }
 };
 
 /**
- * Generate a unique school code
- * @returns The generated school code
+ * Transform raw school data from the database to the frontend format
  */
-export const generateSchoolCode = (): string => {
-  const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `SCH-${timestamp}-${random}`;
+export const transformSchoolData = (schoolData: any): School => {
+  return {
+    id: schoolData.id,
+    name: schoolData.name,
+    code: schoolData.code,
+    region_id: schoolData.region_id,
+    sector_id: schoolData.sector_id,
+    type_id: schoolData.type_id,
+    address: schoolData.address,
+    director: schoolData.director || '',
+    email: schoolData.email || '',
+    phone: schoolData.phone || '',
+    status: schoolData.status || 'active',
+    student_count: schoolData.student_count || 0,
+    teacher_count: schoolData.teacher_count || 0,
+    created_at: schoolData.created_at,
+    updated_at: schoolData.updated_at,
+    archived: schoolData.archived || false,
+    
+    // Add relations if available
+    region: schoolData.regions?.name || '',
+    sector: schoolData.sectors?.name || '',
+    type: schoolData.school_types?.name || '',
+    
+    // Add computed fields
+    completionRate: 0, // This will be calculated separately
+    studentCount: schoolData.student_count || 0,
+    teacherCount: schoolData.teacher_count || 0,
+    contactEmail: schoolData.email || '',
+    contactPhone: schoolData.phone || '',
+    createdAt: schoolData.created_at
+  };
 };

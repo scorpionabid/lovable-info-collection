@@ -1,6 +1,6 @@
 
 // Export the User type and all other types with proper type annotations
-import { 
+import type { 
   User, 
   UserFilter, 
   UserResponse, 

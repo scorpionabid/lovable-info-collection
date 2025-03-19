@@ -42,7 +42,7 @@ export const useSchoolData = ({
     queryKey: ['schools', currentPage, pageSize, sortParams, filters],
     queryFn: async () => {
       try {
-        const result = await schoolService.getSchools(queryParams);
+        const result = await schoolService.getSchools();
 
         // Ensure we always return an object with data and count properties
         if (Array.isArray(result)) {

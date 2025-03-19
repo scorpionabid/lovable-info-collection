@@ -1,11 +1,11 @@
 
 import { supabase } from '../supabaseClient';
-import { School } from './types';
+import { School, SchoolFilter } from './types';
 
 /**
- * Get all schools
+ * Get all schools with optional filtering
  */
-export const getSchools = async (): Promise<School[]> => {
+export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
   try {
     const { data, error } = await supabase
       .from('schools')

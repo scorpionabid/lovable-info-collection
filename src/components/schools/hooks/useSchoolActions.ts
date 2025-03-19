@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { School, SchoolWithStats, deleteSchool } from '@/services/supabase/school';
+import { School, SchoolWithStats } from '@/services/supabase/school/types';
+import { deleteSchool } from '@/services/supabase/school';
 import { useToast } from '@/hooks/use-toast';
 
 export const useSchoolActions = (refetch: () => void) => {
@@ -38,7 +39,7 @@ export const useSchoolActions = (refetch: () => void) => {
   };
 
   // Updated to accept a SchoolWithStats parameter
-  const handleDeleteSchool = async (school: SchoolWithStats) => {
+  const handleDeleteSchool = async (school: School) => {
     try {
       if (!school || !school.id) {
         throw new Error("Invalid school data");

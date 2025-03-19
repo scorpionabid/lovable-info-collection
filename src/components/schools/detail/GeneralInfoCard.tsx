@@ -53,7 +53,7 @@ export const GeneralInfoCard = ({
               <Phone className="w-4 h-4 text-infoline-blue mr-2 mt-1" />
               <div>
                 <div className="text-sm font-medium">Əlaqə nömrəsi</div>
-                <div className="text-sm text-infoline-dark-gray">{school.contactPhone}</div>
+                <div className="text-sm text-infoline-dark-gray">{school.phone || school.contactPhone}</div>
               </div>
             </div>
             
@@ -61,7 +61,7 @@ export const GeneralInfoCard = ({
               <Mail className="w-4 h-4 text-infoline-blue mr-2 mt-1" />
               <div>
                 <div className="text-sm font-medium">E-poçt</div>
-                <div className="text-sm text-infoline-dark-gray">{school.contactEmail}</div>
+                <div className="text-sm text-infoline-dark-gray">{school.email || school.contactEmail}</div>
               </div>
             </div>
             
@@ -97,20 +97,45 @@ export const GeneralInfoCard = ({
                 </div>
                 <div className="font-medium">{admin.first_name} {admin.last_name}</div>
               </div>
-              <div className="text-sm text-infoline-dark-gray mb-2">{admin.email}</div>
-              <Button variant="outline" className="w-full" onClick={() => setSelectedAdmin("")}>
-                Adminni dəyişdir
-              </Button>
+              <div className="text-sm text-infoline-dark-gray">{admin.email}</div>
             </div>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-              <div className="text-sm text-yellow-800 mb-2">
-                Bu məktəb üçün admin təyin edilməyib
+            <div className="bg-infoline-lightest-gray p-3 rounded-lg">
+              <div className="flex items-center mb-2">
+                <div className="bg-gray-300 rounded-full p-1.5 mr-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                </div>
+                <div className="font-medium text-infoline-dark-gray">Admin təyin edilməyib</div>
               </div>
-              <Button onClick={() => window.location.href = `/schools/${school.id}/edit`} variant="outline" className="w-full">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => {}}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Admin təyin et
               </Button>
+            </div>
+          )}
+          
+          {isAssigning && (
+            <div className="mt-4">
+              <Select value={selectedAdmin} onValueChange={setSelectedAdmin}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Admin seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAdmins.map(admin => (
+                    <SelectItem key={admin.id} value={admin.id}>
+                      {admin.first_name} {admin.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex space-x-2 mt-2">
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => {}}>
+                  Ləğv et
+                </Button>
+                <Button size="sm" className="flex-1" onClick={() => onAssignAdmin(selectedAdmin)}>
+                  Təyin et
+                </Button>
+              </div>
             </div>
           )}
         </div>
