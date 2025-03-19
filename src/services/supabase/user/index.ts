@@ -39,5 +39,5 @@ const userService = {
 };
 
 export type { User, UserFilters };
-export { User }; // Named export for compatibility
+// Export the service as default instead of trying to export User twice
 export default userService;
