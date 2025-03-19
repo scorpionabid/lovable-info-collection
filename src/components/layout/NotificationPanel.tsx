@@ -1,199 +1,176 @@
-import { useState, useEffect } from 'react';
-import { Bell, X, Check, ChevronDown } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import notificationService from '@/services/notificationService';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { format, formatDistanceToNow } from 'date-fns';
-import { az } from 'date-fns/locale';
-import { Notification } from '@/types/supabase';
 
-export function NotificationPanel() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const { user } = useAuth();
-  const navigate = useNavigate();
+import { useState } from 'react';
+import { Bell, Check, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-  useEffect(() => {
-    if (!user) return;
-    
-    // Load initial notifications
-    fetchNotifications();
-    
-    // Set up an interval to check for new notifications
-    const intervalId = setInterval(fetchNotifications, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, [user]);
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  type: 'info' | 'warning' | 'success' | 'error';
+};
+
+interface NotificationPanelProps {
+  onClose?: () => void;
+}
+
+// Sample notifications data
+const sampleNotifications: Notification[] = [
+  {
+    id: '1',
+    title: 'Yeni məlumat tələbi',
+    message: 'Şimal regionu üçün yeni məlumat tələbi yaradıldı',
+    time: '15 dəq əvvəl',
+    read: false,
+    type: 'info',
+  },
+  {
+    id: '2',
+    title: 'Məlumat təsdiqləndi',
+    message: 'Müəllim məlumatları Bakı region admini tərəfindən təsdiqləndi',
+    time: '2 saat əvvəl',
+    read: false,
+    type: 'success',
+  },
+  {
+    id: '3',
+    title: 'Diqqət!',
+    message: 'Məktəb #42 hesabatında məlumat çatışmazlığı var',
+    time: '1 gün əvvəl',
+    read: true,
+    type: 'warning',
+  },
+  {
+    id: '4',
+    title: 'Sistem yeniləməsi',
+    message: 'Sistem bu gün 22:00-da texniki işlər üçün müvəqqəti olaraq əlçatan olmayacaq',
+    time: '2 gün əvvəl',
+    read: true,
+    type: 'info',
+  },
+];
+
+export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
+  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications);
   
-  const fetchNotifications = async () => {
-    if (!user) return;
-    
-    try {
-      // Fetch notifications for the current user
-      const fetchedNotifications = await notificationService.getUserNotifications(user.id);
-      setNotifications(fetchedNotifications || []);
-      
-      // Count unread notifications
-      setUnreadCount((fetchedNotifications || []).filter(n => !n.is_read).length);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+  const markAsRead = (id: string) => {
+    setNotifications(notifications.map(notif => 
+      notif.id === id ? { ...notif, read: true } : notif
+    ));
+  };
+  
+  const deleteNotification = (id: string) => {
+    setNotifications(notifications.filter(notif => notif.id !== id));
+  };
+  
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(notif => ({ ...notif, read: true })));
+  };
+
+  const getTypeColor = (type: Notification['type']) => {
+    switch (type) {
+      case 'info': return 'bg-blue-500';
+      case 'warning': return 'bg-yellow-500';
+      case 'success': return 'bg-green-500';
+      case 'error': return 'bg-red-500';
+      default: return 'bg-blue-500';
     }
   };
-  
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  };
-  
-  const getFilteredNotifications = () => {
-    if (activeTab === 'all') {
-      return notifications;
-    }
-    return notifications.filter(notification => notification.type === activeTab);
-  };
-  
-  const handleMarkAllAsRead = async () => {
-    if (!user) return;
-    
-    try {
-      await notificationService.markAllAsRead(user.id);
-      await fetchNotifications();
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-    }
-  };
-  
-  const formatNotificationDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      
-      // If the notification is from today, show the time
-      if (date.toDateString() === new Date().toDateString()) {
-        return format(date, 'HH:mm', { locale: az });
-      }
-      
-      // Otherwise, show relative time (e.g., "2 days ago")
-      return formatDistanceToNow(date, { locale: az, addSuffix: true });
-    } catch {
-      return dateString;
-    }
-  };
-  
-  const handleNotificationClick = async (notification: Notification) => {
-    try {
-      // Mark as read if not already
-      if (!notification.is_read) {
-        await notificationService.markAsRead(notification.id);
-      }
-      
-      // Navigate to the linked page if available
-      if (notification.link) {
-        navigate(notification.link);
-      }
-      
-      // Close the panel
-      setIsOpen(false);
-      
-      // Refresh notifications
-      fetchNotifications();
-    } catch (error) {
-      console.error('Error handling notification click:', error);
-    }
-  };
-  
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <Badge variant="destructive" className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </Badge>
-        )}
-      </Button>
-      
-      {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-80 p-0 rounded-md border bg-card shadow-md">
-          <div className="flex items-center justify-between border-b p-3">
-            <h3 className="font-semibold text-foreground">Bildirişlər</h3>
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <div className="flex items-center justify-between px-3 py-2">
-              <TabsList>
-                <TabsTrigger value="all">Hamısı</TabsTrigger>
-                <TabsTrigger value="info">Info</TabsTrigger>
-                <TabsTrigger value="success">Uğurlu</TabsTrigger>
-                <TabsTrigger value="error">Xəta</TabsTrigger>
-              </TabsList>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground h-8"
-                onClick={handleMarkAllAsRead}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                Oxunmuş kimi işarələ
-              </Button>
-            </div>
-            
-            <TabsContent value={activeTab} className="m-0">
-              <ScrollArea className="h-[300px] p-0">
-                {getFilteredNotifications().length > 0 ? (
-                  <div className="space-y-1">
-                    {getFilteredNotifications().map((notification) => (
-                      <button
-                        key={notification.id}
-                        className={`w-full flex items-start p-3 text-left hover:bg-muted ${
-                          !notification.is_read ? 'bg-muted/50' : ''
-                        }`}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        <div className="w-full">
-                          <div className="flex justify-between items-start mb-1">
-                            <h4 className="font-medium text-sm">{notification.title}</h4>
-                            <span className="text-xs text-muted-foreground">
-                              {formatNotificationDate(notification.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {notification.message}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <p>Bildiriş yoxdur</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-          
-          <div className="border-t p-2">
-            <Button variant="ghost" size="sm" className="w-full justify-center text-muted-foreground">
-              Bütün bildirişlərə bax
-              <ChevronDown className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
+    <div className="max-h-[500px] flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-infoline-light-gray">
+        <div className="flex items-center gap-2">
+          <Bell size={16} className="text-infoline-dark-gray" />
+          <span className="font-medium text-infoline-dark-blue">Bildirişlər</span>
+          {unreadCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-infoline-blue text-white">
+              {unreadCount}
+            </span>
+          )}
         </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={markAllAsRead}
+            className="text-xs text-infoline-blue hover:text-infoline-dark-blue"
+          >
+            Hamısını oxunmuş et
+          </button>
+          {onClose && (
+            <button 
+              onClick={onClose}
+              className="text-xs text-infoline-dark-gray hover:text-infoline-dark-blue"
+            >
+              Bağla
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {notifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-6 text-center">
+          <Bell size={40} className="text-infoline-light-gray mb-2" />
+          <p className="text-infoline-dark-gray">Bildiriş yoxdur</p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-y-auto divide-y divide-infoline-light-gray">
+            {notifications.map((notification) => (
+              <div 
+                key={notification.id}
+                className={cn(
+                  "flex gap-3 p-4 transition-colors hover:bg-infoline-light-gray",
+                  !notification.read && "bg-blue-50"
+                )}
+              >
+                <div className={cn(
+                  "w-2 h-2 mt-1.5 rounded-full flex-shrink-0",
+                  getTypeColor(notification.type)
+                )} />
+                
+                <div className="flex-grow min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-sm text-infoline-dark-blue">{notification.title}</p>
+                    <span className="text-xs text-infoline-dark-gray whitespace-nowrap">
+                      {notification.time}
+                    </span>
+                  </div>
+                  <p className="text-sm text-infoline-dark-gray mt-1 break-words">
+                    {notification.message}
+                  </p>
+                </div>
+                
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  {!notification.read && (
+                    <button 
+                      onClick={() => markAsRead(notification.id)}
+                      className="p-1.5 text-infoline-blue hover:bg-white rounded-full"
+                    >
+                      <Check size={14} />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => deleteNotification(notification.id)}
+                    className="p-1.5 text-infoline-dark-gray hover:text-red-500 hover:bg-white rounded-full"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="border-t border-infoline-light-gray p-3">
+            <button className="w-full py-2 text-center text-sm text-infoline-blue hover:bg-infoline-light-gray rounded-md">
+              Bütün bildirişlərə bax
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
-}
+};

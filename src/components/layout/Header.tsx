@@ -18,9 +18,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
   userRole?: string;
+  onToggleSidebar?: () => void;
 }
 
-export function Header({ userRole }: HeaderProps) {
+export function Header({ userRole, onToggleSidebar }: HeaderProps) {
   const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -69,7 +70,7 @@ export function Header({ userRole }: HeaderProps) {
           
           {/* Notifications */}
           {showNotifications ? (
-            <NotificationPanel />
+            <NotificationPanel onClose={toggleNotifications} />
           ) : (
             <Button 
               variant="ghost" 
