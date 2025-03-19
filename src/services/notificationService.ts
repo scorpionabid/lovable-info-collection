@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import { Notification } from '@/types/supabase';
+import { Tables } from '@/types/supabase';
 
 /**
  * Notification service for handling user notifications
@@ -11,7 +11,7 @@ const notificationService = {
    * @param userId User ID
    * @param limit Optional limit for number of notifications
    */
-  getUserNotifications: async (userId: string, limit?: number): Promise<Notification[]> => {
+  getUserNotifications: async (userId: string, limit?: number): Promise<Tables<'notifications'>[]> => {
     try {
       let query = supabase
         .from('notifications')
@@ -30,7 +30,7 @@ const notificationService = {
         return [];
       }
       
-      return data as Notification[];
+      return data || [];
     } catch (error) {
       console.error('Error in getUserNotifications:', error);
       return [];
@@ -42,7 +42,7 @@ const notificationService = {
    * @param userId User ID
    * @param type Notification type
    */
-  getNotifications: async (userId: string, type?: string): Promise<Notification[]> => {
+  getNotifications: async (userId: string, type?: string): Promise<Tables<'notifications'>[]> => {
     try {
       let query = supabase
         .from('notifications')
@@ -61,7 +61,7 @@ const notificationService = {
         return [];
       }
       
-      return data as Notification[];
+      return data || [];
     } catch (error) {
       console.error('Error in getNotifications:', error);
       return [];
@@ -96,7 +96,7 @@ const notificationService = {
    * Mark a notification as read
    * @param notificationId Notification ID
    */
-  markNotificationAsRead: async (notificationId: string): Promise<boolean> => {
+  markAsRead: async (notificationId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -113,7 +113,7 @@ const notificationService = {
       
       return true;
     } catch (error) {
-      console.error('Error in markNotificationAsRead:', error);
+      console.error('Error in markAsRead:', error);
       return false;
     }
   },
@@ -122,7 +122,7 @@ const notificationService = {
    * Mark all notifications as read for a user
    * @param userId User ID
    */
-  markAllNotificationsAsRead: async (userId: string): Promise<boolean> => {
+  markAllAsRead: async (userId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -140,7 +140,7 @@ const notificationService = {
       
       return true;
     } catch (error) {
-      console.error('Error in markAllNotificationsAsRead:', error);
+      console.error('Error in markAllAsRead:', error);
       return false;
     }
   },
@@ -155,7 +155,7 @@ const notificationService = {
     message: string;
     type: string;
     link?: string;
-  }): Promise<Notification | null> => {
+  }): Promise<Tables<'notifications'> | null> => {
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -176,7 +176,7 @@ const notificationService = {
         return null;
       }
       
-      return data as Notification;
+      return data;
     } catch (error) {
       console.error('Error in createNotification:', error);
       return null;

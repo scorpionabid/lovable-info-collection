@@ -1,12 +1,17 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { User, UserFilter } from '@/services/userService/types';
+import { User, UserFilter } from '@/services/userService';
 import userService from '@/services/userService';
 
 export const useUsersData = (initialFilters: UserFilter = {}) => {
   const [filters, setFilters] = useState<UserFilter>(initialFilters);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [search, setSearch] = useState('');
+  const [sortColumn, setSortColumn] = useState<string>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const {
     data: userData,
@@ -20,8 +25,11 @@ export const useUsersData = (initialFilters: UserFilter = {}) => {
       // Convert sortBy to sortField and sortOrder for compatibility
       const apiFilters: UserFilter = {
         ...filters,
-        sortField: filters.sortField || 'created_at',
-        sortOrder: filters.sortOrder || 'desc'
+        page,
+        pageSize: perPage,
+        search,
+        sortField: sortColumn || 'created_at',
+        sortOrder: sortOrder || 'desc'
       };
       
       return userService.getUsers(apiFilters);
@@ -32,6 +40,23 @@ export const useUsersData = (initialFilters: UserFilter = {}) => {
   useEffect(() => {
     setSelectedRows([]);
   }, [userData]);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1); // Reset to first page when searching
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle sort direction
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new sort column and default to ascending
+      setSortColumn(column);
+      setSortOrder('asc');
+    }
+    setPage(1); // Reset to first page when sorting
+  };
 
   const users = userData?.data || [];
   const totalCount = userData?.count || 0;
@@ -46,6 +71,15 @@ export const useUsersData = (initialFilters: UserFilter = {}) => {
     setFilters,
     selectedRows,
     setSelectedRows,
-    refetch
+    refetch,
+    page,
+    perPage,
+    search,
+    sortColumn,
+    sortOrder,
+    handleSearchChange,
+    handleSort,
+    setPage,
+    setPerPage,
   };
 };

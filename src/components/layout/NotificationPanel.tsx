@@ -4,7 +4,7 @@ import { X, Bell, Check, AlertCircle, Info, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import notificationService from '@/services/notificationService';
-import { Notification } from '@/services/supabase/supabaseClient';
+import { Tables } from '@/types/supabase';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,7 @@ interface NotificationPanelProps {
 }
 
 export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Tables<'notifications'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const { toast } = useToast();
@@ -31,12 +31,9 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
           return;
         }
         
-        // Fix method name: getNotifications -> getUserNotifications
         const result = await notificationService.getUserNotifications(userId);
-        if (result.data) {
-          setNotifications(result.data);
-          setUnreadCount(result.data.filter(n => !n.is_read).length);
-        }
+        setNotifications(result);
+        setUnreadCount(result.filter(n => !n.is_read).length);
       } catch (error) {
         console.error('Error fetching notifications:', error);
         toast({
@@ -67,13 +64,13 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            const newNotification = payload.new as Notification;
+            const newNotification = payload.new as Tables<'notifications'>;
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
             
             toast({
               title: newNotification.title,
-              description: newNotification.body,
+              description: newNotification.message,
             });
           }
         )
@@ -104,19 +101,16 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
         return;
       }
       
-      // Create a custom implementation if markAllNotificationsAsRead doesn't exist
-      // Use available API methods to achieve the same result
-      const unreadNotifications = notifications.filter(n => !n.is_read);
-      for (const notification of unreadNotifications) {
-        await notificationService.markAsRead(notification.id);
-      }
+      const success = await notificationService.markAllAsRead(userId);
       
-      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-      toast({
-        title: 'Uğurlu əməliyyat',
-        description: 'Bütün bildirişlər oxunmuş kimi işarələndi',
-      });
+      if (success) {
+        setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+        setUnreadCount(0);
+        toast({
+          title: 'Uğurlu əməliyyat',
+          description: 'Bütün bildirişlər oxunmuş kimi işarələndi',
+        });
+      }
     } catch (error) {
       console.error('Error marking all as read:', error);
       toast({
@@ -129,14 +123,16 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      // Fix method name: markNotificationAsRead -> markAsRead
-      await notificationService.markAsRead(id);
-      setNotifications(
-        notifications.map(n => 
-          n.id === id ? { ...n, is_read: true } : n
-        )
-      );
-      setUnreadCount(prev => prev - 1);
+      const success = await notificationService.markAsRead(id);
+      
+      if (success) {
+        setNotifications(
+          notifications.map(n => 
+            n.id === id ? { ...n, is_read: true } : n
+          )
+        );
+        setUnreadCount(prev => prev - 1);
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
       toast({
@@ -218,7 +214,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
               >
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.notification_type || notification.type)}
+                    {getNotificationIcon(notification.type)}
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between">
@@ -237,20 +233,20 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
                       )}
                     </div>
                     <p className="text-sm text-infoline-dark-gray mt-1">
-                      {notification.body || notification.message}
+                      {notification.message}
                     </p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs text-infoline-gray">
                         {format(new Date(notification.created_at), 'dd.MM.yyyy HH:mm')}
                       </span>
-                      {(notification.action_url || notification.link) && (
+                      {notification.link && (
                         <Button
                           variant="link"
                           size="sm"
                           className="h-6 p-0 text-xs text-infoline-blue"
                           asChild
                         >
-                          <a href={notification.action_url || notification.link}>Bax</a>
+                          <a href={notification.link}>Bax</a>
                         </Button>
                       )}
                     </div>

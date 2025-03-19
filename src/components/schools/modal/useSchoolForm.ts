@@ -6,6 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { School, CreateSchoolDto } from '@/services/supabase/school/types';
 import { useSchoolHelpers } from './useSchoolHelpers';
 
+interface SchoolType {
+  id: string;
+  name: string;
+}
+
 export const useSchoolForm = ({ mode, school, onSchoolUpdated, onClose }: {
   mode: 'create' | 'edit';
   school?: School;
@@ -55,49 +60,61 @@ export const useSchoolForm = ({ mode, school, onSchoolUpdated, onClose }: {
     const fetchLookupData = async () => {
       try {
         // Fetch regions
-        const { data: regionsData } = await supabase
+        const { data: regionsData, error: regionsError } = await supabase
           .from('regions')
           .select('id, name')
           .order('name');
+        
+        if (regionsError) {
+          console.error('Error fetching regions:', regionsError);
+          toast.error('Bölgə məlumatları yüklənərkən xəta baş verdi');
+          return;
+        }
         
         if (regionsData) {
           setRegions(regionsData);
         }
         
-        // Fetch school types
-        // Use a raw query or direct table name to handle "school_types" table
-        // since it's not in the type definitions
-        const schoolTypesResponse = await supabase
-          .rpc('get_school_types') // Use a stored procedure if available
-          .select('id, name');
-
-        if (schoolTypesResponse.data && !schoolTypesResponse.error) {
-          setTypes(schoolTypesResponse.data.map(type => ({
-            id: type.id,
-            name: type.name
-          })));
-        } else {
-          // Fallback to direct query with error handling
-          const { data, error } = await supabase.from('school_types')
-            .select('id, name')
-            .order('name');
+        // Fetch school types using rpc or direct query with error handling
+        try {
+          // First try a custom query to handle the school_types table
+          const { data: typesData, error: typesError } = await supabase
+            .rpc('get_school_types');
+          
+          if (typesError) {
+            // Fallback to a raw SQL query
+            console.log('RPC failed, falling back to raw query:', typesError);
+            const { data, error } = await supabase.rpc('get_school_type_list');
             
-          if (error) {
-            console.error('Error fetching school types:', error);
-            setTypes([]);
-          } else if (data) {
-            // Manually map the data with type safety
-            const typesArray: {id: string; name: string}[] = [];
-            data.forEach(item => {
-              if (typeof item.id === 'string' && typeof item.name === 'string') {
-                typesArray.push({
-                  id: item.id,
-                  name: item.name
-                });
+            if (error) {
+              console.error('Error fetching school types with rpc:', error);
+              // As a third fallback, attempt a direct query to the table
+              const rawResponse = await supabase.from('school_types').select('id, name').order('name');
+              
+              if (rawResponse.error) {
+                console.error('All methods to fetch school types failed:', rawResponse.error);
+                setTypes([]);
+                toast.error('Məktəb tipləri yüklənərkən xəta baş verdi');
+                return;
               }
-            });
-            setTypes(typesArray);
+              
+              setTypes(rawResponse.data || []);
+            } else if (data) {
+              setTypes(data.map((type: SchoolType) => ({
+                id: type.id,
+                name: type.name
+              })));
+            }
+          } else if (typesData) {
+            setTypes(typesData.map((type: SchoolType) => ({
+              id: type.id,
+              name: type.name
+            })));
           }
+        } catch (typesError) {
+          console.error('Error in school types fetch handling:', typesError);
+          toast.error('Məktəb tipləri yüklənərkən xəta baş verdi');
+          setTypes([]);
         }
       } catch (error) {
         console.error('Error fetching lookup data', error);
@@ -123,25 +140,15 @@ export const useSchoolForm = ({ mode, school, onSchoolUpdated, onClose }: {
           .eq('region_id', formData.region_id)
           .order('name');
         
-        // Add a null check before setting state
         if (error) {
           console.error('Error fetching sectors:', error);
           setSectors([]);
+          toast.error('Sektor məlumatları yüklənərkən xəta baş verdi');
           return;
         }
         
         if (data) {
-          // Transform with type safety
-          const sectorsArray: {id: string; name: string}[] = [];
-          data.forEach(item => {
-            if (typeof item.id === 'string' && typeof item.name === 'string') {
-              sectorsArray.push({
-                id: item.id,
-                name: item.name
-              });
-            }
-          });
-          setSectors(sectorsArray);
+          setSectors(data);
         } else {
           setSectors([]);
         }
