@@ -1,22 +1,52 @@
+
+// Define our school types
 export interface School {
   id: string;
   name: string;
-  type: string;
-  region: string;
-  region_id: string;
-  sector: string;
+  type?: string;
+  region?: string;
+  region_id?: string;
+  sector?: string;
   sector_id: string;
-  studentCount: number;
-  teacherCount: number;
-  completionRate: number;
-  status: string;
-  contactEmail: string;
-  contactPhone: string;
-  createdAt: string;
-  address?: string;
+  studentCount?: number;
+  teacherCount?: number;
+  completionRate?: number;
+  status?: string;
   director?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  createdAt?: string;
+  address?: string;
   adminName?: string | null;
   adminId?: string | null;
+}
+
+export interface CreateSchoolDto {
+  name: string;
+  region_id: string;
+  sector_id: string;
+  type?: string;
+  address?: string;
+  studentCount?: number;
+  teacherCount?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  director?: string;
+  status?: string;
+}
+
+export interface UpdateSchoolDto {
+  name?: string;
+  region_id?: string;
+  sector_id?: string;
+  type?: string;
+  address?: string;
+  studentCount?: number;
+  teacherCount?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  director?: string;
+  status?: string;
 }
 
 export interface SchoolFilter {
@@ -25,39 +55,23 @@ export interface SchoolFilter {
   sectorId?: string;
   type?: string;
   status?: string;
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
 }
 
-export interface Category {
+export interface SchoolSummary {
+  id: string;
   name: string;
-  value: number;
-}
-
-export interface CompletionHistory {
-  name: string;
-  value: number;
-}
-
-export interface SchoolStats {
-  categories: Category[];
-  completionHistory: CompletionHistory[];
-}
-
-export interface CreateSchoolDto {
-  name: string;
-  type: string; // This needs to be a valid UUID for type_id
-  region_id: string; // This must be a valid UUID
-  sector_id: string; // This must be a valid UUID
-  region?: string;
-  sector?: string;
   studentCount: number;
   teacherCount: number;
-  address?: string;
-  contactEmail: string;
-  contactPhone: string;
+  completionRate: number;
   status: string;
-  director?: string;
 }
 
-export interface UpdateSchoolDto extends Partial<CreateSchoolDto> {}
+export interface SchoolWithAdmin extends School {
+  admin?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+  } | null;
+}

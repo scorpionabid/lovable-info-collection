@@ -1,14 +1,16 @@
 
 import { supabase } from '../supabaseClient';
+import { Region, Sector } from './types';
 
 // Create a region 
-export const createRegion = async (regionData: { name: string; code?: string }) => {
+export const createRegion = async (regionData: { name: string; code?: string; description?: string }): Promise<Region> => {
   try {
     const { data, error } = await supabase
       .from('regions')
       .insert({
         name: regionData.name,
         code: regionData.code || null,
+        description: regionData.description || null
       })
       .select('*')
       .single();
@@ -22,12 +24,13 @@ export const createRegion = async (regionData: { name: string; code?: string }) 
 };
 
 // Update a region by ID
-export const updateRegion = async (id: string, regionData: { name?: string; code?: string }) => {
+export const updateRegion = async (id: string, regionData: { name?: string; code?: string; description?: string }): Promise<Region> => {
   try {
-    const updateData: any = {};
+    const updateData: Partial<Region> = {};
     
     if (regionData.name) updateData.name = regionData.name;
     if (regionData.code !== undefined) updateData.code = regionData.code;
+    if (regionData.description !== undefined) updateData.description = regionData.description;
     
     const { data, error } = await supabase
       .from('regions')
@@ -45,7 +48,7 @@ export const updateRegion = async (id: string, regionData: { name?: string; code
 };
 
 // Delete a region by ID
-export const deleteRegion = async (id: string) => {
+export const deleteRegion = async (id: string): Promise<boolean> => {
   try {
     // First check if region has any sectors
     const { data: sectorsData, error: sectorsError } = await supabase
@@ -75,7 +78,7 @@ export const deleteRegion = async (id: string) => {
 };
 
 // Archive a region (safer than deletion)
-export const archiveRegion = async (id: string) => {
+export const archiveRegion = async (id: string): Promise<Region> => {
   try {
     const { data, error } = await supabase
       .from('regions')
@@ -93,7 +96,7 @@ export const archiveRegion = async (id: string) => {
 };
 
 // Create a sector belonging to a region
-export const createSector = async (regionId: string, sectorData: { name: string; code?: string }) => {
+export const createSector = async (regionId: string, sectorData: { name: string; code?: string; description?: string }): Promise<Sector> => {
   try {
     if (!regionId) {
       throw new Error('regionId is required');
@@ -105,6 +108,7 @@ export const createSector = async (regionId: string, sectorData: { name: string;
         region_id: regionId,
         name: sectorData.name,
         code: sectorData.code || null,
+        description: sectorData.description || null
       })
       .select('*')
       .single();
@@ -118,12 +122,13 @@ export const createSector = async (regionId: string, sectorData: { name: string;
 };
 
 // Update a sector by ID
-export const updateSector = async (id: string, sectorData: { name?: string; code?: string; region_id?: string }) => {
+export const updateSector = async (id: string, sectorData: { name?: string; code?: string; description?: string; region_id?: string }): Promise<Sector> => {
   try {
-    const updateData: any = {};
+    const updateData: Partial<Sector> = {};
     
     if (sectorData.name) updateData.name = sectorData.name;
     if (sectorData.code !== undefined) updateData.code = sectorData.code;
+    if (sectorData.description !== undefined) updateData.description = sectorData.description;
     if (sectorData.region_id) updateData.region_id = sectorData.region_id;
     
     const { data, error } = await supabase
@@ -142,7 +147,7 @@ export const updateSector = async (id: string, sectorData: { name?: string; code
 };
 
 // Delete a sector by ID 
-export const deleteSector = async (id: string) => {
+export const deleteSector = async (id: string): Promise<boolean> => {
   try {
     // First check if sector has any schools
     const { data: schoolsData, error: schoolsError } = await supabase
@@ -172,7 +177,7 @@ export const deleteSector = async (id: string) => {
 };
 
 // Archive a sector (safer than deletion)
-export const archiveSector = async (id: string) => {
+export const archiveSector = async (id: string): Promise<Sector> => {
   try {
     const { data, error } = await supabase
       .from('sectors')

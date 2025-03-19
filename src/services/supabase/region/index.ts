@@ -8,7 +8,8 @@ import {
 // Export other region functionality
 import { getRegions, getRegionById, getRegionWithStats } from './queries';
 import { searchRegionsByName } from './search';
-import { FilterParams, SortConfig, RegionWithStats } from './types';
+import { getRegionSectors, getSectorById, getSectorsWithSchoolCounts } from './sectorQueries';
+import { FilterParams, SortConfig, RegionWithStats, Region, Sector } from './types';
 
 // Combined exports
 export {
@@ -20,11 +21,14 @@ export {
   getRegions, getRegionById, getRegionWithStats,
   
   // Search
-  searchRegionsByName
+  searchRegionsByName,
+  
+  // Sector queries
+  getRegionSectors, getSectorById, getSectorsWithSchoolCounts
 };
 
 // Export types
-export type { FilterParams, SortConfig, RegionWithStats };
+export type { FilterParams, SortConfig, RegionWithStats, Region, Sector };
 
 // Default export with all functions
 export default {
@@ -36,5 +40,8 @@ export default {
   getRegions, getRegionById, getRegionWithStats,
   
   // Search
-  searchRegionsByName
+  searchRegionsByName,
+  
+  // Sector queries
+  getRegionSectors, getSectorById, getSectorsWithSchoolCounts
 };

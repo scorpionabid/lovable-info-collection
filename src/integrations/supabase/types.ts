@@ -1206,6 +1206,7 @@ export type Database = {
       schools: {
         Row: {
           address: string | null
+          archived: boolean | null
           created_at: string | null
           director: string | null
           email: string | null
@@ -1221,6 +1222,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          archived?: boolean | null
           created_at?: string | null
           director?: string | null
           email?: string | null
@@ -1236,6 +1238,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          archived?: boolean | null
           created_at?: string | null
           director?: string | null
           email?: string | null
