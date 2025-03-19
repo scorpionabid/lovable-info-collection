@@ -1,6 +1,6 @@
 
 // Re-export the User type and all other types
-export type { 
+export { 
   User, 
   UserFilter, 
   UserResponse, 
@@ -10,7 +10,7 @@ export type {
 } from './types';
 
 // Import the actual service implementation
-import userService from '../userService-bridge';
+import userService from './userService-bridge';
 
 // Export the service as the default export
 export default userService;

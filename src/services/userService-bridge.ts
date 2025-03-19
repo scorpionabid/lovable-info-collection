@@ -1,7 +1,8 @@
 
+import { supabase } from '@/lib/supabase';
 import { User as SupabaseUser } from "@/services/supabase/user/types";
 import supabaseUserService from "@/services/supabase/user";
-import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto } from "./services/userService/types";
+import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto } from "./userService/types";
 
 // Create a bridge between the old userService and the new Supabase implementation
 const userService = {
@@ -106,7 +107,8 @@ const userService = {
 
   blockUser: async (id: string): Promise<boolean> => {
     try {
-      return await supabaseUserService.blockUser(id);
+      const result = await supabaseUserService.blockUser(id);
+      return result ? true : false;
     } catch (error) {
       console.error("Error in blockUser bridge:", error);
       return false;
@@ -115,7 +117,8 @@ const userService = {
 
   activateUser: async (id: string): Promise<boolean> => {
     try {
-      return await supabaseUserService.activateUser(id);
+      const result = await supabaseUserService.activateUser(id);
+      return result ? true : false;
     } catch (error) {
       console.error("Error in activateUser bridge:", error);
       return false;
@@ -137,7 +140,15 @@ const userService = {
 
   changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      return await supabaseUserService.changePassword(oldPassword, newPassword);
+      if (supabaseUserService.changePassword) {
+        return await supabaseUserService.changePassword(oldPassword, newPassword);
+      } else {
+        // Fallback to Supabase Auth directly
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+        return !error;
+      }
     } catch (error) {
       console.error("Error in changePassword bridge:", error);
       return false;
@@ -155,7 +166,7 @@ const userService = {
     }
   },
 
-  getRegions: async () => {
+  getRegions: async (userId?: string, userRole?: string) => {
     try {
       const regions = await supabaseUserService.getRegions();
       return regions;
@@ -165,7 +176,7 @@ const userService = {
     }
   },
 
-  getSectors: async (regionId: string) => {
+  getSectors: async (regionId: string, userId?: string, userRole?: string) => {
     try {
       const sectors = await supabaseUserService.getSectors(regionId);
       return sectors;
@@ -175,7 +186,7 @@ const userService = {
     }
   },
 
-  getSchools: async (sectorId: string) => {
+  getSchools: async (sectorId: string, userId?: string, userRole?: string) => {
     try {
       const schools = await supabaseUserService.getSchools(sectorId);
       return schools;
