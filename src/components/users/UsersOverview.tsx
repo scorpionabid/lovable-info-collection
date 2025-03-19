@@ -106,7 +106,7 @@ export const UsersOverview = () => {
 
       <UserTableToolbar 
         search={search}
-        onSearchChange={(e) => handleSearchChange(e.target.value)}
+        onSearchChange={handleSearchChange}
         onExport={handleExport}
         onAddUser={handleAddUser}
       />
