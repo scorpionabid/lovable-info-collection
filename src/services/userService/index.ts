@@ -1,7 +1,7 @@
 
 // Export the User type and all other types with proper type annotations
 import { 
-  User as UserType, 
+  User, 
   UserFilter, 
   UserResponse, 
   CreateUserDto, 
