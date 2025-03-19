@@ -1,3 +1,4 @@
+
 /**
  * Metric Service - Fetches and processes metrics data
  */
@@ -920,4 +921,52 @@ const metricService = {
 
       // Count the occurrences of each sector
       const sectorCounts: Record<string, number> = data.reduce((counts, school) => {
-        counts[school.sector_
+        counts[school.sector_id] = (counts[school.sector_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return sectorCounts;
+    } catch (error) {
+      logger.error('Error getting most frequent sectors:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of least frequent sectors.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each sector.
+   */
+  getLeastFrequentSectors: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('sector_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching schools for sectors:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each sector
+      const sectorCounts: Record<string, number> = data.reduce((counts, school) => {
+        counts[school.sector_id] = (counts[school.sector_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return sectorCounts;
+    } catch (error) {
+      logger.error('Error getting least frequent sectors:', error);
+      return null;
+    }
+  }
+};
+
+export default metricService;
