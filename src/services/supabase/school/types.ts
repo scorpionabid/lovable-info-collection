@@ -1,131 +1,105 @@
 
-// Define our school types
+// School types
 export interface School {
   id: string;
   name: string;
-  type?: string;
-  type_id?: string;
-  region?: string;
-  region_id?: string;
-  sector?: string;
+  code: string;
+  region_id: string;
   sector_id: string;
-  studentCount?: number;
-  teacherCount?: number;
-  completionRate?: number;
-  status?: string;
-  director?: string;
-  contactEmail?: string;
-  contactPhone?: string;
-  createdAt?: string;
-  address?: string;
-  adminName?: string | null;
-  adminId?: string | null;
-  // Database field names
-  email?: string;
-  phone?: string;
-  student_count?: number;
-  teacher_count?: number;
-  code?: string;
-  created_at?: string;
-  updated_at?: string;
-  archived?: boolean;
-}
-
-export interface SchoolDatabaseRow {
-  id: string;
-  name: string;
-  region_id?: string;
-  sector_id: string;
-  type_id?: string;
-  address?: string;
-  email?: string;
-  phone?: string;
-  director?: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
-  code?: string;
+  type_id: string;
+  address: string;
   created_at: string;
-  updated_at?: string;
+  updated_at: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface CreateSchoolDto {
   name: string;
+  code: string;
   region_id: string;
   sector_id: string;
-  type?: string;
-  type_id?: string;
-  address?: string;
-  studentCount?: number;
-  teacherCount?: number;
-  contactEmail?: string;
-  contactPhone?: string;
-  director?: string;
-  status?: string;
-  // Database field names
-  email?: string;
-  phone?: string;
+  type_id: string;
+  address: string;
   student_count?: number;
   teacher_count?: number;
-  code?: string;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface UpdateSchoolDto {
   name?: string;
+  code?: string;
   region_id?: string;
   sector_id?: string;
-  type?: string;
   type_id?: string;
   address?: string;
-  studentCount?: number;
-  teacherCount?: number;
-  contactEmail?: string;
-  contactPhone?: string;
-  director?: string;
-  status?: string;
-  // Database field names
-  email?: string;
-  phone?: string;
   student_count?: number;
   teacher_count?: number;
-  code?: string;
-  archived?: boolean;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface SchoolFilter {
+  region_id?: string;
+  sector_id?: string;
+  type_id?: string;
   search?: string;
-  regionId?: string;
-  sectorId?: string;
-  type?: string;
   status?: string;
-  // Min/Max completion rate for filtering
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
 }
 
 export interface SchoolSummary {
   id: string;
   name: string;
-  studentCount: number;
-  teacherCount: number;
-  completionRate: number;
+  code: string;
+  region: string;
+  sector: string;
   status: string;
+  students: number;
+  teachers: number;
+}
+
+export interface SchoolStats {
+  total_students: number;
+  total_teachers: number;
+  student_teacher_ratio: number;
+  completion_percentage: number;
+  last_updated: string;
 }
 
 export interface SchoolWithAdmin extends School {
   admin?: {
     id: string;
-    firstName: string;
-    lastName: string;
+    name: string;
     email: string;
-    phone?: string;
-  } | null;
+  };
 }
 
-// Add SchoolStats interface
-export interface SchoolStats {
-  totalSchools: number;
-  activeSchools: number;
-  averageCompletionRate: number;
-  completionHistory?: any[]; // Add this to fix the type error
-}
+export type SchoolDatabaseRow = {
+  id: string;
+  name: string;
+  code: string;
+  region_id: string;
+  sector_id: string;
+  type_id: string;
+  address: string;
+  created_at: string;
+  updated_at: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
+  school_types?: any;
+  regions?: any;
+  sectors?: any;
+};

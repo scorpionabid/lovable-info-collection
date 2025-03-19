@@ -4,25 +4,25 @@ import { Region, Sector } from './types';
 
 /**
  * Create a new region
- * @param data Region data
- * @returns The created region
+ * @param regionData Region data to create
+ * @returns Created region or error
  */
-export const createRegion = async (data: Partial<Region>) => {
+export const createRegion = async (regionData: Partial<Region>) => {
   try {
-    const { data: regionData, error } = await supabase
+    const { data, error } = await supabase
       .from('regions')
       .insert({
-        name: data.name,
-        code: data.code,
-        description: data.description, // Now accepts description
+        name: regionData.name,
+        code: regionData.code,
+        description: regionData.description,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .select()
       .single();
-
+    
     if (error) throw error;
-    return regionData;
+    return data;
   } catch (error) {
     console.error('Error creating region:', error);
     throw error;
@@ -30,29 +30,29 @@ export const createRegion = async (data: Partial<Region>) => {
 };
 
 /**
- * Update a region
+ * Update an existing region
  * @param id Region ID
- * @param data Region data
- * @returns The updated region
+ * @param regionData Region data to update
+ * @returns Updated region or error
  */
-export const updateRegion = async (id: string, data: Partial<Region>) => {
+export const updateRegion = async (id: string, regionData: Partial<Region>) => {
   try {
-    const { data: regionData, error } = await supabase
+    const { data, error } = await supabase
       .from('regions')
       .update({
-        name: data.name,
-        code: data.code,
-        description: data.description, // Now accepts description
+        name: regionData.name,
+        code: regionData.code,
+        description: regionData.description,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single();
-
+    
     if (error) throw error;
-    return regionData;
+    return data;
   } catch (error) {
-    console.error('Error updating region:', error);
+    console.error(`Error updating region ${id}:`, error);
     throw error;
   }
 };
@@ -60,7 +60,7 @@ export const updateRegion = async (id: string, data: Partial<Region>) => {
 /**
  * Delete a region
  * @param id Region ID
- * @returns Boolean success value
+ * @returns Success status or error
  */
 export const deleteRegion = async (id: string) => {
   try {
@@ -68,57 +68,62 @@ export const deleteRegion = async (id: string) => {
       .from('regions')
       .delete()
       .eq('id', id);
-
+    
     if (error) throw error;
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error('Error deleting region:', error);
+    console.error(`Error deleting region ${id}:`, error);
     throw error;
   }
 };
 
 /**
- * Archive a region
+ * Archive a region (soft delete)
  * @param id Region ID
- * @returns Boolean success value
+ * @returns Success status or error
  */
 export const archiveRegion = async (id: string) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('regions')
-      .update({ archived: true })
-      .eq('id', id);
-
+      .update({
+        archived: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
     if (error) throw error;
-    return true;
+    return data;
   } catch (error) {
-    console.error('Error archiving region:', error);
+    console.error(`Error archiving region ${id}:`, error);
     throw error;
   }
 };
 
 /**
  * Create a new sector
- * @param data Sector data
- * @returns The created sector
+ * @param sectorData Sector data to create
+ * @returns Created sector or error
  */
-export const createSector = async (data: Partial<Sector>) => {
+export const createSector = async (sectorData: Partial<Sector>) => {
   try {
-    const { data: sectorData, error } = await supabase
+    const { data, error } = await supabase
       .from('sectors')
       .insert({
-        name: data.name,
-        region_id: data.region_id,
-        code: data.code,
-        description: data.description, // Now accepts description
+        name: sectorData.name,
+        region_id: sectorData.region_id,
+        code: sectorData.code,
+        description: sectorData.description,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .select()
       .single();
-
+    
     if (error) throw error;
-    return sectorData;
+    return data;
   } catch (error) {
     console.error('Error creating sector:', error);
     throw error;
@@ -126,30 +131,30 @@ export const createSector = async (data: Partial<Sector>) => {
 };
 
 /**
- * Update a sector
+ * Update an existing sector
  * @param id Sector ID
- * @param data Sector data
- * @returns The updated sector
+ * @param sectorData Sector data to update
+ * @returns Updated sector or error
  */
-export const updateSector = async (id: string, data: Partial<Sector>) => {
+export const updateSector = async (id: string, sectorData: Partial<Sector>) => {
   try {
-    const { data: sectorData, error } = await supabase
+    const { data, error } = await supabase
       .from('sectors')
       .update({
-        name: data.name,
-        region_id: data.region_id,
-        code: data.code,
-        description: data.description, // Now accepts description
+        name: sectorData.name,
+        region_id: sectorData.region_id,
+        code: sectorData.code,
+        description: sectorData.description,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single();
-
+    
     if (error) throw error;
-    return sectorData;
+    return data;
   } catch (error) {
-    console.error('Error updating sector:', error);
+    console.error(`Error updating sector ${id}:`, error);
     throw error;
   }
 };
@@ -157,7 +162,7 @@ export const updateSector = async (id: string, data: Partial<Sector>) => {
 /**
  * Delete a sector
  * @param id Sector ID
- * @returns Boolean success value
+ * @returns Success status or error
  */
 export const deleteSector = async (id: string) => {
   try {
@@ -165,31 +170,36 @@ export const deleteSector = async (id: string) => {
       .from('sectors')
       .delete()
       .eq('id', id);
-
+    
     if (error) throw error;
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error('Error deleting sector:', error);
+    console.error(`Error deleting sector ${id}:`, error);
     throw error;
   }
 };
 
 /**
- * Archive a sector
+ * Archive a sector (soft delete)
  * @param id Sector ID
- * @returns Boolean success value
+ * @returns Success status or error
  */
 export const archiveSector = async (id: string) => {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('sectors')
-      .update({ archived: true })
-      .eq('id', id);
-
+      .update({
+        archived: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
     if (error) throw error;
-    return true;
+    return data;
   } catch (error) {
-    console.error('Error archiving sector:', error);
+    console.error(`Error archiving sector ${id}:`, error);
     throw error;
   }
 };

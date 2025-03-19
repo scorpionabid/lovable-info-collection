@@ -33,13 +33,16 @@ export interface SectorData {
 export interface SectorWithStats {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   region_id: string;
   regionName: string;
   created_at: string;
   schoolCount: number;
   completionRate: number;
   archived: boolean;
+  // Compatibility with region module
+  schools_count?: number;
+  completion_rate?: number;
 }
 
 // Sektor əlavə etmə nəticəsi

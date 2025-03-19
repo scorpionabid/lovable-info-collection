@@ -1,119 +1,172 @@
 
-import { useState } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RegionWithStats } from '@/services/supabase/region/types';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { SectorWithStats } from "@/services/supabase/sector/types";
+import { createSector, updateSector } from "@/services/supabase/sector";
+import { useToast } from "@/hooks/use-toast";
 
 export interface SectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'create' | 'edit';
-  region?: RegionWithStats;
+  mode: "create" | "edit";
+  region?: { id: string; name: string };
   sectorId?: string;
+  sector?: SectorWithStats;
   onSuccess?: () => void;
 }
 
-export const SectorModal = ({ isOpen, onClose, mode, region, sectorId, onSuccess }: SectorModalProps) => {
-  const [sectorName, setSectorName] = useState('');
+export const SectorModal = ({ 
+  isOpen, 
+  onClose, 
+  mode, 
+  region, 
+  sectorId,
+  sector, 
+  onSuccess 
+}: SectorModalProps) => {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    regionId: "",
+  });
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  useEffect(() => {
+    if (mode === "edit" && sector) {
+      setFormData({
+        name: sector.name,
+        description: sector.description || "",
+        regionId: sector.region_id,
+      });
+    } else if (mode === "create" && region) {
+      setFormData({
+        name: "",
+        description: "",
+        regionId: region.id,
+      });
+    }
+  }, [mode, sector, region]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (!sectorName.trim()) {
-      setError('Sector name is required');
+    if (!formData.name) {
+      toast({
+        title: "Xəta",
+        description: "Sektor adını daxil edin",
+        variant: "destructive",
+      });
       return;
     }
-    
-    setIsSubmitting(true);
-    setError('');
-    
+
     try {
-      // In a real app, this would make an API call
-      console.log('Creating sector:', {
-        name: sectorName,
-        regionId: region?.id
-      });
+      setIsSubmitting(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (mode === "create") {
+        await createSector({
+          name: formData.name,
+          description: formData.description,
+          region_id: formData.regionId,
+        });
+        
+        toast({
+          title: "Uğurlu",
+          description: "Sektor uğurla yaradıldı",
+        });
+      } else if (mode === "edit" && sector) {
+        await updateSector(sector.id, {
+          name: formData.name,
+          description: formData.description,
+          region_id: formData.regionId,
+        });
+        
+        toast({
+          title: "Uğurlu",
+          description: "Sektor uğurla yeniləndi",
+        });
+      }
       
       if (onSuccess) {
         onSuccess();
       }
       
       onClose();
-    } catch (err) {
-      console.error('Error creating sector:', err);
-      setError('Failed to create sector. Please try again.');
+    } catch (error) {
+      console.error("Sector operation failed:", error);
+      toast({
+        title: "Xəta",
+        description: "Əməliyyat zamanı xəta baş verdi",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Create New Sector' : 'Edit Sector'}
+            {mode === "create" ? "Yeni Sektor Yarat" : "Sektoru Redaktə Et"}
           </DialogTitle>
-          <DialogDescription>
-            {mode === 'create' 
-              ? `Add a new sector to ${region?.name || 'the region'}`
-              : 'Update sector information'
-            }
-          </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="sector-name">Sector Name</Label>
-              <Input
-                id="sector-name"
-                placeholder="Enter sector name"
-                value={sectorName}
-                onChange={(e) => setSectorName(e.target.value)}
-              />
-              {error && <p className="text-sm text-red-500">{error}</p>}
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Sektor adı</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Sektor adını daxil edin"
+              required
+            />
           </div>
           
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+          <div className="space-y-2">
+            <Label htmlFor="description">Təsvir</Label>
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Təsvir daxil edin (istəyə bağlı)"
+              rows={3}
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-4 pt-4">
+            <Button
+              type="button"
+              variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Cancel
+              Ləğv et
             </Button>
             <Button 
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {mode === 'create' ? 'Creating...' : 'Updating...'}
-                </>
-              ) : (
-                mode === 'create' ? 'Create Sector' : 'Update Sector'
-              )}
+              {isSubmitting
+                ? "Gözləyin..."
+                : mode === "create"
+                ? "Yarat"
+                : "Yadda saxla"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

@@ -24,14 +24,14 @@ export const RegionsOverview = () => {
 
   // Data fetching
   const { 
-    data: regionsData, 
+    regionsData, 
     isLoading, 
     isError, 
     refetch,
     searchTerm,
     setSearchTerm
   } = useRegionData({ 
-    page: currentPage, 
+    currentPage, 
     pageSize, 
     sortColumn, 
     sortDirection, 

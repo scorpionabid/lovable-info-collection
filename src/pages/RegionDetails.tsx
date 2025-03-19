@@ -15,21 +15,21 @@ import { Spinner } from "@/components/ui/spinner";
 import { getRegionById } from "@/services/supabase/region/queries";
 import { getSectorsByRegion } from "@/services/supabase/region/sectorQueries";
 import { getSchoolsByRegion } from "@/services/supabase/school/queries/schoolQueries";
-import { RegionWithStats, SectorWithStats } from "@/services/supabase/region/types";
-import { School } from "@/services/supabase/school/types";
+import { Region, RegionWithStats, SectorWithStats as RegionSectorWithStats } from "@/services/supabase/region/types";
+import { SectorWithStats } from "@/services/supabase/sector/types";
 
 export default function RegionDetails() {
   const { id } = useParams();
   const [region, setRegion] = useState<RegionWithStats | null>(null);
   const [sectors, setSectors] = useState<SectorWithStats[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
+  const [schools, setSchools] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   
   // Modals
   const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
   const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
-
+  
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
@@ -39,13 +39,12 @@ export default function RegionDetails() {
         // Fetch region details
         const regionData = await getRegionById(id);
         if (regionData) {
-          // Convert Region to RegionWithStats if needed
+          // Convert to RegionWithStats by adding the missing properties
           const regionWithStats: RegionWithStats = {
             ...regionData,
             sectors_count: 0,
             schools_count: 0,
             completion_rate: 0,
-            // Backward compatibility
             sectorCount: 0,
             schoolCount: 0,
             completionRate: 0
@@ -55,18 +54,14 @@ export default function RegionDetails() {
           // Fetch sectors in this region
           const sectorsData = await getSectorsByRegion(id);
           if (sectorsData) {
-            // Add UI fields for compatibility
-            const processedSectors = sectorsData.map((sector) => {
-              return {
-                ...sector,
-                schools_count: sector.schools_count || 0,
-                completion_rate: sector.completion_rate || 0,
-                regionName: sector.region?.name || 'Unknown',
-                // Backward compatibility
-                schoolCount: sector.schools_count || 0,
-                completionRate: sector.completion_rate || 0
-              } as SectorWithStats;
-            });
+            // Process sectors to add required properties
+            const processedSectors: SectorWithStats[] = sectorsData.map((sector) => ({
+              ...sector,
+              schoolCount: sector.schools_count || 0,
+              completionRate: sector.completion_rate || 0,
+              regionName: sector.region?.name || '',
+              archived: !!sector.archived
+            }));
             setSectors(processedSectors);
           }
           
@@ -85,7 +80,7 @@ export default function RegionDetails() {
     
     fetchData();
   }, [id]);
-
+  
   // Reload data after modal actions
   const handleDataChange = () => {
     if (id) {
@@ -94,46 +89,44 @@ export default function RegionDetails() {
         getRegionById(id),
         getSectorsByRegion(id),
         getSchoolsByRegion(id)
-      ]).then(([regionData, sectorsData, schoolsData]) => {
-        if (regionData) {
-          // Convert Region to RegionWithStats if needed
-          const regionWithStats: RegionWithStats = {
-            ...regionData,
-            sectors_count: 0,
-            schools_count: 0,
-            completion_rate: 0,
-            // Backward compatibility
-            sectorCount: 0,
-            schoolCount: 0,
-            completionRate: 0
-          };
-          setRegion(regionWithStats);
-        }
-        if (sectorsData) {
-          const processedSectors = sectorsData.map(sector => ({
-            ...sector,
-            schools_count: sector.schools_count || 0,
-            completion_rate: sector.completion_rate || 0,
-            regionName: sector.region?.name || 'Unknown',
-            // Backward compatibility
-            schoolCount: sector.schools_count || 0,
-            completionRate: sector.completion_rate || 0
-          } as SectorWithStats));
-          setSectors(processedSectors);
-        }
-        if (schoolsData) setSchools(schoolsData);
-      }).catch(error => {
-        console.error("Error reloading data:", error);
-      }).finally(() => {
-        setIsLoading(false);
-      });
+      ])
+        .then(([regionData, sectorsData, schoolsData]) => {
+          if (regionData) {
+            const regionWithStats: RegionWithStats = {
+              ...regionData,
+              sectors_count: 0,
+              schools_count: 0,
+              completion_rate: 0,
+              sectorCount: 0,
+              schoolCount: 0,
+              completionRate: 0
+            };
+            setRegion(regionWithStats);
+          }
+          
+          if (sectorsData) {
+            const processedSectors: SectorWithStats[] = sectorsData.map((sector) => ({
+              ...sector,
+              schoolCount: sector.schools_count || 0,
+              completionRate: sector.completion_rate || 0,
+              regionName: sector.region?.name || '',
+              archived: !!sector.archived
+            }));
+            setSectors(processedSectors);
+          }
+          
+          if (schoolsData) setSchools(schoolsData);
+        })
+        .catch((error) => {
+          console.error("Error reloading data:", error);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   };
-
-  // Empty handleEditSchool and handleDeleteSchool for SchoolTable
-  const handleEditSchool = () => {};
-  const handleDeleteSchool = () => {};
-
+  
+  // Loading state
   if (isLoading && !region) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -141,7 +134,8 @@ export default function RegionDetails() {
       </div>
     );
   }
-
+  
+  // Region not found
   if (!region) {
     return (
       <div className="flex flex-col items-center justify-center h-96">
@@ -152,7 +146,8 @@ export default function RegionDetails() {
       </div>
     );
   }
-
+  
+  // Render content
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
@@ -169,20 +164,20 @@ export default function RegionDetails() {
           }
         />
       </div>
-
+      
       <RegionStats region={region} />
-
+      
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sectors">Sectors</TabsTrigger>
           <TabsTrigger value="schools">Schools</TabsTrigger>
         </TabsList>
-
+        
         <TabsContent value="overview" className="mt-6">
           <RegionCharts region={region} />
         </TabsContent>
-
+        
         <TabsContent value="sectors" className="mt-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Sectors in {region.name}</h2>
@@ -193,11 +188,11 @@ export default function RegionDetails() {
           </div>
           
           <SectorTable 
-            sectors={sectors} 
-            onDataChange={handleDataChange} 
+            sectors={sectors}
+            onDataChange={handleDataChange}
           />
         </TabsContent>
-
+        
         <TabsContent value="schools" className="mt-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Schools in {region.name}</h2>
@@ -208,29 +203,31 @@ export default function RegionDetails() {
           </div>
           
           <SchoolTable 
-            schools={schools} 
+            schools={schools}
             isLoading={false}
-            onEditSchool={handleEditSchool}
-            onDeleteSchool={handleDeleteSchool}
+            onEditSchool={() => {}}
+            onDeleteSchool={() => {}}
           />
         </TabsContent>
       </Tabs>
-
+      
       {isSectorModalOpen && (
         <SectorModal
           isOpen={isSectorModalOpen}
           onClose={() => setIsSectorModalOpen(false)}
           mode="create"
+          region={region}
           onSuccess={handleDataChange}
         />
       )}
-
+      
       {isSchoolModalOpen && (
         <SchoolModal
           isOpen={isSchoolModalOpen}
           onClose={() => setIsSchoolModalOpen(false)}
           mode="create"
-          onSuccess={handleDataChange}
+          regionId={id}
+          onCreated={handleDataChange}
         />
       )}
     </div>

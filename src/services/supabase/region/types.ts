@@ -4,7 +4,7 @@ export interface Region {
   id: string;
   name: string;
   code?: string;
-  description?: string; // Added description field
+  description?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -25,7 +25,8 @@ export interface Sector {
   name: string;
   region_id: string;
   code?: string;
-  description?: string; // Added description field
+  description?: string;
+  archived?: boolean;
   region?: {
     id: string;
     name: string;
@@ -45,6 +46,7 @@ export interface SectorWithStats extends Sector {
   schools_count: number;
   completion_rate: number;
   regionName: string;
+  archived: boolean;
   // Backward compatibility for old components
   schoolCount?: number;
   completionRate?: number;
@@ -52,9 +54,9 @@ export interface SectorWithStats extends Sector {
 
 export interface FilterParams {
   searchQuery?: string;
-  name?: string; // Added name filter
-  code?: string; // Added code filter
-  status?: string; // Added status filter
+  name?: string;
+  code?: string;
+  status?: string;
   dateFrom?: string;
   dateTo?: string;
   completionRate?: 'all' | 'high' | 'medium' | 'low';

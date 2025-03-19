@@ -1,6 +1,6 @@
 
 import { 
-  User, 
+  User as UserType, 
   UserFilter, 
   UserResponse, 
   CreateUserDto, 
@@ -9,7 +9,7 @@ import {
 } from './userService/types';
 
 // Re-export User type
-export type { User };
+export type { UserType as User };
 
 // Mock implementation of userService for development
 const userService = {
@@ -19,7 +19,7 @@ const userService = {
     return { data: [], count: 0, error: null };
   },
   
-  getUserById: async (id: string): Promise<User> => {
+  getUserById: async (id: string): Promise<UserType> => {
     console.log('Getting user by ID:', id);
     return {
       id,
@@ -64,7 +64,7 @@ const userService = {
   },
   
   // User management
-  createUser: async (userData: CreateUserDto): Promise<User> => {
+  createUser: async (userData: CreateUserDto): Promise<UserType> => {
     console.log('Creating user:', userData);
     return {
       id: 'new-user-id',
@@ -80,7 +80,7 @@ const userService = {
     };
   },
   
-  updateUser: async (id: string, userData: UpdateUserDto): Promise<User> => {
+  updateUser: async (id: string, userData: UpdateUserDto): Promise<UserType> => {
     console.log('Updating user:', id, userData);
     return {
       id,
