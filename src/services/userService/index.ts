@@ -10,8 +10,8 @@ import {
 } from './types';
 
 // Re-export all types
+export type User = UserType;
 export type { 
-  UserType as User, 
   UserFilter, 
   UserResponse, 
   CreateUserDto, 
@@ -34,6 +34,13 @@ const enhancedUserService = {
       userService.deleteUserById ? 
         userService.deleteUserById(userId) : 
         Promise.resolve(false);
+  },
+  
+  deleteUserById: (userId: string) => {
+    console.warn('deleteUserById is deprecated and will be removed in a future version');
+    return userService.deleteUser ? 
+      userService.deleteUser(userId) : 
+      Promise.resolve(false);
   },
   
   blockUser: (userId: string) => {
@@ -62,6 +69,13 @@ const enhancedUserService = {
         Promise.resolve([]);
   },
   
+  getUserRoles: () => {
+    console.warn('getUserRoles is deprecated and will be removed in a future version');
+    return userService.getRoles ? 
+      userService.getRoles() : 
+      Promise.resolve([]);
+  },
+  
   getRegions: () => {
     console.warn('getRegions is deprecated and will be removed in a future version');
     return userService.getRegions ? 
@@ -69,6 +83,13 @@ const enhancedUserService = {
       userService.getUserRegions ? 
         userService.getUserRegions() : 
         Promise.resolve([]);
+  },
+  
+  getUserRegions: () => {
+    console.warn('getUserRegions is deprecated and will be removed in a future version');
+    return userService.getRegions ? 
+      userService.getRegions() : 
+      Promise.resolve([]);
   },
   
   getSectors: (regionId?: string) => {
@@ -80,6 +101,13 @@ const enhancedUserService = {
         Promise.resolve([]);
   },
   
+  getUserSectors: (regionId?: string) => {
+    console.warn('getUserSectors is deprecated and will be removed in a future version');
+    return userService.getSectors ? 
+      userService.getSectors(regionId) : 
+      Promise.resolve([]);
+  },
+  
   getSchools: (sectorId?: string) => {
     console.warn('getSchools is deprecated and will be removed in a future version');
     return userService.getSchools ? 
@@ -87,6 +115,13 @@ const enhancedUserService = {
       userService.getUserSchools ? 
         userService.getUserSchools(sectorId) : 
         Promise.resolve([]);
+  },
+  
+  getUserSchools: (sectorId?: string) => {
+    console.warn('getUserSchools is deprecated and will be removed in a future version');
+    return userService.getSchools ? 
+      userService.getSchools(sectorId) : 
+      Promise.resolve([]);
   }
 };
 

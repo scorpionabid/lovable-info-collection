@@ -3,6 +3,7 @@ import { Tables } from '@/integrations/supabase/types';
 
 // Base School type
 export type School = Tables<'schools'> & {
+  // Required fields
   archived?: boolean;
   director?: string;
   email?: string;
@@ -10,6 +11,18 @@ export type School = Tables<'schools'> & {
   status?: string;
   student_count?: number;
   teacher_count?: number;
+  // Virtual properties for joins and UI
+  type?: string;
+  region?: string;
+  sector?: string;
+  completionRate?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  adminName?: string;
+  adminId?: string;
+  // Backward compatibility fields
+  studentCount?: number;
+  teacherCount?: number;
 };
 
 // Database row type
@@ -40,6 +53,9 @@ export interface SchoolFilter {
   status?: 'all' | 'active' | 'inactive';
   min_student_count?: number | string;
   max_student_count?: number | string;
+  // Pagination parameters
+  page?: number;
+  pageSize?: number;
   // Backwards compatibility
   regionId?: string;
   sectorId?: string;
@@ -102,6 +118,7 @@ export interface CreateSchoolDto {
   director?: string;
   email?: string;
   phone?: string;
+  archived?: boolean;
   contactEmail?: string;
   contactPhone?: string;
   // For backward compatibility
@@ -116,12 +133,13 @@ export interface UpdateSchoolDto {
   type_id?: string;
   code?: string;
   address?: string;
-  status?: 'active' | 'inactive';
+  status?: string;
   student_count?: number;
   teacher_count?: number;
   director?: string;
   email?: string;
   phone?: string;
+  archived?: boolean;
 }
 
 export interface SchoolStats {
@@ -129,4 +147,20 @@ export interface SchoolStats {
   totalTeachers: number;
   completionRate: number;
   lastUpdate: string;
+}
+
+export interface SchoolTableProps {
+  schools: School[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  setCurrentPage: (page: number) => void;
+  sortColumn: string;
+  sortDirection: 'asc' | 'desc';
+  onSortChange: (column: string) => void;
+  isLoading: boolean;
+  isError: boolean;
+  onRefresh: () => void;
+  onEditSchool?: (school: School) => void;
+  onDeleteSchool?: (schoolId: string) => void;
 }

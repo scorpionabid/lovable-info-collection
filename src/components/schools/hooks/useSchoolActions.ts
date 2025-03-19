@@ -1,71 +1,82 @@
 
 import { useState } from 'react';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 import { School } from '@/services/supabase/school/types';
-import * as XLSX from 'xlsx';
+import { deleteSchool } from '@/services/supabase/school';
+import { exportToExcel } from '@/utils/excel';
 
 export const useSchoolActions = (refetch: () => void) => {
+  const { toast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
-  const queryClient = useQueryClient();
 
+  // Refresh school data
   const handleRefresh = () => {
     refetch();
-    toast.success('Məlumatlar yeniləndi');
   };
 
+  // Handle successful school creation
   const handleCreateSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['schools'] });
-    setIsCreateModalOpen(false);
-    toast.success('Məktəb uğurla yaradıldı');
+    toast({
+      title: "Məktəb yaradıldı",
+      description: "Məktəb uğurla yaradıldı",
+    });
+    refetch();
   };
 
-  const handleUpdateSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['schools'] });
-    setIsEditModalOpen(false);
-    setSelectedSchool(null);
-    toast.success('Məktəb uğurla yeniləndi');
+  // Handle export to Excel
+  const handleExport = (schools: School[]) => {
+    const data = schools.map(school => ({
+      ID: school.id,
+      Name: school.name,
+      Code: school.code || '-',
+      Type: school.type || '-',
+      Region: school.region || '-',
+      Sector: school.sector || '-',
+      Address: school.address || '-',
+      Director: school.director || '-',
+      Email: school.email || '-',
+      Phone: school.phone || '-',
+      'Student Count': school.student_count || 0,
+      'Teacher Count': school.teacher_count || 0,
+      Status: school.status || '-',
+      'Created At': new Date(school.created_at).toLocaleDateString()
+    }));
+
+    exportToExcel(data, 'schools');
   };
 
-  const handleEdit = (school: School) => {
+  // Handle import from Excel (placeholder for now)
+  const handleImport = () => {
+    toast({
+      title: "Excel İdxalı",
+      description: "Excel idxalı funksiyası hazırlanır",
+    });
+  };
+
+  // Handle edit school
+  const handleEditSchool = (school: School) => {
     setSelectedSchool(school);
     setIsEditModalOpen(true);
   };
 
-  const handleExport = (schools: School[]) => {
+  // Handle delete school
+  const handleDeleteSchool = async (schoolId: string) => {
     try {
-      const worksheet = XLSX.utils.json_to_sheet(
-        schools.map(school => ({
-          'Ad': school.name,
-          'Region': school.region?.name || 'N/A',
-          'Sektor': school.sector?.name || 'N/A',
-          'Tip': school.type || 'N/A',
-          'Şagird sayı': school.student_count,
-          'Müəllim sayı': school.teacher_count,
-          'Status': school.status,
-          'Direktor': school.director || 'N/A',
-          'Ünvan': school.address || 'N/A',
-          'Telefon': school.phone || 'N/A',
-          'Email': school.email || 'N/A'
-        }))
-      );
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Məktəblər');
-      XLSX.writeFile(workbook, 'məktəblər.xlsx');
-      
-      toast.success('Məlumatlar uğurla export edildi');
+      await deleteSchool(schoolId);
+      toast({
+        title: "Məktəb silindi",
+        description: "Məktəb uğurla silindi",
+      });
+      refetch();
     } catch (error) {
-      console.error('Error exporting data:', error);
-      toast.error('Export zamanı xəta baş verdi');
+      toast({
+        title: "Xəta",
+        description: "Məktəb silinərkən xəta baş verdi",
+        variant: "destructive",
+      });
     }
-  };
-
-  const handleImport = () => {
-    // This would typically handle file upload and processing
-    toast.info('Import funksionallığı hazırlanır');
   };
 
   return {
@@ -77,9 +88,9 @@ export const useSchoolActions = (refetch: () => void) => {
     setSelectedSchool,
     handleRefresh,
     handleCreateSuccess,
-    handleUpdateSuccess,
-    handleEdit,
     handleExport,
-    handleImport
+    handleImport,
+    handleEditSchool,
+    handleDeleteSchool
   };
 };

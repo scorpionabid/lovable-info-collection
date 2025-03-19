@@ -29,13 +29,17 @@ export const useSchoolData = ({
     direction: sortDirection
   };
 
+  const paginationParams = {
+    page: currentPage,
+    pageSize: pageSize
+  };
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['schools', currentPage, pageSize, sortParams, filters],
     queryFn: async () => {
       try {
         const result = await schoolService.getSchools({
-          page: currentPage,
-          pageSize: pageSize,
+          pagination: paginationParams,
           sort: sortParams,
           filters: filters
         });

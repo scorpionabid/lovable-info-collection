@@ -4,6 +4,15 @@ import { Tables } from '@/integrations/supabase/types';
 // Base Region type
 export type Region = Tables<'regions'> & {
   description?: string;
+  sectorCount?: number;
+  schoolCount?: number;
+  studentCount?: number;
+  teacherCount?: number;
+  completionRate?: number;
+  // Backward compatibility fields
+  sectors_count?: number;
+  schools_count?: number;
+  completion_rate?: number;
 };
 
 // Define additional types needed for regions
@@ -37,6 +46,16 @@ export interface Sector {
   archived: boolean;
   code?: string;
   updated_at?: string;
+}
+
+// SectorWithStats interface for RegionDetails page
+export interface SectorWithStats extends Sector {
+  schoolCount: number;
+  completionRate: number;
+  regionName?: string;
+  // Backward compatibility
+  schools_count?: number;
+  completion_rate?: number;
 }
 
 // SectorData type for data submission
