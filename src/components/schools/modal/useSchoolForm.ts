@@ -75,41 +75,20 @@ export const useSchoolForm = ({ mode, school, onSchoolUpdated, onClose }: {
           setRegions(regionsData);
         }
         
-        // Fetch school types using rpc or direct query with error handling
+        // Fetch school types using RPC function
         try {
-          // First try a custom query to handle the school_types table
           const { data: typesData, error: typesError } = await supabase
             .rpc('get_school_types');
           
           if (typesError) {
-            // Fallback to a raw SQL query
-            console.log('RPC failed, falling back to raw query:', typesError);
-            const { data, error } = await supabase.rpc('get_school_type_list');
-            
-            if (error) {
-              console.error('Error fetching school types with rpc:', error);
-              // As a third fallback, attempt a direct query to the table
-              const rawResponse = await supabase.from('school_types').select('id, name').order('name');
-              
-              if (rawResponse.error) {
-                console.error('All methods to fetch school types failed:', rawResponse.error);
-                setTypes([]);
-                toast.error('Məktəb tipləri yüklənərkən xəta baş verdi');
-                return;
-              }
-              
-              setTypes(rawResponse.data || []);
-            } else if (data) {
-              setTypes(data.map((type: SchoolType) => ({
-                id: type.id,
-                name: type.name
-              })));
-            }
+            console.error('Error fetching school types with RPC:', typesError);
+            toast.error('Məktəb tipləri yüklənərkən xəta baş verdi');
+            setTypes([]);
           } else if (typesData) {
-            setTypes(typesData.map((type: SchoolType) => ({
-              id: type.id,
-              name: type.name
-            })));
+            // Properly handle the typed data
+            setTypes(typesData as unknown as SchoolType[]);
+          } else {
+            setTypes([]);
           }
         } catch (typesError) {
           console.error('Error in school types fetch handling:', typesError);

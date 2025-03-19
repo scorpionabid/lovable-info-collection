@@ -21,7 +21,7 @@ export interface User {
   updated_at?: string;
 }
 
-// Re-export other types
+// Re-export the type definitions
 export type { UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption } from './types';
 
 // Export the service as the default export

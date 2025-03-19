@@ -22,14 +22,15 @@ export const UsersOverview = () => {
   // Use our custom hook for user data and state management
   const {
     users,
+    totalCount,
     isLoading,
+    isError,
     error,
     page,
     perPage,
     search,
     sortColumn,
     sortOrder,
-    usersData,
     refetch,
     handleSearchChange,
     handleSort,
@@ -105,7 +106,7 @@ export const UsersOverview = () => {
 
       <UserTableToolbar 
         search={search}
-        onSearchChange={handleSearchChange}
+        onSearchChange={(e) => handleSearchChange(e.target.value)}
         onExport={handleExport}
         onAddUser={handleAddUser}
       />
@@ -136,7 +137,7 @@ export const UsersOverview = () => {
       <UserTablePagination
         page={page}
         perPage={perPage}
-        totalItems={(usersData as any)?.count || 0}
+        totalItems={totalCount}
         setPage={setPage}
         setPerPage={setPerPage}
       />

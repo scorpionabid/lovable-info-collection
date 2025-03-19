@@ -20,9 +20,9 @@ export const useUsersData = (initialFilters: UserFilter = {}) => {
     error,
     refetch
   } = useQuery({
-    queryKey: ['users', filters],
+    queryKey: ['users', filters, page, perPage, search, sortColumn, sortOrder],
     queryFn: async () => {
-      // Convert sortBy to sortField and sortOrder for compatibility
+      // Create proper filter object for the API
       const apiFilters: UserFilter = {
         ...filters,
         page,

@@ -1,262 +1,199 @@
-
 import { useState, useEffect } from 'react';
-import { X, Bell, Check, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import { Bell, X, Check, ChevronDown } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import notificationService from '@/services/notificationService';
-import { Tables } from '@/types/supabase';
-import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { format, formatDistanceToNow } from 'date-fns';
+import { az } from 'date-fns/locale';
+import { Notification } from '@/types/supabase';
 
-interface NotificationPanelProps {
-  onClose: () => void;
-}
-
-export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
-  const [notifications, setNotifications] = useState<Tables<'notifications'>[]>([]);
-  const [loading, setLoading] = useState(true);
+export function NotificationPanel() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        setLoading(true);
-        const { data: authUser } = await supabase.auth.getUser();
-        const userId = authUser?.user?.id;
-        
-        if (!userId) {
-          console.error("No authenticated user found");
-          return;
-        }
-        
-        const result = await notificationService.getUserNotifications(userId);
-        setNotifications(result);
-        setUnreadCount(result.filter(n => !n.is_read).length);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-        toast({
-          title: 'Xəta',
-          description: 'Bildirişlər yüklənərkən xəta baş verdi',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotifications();
-
-    // Set up real-time subscription
-    const setupSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const channel = supabase
-        .channel(`public:notifications:user_id=eq.${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newNotification = payload.new as Tables<'notifications'>;
-            setNotifications(prev => [newNotification, ...prev]);
-            setUnreadCount(prev => prev + 1);
-            
-            toast({
-              title: newNotification.title,
-              description: newNotification.message,
-            });
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
-
-    const unsubscribe = setupSubscription();
+    if (!user) return;
     
-    // Cleanup subscription
-    return () => {
-      if (unsubscribe) {
-        unsubscribe.then(fn => fn && fn());
-      }
-    };
-  }, [toast]);
-
-  const handleMarkAllAsRead = async () => {
+    // Load initial notifications
+    fetchNotifications();
+    
+    // Set up an interval to check for new notifications
+    const intervalId = setInterval(fetchNotifications, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [user]);
+  
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
     try {
-      const { data: authUser } = await supabase.auth.getUser();
-      const userId = authUser?.user?.id;
+      // Fetch notifications for the current user
+      const fetchedNotifications = await notificationService.getUserNotifications(user.id);
+      setNotifications(fetchedNotifications || []);
       
-      if (!userId) {
-        console.error("No authenticated user found");
-        return;
-      }
-      
-      const success = await notificationService.markAllAsRead(userId);
-      
-      if (success) {
-        setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-        setUnreadCount(0);
-        toast({
-          title: 'Uğurlu əməliyyat',
-          description: 'Bütün bildirişlər oxunmuş kimi işarələndi',
-        });
-      }
+      // Count unread notifications
+      setUnreadCount((fetchedNotifications || []).filter(n => !n.is_read).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+  
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+  
+  const getFilteredNotifications = () => {
+    if (activeTab === 'all') {
+      return notifications;
+    }
+    return notifications.filter(notification => notification.type === activeTab);
+  };
+  
+  const handleMarkAllAsRead = async () => {
+    if (!user) return;
+    
+    try {
+      await notificationService.markAllAsRead(user.id);
+      await fetchNotifications();
     } catch (error) {
       console.error('Error marking all as read:', error);
-      toast({
-        title: 'Xəta',
-        description: 'Bildirişlər yenilənərkən xəta baş verdi',
-        variant: 'destructive',
-      });
     }
   };
-
-  const handleMarkAsRead = async (id: string) => {
+  
+  const formatNotificationDate = (dateString: string) => {
     try {
-      const success = await notificationService.markAsRead(id);
+      const date = new Date(dateString);
       
-      if (success) {
-        setNotifications(
-          notifications.map(n => 
-            n.id === id ? { ...n, is_read: true } : n
-          )
-        );
-        setUnreadCount(prev => prev - 1);
+      // If the notification is from today, show the time
+      if (date.toDateString() === new Date().toDateString()) {
+        return format(date, 'HH:mm', { locale: az });
       }
+      
+      // Otherwise, show relative time (e.g., "2 days ago")
+      return formatDistanceToNow(date, { locale: az, addSuffix: true });
+    } catch {
+      return dateString;
+    }
+  };
+  
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // Mark as read if not already
+      if (!notification.is_read) {
+        await notificationService.markAsRead(notification.id);
+      }
+      
+      // Navigate to the linked page if available
+      if (notification.link) {
+        navigate(notification.link);
+      }
+      
+      // Close the panel
+      setIsOpen(false);
+      
+      // Refresh notifications
+      fetchNotifications();
     } catch (error) {
-      console.error('Error marking notification as read:', error);
-      toast({
-        title: 'Xəta',
-        description: 'Bildiriş yenilənərkən xəta baş verdi',
-        variant: 'destructive',
-      });
+      console.error('Error handling notification click:', error);
     }
   };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'info':
-        return <Info className="h-5 w-5 text-blue-500" />;
-      case 'warning':
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-      case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
+  
   return (
-    <div className="fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-80 bg-white border-l border-infoline-light-gray shadow-lg animate-in slide-in-from-right">
-      <div className="flex items-center justify-between border-b border-infoline-light-gray p-4">
-        <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-infoline-dark-blue" />
-          <h2 className="font-semibold text-infoline-dark-blue">Bildirişlər</h2>
-          {unreadCount > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-xs"
-              onClick={handleMarkAllAsRead}
-            >
-              <Check className="h-4 w-4 mr-1" />
-              Hamısını oxunmuş et
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <ScrollArea className="h-[calc(100%-4rem)]">
-        {loading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-infoline-blue"></div>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-infoline-dark-gray">
-            <Bell className="h-8 w-8 mb-2 opacity-30" />
-            <p>Bildirişiniz yoxdur</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-infoline-light-gray">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`p-4 hover:bg-infoline-light-gray/20 ${
-                  !notification.is_read ? 'bg-blue-50' : ''
-                }`}
-              >
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <h4 className="font-medium text-infoline-dark-blue">
-                        {notification.title}
-                      </h4>
-                      {!notification.is_read && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => handleMarkAsRead(notification.id)}
-                        >
-                          <Check className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                    <p className="text-sm text-infoline-dark-gray mt-1">
-                      {notification.message}
-                    </p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs text-infoline-gray">
-                        {format(new Date(notification.created_at), 'dd.MM.yyyy HH:mm')}
-                      </span>
-                      {notification.link && (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="h-6 p-0 text-xs text-infoline-blue"
-                          asChild
-                        >
-                          <a href={notification.link}>Bax</a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <Bell className="h-5 w-5" />
+        {unreadCount > 0 && (
+          <Badge variant="destructive" className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </Badge>
         )}
-      </ScrollArea>
+      </Button>
+      
+      {isOpen && (
+        <div className="absolute right-0 z-50 mt-2 w-80 p-0 rounded-md border bg-card shadow-md">
+          <div className="flex items-center justify-between border-b p-3">
+            <h3 className="font-semibold text-foreground">Bildirişlər</h3>
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <div className="flex items-center justify-between px-3 py-2">
+              <TabsList>
+                <TabsTrigger value="all">Hamısı</TabsTrigger>
+                <TabsTrigger value="info">Info</TabsTrigger>
+                <TabsTrigger value="success">Uğurlu</TabsTrigger>
+                <TabsTrigger value="error">Xəta</TabsTrigger>
+              </TabsList>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground h-8"
+                onClick={handleMarkAllAsRead}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Oxunmuş kimi işarələ
+              </Button>
+            </div>
+            
+            <TabsContent value={activeTab} className="m-0">
+              <ScrollArea className="h-[300px] p-0">
+                {getFilteredNotifications().length > 0 ? (
+                  <div className="space-y-1">
+                    {getFilteredNotifications().map((notification) => (
+                      <button
+                        key={notification.id}
+                        className={`w-full flex items-start p-3 text-left hover:bg-muted ${
+                          !notification.is_read ? 'bg-muted/50' : ''
+                        }`}
+                        onClick={() => handleNotificationClick(notification)}
+                      >
+                        <div className="w-full">
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-medium text-sm">{notification.title}</h4>
+                            <span className="text-xs text-muted-foreground">
+                              {formatNotificationDate(notification.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {notification.message}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-muted-foreground">
+                    <p>Bildiriş yoxdur</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="border-t p-2">
+            <Button variant="ghost" size="sm" className="w-full justify-center text-muted-foreground">
+              Bütün bildirişlərə bax
+              <ChevronDown className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
