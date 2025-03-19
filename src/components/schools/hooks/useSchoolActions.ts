@@ -1,8 +1,8 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { School } from '@/services/supabase/school/types';
-import { deleteSchool } from '@/services/supabase/school';
+import { School, SchoolWithStats } from '@/services/supabase/school/types';
+import * as schoolService from '@/services/supabase/school';
 import { exportToExcel } from '@/utils/excel';
 
 export const useSchoolActions = (refetch: () => void) => {
@@ -31,9 +31,9 @@ export const useSchoolActions = (refetch: () => void) => {
       ID: school.id,
       Name: school.name,
       Code: school.code || '-',
-      Type: school.type || '-',
-      Region: school.region || '-',
-      Sector: school.sector || '-',
+      Type: school.type || school.type_id || '-',
+      Region: school.region || school.region_id || '-',
+      Sector: school.sector || school.sector_id || '-',
       Address: school.address || '-',
       Director: school.director || '-',
       Email: school.email || '-',
@@ -64,7 +64,7 @@ export const useSchoolActions = (refetch: () => void) => {
   // Handle delete school
   const handleDeleteSchool = async (schoolId: string) => {
     try {
-      await deleteSchool(schoolId);
+      await schoolService.deleteSchool(schoolId);
       toast({
         title: "Məktəb silindi",
         description: "Məktəb uğurla silindi",

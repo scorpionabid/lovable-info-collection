@@ -57,21 +57,21 @@ const enhancedUserService = {
       Promise.resolve([]);
   },
   
-  getRegions: (userId?: string, userRole?: string) => {
+  getRegions: (userId?: string) => {
     return userService.getRegions ? 
-      userService.getRegions(userId, userRole) : 
+      userService.getRegions(userId) : 
       Promise.resolve([]);
   },
   
-  getSectors: (regionId?: string, userId?: string, userRole?: string) => {
+  getSectors: (regionId?: string) => {
     return userService.getSectors ? 
-      userService.getSectors(regionId, userId, userRole) : 
+      userService.getSectors(regionId) : 
       Promise.resolve([]);
   },
   
-  getSchools: (sectorId?: string, userId?: string, userRole?: string) => {
+  getSchools: (sectorId?: string) => {
     return userService.getSchools ? 
-      userService.getSchools(sectorId, userId, userRole) : 
+      userService.getSchools(sectorId) : 
       Promise.resolve([]);
   }
 };

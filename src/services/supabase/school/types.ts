@@ -55,9 +55,10 @@ export interface SchoolFilter {
   status?: 'all' | 'active' | 'inactive';
   min_student_count?: number | string;
   max_student_count?: number | string;
-  // Add fields for pagination
+  // Add fields for pagination and sorting
   page?: number;
   pageSize?: number;
+  sort?: SchoolSortParams;
   // Backwards compatibility
   regionId?: string;
   sectorId?: string;
@@ -164,5 +165,5 @@ export interface SchoolTableProps {
   isError: boolean;
   onRefresh: () => void;
   onEditSchool?: (school: School) => void;
-  onDeleteSchool?: (schoolId: string) => void;
+  onDeleteSchool?: (school: SchoolWithStats) => void;
 }

@@ -7,12 +7,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SchoolForm } from "./SchoolForm";
+import { SchoolWithStats } from '@/services/supabase/school/types';
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  school?: any; // School data for edit mode
+  initialData?: any; // School data for edit mode
   regionId?: string; // Added for RegionDetails.tsx
   sectorId?: string;
   onSuccess?: () => void;
@@ -24,7 +25,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   isOpen, 
   onClose, 
   mode, 
-  school,
+  initialData,
   regionId,
   sectorId,
   onSuccess,
@@ -53,7 +54,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         </DialogHeader>
         <SchoolForm 
           mode={mode} 
-          initialData={school} 
+          initialData={initialData} 
           onSuccess={handleSuccess} 
           onCancel={onClose}
           defaultRegionId={regionId}

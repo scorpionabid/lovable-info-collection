@@ -1,65 +1,49 @@
 
+import { supabase } from '../../supabaseClient';
 import { SchoolStats } from '../types';
 
-/**
- * Get school completion statistics for charts
- */
 export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => {
   try {
-    // Fetch real statistics or generate placeholders
-    
-    // Return a valid SchoolStats object with both standard and UI-specific properties
+    // Fetch student and teacher counts
+    const { data: schoolData, error: schoolError } = await supabase
+      .from('schools')
+      .select('student_count, teacher_count')
+      .eq('id', schoolId)
+      .single();
+
+    if (schoolError) throw schoolError;
+
+    // Calculate completion rate - in a real scenario, this would be based on
+    // the percentage of completed data entries for the school
+    // For now, we'll use a random number between 60-100 for demo
+    const completionRate = Math.floor(Math.random() * 40) + 60;
+
+    // Get the last update timestamp from the school data
+    const { data: latestData, error: latestError } = await supabase
+      .from('schools')
+      .select('updated_at')
+      .eq('id', schoolId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (latestError) throw latestError;
+
     return {
-      total_students: 250,
-      total_teachers: 25,
-      student_teacher_ratio: 10,
-      completion_percentage: 85,
-      last_updated: new Date().toISOString(),
-      
-      // UI specific properties used in charts
-      categories: [
-        { name: 'Əsas məlumatlar', value: 100 },
-        { name: 'Tələbə məlumatları', value: 85 },
-        { name: 'Müəllim məlumatları', value: 90 },
-        { name: 'İnfrastruktur', value: 70 }
-      ],
-      completionHistory: [
-        { name: 'Sentyabr', value: 60 },
-        { name: 'Oktyabr', value: 75 },
-        { name: 'Noyabr', value: 85 }
-      ]
+      totalStudents: schoolData?.student_count || 0,
+      totalTeachers: schoolData?.teacher_count || 0,
+      completionRate,
+      lastUpdate: latestData?.updated_at || new Date().toISOString()
     };
   } catch (error) {
     console.error('Error fetching school stats:', error);
     
-    // Return default stats if there's an error
+    // Return default stats if error occurs
     return {
-      total_students: 0,
-      total_teachers: 0,
-      student_teacher_ratio: 0,
-      completion_percentage: 0,
-      last_updated: new Date().toISOString(),
-      categories: [],
-      completionHistory: []
+      totalStudents: 0,
+      totalTeachers: 0,
+      completionRate: 0,
+      lastUpdate: new Date().toISOString()
     };
-  }
-};
-
-/**
- * Get recent activities for a school
- */
-export const getSchoolActivities = async (schoolId: string) => {
-  try {
-    // This would normally query an activities or audit log table
-    // For now, returning mock data
-    return [
-      { id: 1, action: 'Müəllimlər kateqoriyası doldurulub', user: 'Əliyev Vüqar', time: '14:25, 12 May 2024' },
-      { id: 2, action: 'Maddi Texniki Baza yenilənib', user: 'Əliyev Vüqar', time: '10:15, 10 May 2024' },
-      { id: 3, action: 'Maliyyə hesabatı təsdiqlənib', user: 'Məmmədov Elnur', time: '16:40, 5 May 2024' },
-      { id: 4, action: 'Şagird siyahısı yenilənib', user: 'Hüseynova Aysel', time: '09:30, 3 May 2024' }
-    ];
-  } catch (error) {
-    console.error('Error fetching school activities:', error);
-    throw error;
   }
 };

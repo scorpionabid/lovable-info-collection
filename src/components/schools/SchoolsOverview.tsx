@@ -8,7 +8,7 @@ import { useSchoolData } from './hooks/useSchoolData';
 import { useSchoolFilters } from './hooks/useSchoolFilters';
 import { useSchoolSort } from './hooks/useSchoolSort';
 import { useSchoolActions } from './hooks/useSchoolActions';
-import { School } from '@/services/supabase/school/types';
+import { School, SchoolWithStats } from '@/services/supabase/school/types';
 
 export const SchoolsOverview = () => {
   const [pageSize, setPageSize] = useState(10);
@@ -51,13 +51,23 @@ export const SchoolsOverview = () => {
     setShowFilters(false);
   };
 
+  // Make sure we have proper data extraction
+  const schools = schoolsData?.data || [];
+  const totalCount = schoolsData?.count || 0;
+
+  const handleDeleteSchoolById = async (school: SchoolWithStats) => {
+    if (school && school.id) {
+      await handleDeleteSchool(school.id);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <SchoolToolbar
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         onRefresh={handleRefresh}
-        onExport={() => handleExport(schoolsData?.data || [])}
+        onExport={() => handleExport(schools)}
         onImport={handleImport}
         onCreateSchool={() => setIsCreateModalOpen(true)}
         onToggleFilters={toggleFilters}
@@ -71,8 +81,8 @@ export const SchoolsOverview = () => {
       )}
 
       <SchoolTable
-        schools={schoolsData?.data || []}
-        totalCount={schoolsData?.count || 0}
+        schools={schools}
+        totalCount={totalCount}
         currentPage={currentPage}
         pageSize={pageSize}
         setCurrentPage={setCurrentPage}
@@ -83,7 +93,7 @@ export const SchoolsOverview = () => {
         isError={isError}
         onRefresh={handleRefresh}
         onEditSchool={handleEditSchool}
-        onDeleteSchool={handleDeleteSchool}
+        onDeleteSchool={handleDeleteSchoolById}
       />
 
       {isCreateModalOpen && (
@@ -100,7 +110,7 @@ export const SchoolsOverview = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           mode="edit"
-          school={selectedSchool}
+          initialData={selectedSchool}
           onSuccess={() => {
             refetch();
             setIsEditModalOpen(false);
