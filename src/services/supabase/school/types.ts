@@ -1,92 +1,72 @@
-// School types
+
+/**
+ * School related types
+ */
+
+export interface SchoolFilter {
+  searchQuery?: string;
+  region_id?: string; // snake_case
+  sector_id?: string; // snake_case  
+  regionId?: string;  // camelCase
+  sectorId?: string;  // camelCase
+  type?: string;      // For type filter
+  status?: 'active' | 'inactive' | 'all';
+  minCompletionRate?: number;
+  maxCompletionRate?: number;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface School {
   id: string;
   name: string;
   code: string;
+  type_id: string;
   region_id: string;
   sector_id: string;
-  type_id: string;
-  address: string;
-  created_at: string;
-  updated_at: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
+  address?: string;
   director?: string;
   email?: string;
   phone?: string;
-  // Additional properties for UI components
+  student_count?: number;
+  teacher_count?: number;
+  created_at: string;
+  updated_at: string;
+  status?: string;
+  // UI specific properties
   type?: string;
   region?: string;
   sector?: string;
-  studentCount?: number;
-  teacherCount?: number;
+  studentCount?: number; // camelCase alias for student_count
+  teacherCount?: number; // camelCase alias for teacher_count
   completionRate?: number;
-  contactEmail?: string;
-  contactPhone?: string;
-  createdAt?: string;
   adminName?: string;
   adminId?: string;
+  contactEmail?: string; // alias for email
+  contactPhone?: string; // alias for phone
 }
 
 export interface CreateSchoolDto {
   name: string;
-  code: string;
+  code?: string;
+  type_id?: string;
   region_id: string;
   sector_id: string;
-  type_id: string;
-  address: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
+  address?: string;
   director?: string;
   email?: string;
   phone?: string;
-  // Additional properties for form handling
-  contactEmail?: string;
-  contactPhone?: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  // Camel case versions
   studentCount?: number;
   teacherCount?: number;
+  contactEmail?: string;
 }
 
-export interface UpdateSchoolDto {
-  name?: string;
-  code?: string;
-  region_id?: string;
-  sector_id?: string;
-  type_id?: string;
-  address?: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-}
-
-export interface SchoolFilter {
-  region_id?: string;
-  sector_id?: string;
-  type_id?: string;
-  search?: string;
-  status?: string;
-  // Additional properties used in UI components
-  regionId?: string;
-  sectorId?: string;
-  type?: string;
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
-}
-
-export interface SchoolSummary {
+export interface UpdateSchoolDto extends Partial<CreateSchoolDto> {
   id: string;
-  name: string;
-  code: string;
-  region: string;
-  sector: string;
-  status: string;
-  students: number;
-  teachers: number;
 }
 
 export interface SchoolStats {
@@ -95,36 +75,14 @@ export interface SchoolStats {
   student_teacher_ratio: number;
   completion_percentage: number;
   last_updated: string;
-  // Additional properties for charts
-  categories?: any[];
-  completionHistory?: any[];
+  categories: Array<{ name: string; value: number }>;
+  completionHistory: Array<{ name: string; value: number }>;
 }
 
-export interface SchoolWithAdmin extends School {
-  admin?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+export interface SchoolTableProps {
+  schools: School[];
+  isLoading: boolean;
+  isError?: boolean;
+  onEditSchool: (school: School) => void;
+  onDeleteSchool: (schoolId: string) => void;
 }
-
-export type SchoolDatabaseRow = {
-  id: string;
-  name: string;
-  code: string;
-  region_id: string;
-  sector_id: string;
-  type_id: string;
-  address: string;
-  created_at: string;
-  updated_at: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-  school_types?: any;
-  regions?: any;
-  sectors?: any;
-};

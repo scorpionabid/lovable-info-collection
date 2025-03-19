@@ -1,108 +1,19 @@
 
-// Export school services and types
+import { supabase } from '../supabaseClient';
+import { CreateSchoolDto, School, SchoolFilter, UpdateSchoolDto } from './types';
+import { getSchoolById, getSchools, querySchools } from './queries/schoolQueries';
+import { getSchoolStats, getSchoolActivities } from './queries/statsQueries';
 
-// Import types
-import { 
-  School, 
-  CreateSchoolDto,
-  UpdateSchoolDto,
-  SchoolFilter,
-  SchoolSummary,
-  SchoolStats,
-  SchoolWithAdmin,
-  SchoolDatabaseRow
-} from './types';
-
-// Export all types
-export type { 
-  School, 
-  CreateSchoolDto,
-  UpdateSchoolDto,
-  SchoolFilter,
-  SchoolSummary,
-  SchoolStats,
-  SchoolWithAdmin,
-  SchoolDatabaseRow
+// Generate a random school code
+export const generateSchoolCode = (): string => {
+  return `SCH-${Math.floor(1000 + Math.random() * 9000)}`;
 };
 
-// Import query functions
-import {
-  getSchools,
-  getSchoolById,
-  getSchoolWithAdmin,
-  getSchoolsByRegion as getSchoolsByRegionFromQueries
-} from './queries/schoolQueries';
-
-// Import CRUD operations
-import {
-  createSchool,
-  updateSchool,
-  deleteSchool,
-  archiveSchool
-} from './crudOperations';
-
-// Import helper functions
-import {
-  getSchoolTypes,
-  generateSchoolCode
-} from './helperFunctions';
-
-// Import school stats
-import {
-  getSchoolStats as fetchSchoolStats
-} from './queries/statsQueries';
-
-// Custom functions for school activities
-export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => {
-  return fetchSchoolStats(schoolId);
-};
-
-export const getSchoolActivities = async (schoolId: string): Promise<any[]> => {
-  // Placeholder implementation
-  return [
-    { id: '1', type: 'data_entry', date: new Date().toISOString(), user: 'Admin', description: 'Updated school data' },
-    { id: '2', type: 'login', date: new Date(Date.now() - 86400000).toISOString(), user: 'Teacher', description: 'Logged in' }
-  ];
-};
-
-// Re-export everything
+// Export everything
 export {
-  // Queries
-  getSchools,
   getSchoolById,
-  getSchoolWithAdmin,
-  getSchoolsByRegionFromQueries as getSchoolsByRegion,
-  
-  // CRUD operations
-  createSchool,
-  updateSchool,
-  deleteSchool,
-  archiveSchool,
-  
-  // Helper functions
-  getSchoolTypes,
-  generateSchoolCode
-};
-
-// Default export
-export default {
-  // Queries
   getSchools,
-  getSchoolById,
-  getSchoolWithAdmin,
-  getSchoolsByRegion: getSchoolsByRegionFromQueries,
-  
-  // CRUD operations
-  createSchool,
-  updateSchool,
-  deleteSchool,
-  archiveSchool,
-  
-  // Helper functions
-  getSchoolTypes,
-  generateSchoolCode,
-  
-  // Stats and activities
+  querySchools,
   getSchoolStats,
   getSchoolActivities
 };

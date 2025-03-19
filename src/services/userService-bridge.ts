@@ -1,3 +1,4 @@
+
 import { UserFilter, UserResponse } from './userService/types';
 
 // Re-export the User type for components
@@ -22,6 +23,7 @@ export interface User {
     description?: string;
     permissions?: string[];
   }
+  role?: string; // for backwards compatibility
 }
 
 // Define missing functions for userService
@@ -45,21 +47,44 @@ const resetPassword = async (userId: string): Promise<boolean> => {
 
 const getRoles = async (): Promise<any[]> => {
   // Implementation would go here
+  return [
+    { id: "1", name: "Super Admin" },
+    { id: "2", name: "Region Admin" },
+    { id: "3", name: "Sector Admin" },
+    { id: "4", name: "School Admin" }
+  ];
+};
+
+const getRegions = async (currentUserId?: string, currentUserRole?: string): Promise<any[]> => {
+  // Implementation would go here
+  return [
+    { id: "1", name: "Bakı" },
+    { id: "2", name: "Sumqayıt" },
+    { id: "3", name: "Gəncə" }
+  ];
+};
+
+const getSectors = async (regionId?: string, currentUserId?: string, currentUserRole?: string): Promise<any[]> => {
+  // Implementation would go here
+  if (regionId === "1") {
+    return [
+      { id: "1", name: "Binəqədi" },
+      { id: "2", name: "Yasamal" },
+      { id: "3", name: "Nəsimi" }
+    ];
+  }
   return [];
 };
 
-const getRegions = async (): Promise<any[]> => {
+const getSchools = async (sectorId?: string, currentUserId?: string, currentUserRole?: string): Promise<any[]> => {
   // Implementation would go here
-  return [];
-};
-
-const getSectors = async (regionId?: string): Promise<any[]> => {
-  // Implementation would go here
-  return [];
-};
-
-const getSchools = async (sectorId?: string): Promise<any[]> => {
-  // Implementation would go here
+  if (sectorId === "1") {
+    return [
+      { id: "1", name: "Məktəb #1" },
+      { id: "2", name: "Məktəb #2" },
+      { id: "3", name: "Məktəb #3" }
+    ];
+  }
   return [];
 };
 

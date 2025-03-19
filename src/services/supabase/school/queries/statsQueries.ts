@@ -1,3 +1,4 @@
+
 import { SchoolStats } from '../types';
 
 /**
