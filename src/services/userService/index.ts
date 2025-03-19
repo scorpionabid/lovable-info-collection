@@ -1,6 +1,6 @@
 
 import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption } from './types';
-import userService from '../userService';
+import userService from '../userService-bridge';
 
 // Re-export the types for use throughout the application
 export type { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption };

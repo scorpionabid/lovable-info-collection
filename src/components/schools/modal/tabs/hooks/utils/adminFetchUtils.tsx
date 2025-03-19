@@ -4,6 +4,26 @@ import { supabase } from '@/integrations/supabase/client';
 import { type User } from '@/services/userService/types';
 import { toast } from 'sonner';
 
+export const fetchSchoolAdminRoleId = async (): Promise<string | null> => {
+  try {
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'school-admin')
+      .single();
+      
+    if (roleError) {
+      console.error('Error getting school-admin role:', roleError);
+      return null;
+    }
+    
+    return roleData?.id || null;
+  } catch (error) {
+    console.error('Error fetching school admin role ID:', error);
+    return null;
+  }
+};
+
 export const useAdminFetching = (schoolId?: string) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,19 +35,7 @@ export const useAdminFetching = (schoolId?: string) => {
     setIsLoading(true);
     try {
       // Get the role ID for SchoolAdmin
-      const { data: roleData, error: roleError } = await supabase
-        .from('roles')
-        .select('id')
-        .eq('name', 'school-admin')
-        .single();
-        
-      if (roleError) {
-        console.error('Error getting school-admin role:', roleError);
-        toast.error('Rol məlumatları yüklənmədi');
-        return { users: [], currentAdmin: null };
-      }
-      
-      const schoolAdminRoleId = roleData?.id;
+      const schoolAdminRoleId = await fetchSchoolAdminRoleId();
       
       if (!schoolAdminRoleId) {
         console.error('School admin role ID not found');
