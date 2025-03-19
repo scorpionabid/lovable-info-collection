@@ -10,17 +10,10 @@ import {
 } from './types';
 
 // Re-export all types
-export type User = UserType;
-export type { 
-  UserFilter, 
-  UserResponse, 
-  CreateUserDto, 
-  UpdateUserDto, 
-  EntityOption 
-};
+export type { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption };
 
 // Import the actual service implementation
-import userService from '../userService-bridge';
+import userService from '../userService';
 
 // Create enhanced userService
 const enhancedUserService = {
