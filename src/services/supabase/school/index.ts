@@ -1,52 +1,15 @@
 
-// Export all the necessary functions and types from the school service
-import { getSchools, getSchoolById, getSchoolWithAdmin, getSchoolsByRegion } from './queries/schoolQueries';
-import { createSchool, updateSchool, deleteSchool, archiveSchool } from './crudOperations';
-import { getSchoolStats } from './queries/statsQueries';
-import { getSchoolTypes } from './helperFunctions';
-import { getSchoolActivities } from './schoolActivities';
-import { School, SchoolWithStats, SchoolStats, SchoolFilter, SchoolSortParams, SchoolPaginationParams, CreateSchoolDto, UpdateSchoolDto } from './types';
+// Re-export everything from crudOperations
+export * from './crudOperations';
 
-// Export type definitions
-export type {
-  School,
-  SchoolWithStats,
-  SchoolStats,
-  SchoolFilter,
-  SchoolSortParams,
-  SchoolPaginationParams,
-  CreateSchoolDto,
-  UpdateSchoolDto
-};
+// Re-export everything from querySchools 
+export * from './querySchools';
 
-// Export query functions
-export {
-  getSchools,
-  getSchoolById,
-  getSchoolWithAdmin,
-  getSchoolsByRegion,
-  createSchool,
-  updateSchool,
-  deleteSchool,
-  archiveSchool,
-  getSchoolStats,
-  getSchoolTypes,
-  getSchoolActivities
-};
+// Re-export everything from helperFunctions
+export * from './helperFunctions';
 
-// Default export for backward compatibility
-const schoolService = {
-  getSchools,
-  getSchoolById,
-  getSchoolWithAdmin,
-  getSchoolsByRegion,
-  createSchool,
-  updateSchool,
-  deleteSchool,
-  archiveSchool,
-  getSchoolStats,
-  getSchoolTypes,
-  getSchoolActivities
-};
+// Re-export from schoolActivities
+export * from './schoolActivities';
 
-export default schoolService;
+// Re-export types
+export * from './types';

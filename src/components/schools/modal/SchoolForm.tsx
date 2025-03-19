@@ -1,370 +1,307 @@
 
-import React, { useEffect, useState } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { School, CreateSchoolDto, UpdateSchoolDto } from '@/services/supabase/school/types';
-import * as schoolService from '@/services/supabase/school';
-import { supabase } from '@/services/supabase/client';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
-
-// Define the schema for school form validation
-const schoolSchema = z.object({
-  name: z.string().min(2, "Ad minimum 2 simvol olmalıdır"),
-  code: z.string().optional(),
-  region_id: z.string().optional(),
-  sector_id: z.string().min(1, "Sektor seçilməlidir"),
-  type_id: z.string().optional(),
-  address: z.string().optional(),
-  status: z.enum(["active", "inactive"]).default("active"),
-  student_count: z.coerce.number().int().optional(),
-  teacher_count: z.coerce.number().int().optional(),
-  director: z.string().optional(),
-  email: z.string().email("Düzgün email daxil edin").optional().or(z.literal("")),
-  phone: z.string().optional(),
-  archived: z.boolean().default(false)
-});
-
-type SchoolFormValues = z.infer<typeof schoolSchema>;
+import React from "react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSchoolForm } from "./useSchoolForm";
 
 export interface SchoolFormProps {
   mode: 'create' | 'edit';
-  initialData?: School;
-  onSuccess: () => void;
+  initialData?: any;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  defaultRegionId?: string;
+  defaultSectorId?: string;
 }
 
-export const SchoolForm = ({ mode, initialData, onSuccess }: SchoolFormProps) => {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [regions, setRegions] = useState<any[]>([]);
-  const [sectors, setSectors] = useState<any[]>([]);
-  const [schoolTypes, setSchoolTypes] = useState<any[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState(initialData?.region_id || '');
+export const SchoolForm: React.FC<SchoolFormProps> = ({ 
+  mode, 
+  initialData = {}, 
+  onSuccess,
+  onCancel,
+  defaultRegionId,
+  defaultSectorId
+}) => {
+  const {
+    form,
+    onSubmit,
+    isLoading,
+    regions,
+    sectors,
+    schoolTypes,
+    handleRegionChange,
+  } = useSchoolForm(mode === 'edit' ? initialData?.id : undefined, onSuccess);
 
-  const form = useForm<SchoolFormValues>({
-    resolver: zodResolver(schoolSchema),
-    defaultValues: {
-      name: initialData?.name || '',
-      code: initialData?.code || '',
-      region_id: initialData?.region_id || '',
-      sector_id: initialData?.sector_id || '',
-      type_id: initialData?.type_id || '',
-      address: initialData?.address || '',
-      status: (initialData?.status as "active" | "inactive") || 'active',
-      student_count: initialData?.student_count || 0,
-      teacher_count: initialData?.teacher_count || 0,
-      director: initialData?.director || '',
-      email: initialData?.email || '',
-      phone: initialData?.phone || '',
-      archived: initialData?.archived || false
-    }
-  });
-
-  // Fetch regions, sectors, and school types on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch regions
-        const { data: regionsData, error: regionsError } = await supabase
-          .from('regions')
-          .select('id, name')
-          .order('name');
-        
-        if (regionsError) throw regionsError;
-        setRegions(regionsData || []);
-
-        // Fetch sectors
-        await fetchSectors(initialData?.region_id);
-
-        // Fetch school types using the helper function
-        const schoolTypesData = await schoolService.getSchoolTypes();
-        setSchoolTypes(schoolTypesData || []);
-      } catch (error) {
-        console.error('Error fetching form data:', error);
-        toast({
-          title: "Məlumat yüklənmə xətası",
-          description: "Məlumatları yükləyərkən xəta baş verdi",
-          variant: "destructive"
-        });
-      }
-    };
-
-    fetchData();
-  }, [initialData]);
-
-  // Fetch sectors when region selection changes
-  const fetchSectors = async (regionId?: string) => {
-    try {
-      let query = supabase.from('sectors').select('id, name');
-      
-      if (regionId) {
-        query = query.eq('region_id', regionId);
-      }
-      
-      const { data, error } = await query.order('name');
-      
-      if (error) throw error;
-      setSectors(data || []);
-    } catch (error) {
-      console.error('Error fetching sectors:', error);
-    }
-  };
-
-  // Handle region change
-  const handleRegionChange = (regionId: string) => {
-    setSelectedRegion(regionId);
-    form.setValue('region_id', regionId);
-    form.setValue('sector_id', ''); // Reset sector when region changes
-    fetchSectors(regionId);
-  };
-
-  // Handle form submission
-  const onSubmit = async (values: SchoolFormValues) => {
-    setIsLoading(true);
-    try {
-      if (mode === 'create') {
-        // Create new school
-        const schoolData: CreateSchoolDto = {
-          name: values.name,
-          code: values.code,
-          region_id: values.region_id,
-          sector_id: values.sector_id,
-          type_id: values.type_id,
-          address: values.address,
-          status: values.status,
-          student_count: values.student_count,
-          teacher_count: values.teacher_count,
-          director: values.director,
-          email: values.email,
-          phone: values.phone,
-          archived: values.archived
-        };
-        
-        await schoolService.createSchool(schoolData);
-        toast({
-          title: "Məktəb yaradıldı",
-          description: "Məktəb uğurla əlavə edildi",
-        });
-      } else if (initialData?.id) {
-        // Update existing school
-        const schoolData: UpdateSchoolDto = {
-          name: values.name,
-          code: values.code,
-          region_id: values.region_id,
-          sector_id: values.sector_id,
-          type_id: values.type_id,
-          address: values.address,
-          status: values.status,
-          student_count: values.student_count,
-          teacher_count: values.teacher_count,
-          director: values.director,
-          email: values.email,
-          phone: values.phone,
-          archived: values.archived
-        };
-        
-        await schoolService.updateSchool(initialData.id, schoolData);
-        toast({
-          title: "Məktəb yeniləndi",
-          description: "Məktəb məlumatları uğurla yeniləndi",
-        });
-      }
-      
-      onSuccess();
-    } catch (error) {
-      console.error('Error saving school:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Məktəb məlumatları saxlanarkən xəta baş verdi",
-        variant: "destructive"
+  // Set default values when component mounts
+  React.useEffect(() => {
+    // If we have initialData, use it
+    if (mode === 'edit' && initialData) {
+      form.reset({
+        name: initialData.name || '',
+        sector_id: initialData.sector_id || '',
+        region_id: initialData.region_id || '',
+        type_id: initialData.type_id || '',
+        code: initialData.code || '',
+        address: initialData.address || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+        director: initialData.director || '',
+        student_count: initialData.student_count || 0,
+        teacher_count: initialData.teacher_count || 0,
+        status: initialData.status || 'Aktiv',
       });
-    } finally {
-      setIsLoading(false);
+    } 
+    // If creating new and we have default IDs
+    else if (mode === 'create') {
+      if (defaultRegionId) {
+        form.setValue('region_id', defaultRegionId);
+        handleRegionChange(defaultRegionId);
+      }
+      if (defaultSectorId) {
+        form.setValue('sector_id', defaultSectorId);
+      }
     }
-  };
+  }, [form, initialData, mode, defaultRegionId, defaultSectorId, handleRegionChange]);
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Məktəb adı</Label>
-          <Input
-            id="name"
-            {...form.register('name')}
-            placeholder="Məktəb adını daxil edin"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəb adı *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Məktəb adını daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          {form.formState.errors.name && (
-            <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
-          )}
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="code">Kod</Label>
-          <Input
-            id="code"
-            {...form.register('code')}
-            placeholder="Məktəb kodu"
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəb kodu</FormLabel>
+                <FormControl>
+                  <Input placeholder="Məktəb kodunu daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="region_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Region *</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    handleRegionChange(value);
+                  }}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Region seçin" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {regions.map((region) => (
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="sector_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sektor *</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sektor seçin" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {sectors.map((sector) => (
+                      <SelectItem key={sector.id} value={sector.id}>
+                        {sector.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="type_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəb növü</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Məktəb növünü seçin" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {schoolTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status seçin" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Aktiv">Aktiv</SelectItem>
+                    <SelectItem value="Deaktiv">Deaktiv</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Ünvan</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ünvanı daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="director"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Direktor</FormLabel>
+                <FormControl>
+                  <Input placeholder="Direktor adını daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>E-poçt</FormLabel>
+                <FormControl>
+                  <Input placeholder="E-poçt ünvanını daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Telefon</FormLabel>
+                <FormControl>
+                  <Input placeholder="Telefon nömrəsini daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="student_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Şagird sayı</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="teacher_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Müəllim sayı</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="region">Region</Label>
-          <Select
-            value={selectedRegion}
-            onValueChange={handleRegionChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Region seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              {regions.map(region => (
-                <SelectItem key={region.id} value={region.id}>
-                  {region.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button variant="outline" type="button" onClick={onCancel}>
+            Ləğv et
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Yüklənir..." : mode === 'create' ? "Yarat" : "Saxla"}
+          </Button>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="sector">Sektor</Label>
-          <Select
-            value={form.watch('sector_id')}
-            onValueChange={(value) => form.setValue('sector_id', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sektor seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              {sectors.map(sector => (
-                <SelectItem key={sector.id} value={sector.id}>
-                  {sector.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.sector_id && (
-            <p className="text-sm text-red-500">{form.formState.errors.sector_id.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="type">Məktəb növü</Label>
-          <Select
-            value={form.watch('type_id')}
-            onValueChange={(value) => form.setValue('type_id', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Məktəb növü seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              {schoolTypes.map(type => (
-                <SelectItem key={type.id} value={type.id}>
-                  {type.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="address">Ünvan</Label>
-          <Input
-            id="address"
-            {...form.register('address')}
-            placeholder="Məktəb ünvanı"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="studentCount">Şagird sayı</Label>
-          <Input
-            id="studentCount"
-            type="number"
-            {...form.register('student_count')}
-            placeholder="Şagird sayı"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="teacherCount">Müəllim sayı</Label>
-          <Input
-            id="teacherCount"
-            type="number"
-            {...form.register('teacher_count')}
-            placeholder="Müəllim sayı"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="director">Direktor</Label>
-          <Input
-            id="director"
-            {...form.register('director')}
-            placeholder="Direktor adı"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">E-poçt</Label>
-          <Input
-            id="email"
-            type="email"
-            {...form.register('email')}
-            placeholder="E-poçt ünvanı"
-          />
-          {form.formState.errors.email && (
-            <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Telefon</Label>
-          <Input
-            id="phone"
-            {...form.register('phone')}
-            placeholder="Telefon nömrəsi"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <Select
-            value={form.watch('status')}
-            onValueChange={(value: 'active' | 'inactive') => form.setValue('status', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Status seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Aktiv</SelectItem>
-              <SelectItem value="inactive">Deaktiv</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="archived"
-            checked={form.watch('archived')}
-            onCheckedChange={(value) => form.setValue('archived', value)}
-          />
-          <Label htmlFor="archived">Arxivləşdirilib</Label>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {mode === 'create' ? 'Yarat' : 'Yadda saxla'}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
 };

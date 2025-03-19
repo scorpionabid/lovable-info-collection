@@ -7,42 +7,56 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SchoolForm } from "./SchoolForm";
-import { SchoolWithStats } from '@/services/supabase/school/types';
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  initialData?: any; // School data for edit mode
-  regionId?: string; // Added for RegionDetails.tsx
-  sectorId?: string;
+  school?: any; // School data for edit mode
+  initialData?: any; // Alternative name for school prop
   onSuccess?: () => void;
-  onCreated?: () => void;
-  onUpdated?: () => void;
+  onSchoolCreated?: () => void;
+  onSchoolUpdated?: () => void;
+  regionId?: string; // Added for RegionDetails.tsx
+  defaultRegionId?: string; // Alternative name for regionId
+  sectorId?: string;
+  defaultSectorId?: string; // Alternative name for sectorId
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({ 
   isOpen, 
   onClose, 
   mode, 
+  school,
   initialData,
-  regionId,
-  sectorId,
   onSuccess,
-  onCreated,
-  onUpdated
+  onSchoolCreated,
+  onSchoolUpdated,
+  regionId,
+  defaultRegionId,
+  sectorId,
+  defaultSectorId
 }) => {
   const handleSuccess = () => {
     // Call the appropriate callback based on availability and mode
     if (onSuccess) {
       onSuccess();
-    } else if (mode === 'create' && onCreated) {
-      onCreated();
-    } else if (mode === 'edit' && onUpdated) {
-      onUpdated();
+    } else if (mode === 'create' && onSchoolCreated) {
+      onSchoolCreated();
+    } else if (mode === 'edit' && onSchoolUpdated) {
+      onSchoolUpdated();
     }
     onClose();
   };
+
+  // Use either school or initialData prop
+  const schoolData = initialData || school;
+  
+  // Use either regionId or defaultRegionId
+  const finalRegionId = regionId || defaultRegionId;
+  
+  // Use either sectorId or defaultSectorId
+  const finalSectorId = sectorId || defaultSectorId;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -54,11 +68,11 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         </DialogHeader>
         <SchoolForm 
           mode={mode} 
-          initialData={initialData} 
-          onSuccess={handleSuccess} 
+          initialData={schoolData} 
+          onSuccess={handleSuccess}
           onCancel={onClose}
-          defaultRegionId={regionId}
-          defaultSectorId={sectorId}
+          defaultRegionId={finalRegionId}
+          defaultSectorId={finalSectorId}
         />
       </DialogContent>
     </Dialog>
