@@ -107,6 +107,7 @@ const userService = {
 
   blockUser: async (id: string): Promise<boolean> => {
     try {
+      // Call to block user using the Supabase service
       const result = await supabaseUserService.blockUser(id);
       return result ? true : false;
     } catch (error) {
@@ -140,8 +141,8 @@ const userService = {
 
   changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      if (supabaseUserService.changePassword) {
-        return await supabaseUserService.changePassword(oldPassword, newPassword);
+      if (supabaseUserService.updatePassword) {
+        return await supabaseUserService.updatePassword(newPassword);
       } else {
         // Fallback to Supabase Auth directly
         const { error } = await supabase.auth.updateUser({

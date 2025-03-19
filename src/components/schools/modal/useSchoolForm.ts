@@ -76,7 +76,8 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
           const { data: school } = await supabase
             .from('schools')
             .select(`
-              *,
+              id, name, region_id, sector_id, type_id, code, address,
+              email, phone, director, student_count, teacher_count,
               regions(id, name),
               sectors(id, name),
               school_types(id, name)

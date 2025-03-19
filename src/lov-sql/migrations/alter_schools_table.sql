@@ -1,0 +1,8 @@
+
+-- Add missing columns to the schools table
+ALTER TABLE IF EXISTS schools
+ADD COLUMN IF NOT EXISTS email TEXT,
+ADD COLUMN IF NOT EXISTS phone TEXT,
+ADD COLUMN IF NOT EXISTS director TEXT,
+ADD COLUMN IF NOT EXISTS student_count INT DEFAULT 0,
+ADD COLUMN IF NOT EXISTS teacher_count INT DEFAULT 0;
