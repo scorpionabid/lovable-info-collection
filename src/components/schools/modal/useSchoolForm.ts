@@ -78,6 +78,7 @@ export const useSchoolForm = (school?: School, onSuccess?: () => void) => {
     const loadSchoolTypes = async () => {
       setLoadingSchoolTypes(true);
       try {
+        // Use the get_school_types RPC function that returns proper school types
         const { data, error } = await supabase.rpc('get_school_types');
 
         if (error) throw error;
@@ -145,6 +146,8 @@ export const useSchoolForm = (school?: School, onSuccess?: () => void) => {
       // Convert string numbers to actual numbers
       const formattedValues = {
         ...values,
+        name: values.name, // Ensure name is present and non-optional
+        sector_id: values.sector_id, // Ensure sector_id is present and non-optional
         student_count: values.student_count || null,
         teacher_count: values.teacher_count || null,
       };

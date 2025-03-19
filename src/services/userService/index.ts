@@ -1,6 +1,4 @@
 
-import userService from '../userService-bridge';
-
 // Define and export the User type
 export interface User {
   id: string;
@@ -23,6 +21,9 @@ export interface User {
 
 // Re-export the type definitions
 export type { UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption } from './types';
+
+// Import the actual service implementation
+import userService from './userService-bridge';
 
 // Export the service as the default export
 export default userService;

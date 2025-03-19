@@ -90,6 +90,11 @@ export const UsersOverview = () => {
     }
   };
 
+  // Adapter function to convert string to event handler
+  const handleSearchInputChange = (value: string) => {
+    handleSearchChange(value);
+  };
+
   return (
     <div className="container mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
@@ -106,7 +111,7 @@ export const UsersOverview = () => {
 
       <UserTableToolbar 
         search={search}
-        onSearchChange={handleSearchChange}
+        onSearchChange={handleSearchInputChange}
         onExport={handleExport}
         onAddUser={handleAddUser}
       />
