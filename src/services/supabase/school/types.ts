@@ -5,11 +5,13 @@
 
 export interface SchoolFilter {
   searchQuery?: string;
-  region_id?: string; // snake_case
-  sector_id?: string; // snake_case  
-  regionId?: string;  // camelCase
-  sectorId?: string;  // camelCase
-  type?: string;      // For type filter
+  search?: string;       // Alternative name for search query
+  region_id?: string;    // snake_case
+  sector_id?: string;    // snake_case  
+  regionId?: string;     // camelCase
+  sectorId?: string;     // camelCase
+  type?: string;         // For type filter
+  type_id?: string;      // For type filter with ID
   status?: 'active' | 'inactive' | 'all';
   minCompletionRate?: number;
   maxCompletionRate?: number;
@@ -21,7 +23,7 @@ export interface School {
   id: string;
   name: string;
   code: string;
-  type_id: string;
+  type_id?: string;
   region_id: string;
   sector_id: string;
   address?: string;
@@ -37,13 +39,32 @@ export interface School {
   type?: string;
   region?: string;
   sector?: string;
-  studentCount?: number; // camelCase alias for student_count
-  teacherCount?: number; // camelCase alias for teacher_count
+  studentCount?: number;       // camelCase alias for student_count
+  teacherCount?: number;       // camelCase alias for teacher_count
   completionRate?: number;
   adminName?: string;
   adminId?: string;
-  contactEmail?: string; // alias for email
-  contactPhone?: string; // alias for phone
+  contactEmail?: string;       // alias for email
+  contactPhone?: string;       // alias for phone
+}
+
+// Database row representation of School
+export interface SchoolDatabaseRow {
+  id: string;
+  name: string;
+  code?: string;
+  type_id?: string;
+  region_id?: string;
+  sector_id?: string;
+  address?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
+  created_at: string;
+  updated_at: string;
+  status?: string;
 }
 
 export interface CreateSchoolDto {
