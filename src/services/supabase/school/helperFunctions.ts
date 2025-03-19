@@ -8,10 +8,8 @@ export const getSchoolTypes = async () => {
   try {
     console.log('Fetching school types...');
     
-    const { data, error } = await supabase
-      .from('school_types')
-      .select('id, name')
-      .order('name', { ascending: true });
+    // Use RPC instead of direct table query
+    const { data, error } = await supabase.rpc('get_school_types');
     
     if (error) {
       console.error('Error fetching school types:', error);

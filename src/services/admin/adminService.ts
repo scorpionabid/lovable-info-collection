@@ -1,6 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { User } from '@/services/userService';
+import { supabase } from '@/lib/supabase/client';
+import type { User } from '@/services/userService/types';
 import { toast } from "sonner";
 
 // Define the interface here but don't export it directly

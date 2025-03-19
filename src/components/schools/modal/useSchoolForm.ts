@@ -73,38 +73,46 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
 
         // If editing, fetch the school data
         if (schoolId) {
-          const { data: school } = await supabase
-            .from('schools')
-            .select(`
-              id, name, region_id, sector_id, type_id, code, address,
-              email, phone, director, student_count, teacher_count,
-              regions(id, name),
-              sectors(id, name),
-              school_types(id, name)
-            `)
-            .eq('id', schoolId)
-            .single();
+          // Use try-catch to handle potential errors
+          try {
+            const { data: school, error } = await supabase
+              .from('schools')
+              .select(`
+                id, name, region_id, sector_id, type_id, code, address,
+                email, phone, director, student_count, teacher_count,
+                regions(id, name),
+                sectors(id, name),
+                school_types:type_id(id, name)
+              `)
+              .eq('id', schoolId)
+              .single();
 
-          if (school) {
-            // Set form values
-            form.reset({
-              name: school.name,
-              sector_id: school.sector_id,
-              region_id: school.region_id || '',
-              type_id: school.type_id || '',
-              code: school.code || '',
-              address: school.address || '',
-              email: school.email || '',
-              phone: school.phone || '',
-              director: school.director || '',
-              student_count: school.student_count || 0,
-              teacher_count: school.teacher_count || 0,
-            });
+            if (error) throw error;
 
-            // Set the selected region to load sectors
-            if (school.region_id) {
-              setSelectedRegion(school.region_id);
+            if (school) {
+              // Set form values
+              form.reset({
+                name: school.name || '',
+                sector_id: school.sector_id || '',
+                region_id: school.region_id || '',
+                type_id: school.type_id || '',
+                code: school.code || '',
+                address: school.address || '',
+                email: school.email || '',
+                phone: school.phone || '',
+                director: school.director || '',
+                student_count: school.student_count || 0,
+                teacher_count: school.teacher_count || 0,
+              });
+
+              // Set the selected region to load sectors
+              if (school.region_id) {
+                setSelectedRegion(school.region_id);
+              }
             }
+          } catch (fetchError) {
+            console.error('Error fetching school details:', fetchError);
+            toast.error('Məktəb məlumatları yüklənərkən xəta baş verdi');
           }
         }
       } catch (error) {

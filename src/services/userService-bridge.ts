@@ -2,7 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { User as SupabaseUser } from "@/services/supabase/user/types";
 import supabaseUserService from "@/services/supabase/user";
-import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto } from "./userService/types";
+import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption } from "./userService/types";
 
 // Create a bridge between the old userService and the new Supabase implementation
 const userService = {
@@ -141,7 +141,8 @@ const userService = {
 
   changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      if (supabaseUserService.updatePassword) {
+      // Try to use the method from supabaseUserService if it exists
+      if (typeof supabaseUserService.updatePassword === 'function') {
         return await supabaseUserService.updatePassword(newPassword);
       } else {
         // Fallback to Supabase Auth directly
@@ -157,40 +158,40 @@ const userService = {
   },
 
   // Organization data getters
-  getRoles: async () => {
+  getRoles: async (): Promise<EntityOption[]> => {
     try {
       const roles = await supabaseUserService.getRoles();
-      return roles;
+      return roles as EntityOption[];
     } catch (error) {
       console.error("Error in getRoles bridge:", error);
       return [];
     }
   },
 
-  getRegions: async (userId?: string, userRole?: string) => {
+  getRegions: async (userId?: string, userRole?: string): Promise<EntityOption[]> => {
     try {
       const regions = await supabaseUserService.getRegions();
-      return regions;
+      return regions as EntityOption[];
     } catch (error) {
       console.error("Error in getRegions bridge:", error);
       return [];
     }
   },
 
-  getSectors: async (regionId: string, userId?: string, userRole?: string) => {
+  getSectors: async (regionId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
     try {
       const sectors = await supabaseUserService.getSectors(regionId);
-      return sectors;
+      return sectors as EntityOption[];
     } catch (error) {
       console.error("Error in getSectors bridge:", error);
       return [];
     }
   },
 
-  getSchools: async (sectorId: string, userId?: string, userRole?: string) => {
+  getSchools: async (sectorId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
     try {
       const schools = await supabaseUserService.getSchools(sectorId);
-      return schools;
+      return schools as EntityOption[];
     } catch (error) {
       console.error("Error in getSchools bridge:", error);
       return [];
