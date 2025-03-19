@@ -24,9 +24,9 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         status,
         director,
         created_at,
-        school_types:type_id (id, name),
-        regions:region_id (id, name),
-        sectors:sector_id (id, name)
+        regions(id, name),
+        sectors(id, name),
+        school_types:type_id(id, name)
       `);
 
     // Apply filters if provided
@@ -46,12 +46,6 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
       if (filters.status) {
         query = query.eq('status', filters.status);
       }
-      if (filters.minCompletionRate !== undefined) {
-        query = query.gte('completion_rate', filters.minCompletionRate);
-      }
-      if (filters.maxCompletionRate !== undefined) {
-        query = query.lte('completion_rate', filters.maxCompletionRate);
-      }
     }
 
     const { data: schoolsData, error: schoolsError } = await query.order('name');
@@ -59,7 +53,6 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
     if (schoolsError) throw schoolsError;
 
     // Now let's get the admin information for each school in a separate query
-    // This avoids the foreign key relationship issue
     const { data: adminData, error: adminError } = await supabase
       .from('users')
       .select(`
@@ -67,9 +60,9 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         first_name,
         last_name,
         school_id,
-        roles:role_id (name)
+        role_id
       `)
-      .eq('roles.name', 'school-admin');
+      .eq('role_id', (await supabase.from('roles').select('id').eq('name', 'school-admin').single()).data?.id);
 
     if (adminError) {
       console.warn('Error fetching admin data:', adminError);
@@ -90,7 +83,47 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
     }
 
     // Transform the data to match our expected School interface
-    const schools = schoolsData.map((item: any) => transformSchoolData(item, schoolAdmins));
+    const schools = schoolsData.map((school: any) => {
+      const admin = schoolAdmins.get(school.id);
+      
+      // Extract values from nested objects safely
+      let schoolType = 'N/A';
+      let regionName = 'N/A';
+      let sectorName = 'N/A';
+
+      if (school.school_types) {
+        schoolType = school.school_types.name || 'N/A';
+      }
+
+      if (school.regions) {
+        regionName = school.regions.name || 'N/A';
+      }
+
+      if (school.sectors) {
+        sectorName = school.sectors.name || 'N/A';
+      }
+
+      return {
+        id: school.id,
+        name: school.name,
+        type: schoolType,
+        region: regionName,
+        region_id: school.region_id,
+        sector: sectorName,
+        sector_id: school.sector_id,
+        studentCount: school.student_count || 0,
+        teacherCount: school.teacher_count || 0,
+        completionRate: Math.floor(Math.random() * 40) + 60, // Placeholder
+        status: school.status || 'Aktiv',
+        director: school.director || 'N/A',
+        contactEmail: school.email || 'N/A',
+        contactPhone: school.phone || 'N/A',
+        createdAt: school.created_at,
+        address: school.address,
+        adminName: admin?.name || null,
+        adminId: admin?.id || null
+      };
+    });
 
     return schools;
   } catch (error) {
@@ -119,9 +152,9 @@ export const getSchoolById = async (id: string): Promise<School> => {
         status,
         director,
         created_at,
-        school_types:type_id (id, name),
-        regions:region_id (id, name),
-        sectors:sector_id (id, name)
+        regions(id, name),
+        sectors(id, name),
+        school_types:type_id(id, name)
       `)
       .eq('id', id)
       .single();
@@ -137,27 +170,15 @@ export const getSchoolById = async (id: string): Promise<School> => {
     let sectorName = 'N/A';
 
     if (data.school_types) {
-      // Type assertion to help TypeScript understand the shape
-      const schoolTypes = data.school_types as { id: string; name: string } | { id: string; name: string }[];
-      schoolType = Array.isArray(schoolTypes) 
-        ? (schoolTypes[0]?.name || 'N/A') 
-        : (schoolTypes.name || 'N/A');
+      schoolType = data.school_types.name || 'N/A';
     }
 
     if (data.regions) {
-      // Type assertion for regions
-      const regions = data.regions as { id: string; name: string } | { id: string; name: string }[];
-      regionName = Array.isArray(regions)
-        ? (regions[0]?.name || 'N/A')
-        : (regions.name || 'N/A');
+      regionName = data.regions.name || 'N/A';
     }
 
     if (data.sectors) {
-      // Type assertion for sectors
-      const sectors = data.sectors as { id: string; name: string } | { id: string; name: string }[];
-      sectorName = Array.isArray(sectors)
-        ? (sectors[0]?.name || 'N/A')
-        : (sectors.name || 'N/A');
+      sectorName = data.sectors.name || 'N/A';
     }
 
     return {
@@ -204,9 +225,9 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
         status,
         director,
         created_at,
-        school_types:type_id (id, name),
-        regions:region_id (id, name),
-        sectors:sector_id (id, name)
+        regions(id, name),
+        sectors(id, name),
+        school_types:type_id(id, name)
       `)
       .eq('id', id)
       .single();
@@ -226,8 +247,8 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
         roles(name)
       `)
       .eq('school_id', id)
-      .eq('roles.name', 'school-admin')
-      .single();
+      .eq('role_id', (await supabase.from('roles').select('id').eq('name', 'school-admin').single()).data?.id)
+      .maybeSingle();
 
     if (adminError && adminError.code !== 'PGRST116') { // PGRST116 is "No rows returned" which is OK
       console.warn('Error fetching admin data:', adminError);
@@ -238,33 +259,21 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
-    // Fix: Handle the nested objects properly with proper type assertions
+    // Handle nested objects correctly
     let schoolType = 'N/A';
     let regionName = 'N/A';
     let sectorName = 'N/A';
 
     if (data.school_types) {
-      // Type assertion to help TypeScript understand the shape
-      const schoolTypes = data.school_types as { id: string; name: string } | { id: string; name: string }[];
-      schoolType = Array.isArray(schoolTypes) 
-        ? (schoolTypes[0]?.name || 'N/A') 
-        : (schoolTypes.name || 'N/A');
+      schoolType = data.school_types.name || 'N/A';
     }
 
     if (data.regions) {
-      // Type assertion for regions
-      const regions = data.regions as { id: string; name: string } | { id: string; name: string }[];
-      regionName = Array.isArray(regions)
-        ? (regions[0]?.name || 'N/A')
-        : (regions.name || 'N/A');
+      regionName = data.regions.name || 'N/A';
     }
 
     if (data.sectors) {
-      // Type assertion for sectors
-      const sectors = data.sectors as { id: string; name: string } | { id: string; name: string }[];
-      sectorName = Array.isArray(sectors)
-        ? (sectors[0]?.name || 'N/A')
-        : (sectors.name || 'N/A');
+      sectorName = data.sectors.name || 'N/A';
     }
 
     const school = {

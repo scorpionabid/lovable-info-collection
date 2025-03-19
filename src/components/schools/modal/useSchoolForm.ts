@@ -5,18 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-
-// Using a stored procedure (RPC) to get school types
-const fetchSchoolTypes = async () => {
-  try {
-    const { data, error } = await supabase.rpc('get_school_types');
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching school types:', error);
-    return [];
-  }
-};
+import { getSchoolTypes } from '@/services/supabase/school/helperFunctions';
 
 // Define the form schema
 const schoolFormSchema = z.object({
@@ -64,7 +53,7 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
     const loadData = async () => {
       try {
         // Fetch school types using RPC
-        const types = await fetchSchoolTypes();
+        const types = await getSchoolTypes();
         setSchoolTypes(types);
 
         // Fetch regions
@@ -77,13 +66,7 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
           try {
             const { data: school, error } = await supabase
               .from('schools')
-              .select(`
-                id, name, region_id, sector_id, type_id, code, address,
-                email, phone, director, student_count, teacher_count,
-                regions(id, name),
-                sectors(id, name),
-                school_types:type_id(id, name)
-              `)
+              .select('*')
               .eq('id', schoolId)
               .single();
 

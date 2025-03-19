@@ -24,16 +24,13 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       address: schoolData.address,
       email: schoolData.contactEmail,
       phone: schoolData.contactPhone,
-      status: schoolData.status
+      status: schoolData.status,
+      director: schoolData.director
     };
 
     // Only include type_id if it exists
     if (schoolData.type) {
       dbData.type_id = schoolData.type;
-    }
-
-    if (schoolData.director) {
-      dbData.director = schoolData.director;
     }
 
     // Log the converted data to ensure it's correctly formatted
@@ -126,7 +123,10 @@ export const archiveSchool = async (id: string) => {
   try {
     const { data, error } = await supabase
       .from('schools')
-      .update({ status: 'Deaktiv' })
+      .update({ 
+        status: 'Deaktiv',
+        archived: true
+      })
       .eq('id', id)
       .select()
       .single();

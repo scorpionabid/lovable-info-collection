@@ -141,16 +141,11 @@ const userService = {
 
   changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      // Try to use the method from supabaseUserService if it exists
-      if (typeof supabaseUserService.updatePassword === 'function') {
-        return await supabaseUserService.updatePassword(newPassword);
-      } else {
-        // Fallback to Supabase Auth directly
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword
-        });
-        return !error;
-      }
+      // Use Supabase Auth directly for password change
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      return !error;
     } catch (error) {
       console.error("Error in changePassword bridge:", error);
       return false;
