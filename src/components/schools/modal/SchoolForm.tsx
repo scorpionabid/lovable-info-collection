@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
+import { getSchoolTypes } from '@/services/supabase/school/helperFunctions';
 
 // Define schema for school form
 const schoolFormSchema = z.object({
@@ -69,8 +70,8 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({ mode, school, onSuccess 
         if (regionsData) setRegions(regionsData);
 
         // Fetch school types
-        const { data: typesData } = await supabase.from('school_types').select('id, name').order('name');
-        if (typesData) setSchoolTypes(typesData);
+        const typesData = await getSchoolTypes();
+        setSchoolTypes(typesData);
 
         // If editing, set the selected region
         if (school?.region_id) {

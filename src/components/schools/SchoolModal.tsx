@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { z } from "zod";
 import { SchoolForm } from "./modal/SchoolForm";
 
 export interface SchoolModalProps {
@@ -14,12 +13,10 @@ export interface SchoolModalProps {
   onClose: () => void;
   mode: 'create' | 'edit';
   school?: any; // School data for edit mode
-  // Add callback props for all possible operations
   onSuccess?: () => void;
   onSchoolCreated?: () => void;
   onSchoolUpdated?: () => void;
   regionId?: string; // Added for RegionDetails.tsx
-  onCreated?: () => void; // Added for RegionDetails.tsx
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({ 
@@ -30,8 +27,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   onSuccess,
   onSchoolCreated,
   onSchoolUpdated,
-  regionId,
-  onCreated
+  regionId
 }) => {
   const handleSuccess = () => {
     // Call the appropriate callback based on availability and mode
@@ -41,8 +37,6 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
       onSchoolCreated();
     } else if (mode === 'edit' && onSchoolUpdated) {
       onSchoolUpdated();
-    } else if (mode === 'create' && onCreated) {
-      onCreated();
     }
     onClose();
   };

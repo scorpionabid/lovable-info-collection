@@ -1,7 +1,7 @@
 
 // Export the User type and all other types with proper type annotations
 import { 
-  User, 
+  User as UserType, 
   UserFilter, 
   UserResponse, 
   CreateUserDto, 
@@ -9,9 +9,9 @@ import {
   EntityOption 
 } from './types';
 
-// Re-export all types
+// Re-export all types - use 'export type' to avoid conflicts
 export type { 
-  User, 
+  UserType as User, 
   UserFilter, 
   UserResponse, 
   CreateUserDto, 

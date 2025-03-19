@@ -1,168 +1,180 @@
-import React from 'react';
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { SectorWithStats } from "@/services/supabase/sector/types";
-import { createSector, updateSector } from "@/services/supabase/sector";
-import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { supabase } from '@/lib/supabase';
 
 export interface SectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  sector?: any; // The sector data for edit mode
-  sectorId?: string; // Alternative way to specify the sector
+  sector?: any; // Sector data for edit mode
   onSuccess?: () => void;
+  regionId?: string; // Added for RegionDetails.tsx
 }
 
-export const SectorModal = ({ 
+export const SectorModal: React.FC<SectorModalProps> = ({ 
   isOpen, 
   onClose, 
   mode, 
-  sector, 
-  sectorId,
-  onSuccess 
-}: SectorModalProps) => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    regionId: "",
-  });
+  sector,
+  onSuccess,
+  regionId
+}) => {
+  const [name, setName] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState<string>('');
+  const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (mode === "edit" && sector) {
-      setFormData({
-        name: sector.name,
-        description: sector.description || "",
-        regionId: sector.region_id,
-      });
-    } else if (mode === "create") {
-      setFormData({
-        name: "",
-        description: "",
-        regionId: "",
-      });
+    // If editing, set initial values
+    if (mode === 'edit' && sector) {
+      setName(sector.name || '');
+      setSelectedRegion(sector.region_id || '');
     }
-  }, [mode, sector]);
+    
+    // If creating from region details page, use provided regionId
+    if (mode === 'create' && regionId) {
+      setSelectedRegion(regionId);
+    }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    // Load regions for dropdown
+    const fetchRegions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('regions')
+          .select('id, name')
+          .order('name');
+        
+        if (error) throw error;
+        setRegions(data || []);
+      } catch (error) {
+        console.error('Error loading regions:', error);
+        toast.error('Failed to load regions');
+      }
+    };
+
+    fetchRegions();
+  }, [mode, sector, regionId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name) {
-      toast({
-        title: "Xəta",
-        description: "Sektor adını daxil edin",
-        variant: "destructive",
-      });
+    // Validate inputs
+    if (!name.trim()) {
+      toast.error('Sektor adı daxil edin');
       return;
     }
-
+    
+    if (!selectedRegion) {
+      toast.error('Region seçin');
+      return;
+    }
+    
+    setLoading(true);
+    
     try {
-      setIsSubmitting(true);
-      
-      if (mode === "create") {
-        await createSector({
-          name: formData.name,
-          description: formData.description,
-          region_id: formData.regionId,
-        });
+      if (mode === 'create') {
+        // Create new sector
+        const { error } = await supabase
+          .from('sectors')
+          .insert({
+            name,
+            region_id: selectedRegion
+          });
         
-        toast({
-          title: "Uğurlu",
-          description: "Sektor uğurla yaradıldı",
-        });
-      } else if (mode === "edit") {
-        await updateSector(sector.id, {
-          name: formData.name,
-          description: formData.description,
-          region_id: formData.regionId,
-        });
+        if (error) throw error;
+        toast.success('Sektor yaradıldı');
+      } else {
+        // Update existing sector
+        const { error } = await supabase
+          .from('sectors')
+          .update({
+            name,
+            region_id: selectedRegion
+          })
+          .eq('id', sector.id);
         
-        toast({
-          title: "Uğurlu",
-          description: "Sektor uğurla yeniləndi",
-        });
+        if (error) throw error;
+        toast.success('Sektor yeniləndi');
       }
       
-      if (onSuccess) {
-        onSuccess();
-      }
-      
+      // Call onSuccess callback
+      if (onSuccess) onSuccess();
+      // Close modal
       onClose();
     } catch (error) {
-      console.error("Sector operation failed:", error);
-      toast({
-        title: "Xəta",
-        description: "Əməliyyat zamanı xəta baş verdi",
-        variant: "destructive",
-      });
+      console.error('Error saving sector:', error);
+      toast.error('Əməliyyat zamanı xəta baş verdi');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "Yeni Sektor Yarat" : "Sektoru Redaktə Et"}
+            {mode === 'create' ? 'Yeni sektor' : 'Sektoru redaktə et'}
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Sektor adı</Label>
+            <Label htmlFor="sector-name">Sektor adı</Label>
             <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              id="sector-name"
               placeholder="Sektor adını daxil edin"
-              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Təsvir</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Təsvir daxil edin (istəyə bağlı)"
-              rows={3}
-            />
+            <Label htmlFor="region">Region</Label>
+            <Select
+              value={selectedRegion}
+              onValueChange={setSelectedRegion}
+              disabled={loading || (mode === 'create' && !!regionId)}
+            >
+              <SelectTrigger id="region">
+                <SelectValue placeholder="Region seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {regions.map((region) => (
+                  <SelectItem key={region.id} value={region.id}>
+                    {region.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button
-              type="button"
-              variant="outline"
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={loading}
             >
               Ləğv et
             </Button>
             <Button 
               type="submit"
-              disabled={isSubmitting}
+              disabled={loading}
             >
-              {isSubmitting
-                ? "Gözləyin..."
-                : mode === "create"
-                ? "Yarat"
-                : "Yadda saxla"}
+              {loading ? 'Yüklənir...' : mode === 'create' ? 'Yarat' : 'Yadda saxla'}
             </Button>
           </div>
         </form>

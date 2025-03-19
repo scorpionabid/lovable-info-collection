@@ -1,271 +1,219 @@
-import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
-import { SchoolFilter } from "@/services/supabase/school/types";
-import { getRegionsForDropdown } from "@/services/supabase/sector/helperFunctions";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { X } from "lucide-react";
+import { SchoolFilter } from '@/services/supabase/school/types';
 
 interface SchoolFilterPanelProps {
-  isVisible: boolean;
-  onToggleVisibility: () => void;
-  onApplyFilters: (filters: SchoolFilter) => void;
+  onFilterChange: (filters: SchoolFilter) => void;
+  regions: { id: string; name: string }[];
+  sectors: { id: string; name: string }[];
+  schoolTypes: { id: string; name: string }[];
+  isLoading?: boolean;
 }
 
-export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilters }: SchoolFilterPanelProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRegionId, setSelectedRegionId] = useState<string>('');
-  const [selectedSectorId, setSelectedSectorId] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [minRate, setMinRate] = useState<string>('');
-  const [maxRate, setMaxRate] = useState<string>('');
-  
-  const [regions, setRegions] = useState<Array<{id: string, name: string}>>([]);
-  const [sectors, setSectors] = useState<Array<{id: string, name: string}>>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  useEffect(() => {
-    const loadRegions = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getRegionsForDropdown();
-        setRegions(data);
-      } catch (error) {
-        console.error('Error loading regions:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadRegions();
-  }, []);
-  
-  useEffect(() => {
-    const loadSectors = async () => {
-      if (!selectedRegionId) {
-        setSectors([]);
-        return;
-      }
-      
-      try {
-        setIsLoading(true);
-        const sectorsMock = [
-          { id: '1', name: 'Nəsimi rayonu' },
-          { id: '2', name: 'Yasamal rayonu' },
-          { id: '3', name: 'Sabunçu rayonu' },
-          { id: '4', name: 'Mərkəz' },
-        ];
-        setSectors(sectorsMock);
-      } catch (error) {
-        console.error('Error loading sectors:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadSectors();
-  }, [selectedRegionId]);
-  
-  const handleReset = () => {
-    setSearchTerm('');
-    setSelectedRegionId('');
-    setSelectedSectorId('');
-    setSelectedType('');
-    setSelectedStatus('');
-    setMinRate('');
-    setMaxRate('');
-    
-    onApplyFilters({});
+export const SchoolFilterPanel: React.FC<SchoolFilterPanelProps> = ({
+  onFilterChange,
+  regions,
+  sectors,
+  schoolTypes,
+  isLoading = false
+}) => {
+  const [filters, setFilters] = React.useState<SchoolFilter>({
+    search: '',
+    region_id: '',
+    sector_id: '',
+    type_id: '',
+    status: 'all',
+    minCompletionRate: 0,
+    maxCompletionRate: 100
+  });
+
+  // Handle input change for text filters
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
-  
-  const handleApplyFilters = () => {
-    const filters: SchoolFilter = {};
-    
-    if (searchTerm) filters.search = searchTerm;
-    if (selectedRegionId) filters.region_id = selectedRegionId;
-    if (selectedSectorId) filters.sector_id = selectedSectorId;
-    if (selectedType) filters.type = selectedType;
-    if (selectedStatus) filters.status = selectedStatus;
-    if (minRate) filters.minCompletionRate = parseInt(minRate);
-    if (maxRate) filters.maxCompletionRate = parseInt(maxRate);
-    
-    onApplyFilters(filters);
+
+  // Handle select change for dropdown filters
+  const handleSelectChange = (name: string, value: string) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
-  
-  if (!isVisible) {
-    return (
-      <div className="lg:col-span-1 flex justify-end">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onToggleVisibility}
-          className="h-8 w-8 p-0 rounded-full"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  }
-  
+
+  // Handle slider change for completion rate
+  const handleCompletionRateChange = (values: number[]) => {
+    setFilters(prev => ({
+      ...prev,
+      minCompletionRate: values[0],
+      maxCompletionRate: values[1]
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = () => {
+    onFilterChange(filters);
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    const resetFiltersState = {
+      search: '',
+      region_id: '',
+      sector_id: '',
+      type_id: '',
+      status: 'all' as const,
+      minCompletionRate: 0,
+      maxCompletionRate: 100
+    };
+    setFilters(resetFiltersState);
+    onFilterChange(resetFiltersState);
+  };
+
   return (
-    <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-sm h-fit">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-medium text-infoline-dark-blue">Filterlər</h3>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleReset}
-            className="h-8 text-infoline-dark-gray"
-          >
-            <X className="h-4 w-4 mr-1" />
-            Sıfırla
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onToggleVisibility}
-            className="h-8 w-8 p-0 lg:flex hidden"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
-            Axtarış
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-infoline-gray" />
+    <Card className="mb-6">
+      <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Search */}
+          <div className="space-y-2">
+            <Label htmlFor="search">Axtarış</Label>
             <Input
-              placeholder="Məktəb adı, direktor..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              id="search"
+              name="search"
+              placeholder="Məktəb adı axtar..."
+              value={filters.search}
+              onChange={handleInputChange}
+              disabled={isLoading}
+            />
+          </div>
+          
+          {/* Region Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="region">Region</Label>
+            <Select
+              value={filters.region_id}
+              onValueChange={(value) => handleSelectChange('region_id', value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger id="region">
+                <SelectValue placeholder="Region seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Bütün regionlar</SelectItem>
+                {regions.map((region) => (
+                  <SelectItem key={region.id} value={region.id}>
+                    {region.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Sector Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="sector">Sektor</Label>
+            <Select
+              value={filters.sector_id}
+              onValueChange={(value) => handleSelectChange('sector_id', value)}
+              disabled={isLoading || !filters.region_id}
+            >
+              <SelectTrigger id="sector">
+                <SelectValue placeholder={filters.region_id ? "Sektor seçin" : "Əvvəlcə region seçin"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Bütün sektorlar</SelectItem>
+                {sectors.map((sector) => (
+                  <SelectItem key={sector.id} value={sector.id}>
+                    {sector.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* School Type Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="type">Məktəb növü</Label>
+            <Select
+              value={filters.type_id}
+              onValueChange={(value) => handleSelectChange('type_id', value)}
+              disabled={isLoading}
+            >
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Növ seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Bütün növlər</SelectItem>
+                {schoolTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Status Filter */}
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={filters.status}
+              onValueChange={(value) => handleSelectChange('status', value as 'all' | 'active' | 'inactive')}
+              disabled={isLoading}
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Status seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Bütün</SelectItem>
+                <SelectItem value="active">Aktiv</SelectItem>
+                <SelectItem value="inactive">Deaktiv</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Completion Rate Filter */}
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <Label>Tamamlanma faizi</Label>
+              <span className="text-sm text-gray-500">
+                {filters.minCompletionRate}% - {filters.maxCompletionRate}%
+              </span>
+            </div>
+            <Slider
+              min={0}
+              max={100}
+              step={5}
+              value={[filters.minCompletionRate, filters.maxCompletionRate]}
+              onValueChange={handleCompletionRateChange}
+              disabled={isLoading}
             />
           </div>
         </div>
         
-        <div>
-          <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
-            Region
-          </label>
-          <Select value={selectedRegionId} onValueChange={setSelectedRegionId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Bütün regionlar" />
-            </SelectTrigger>
-            <SelectContent>
-              {regions.map(region => (
-                <SelectItem key={region.id} value={region.id}>
-                  {region.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
-            Sektor
-          </label>
-          <Select 
-            value={selectedSectorId} 
-            onValueChange={setSelectedSectorId}
-            disabled={!selectedRegionId || sectors.length === 0}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Bütün sektorlar" />
-            </SelectTrigger>
-            <SelectContent>
-              {sectors.map(sector => (
-                <SelectItem key={sector.id} value={sector.id}>
-                  {sector.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
-            Məktəb növü
-          </label>
-          <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Bütün növlər" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Orta məktəb">Orta məktəb</SelectItem>
-              <SelectItem value="Tam orta məktəb">Tam orta məktəb</SelectItem>
-              <SelectItem value="İbtidai məktəb">İbtidai məktəb</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
-            Status
-          </label>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Bütün statuslar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Aktiv">Aktiv</SelectItem>
-              <SelectItem value="Deaktiv">Deaktiv</SelectItem>
-              <SelectItem value="Arxivləşdirilmiş">Arxivləşdirilmiş</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <label className="text-sm font-medium text-infoline-dark-gray mb-1 block">
-            Doldurma faizi
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <Select value={minRate} onValueChange={setMinRate}>
-              <SelectTrigger>
-                <SelectValue placeholder="Min" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">0%</SelectItem>
-                <SelectItem value="25">25%</SelectItem>
-                <SelectItem value="50">50%</SelectItem>
-                <SelectItem value="75">75%</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={maxRate} onValueChange={setMaxRate}>
-              <SelectTrigger>
-                <SelectValue placeholder="Max" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="25">25%</SelectItem>
-                <SelectItem value="50">50%</SelectItem>
-                <SelectItem value="75">75%</SelectItem>
-                <SelectItem value="100">100%</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        <div className="pt-2">
+        <div className="flex justify-end space-x-2">
           <Button 
-            className="w-full bg-infoline-blue hover:bg-infoline-dark-blue"
-            onClick={handleApplyFilters}
+            variant="outline" 
+            onClick={resetFilters}
+            disabled={isLoading}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Sıfırla
+          </Button>
+          <Button 
+            onClick={applyFilters}
+            disabled={isLoading}
           >
             Tətbiq et
           </Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -1,5 +1,5 @@
 
-import { userService } from "./userService";
+import userService from "./userService";
 
 // User interface
 export interface User {
@@ -123,4 +123,3 @@ const enhancedUserService = {
 
 // Export the enhanced user service
 export default enhancedUserService;
-export { User };
