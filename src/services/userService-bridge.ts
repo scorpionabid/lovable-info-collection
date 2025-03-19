@@ -1,125 +1,86 @@
 
-import userService from "./userService";
+import userService from './userService';
+import type { 
+  UserFilter, 
+  UserResponse, 
+  CreateUserDto, 
+  UpdateUserDto, 
+  EntityOption 
+} from './userService/types';
 
-// User interface
+// Export the User interface
 export interface User {
   id: string;
-  email: string;
   first_name: string;
   last_name: string;
+  email: string;
+  phone: string;
+  role_id: string;
+  region_id: string | null;
+  sector_id: string | null;
+  school_id: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
-  phone?: string;
-  role_id: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  is_active: boolean;
-  last_login?: string;
-  utis_code: string;
-  // Additional UI properties
-  role?: string;
-  region?: string;
-  sector?: string;
-  school?: string;
+  last_login: string | null;
+  utis_code: string | null;
 }
 
-// Additional methods needed for userService
+// Export the type definitions
+export type { 
+  UserFilter, 
+  UserResponse, 
+  CreateUserDto, 
+  UpdateUserDto, 
+  EntityOption 
+};
+
+// Enhanced userService with missing methods
 const enhancedUserService = {
   ...userService,
   
-  // Delete a user
-  deleteUser: async (userId: string) => {
-    try {
-      // This would normally be implemented in the backend
-      console.log(`Deleting user with ID: ${userId}`);
-      // Mock successful response
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      throw error;
-    }
+  // Add missing methods to fix type errors
+  deleteUser: async (userId: string): Promise<boolean> => {
+    console.log(`Deleting user with ID: ${userId}`);
+    // Here we would implement the actual delete logic
+    return true;
   },
   
-  // Block a user
-  blockUser: async (userId: string) => {
-    try {
-      console.log(`Blocking user with ID: ${userId}`);
-      return { success: true };
-    } catch (error) {
-      console.error('Error blocking user:', error);
-      throw error;
-    }
+  blockUser: async (userId: string): Promise<boolean> => {
+    console.log(`Blocking user with ID: ${userId}`);
+    // Here we would implement the actual blocking logic
+    return true;
   },
   
-  // Reset password for a user
-  resetPassword: async (userId: string) => {
-    try {
-      console.log(`Resetting password for user with ID: ${userId}`);
-      return { success: true };
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      throw error;
-    }
+  resetPassword: async (userId: string): Promise<boolean> => {
+    console.log(`Resetting password for user with ID: ${userId}`);
+    // Here we would implement the actual password reset logic
+    return true;
   },
-  
-  // Get all roles
-  getRoles: async () => {
-    try {
-      return [
-        { id: '1', name: 'SuperAdmin' },
-        { id: '2', name: 'RegionAdmin' },
-        { id: '3', name: 'SectorAdmin' },
-        { id: '4', name: 'SchoolAdmin' }
-      ];
-    } catch (error) {
-      console.error('Error getting roles:', error);
-      throw error;
-    }
+
+  // Organization data methods
+  getRoles: async (): Promise<EntityOption[]> => {
+    return [
+      { id: 'super_admin', name: 'Super Admin' },
+      { id: 'region_admin', name: 'Region Admin' },
+      { id: 'sector_admin', name: 'Sector Admin' },
+      { id: 'school_admin', name: 'School Admin' }
+    ];
   },
-  
-  // Get all regions
-  getRegions: async () => {
-    try {
-      return [
-        { id: '1', name: 'Bakı' },
-        { id: '2', name: 'Gəncə' },
-        { id: '3', name: 'Sumqayıt' }
-      ];
-    } catch (error) {
-      console.error('Error getting regions:', error);
-      throw error;
-    }
+
+  getRegions: async (): Promise<EntityOption[]> => {
+    return []; // Would fetch actual regions in production
   },
-  
-  // Get sectors by region ID
-  getSectors: async (regionId?: string) => {
-    try {
-      return [
-        { id: '1', name: 'Sektor 1', region_id: '1' },
-        { id: '2', name: 'Sektor 2', region_id: '1' },
-        { id: '3', name: 'Sektor 3', region_id: '2' }
-      ].filter(sector => !regionId || sector.region_id === regionId);
-    } catch (error) {
-      console.error('Error getting sectors:', error);
-      throw error;
-    }
+
+  getSectors: async (regionId?: string): Promise<EntityOption[]> => {
+    console.log(`Fetching sectors for region ID: ${regionId}`);
+    return []; // Would fetch actual sectors in production
   },
-  
-  // Get schools
-  getSchools: async (sectorId?: string) => {
-    try {
-      return [
-        { id: '1', name: 'Məktəb 1', sector_id: '1' },
-        { id: '2', name: 'Məktəb 2', sector_id: '1' },
-        { id: '3', name: 'Məktəb 3', sector_id: '2' }
-      ].filter(school => !sectorId || school.sector_id === sectorId);
-    } catch (error) {
-      console.error('Error getting schools:', error);
-      throw error;
-    }
+
+  getSchools: async (sectorId?: string): Promise<EntityOption[]> => {
+    console.log(`Fetching schools for sector ID: ${sectorId}`);
+    return []; // Would fetch actual schools in production
   }
 };
 
-// Export the enhanced user service
 export default enhancedUserService;
