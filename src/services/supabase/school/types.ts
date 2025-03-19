@@ -8,15 +8,19 @@ export interface School {
   sector_id: string;
   type_id: string;
   address: string;
-  director: string;
-  email: string;
-  phone: string;
-  status: string;
-  student_count: number;
-  teacher_count: number;
+  
+  // Optional fields that might not exist in all responses
+  director?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+  student_count?: number;
+  teacher_count?: number;
+  archived?: boolean;
+  
+  // Required fields
   created_at: string;
   updated_at: string;
-  archived: boolean;
   
   // Optional fields that might be populated from relationships
   regions?: any;

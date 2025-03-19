@@ -10,14 +10,13 @@ import {
   blockUser,
   activateUser,
   resetPassword,
-  createUsers
-} from './queries';
-import {
+  createUsers,
+  // Organization queries
   getRegions,
   getSectors,
   getSchools,
   getRoles
-} from './organizationQueries';
+} from './queries';
 
 const userService = {
   // User management
@@ -40,4 +39,5 @@ const userService = {
 };
 
 export type { User, UserFilters };
+export { User }; // Named export for compatibility
 export default userService;
