@@ -1,6 +1,6 @@
 
 import { UserRole } from '@/hooks/types/authTypes';
-import { User } from '@/services/api/userService';
+import { User } from '@/services/userService';
 
 /**
  * Normalizes a role string to a valid UserRole type

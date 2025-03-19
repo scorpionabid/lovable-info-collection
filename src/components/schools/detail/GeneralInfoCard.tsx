@@ -11,7 +11,7 @@ import { School } from "@/services/supabase/school/types";
 import { User, MapPin, Phone, Mail, Award, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User as UserType } from "@/services/api/userService";
+import { User as UserType } from "@/services/userService";
 
 interface GeneralInfoCardProps {
   school: School;

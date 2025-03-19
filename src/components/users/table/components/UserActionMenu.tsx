@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash, Lock, CheckCircle, XCircle, MoreHorizontal } from "lucide-react";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface UserActionMenuProps {
   user: User;

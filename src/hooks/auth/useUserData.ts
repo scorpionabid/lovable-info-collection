@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { getNormalizedRole } from "@/components/users/utils/userUtils";
 import { UserRole } from "../types/authTypes";
 

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { UserFormValues } from "../modals/UserFormSchema";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface Role {
   id: string;

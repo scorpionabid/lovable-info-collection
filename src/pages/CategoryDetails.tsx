@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/layout/Layout';
 import { CategoryDetailView } from '@/components/categories/CategoryDetailView';
-import { getCategoryById, updateCategory, deleteCategory } from '@/services/api/categoryService';
+import categoryService from '@/services/categoryService';
 import { CategoryType } from '@/components/categories/CategoryDetailView';
 
 const CategoryDetails = () => {
@@ -17,12 +17,12 @@ const CategoryDetails = () => {
 
   const { data: category, isLoading, isError } = useQuery({
     queryKey: ['category', id],
-    queryFn: () => getCategoryById(id as string),
+    queryFn: () => categoryService.getCategoryById(id as string),
     enabled: !!id,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => updateCategory(id as string, data),
+    mutationFn: (data: any) => categoryService.updateCategory(id as string, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['category', id] });
       toast.success('Kateqoriya məlumatları uğurla yeniləndi');
@@ -33,7 +33,7 @@ const CategoryDetails = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteCategory(id as string),
+    mutationFn: () => categoryService.deleteCategory(id as string),
     onSuccess: () => {
       toast.success('Kateqoriya uğurla silindi');
       navigate('/categories');
@@ -82,12 +82,16 @@ const CategoryDetails = () => {
 
   // Ensure createdAt is not optional by providing a default
   const categoryWithDefaults: CategoryType = {
-    ...category,
-    columns: Array.isArray(category.columns) ? category.columns : [],
-    deadline: category.deadline || new Date().toISOString(),
-    description: category.description || '',
-    completionRate: category.completionRate || 0,
-    createdAt: category.createdAt || category.created_at || new Date().toISOString()
+    id: category?.id || '',
+    name: category?.name || '',
+    description: category?.description || '',
+    assignment: category?.assignment || 'All',
+    columns: [],
+    status: category?.status || 'Active',
+    priority: category?.priority || 0,
+    completionRate: 0,
+    createdAt: category?.created_at || new Date().toISOString(),
+    deadline: new Date().toISOString()
   };
 
   return (

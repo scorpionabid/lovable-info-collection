@@ -1,6 +1,6 @@
 
 import * as XLSX from 'xlsx';
-import { CategoryColumn } from '@/services/api/categoryService';
+import { CategoryColumn } from '@/services/categoryService';
 
 // Define ColumnData type
 interface ColumnData extends CategoryColumn {

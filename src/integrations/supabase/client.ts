@@ -1,16 +1,45 @@
 
-// Centralized Supabase client with improved configuration
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
-import { logger } from '@/utils/logger';
+/**
+ * Supabase inteqrasiyası üçün mərkəzləşdirilmiş modul
+ * Bu modul @/lib/supabase faylından funksiyaları yenidən ixrac edir
+ * və əlavə köməkçi funksiyalar təqdim edir
+ */
 
-// Constant values
-const SUPABASE_URL = "https://wxkaasjwpavlwrpvsuia.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4a2Fhc2p3cGF2bHdycHZzdWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODA3NzAsImV4cCI6MjA1NTk1Njc3MH0.Sy0ktssGHAMNtU4kCrEKuFNf8Yf5R280uqwpsMcZpuM";
-const REQUEST_TIMEOUT_MS = 15000; // 15 seconds
+// Re-export from lib/supabase for backward compatibility
+import { 
+  supabase,
+  withRetry,
+  checkConnection,
+  isOfflineMode,
+  handleSupabaseError,
+  buildPaginatedQuery,
+  buildSortedQuery,
+  buildFilteredQuery,
+  queryWithCache,
+  addToCache,
+  getFromCache,
+  clearCache,
+  createCacheKey
+} from '@/lib/supabase';
 
-// Create the Supabase client with optimized options
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export {
+  supabase,
+  withRetry,
+  checkConnection,
+  isOfflineMode,
+  handleSupabaseError,
+  buildPaginatedQuery,
+  buildSortedQuery,
+  buildFilteredQuery,
+  queryWithCache,
+  addToCache,
+  getFromCache,
+  clearCache,
+  createCacheKey
+};
+
+/* Original configuration moved to lib/supabase.ts
+const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -163,3 +192,4 @@ export const buildFilteredQuery = (query: any, filters: Record<string, any>, fil
   
   return filteredQuery;
 };
+*/

@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { UserRole } from "@/contexts/AuthContext";
 
 interface UserRoleBadgeProps {

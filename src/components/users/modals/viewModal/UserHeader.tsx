@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Mail } from "lucide-react";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface UserHeaderProps {
   user: User;

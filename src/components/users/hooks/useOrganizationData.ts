@@ -1,6 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
-import userService from "@/services/api/userService";
+import userService from "@/services/userService";
 
 export const useOrganizationData = (
   currentUserId?: string,

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import userService from "@/services/api/userService";
+import userService from "@/services/userService";
 
 export const useBulkActions = (onSuccess: () => void) => {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);

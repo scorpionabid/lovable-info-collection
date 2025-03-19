@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { UserFormValues } from "../modals/UserFormSchema";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { useUserCreation } from "./useUserCreation";
 import { useUserUpdate } from "./useUserUpdate";
 

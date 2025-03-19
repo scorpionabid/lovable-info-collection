@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { UserFormValues } from "../modals/UserFormSchema";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
 import { 
   checkUtisCodeExists, 

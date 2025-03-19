@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
 import { confirm } from "@/components/ui/confirm";
-import { User } from '@/services/api/userService';
-import userService from "@/services/api/userService";
+import { User } from '@/services/userService';
+import userService from "@/services/userService";
 import { UserForm } from "../modals/UserForm";
 
 interface UserActionsProps {

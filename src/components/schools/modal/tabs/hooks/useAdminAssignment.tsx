@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
-import { User } from '@/services/api/userService';
+import { User } from '@/services/userService';
 import { generateRandomPassword } from '@/utils/passwordUtils';
 import { 
   useAdminFetching 

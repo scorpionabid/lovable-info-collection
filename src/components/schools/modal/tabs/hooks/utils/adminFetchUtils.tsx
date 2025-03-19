@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { toast } from "sonner";
-import { User } from '@/services/api/userService';
+import { User } from '@/services/userService';
 import { supabase } from '@/integrations/supabase/client';
 
 /**

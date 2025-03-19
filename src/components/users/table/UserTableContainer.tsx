@@ -1,12 +1,12 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { UserTableHeader } from "./UserTableHeader";
 import { UserTableRow } from "./UserTableRow";
 import { sortUsers } from "../utils/userUtils";
 import { useToast } from "@/hooks/use-toast";
-import userService from "@/services/api/userService";
+import userService from "@/services/userService";
 
 interface UserTableContainerProps {
   users: User[];

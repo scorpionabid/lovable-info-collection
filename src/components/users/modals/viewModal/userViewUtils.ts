@@ -2,7 +2,7 @@
 import { format, parseISO } from "date-fns";
 import { az } from "date-fns/locale";
 import { Shield, UserCheck, Map, Building, School } from "lucide-react";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 export const getInitials = (name: string, surname: string) => {
   return `${name?.charAt(0) || ""}${surname?.charAt(0) || ""}`;

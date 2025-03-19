@@ -41,7 +41,8 @@ export function useQueryWithPerformance<
             }
           ),
           new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error(`Query '${queryName}' timeout (30s)`)), 30000);
+            // Vaxt aşımı müddətini 60 saniyədən 20 saniyəyə azaldırıq
+            setTimeout(() => reject(new Error(`Query '${queryName}' timeout (20s)`)), 20000);
           })
         ]);
         

@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Calendar, Map, Building, School, UserCheck } from "lucide-react";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { UserDetailsItem } from "./UserDetailsItem";
 import { formatDate, getRoleIcon, getRoleName } from "./userViewUtils";
 

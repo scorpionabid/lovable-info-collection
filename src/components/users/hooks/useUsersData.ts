@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from "sonner";
-import { User } from '@/services/api/userService';
-import userService from "@/services/api/userService";
+import { User } from '@/services/userService';
+import userService from "@/services/userService";
 import { useLogger } from '@/hooks/useLogger';
 
 export function useUsersData() {

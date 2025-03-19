@@ -1,0 +1,52 @@
+Yaxşı, o zaman qaydaları təkmilləşdirək və ingilis dilində saxlayaq, lakin Windsurf-ə Azərbaycan dilində izahlar vermək təlimatı əlavə edək:
+
+```markdown
+# InfoLine Project Windsurf Rules
+
+## Response Language
+1. Always provide explanations, suggestions, and comments in Azerbaijani language
+2. Keep code documentation and variables in English
+
+## Project Overview
+1. Educational data collection system for Azerbaijan schools (600+)
+2. Multi-role application with SuperAdmin, Region Admin, Sector Admin, and School Admin
+3. Built with Vite + React + TypeScript + Supabase
+
+## Tech Stack 
+1. Frontend framework: React 18 with TypeScript
+2. State management: React Context and TanStack Query
+3. UI components: shadcn/ui with Tailwind CSS
+4. Form handling: react-hook-form with zod validation
+5. API client: axios with Supabase 
+6. Reporting: recharts, xlsx, jspdf
+7. Testing: Jest and Cypress
+
+## Code Standards
+1. Use TypeScript strict mode with proper interfaces
+2. All components must have JSDoc documentation
+3. Preserve existing code structure and naming conventions
+4. Responsive design with mobile-first approach
+5. Implement proper loading states and error handling
+
+## Architecture
+1. Feature-based folder structure within src/
+2. Shared components in components/ directory
+3. API services in services/ directory
+4. Custom hooks in hooks/ directory
+5. Type definitions in types/ directory 
+
+## Required Features
+1. Role-based access control (RBAC)
+2. Dynamic category/column management system
+3. Excel import/export functionality
+4. Form-based data collection interface
+5. Notification system (internal and email)
+6. Approval workflow
+7. Reporting and analytics dashboard
+
+## Debugging Tips
+1. Check Supabase connection in Network tab
+2. Verify role permissions in Auth context
+3. Look for type mismatches in form submissions
+4. Preserve all existing functionality when making changes
+```

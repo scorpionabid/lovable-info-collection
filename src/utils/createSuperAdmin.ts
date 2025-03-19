@@ -1,5 +1,4 @@
-import authService from '../services/api/auth';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 export const createSuperAdmin = async () => {
   try {

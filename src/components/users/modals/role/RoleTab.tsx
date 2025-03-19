@@ -1,7 +1,7 @@
 
 import React from "react";
 import { OrganizationSelectionComponent } from "./OrganizationSelectionComponent";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface RoleTabProps {
   roles: any[];

@@ -2,7 +2,7 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { getInitials, getRoleColor, getRoleName } from "./userViewUtils";
 
 interface UserAvatarProps {

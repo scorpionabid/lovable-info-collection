@@ -2,7 +2,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle } from "lucide-react";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface ExistingAdminSelectorProps {
   users: User[];

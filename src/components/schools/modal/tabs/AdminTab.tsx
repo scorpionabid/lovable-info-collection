@@ -2,7 +2,7 @@
 import { useAdminAssignment } from './hooks/useAdminAssignment';
 import { ExistingAdminSelector } from './components/ExistingAdminSelector';
 import { NewAdminCreator } from './components/NewAdminCreator';
-import { User } from '@/services/api/userService';
+import { User } from '@/services/userService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UserCircle } from "lucide-react";
 

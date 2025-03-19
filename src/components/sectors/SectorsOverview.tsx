@@ -126,8 +126,8 @@ export const SectorsOverview = () => {
     queryFn,
     staleTime: CONSTANTS.STALE_TIME,
     gcTime: CONSTANTS.CACHE_TIME, // cacheTime əvəzinə gcTime istifadə edilir
-    retry: 2, // Retry sayını artırırıq
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Eksponensial gecikmə ilə yenidən cəhd
+    retry: 1, // Retry sayını azaldırıq ki, daha tez xəta alınsın
+    retryDelay: (attemptIndex) => 1000, // Sabit gecikmə ilə yenidən cəhd
     refetchOnWindowFocus: false, // Pəncərə fokusunda avtomatik yeniləməni söndürmək
     placeholderData: (previousData) => previousData, // keepPreviousData əvəzinə placeholderData istifadə edilir
   });
@@ -142,7 +142,14 @@ export const SectorsOverview = () => {
     });
     
     if (isError && error) {
-      logger.error('Error fetching sectors', error);
+      // Xəta məlumatlarını daha ətraflı loqlayaq
+      logger.error('Error fetching sectors', {
+        error,
+        message: error instanceof Error ? error.message : 'Naməlum xəta',
+        stack: error instanceof Error ? error.stack : undefined,
+        status,
+        queryKey: JSON.stringify(queryKey)
+      });
       
       // Bağlantı xətasını yoxlayaq
       checkConnection()
@@ -154,13 +161,34 @@ export const SectorsOverview = () => {
               variant: "destructive",
             });
           } else {
-            toast({
-              title: "Sektor məlumatları yüklənərkən xəta baş verdi",
-              description: error instanceof Error ? error.message : 'Naməlum xəta',
-              variant: "destructive",
-            });
+            // Xətanın növünü yönləndirək
+            const errorMessage = error instanceof Error ? error.message : 'Naməlum xəta';
+            
+            // Vaxt aşımı xətasını yönləndirək
+            if (errorMessage.includes('timeout')) {
+              toast({
+                title: "Sorğu vaxt aşımına uğradı",
+                description: "Sorğu çox uzun çəkdi. Əlaqənizi yoxlayın və ya daha az məlumat yükləməyə çalışın.",
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "Sektor məlumatları yüklənərkən xəta baş verdi",
+                description: errorMessage,
+                variant: "destructive",
+              });
+            }
           }
         });
+        
+      // 5 saniyə sonra avtomatik yenidən cəhd etməyək
+      const retryTimer = setTimeout(() => {
+        logger.info('Attempting automatic retry after error');
+        refetch();
+      }, 5000);
+      
+      // Komponent unmount olduqda timer'i təmizləyək
+      return () => clearTimeout(retryTimer);
     }
   }, [status, sectorsResponse, isLoading, isError, error, toast, logger]);
 

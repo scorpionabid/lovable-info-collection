@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { confirm } from "@/components/ui/confirm";
-import { User } from '@/services/api/userService';
-import userService from "@/services/api/userService";
+import { User } from '@/services/userService';
+import userService from "@/services/userService";
 
 export const useUserFormHandling = (onRefetch: () => void) => {
   const [isFormOpen, setIsFormOpen] = useState(false);

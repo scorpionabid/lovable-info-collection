@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { UserFilters } from '@/services/supabase/user/types';
-import userService from '@/services/api/userService';
+import userService from '@/services/userService';
 
 export const useFilterData = () => {
   const [filters, setFilters] = useState<UserFilters>({});

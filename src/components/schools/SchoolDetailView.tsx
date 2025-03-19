@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SchoolModal } from './SchoolModal';
 import { deleteSchool } from '@/services/supabase/schoolService';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@/services/api/userService';
+import { User } from '@/services/userService';
 import {
   SchoolHeader,
   GeneralInfoCard,

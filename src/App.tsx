@@ -65,6 +65,8 @@ const App = () => (
             {/* Dashboard redirect */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
             
+
+            
             {/* Super Admin Routes */}
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['super-admin']}>

@@ -1,6 +1,6 @@
 
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { utils, writeFile } from "xlsx";
 
 export const useUserExport = () => {

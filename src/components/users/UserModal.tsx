@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { useContext } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserModalContent } from "./modals/UserModalContent";

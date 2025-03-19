@@ -6,7 +6,7 @@ import { FormField, FormItem, FormControl } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
 import { UserFormValues } from "./UserFormSchema";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface AccountSettingsProps {
   form: UseFormReturn<UserFormValues>;

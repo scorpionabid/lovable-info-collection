@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { UserAvatar } from "./UserAvatar";
 import { UserHeader } from "./UserHeader";
 import { UserDetails } from "./UserDetails";

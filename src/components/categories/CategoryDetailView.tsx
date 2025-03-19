@@ -38,6 +38,8 @@ export interface CategoryType {
   status: string;
   priority: number;
   completionRate: number;
+  createdAt: string;
+  deadline: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
@@ -45,8 +47,6 @@ export interface CategoryType {
   created_at?: string;
   updated_at?: string;
   created_by?: string;
-  createdAt: string;
-  deadline: string;
 }
 
 export interface CategoryDetailViewProps {

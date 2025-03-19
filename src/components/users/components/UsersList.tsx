@@ -8,7 +8,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { UserTable } from '../UserTable';
 import { BarLoader } from "react-spinners";
 import { AlertTriangle } from 'lucide-react';

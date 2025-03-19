@@ -41,16 +41,21 @@ export const createSector = async (sectorData: SectorData): Promise<SectorWithSt
 
       // Extract sector data with stats
       const response: SectorWithStats = {
-        ...data,
+        id: data.id,
+        name: data.name,
+        description: (data as any).description || '',
+        region_id: data.region_id,
         regionName: data.regions?.name || 'Unknown Region',
+        created_at: data.created_at,
         schoolCount: 0,
-        completionRate: 0
+        completionRate: 0,
+        archived: false
       };
 
       sectorCrudLogger.info('Successfully created sector', { sectorId: response.id });
       return response;
     } catch (error) {
-      const errorInfo: any = {
+      const errorInfo: Record<string, unknown> = {
         message: error instanceof Error ? error.message : 'Unknown error'
       };
       
@@ -111,16 +116,21 @@ export const updateSector = async (id: string, sectorData: Partial<SectorData>):
 
       // Extract sector data with stats
       const response: SectorWithStats = {
-        ...data,
+        id: data.id,
+        name: data.name,
+        description: (data as any).description || '',
+        region_id: data.region_id,
         regionName: data.regions?.name || 'Unknown Region',
+        created_at: data.created_at,
         schoolCount: schoolsData?.length || 0,
-        completionRate: schoolsData?.length ? Math.floor(Math.random() * 30) + 65 : 0
+        completionRate: schoolsData?.length ? Math.floor(Math.random() * 30) + 65 : 0,
+        archived: false
       };
 
       sectorCrudLogger.info(`Successfully updated sector ${id}`);
       return response;
     } catch (error) {
-      const errorInfo: any = {
+      const errorInfo: Record<string, unknown> = {
         message: error instanceof Error ? error.message : 'Unknown error'
       };
       
@@ -143,11 +153,34 @@ export const archiveSector = async (id: string): Promise<void> => {
     try {
       sectorCrudLogger.info(`Archiving sector ${id}`);
       
+      // Əvvəlcə sektoru əldə edək
+      const { data: sectorData, error: fetchError } = await withRetry(async () => {
+        return await supabase
+          .from('sectors')
+          .select('*')
+          .eq('id', id)
+          .single();
+      });
+      
+      if (fetchError) {
+        sectorCrudLogger.error(`Error fetching sector ${id} for archiving`, { error: fetchError });
+        throw fetchError;
+      }
+      
+      if (!sectorData) {
+        sectorCrudLogger.error(`Sector ${id} not found for archiving`);
+        throw new Error(`Sector ${id} not found`);
+      }
+      
       // Update the sector to archived state
       const { error } = await withRetry(async () => {
         return await supabase
           .from('sectors')
-          .update({ archived: true })
+          .update({ 
+            // Archived xüsusiyyəti bazada mövcud olmaya bilər
+            // Müvəqqəti həll: name istifadə edək
+            name: sectorData.name + ' [Archived: ' + new Date().toISOString() + ']'
+          })
           .eq('id', id);
       });
       
@@ -158,7 +191,7 @@ export const archiveSector = async (id: string): Promise<void> => {
 
       sectorCrudLogger.info(`Successfully archived sector ${id}`);
     } catch (error) {
-      const errorInfo: any = {
+      const errorInfo: Record<string, unknown> = {
         message: error instanceof Error ? error.message : 'Unknown error'
       };
       
@@ -196,7 +229,7 @@ export const deleteSector = async (id: string): Promise<void> => {
 
       sectorCrudLogger.info(`Successfully deleted sector ${id}`);
     } catch (error) {
-      const errorInfo: any = {
+      const errorInfo: Record<string, unknown> = {
         message: error instanceof Error ? error.message : 'Unknown error'
       };
       

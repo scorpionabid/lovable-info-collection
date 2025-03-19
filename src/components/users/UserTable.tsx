@@ -1,6 +1,6 @@
 
 import { UserTableContainer } from "./table/UserTableContainer";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 
 interface UserTableProps {
   users: User[];

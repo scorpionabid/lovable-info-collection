@@ -12,7 +12,7 @@ import {
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { User } from "@/services/api/userService";
+import { User } from "@/services/userService";
 import { UserProfileTab } from "./UserProfileTab";
 import { RoleTab } from "./role/RoleTab";
 import { userFormSchema, UserFormValues } from "./UserFormSchema";

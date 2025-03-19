@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useRegionData } from './hooks/useRegionData';
+import { useRegionsData } from './hooks/useRegions';
 import { useRegionFilters } from './hooks/useRegionFilters';
 import { useRegionSort } from './hooks/useRegionSort';
 import { useRegionActions } from './hooks/useRegionActions';
@@ -21,14 +21,16 @@ export const RegionsOverview = () => {
     toggleFilters 
   } = useRegionFilters();
 
-  // Data fetching
+  // Data fetching - yeni universal Supabase hook-u ilə
   const { 
-    regionsData, 
+    data: regionsData, 
     isLoading, 
     isError, 
-    refetch 
-  } = useRegionData({ 
-    currentPage, 
+    refetch,
+    searchTerm,
+    setSearchTerm
+  } = useRegionsData({ 
+    page: currentPage, 
     pageSize, 
     sortColumn, 
     sortDirection, 
@@ -48,8 +50,11 @@ export const RegionsOverview = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <RegionToolbar 
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
+        searchQuery={searchTerm || searchQuery}
+        onSearchChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+          setSearchTerm(e.target.value);
+          handleSearchChange(e); // Burada orijinal event-i ötürük
+        }}
         onRefresh={handleRefresh}
         onExport={() => handleExport(regionsData)}
         onImport={handleImport}
