@@ -26,7 +26,7 @@ import userService from '../userService-bridge';
 const enhancedUserService = {
   ...userService,
   
-  // Add missing methods
+  // Add missing methods that are expected by components
   deleteUser: (userId: string) => {
     return userService.deactivateUser ? 
       userService.deactivateUser(userId) : 
@@ -51,6 +51,7 @@ const enhancedUserService = {
       Promise.resolve(false);
   },
   
+  // Add missing organization data methods
   getRoles: () => {
     return Promise.resolve([
       { id: 'super_admin', name: 'Super Admin' },

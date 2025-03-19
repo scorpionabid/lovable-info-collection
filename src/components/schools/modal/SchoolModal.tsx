@@ -21,6 +21,7 @@ export interface SchoolModalProps {
   defaultRegionId?: string; // Alternative name for regionId
   sectorId?: string;
   defaultSectorId?: string; // Alternative name for sectorId
+  onCreated?: () => void; // Added for compatibility with RegionDetails.tsx
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({ 
@@ -35,7 +36,8 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   regionId,
   defaultRegionId,
   sectorId,
-  defaultSectorId
+  defaultSectorId,
+  onCreated
 }) => {
   const handleSuccess = () => {
     // Call the appropriate callback based on availability and mode
@@ -43,6 +45,8 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
       onSuccess();
     } else if (mode === 'create' && onSchoolCreated) {
       onSchoolCreated();
+    } else if (mode === 'create' && onCreated) {
+      onCreated(); // Support for RegionDetails.tsx
     } else if (mode === 'edit' && onSchoolUpdated) {
       onSchoolUpdated();
     }
