@@ -1,5 +1,5 @@
 
-// Re-export the User type and all other types with proper type annotations
+// Export the User type and all other types with proper type annotations
 export type { 
   User, 
   UserFilter, 

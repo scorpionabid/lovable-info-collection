@@ -18,7 +18,7 @@ export const getRegions = async (
     // Extract pagination, sorting and filtering parameters
     const { page, pageSize } = pagination;
     const { column, direction } = sort;
-    const { searchQuery, dateFrom, dateTo, completionRate } = filters;
+    const { name, searchQuery, dateFrom, dateTo, completionRate } = filters;
     
     // Calculate offset for pagination
     const offset = (page - 1) * pageSize;
@@ -33,8 +33,9 @@ export const getRegions = async (
       `, { count: 'exact' });
     
     // Apply filters if provided
-    if (searchQuery) {
-      query = query.ilike('name', `%${searchQuery}%`);
+    if (name || searchQuery) {
+      const searchTerm = name || searchQuery;
+      query = query.ilike('name', `%${searchTerm}%`);
     }
     
     if (dateFrom) {
@@ -63,18 +64,22 @@ export const getRegions = async (
     
     // Transform data to include statistics
     const regionsWithStats: RegionWithStats[] = data.map(region => {
-      const sectorCount = region.sectors?.[0]?.count || 0;
-      const schoolCount = region.schools?.[0]?.count || 0;
+      const sectors_count = region.sectors?.[0]?.count || 0;
+      const schools_count = region.schools?.[0]?.count || 0;
       
       // Calculate completion rate (mock data for now)
       // In a real app, this would come from another query or calculation
-      const completionRate = Math.floor(Math.random() * 100);
+      const completion_rate = Math.floor(Math.random() * 100);
       
       return {
         ...region,
-        sectorCount,
-        schoolCount,
-        completionRate
+        sectors_count,
+        schools_count,
+        completion_rate,
+        // Add alias properties for backward compatibility
+        sectorCount: sectors_count,
+        schoolCount: schools_count,
+        completionRate: completion_rate
       };
     });
     
@@ -82,9 +87,9 @@ export const getRegions = async (
     let filteredRegions = regionsWithStats;
     if (completionRate && completionRate !== 'all') {
       filteredRegions = regionsWithStats.filter(region => {
-        if (completionRate === 'high') return region.completionRate > 80;
-        if (completionRate === 'medium') return region.completionRate >= 50 && region.completionRate <= 80;
-        if (completionRate === 'low') return region.completionRate < 50;
+        if (completionRate === 'high') return region.completion_rate > 80;
+        if (completionRate === 'medium') return region.completion_rate >= 50 && region.completion_rate <= 80;
+        if (completionRate === 'low') return region.completion_rate < 50;
         return true;
       });
     }
@@ -121,18 +126,22 @@ export const getRegionById = async (id: string): Promise<RegionWithStats> => {
     if (!data) throw new Error('Region not found');
     
     // Get sector and school counts
-    const sectorCount = data.sectors?.[0]?.count || 0;
-    const schoolCount = data.schools?.[0]?.count || 0;
+    const sectors_count = data.sectors?.[0]?.count || 0;
+    const schools_count = data.schools?.[0]?.count || 0;
     
     // Calculate completion rate (mock data for now)
-    const completionRate = Math.floor(Math.random() * 100);
+    const completion_rate = Math.floor(Math.random() * 100);
     
     // Return region with stats
     return {
       ...data,
-      sectorCount,
-      schoolCount,
-      completionRate
+      sectors_count,
+      schools_count,
+      completion_rate,
+      // Add alias properties for backward compatibility
+      sectorCount: sectors_count,
+      schoolCount: schools_count,
+      completionRate: completion_rate
     };
   } catch (error) {
     console.error('Error fetching region by ID:', error);
@@ -167,15 +176,19 @@ export const searchRegionsByName = async (searchTerm: string): Promise<RegionWit
     
     // Transform data to include statistics
     const regionsWithStats: RegionWithStats[] = data.map(region => {
-      const sectorCount = region.sectors?.[0]?.count || 0;
-      const schoolCount = region.schools?.[0]?.count || 0;
-      const completionRate = Math.floor(Math.random() * 100);
+      const sectors_count = region.sectors?.[0]?.count || 0;
+      const schools_count = region.schools?.[0]?.count || 0;
+      const completion_rate = Math.floor(Math.random() * 100);
       
       return {
         ...region,
-        sectorCount,
-        schoolCount,
-        completionRate
+        sectors_count,
+        schools_count,
+        completion_rate,
+        // Add alias properties for backward compatibility
+        sectorCount: sectors_count,
+        schoolCount: schools_count,
+        completionRate: completion_rate
       };
     });
     

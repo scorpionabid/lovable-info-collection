@@ -32,9 +32,9 @@ export const useRegionActions = (refetch: () => void) => {
       'Ad': region.name,
       'Kod': region.code || '',
       'Təsvir': region.description || '',
-      'Sektor sayı': region.sectorCount,
-      'Məktəb sayı': region.schoolCount,
-      'Doldurma faizi': `${region.completionRate}%`,
+      'Sektor sayı': region.sectors_count || region.sectorCount || 0,
+      'Məktəb sayı': region.schools_count || region.schoolCount || 0,
+      'Doldurma faizi': `${region.completion_rate || region.completionRate || 0}%`,
       'Yaradılma tarixi': new Date(region.created_at).toLocaleDateString('az-AZ')
     }));
 

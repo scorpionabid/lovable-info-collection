@@ -19,6 +19,11 @@ export interface School {
   address?: string;
   adminName?: string | null;
   adminId?: string | null;
+  // Add properties to match database schema
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
 }
 
 export interface CreateSchoolDto {
@@ -33,6 +38,11 @@ export interface CreateSchoolDto {
   contactPhone?: string;
   director?: string;
   status?: string;
+  // Add missing properties
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
 }
 
 export interface UpdateSchoolDto {
@@ -47,6 +57,11 @@ export interface UpdateSchoolDto {
   contactPhone?: string;
   director?: string;
   status?: string;
+  // Add missing properties
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
 }
 
 export interface SchoolFilter {
@@ -55,6 +70,9 @@ export interface SchoolFilter {
   sectorId?: string;
   type?: string;
   status?: string;
+  // Add missing properties
+  minCompletionRate?: number;
+  maxCompletionRate?: number;
 }
 
 export interface SchoolSummary {
@@ -74,4 +92,11 @@ export interface SchoolWithAdmin extends School {
     email: string;
     phone?: string;
   } | null;
+}
+
+// Add SchoolStats interface
+export interface SchoolStats {
+  totalSchools: number;
+  activeSchools: number;
+  averageCompletionRate: number;
 }

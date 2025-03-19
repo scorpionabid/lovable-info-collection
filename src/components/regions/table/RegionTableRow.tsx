@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -31,20 +32,21 @@ export const RegionTableRow = ({
     >
       <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{region.name}</td>
       <td className="px-4 py-3 text-sm text-infoline-dark-gray">{region.description}</td>
-      <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{region.sectorCount}</td>
-      <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{region.schoolCount}</td>
+      <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{region.sectors_count || region.sectorCount || 0}</td>
+      <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{region.schools_count || region.schoolCount || 0}</td>
       <td className="px-4 py-3 text-center">
         <div className="flex items-center justify-center">
           <div className="w-16 bg-gray-200 rounded-full h-2.5">
             <div 
               className="h-2.5 rounded-full" 
               style={{ 
-                width: `${region.completionRate}%`,
-                backgroundColor: region.completionRate > 80 ? '#10B981' : region.completionRate > 50 ? '#F59E0B' : '#EF4444'
+                width: `${region.completion_rate || region.completionRate || 0}%`,
+                backgroundColor: (region.completion_rate || region.completionRate || 0) > 80 ? '#10B981' : 
+                               (region.completion_rate || region.completionRate || 0) > 50 ? '#F59E0B' : '#EF4444'
               }}
             ></div>
           </div>
-          <span className="ml-2 text-sm text-infoline-dark-gray">{region.completionRate}%</span>
+          <span className="ml-2 text-sm text-infoline-dark-gray">{region.completion_rate || region.completionRate || 0}%</span>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">

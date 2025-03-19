@@ -64,15 +64,15 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
       }
       
       if (selectedFields.includes('sectorCount')) {
-        dataObj['Sektor sayı'] = region.sectorCount;
+        dataObj['Sektor sayı'] = region.sectors_count || region.sectorCount || 0;
       }
       
       if (selectedFields.includes('schoolCount')) {
-        dataObj['Məktəb sayı'] = region.schoolCount;
+        dataObj['Məktəb sayı'] = region.schools_count || region.schoolCount || 0;
       }
       
       if (selectedFields.includes('completionRate')) {
-        dataObj['Doldurma faizi'] = `${region.completionRate}%`;
+        dataObj['Doldurma faizi'] = `${region.completion_rate || region.completionRate || 0}%`;
       }
       
       if (selectedFields.includes('createdAt')) {
@@ -126,6 +126,7 @@ export const RegionExportModal = ({ isOpen, onClose, region }: RegionExportModal
     }
   };
 
+  // ... remaining code stays the same
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">

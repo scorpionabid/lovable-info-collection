@@ -10,7 +10,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
-import { SchoolFilter } from "@/services/supabase/schoolService";
+import { SchoolFilter } from "@/services/supabase/school/types";
 import { getRegionsForDropdown } from "@/services/supabase/sector/helperFunctions";
 
 interface SchoolFilterPanelProps {
