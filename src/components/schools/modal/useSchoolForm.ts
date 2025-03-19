@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getSchoolTypes } from '@/services/supabase/school/helperFunctions';
-import { SchoolDatabaseRow, School } from '@/services/supabase/school/types';
+import { School } from '@/services/supabase/school/types';
 
 // Define the form schema
 const schoolFormSchema = z.object({
@@ -19,8 +19,8 @@ const schoolFormSchema = z.object({
   email: z.string().email({ message: 'Düzgün email formatı daxil edin' }).optional().or(z.literal('')),
   phone: z.string().optional(),
   director: z.string().optional(),
-  student_count: z.number().min(0).optional(),
-  teacher_count: z.number().min(0).optional(),
+  student_count: z.coerce.number().min(0).optional(),
+  teacher_count: z.coerce.number().min(0).optional(),
   status: z.string().optional(),
 });
 

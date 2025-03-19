@@ -4,35 +4,38 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useSchoolForm } from "./useSchoolForm";
+import { UseFormReturn } from "react-hook-form";
+import { SchoolFormValues } from "./useSchoolForm";
 
 export interface SchoolFormProps {
   mode: 'create' | 'edit';
   initialData?: any;
-  onSuccess?: () => void;
+  onSubmit: (values: SchoolFormValues) => void;
   onCancel?: () => void;
   defaultRegionId?: string;
   defaultSectorId?: string;
+  form: UseFormReturn<SchoolFormValues, any, undefined>;
+  isSubmitting: boolean;
+  errorMessage: string | null;
+  regions: { id: string; name: string }[];
+  sectors: { id: string; name: string }[];
+  schoolTypes: { id: string; name: string }[];
+  onRegionChange: (regionId: string) => void;
 }
 
 export const SchoolForm: React.FC<SchoolFormProps> = ({ 
   mode, 
   initialData = {}, 
-  onSuccess,
+  onSubmit,
   onCancel,
-  defaultRegionId,
-  defaultSectorId
+  form,
+  isSubmitting,
+  errorMessage,
+  regions,
+  sectors,
+  schoolTypes,
+  onRegionChange
 }) => {
-  const {
-    form,
-    onSubmit,
-    isLoading,
-    regions,
-    sectors,
-    schoolTypes,
-    handleRegionChange,
-  } = useSchoolForm(mode === 'edit' ? initialData?.id : undefined, onSuccess);
-
   // Set default values when component mounts
   React.useEffect(() => {
     // If we have initialData, use it
@@ -51,18 +54,8 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
         teacher_count: initialData.teacher_count || 0,
         status: initialData.status || 'Aktiv',
       });
-    } 
-    // If creating new and we have default IDs
-    else if (mode === 'create') {
-      if (defaultRegionId) {
-        form.setValue('region_id', defaultRegionId);
-        handleRegionChange(defaultRegionId);
-      }
-      if (defaultSectorId) {
-        form.setValue('sector_id', defaultSectorId);
-      }
     }
-  }, [form, initialData, mode, defaultRegionId, defaultSectorId, handleRegionChange]);
+  }, [form, initialData, mode]);
 
   return (
     <Form {...form}>
@@ -106,7 +99,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
                   value={field.value}
                   onValueChange={(value) => {
                     field.onChange(value);
-                    handleRegionChange(value);
+                    onRegionChange(value);
                   }}
                 >
                   <FormControl>
@@ -293,12 +286,16 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
           />
         </div>
 
+        {errorMessage && (
+          <div className="text-red-500 text-sm mt-2">{errorMessage}</div>
+        )}
+
         <div className="flex justify-end space-x-2 pt-4">
           <Button variant="outline" type="button" onClick={onCancel}>
             Ləğv et
           </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Yüklənir..." : mode === 'create' ? "Yarat" : "Saxla"}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Yüklənir..." : mode === 'create' ? "Yarat" : "Saxla"}
           </Button>
         </div>
       </form>

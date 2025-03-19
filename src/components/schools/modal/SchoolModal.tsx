@@ -25,6 +25,7 @@ export const SchoolModal = ({
 }: SchoolModalProps) => {
   const {
     form,
+    isLoading,
     isSubmitting,
     errorMessage,
     regions,
@@ -39,12 +40,13 @@ export const SchoolModal = ({
       // Call both callbacks if available
       if (onSuccess) onSuccess();
       if (onCreated) onCreated();
+      onClose();
     },
     regionId
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
@@ -56,6 +58,7 @@ export const SchoolModal = ({
           isSubmitting={isSubmitting}
           errorMessage={errorMessage}
           onSubmit={handleSubmit}
+          onCancel={onClose}
           mode={mode}
           regions={regions}
           sectors={sectors}
