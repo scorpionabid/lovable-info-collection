@@ -4,6 +4,7 @@ import { getSchools, getSchoolById, getSchoolWithAdmin, getSchoolsByRegion } fro
 import { createSchool, updateSchool, deleteSchool, archiveSchool } from './crudOperations';
 import { getSchoolStats } from './queries/statsQueries';
 import { getSchoolTypes } from './helperFunctions';
+import { getSchoolActivities } from './schoolActivities';
 import { School, SchoolWithStats, SchoolStats, SchoolFilter, SchoolSortParams, SchoolPaginationParams, CreateSchoolDto, UpdateSchoolDto } from './types';
 
 // Export type definitions
@@ -29,7 +30,8 @@ export {
   deleteSchool,
   archiveSchool,
   getSchoolStats,
-  getSchoolTypes
+  getSchoolTypes,
+  getSchoolActivities
 };
 
 // Default export for backward compatibility
@@ -43,7 +45,8 @@ const schoolService = {
   deleteSchool,
   archiveSchool,
   getSchoolStats,
-  getSchoolTypes
+  getSchoolTypes,
+  getSchoolActivities
 };
 
 export default schoolService;

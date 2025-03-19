@@ -1,5 +1,3 @@
 
-// Export all the school service functions and types
-export * from './school/index';
-export * from './school/queries/statsQueries';
-export * from './school/types';
+// Re-export everything from the school service for easier importing
+export * from './school';

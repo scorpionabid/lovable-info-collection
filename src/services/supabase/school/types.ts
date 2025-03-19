@@ -59,6 +59,7 @@ export interface SchoolFilter {
   page?: number;
   pageSize?: number;
   sort?: SchoolSortParams;
+  filters?: any;
   // Backwards compatibility
   regionId?: string;
   sectorId?: string;

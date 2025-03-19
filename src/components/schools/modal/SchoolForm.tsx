@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { SchoolWithStats } from '@/services/supabase/school/types';
+import { CreateSchoolDto, SchoolWithStats } from '@/services/supabase/school/types';
 import * as schoolService from '@/services/supabase/school';
 
 // Define the form schema
@@ -89,21 +87,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
   const typesQuery = useQuery({
     queryKey: ['school-types-dropdown'],
     queryFn: async () => {
-      // Use RPC function if available, otherwise fallback to direct query
-      try {
-        const { data, error } = await supabase.rpc('get_school_types');
-        if (error) throw error;
-        return data || [];
-      } catch (e) {
-        // Fallback to direct query
-        const { data, error } = await supabase
-          .from('school_types')
-          .select('id, name')
-          .order('name');
-          
-        if (error) throw error;
-        return data || [];
-      }
+      return await schoolService.getSchoolTypes();
     }
   });
 
@@ -129,7 +113,21 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
   // Create school mutation
   const createSchoolMutation = useMutation({
     mutationFn: async (data: SchoolFormValues) => {
-      return await schoolService.createSchool(data);
+      const schoolData: CreateSchoolDto = {
+        name: data.name,
+        sector_id: data.sector_id,
+        region_id: data.region_id,
+        type_id: data.type_id,
+        code: data.code,
+        address: data.address,
+        status: data.status,
+        student_count: data.student_count,
+        teacher_count: data.teacher_count,
+        director: data.director,
+        email: data.email,
+        phone: data.phone
+      };
+      return await schoolService.createSchool(schoolData);
     },
     onSuccess: () => {
       toast.success('Məktəb uğurla yaradıldı');
@@ -219,7 +217,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {regionsQuery.data?.map((region) => (
+                    {regionsQuery.data && regionsQuery.data.map((region) => (
                       <SelectItem key={region.id} value={region.id}>
                         {region.name}
                       </SelectItem>

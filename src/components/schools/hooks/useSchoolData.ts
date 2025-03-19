@@ -29,12 +29,11 @@ export const useSchoolData = ({
     direction: sortDirection
   };
 
-  // Update the SchoolFilter type to include these properties
-  const enhancedFilters: SchoolFilter = {
-    ...filters,
+  // Create a new filter object that includes pagination and sorting
+  const requestParams = {
     page: currentPage,
     pageSize: pageSize,
-    // Add any additional filter props needed
+    sort: sortParams
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -42,10 +41,8 @@ export const useSchoolData = ({
     queryFn: async () => {
       try {
         const result = await schoolService.getSchools({
-          page: currentPage,
-          pageSize: pageSize,
-          sort: sortParams, 
-          filters: enhancedFilters
+          ...filters,
+          ...requestParams
         });
 
         // Ensure we always return an object with data and count properties

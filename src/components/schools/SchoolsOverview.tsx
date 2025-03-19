@@ -51,15 +51,9 @@ export const SchoolsOverview = () => {
     setShowFilters(false);
   };
 
-  // Make sure we have proper data extraction
+  // Make sure we properly handle the data structure returned by useSchoolData
   const schools = schoolsData?.data || [];
   const totalCount = schoolsData?.count || 0;
-
-  const handleDeleteSchoolById = async (school: SchoolWithStats) => {
-    if (school && school.id) {
-      await handleDeleteSchool(school.id);
-    }
-  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -93,7 +87,7 @@ export const SchoolsOverview = () => {
         isError={isError}
         onRefresh={handleRefresh}
         onEditSchool={handleEditSchool}
-        onDeleteSchool={handleDeleteSchoolById}
+        onDeleteSchool={handleDeleteSchool}
       />
 
       {isCreateModalOpen && (
