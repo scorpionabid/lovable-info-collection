@@ -4,6 +4,26 @@ import { Tables } from '@/integrations/supabase/types';
 // Base School type
 export type School = Tables<'schools'>;
 
+// Database row type
+export interface SchoolDatabaseRow {
+  id: string;
+  name: string;
+  code?: string;
+  region_id?: string;
+  sector_id: string;
+  type_id?: string;
+  address?: string;
+  created_at: string;
+  updated_at?: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
+  archived?: boolean;
+}
+
 export interface SchoolFilter {
   search?: string;
   region_id?: string;
@@ -36,6 +56,9 @@ export interface SchoolWithStats extends School {
   phone?: string;
   completionRate: number;
   address?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  adminName?: string;
 }
 
 export interface CreateSchoolDto {
@@ -45,6 +68,14 @@ export interface CreateSchoolDto {
   type_id?: string;
   code?: string;
   address?: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
+  contactEmail?: string;
+  contactPhone?: string;
 }
 
 export interface UpdateSchoolDto {
@@ -55,4 +86,16 @@ export interface UpdateSchoolDto {
   code?: string;
   address?: string;
   status?: 'active' | 'inactive';
+  student_count?: number;
+  teacher_count?: number;
+  director?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface SchoolStats {
+  totalStudents: number;
+  totalTeachers: number;
+  completionRate: number;
+  lastUpdate: string;
 }

@@ -8,7 +8,7 @@ import type {
 } from './userService/types';
 
 // Export the User interface properly with export type
-export type User = {
+export interface User {
   id: string;
   first_name: string;
   last_name: string;
@@ -29,7 +29,9 @@ export type User = {
     description?: string;
     permissions?: string[];
   };
-};
+  role?: string;
+  roleName?: string;
+}
 
 // Export other types
 export type { 

@@ -1,5 +1,4 @@
 
-// SectorWithStats type definition
 import { Tables } from '@/integrations/supabase/types';
 
 // Base Sector type
@@ -43,7 +42,7 @@ export interface SectorWithStats {
   region_id: string;
   description: string;
   created_at: string;
-  archived: boolean;
+  archived?: boolean;
   schoolCount: number;
   completionRate: number;
   regionName?: string;

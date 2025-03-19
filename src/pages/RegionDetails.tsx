@@ -29,7 +29,23 @@ const RegionDetails = () => {
     if (!id) return;
     const fetchRegion = async () => {
       const data = await getRegionById(id);
-      setRegion(data);
+      if (data) {
+        // Ensure all required properties exist with default values if needed
+        const regionWithDefaults: RegionWithStats = {
+          ...data,
+          sectorCount: data.sectorCount || data.sectors_count || 0,
+          schoolCount: data.schoolCount || data.schools_count || 0,
+          studentCount: data.studentCount || 0,
+          teacherCount: data.teacherCount || 0,
+          completionRate: data.completionRate || data.completion_rate || 0,
+          description: data.description || '',
+          // Add backward compatibility fields
+          sectors_count: data.sectors_count || data.sectorCount || 0,
+          schools_count: data.schools_count || data.schoolCount || 0,
+          completion_rate: data.completion_rate || data.completionRate || 0
+        };
+        setRegion(regionWithDefaults);
+      }
     };
     fetchRegion();
   }, [id]);
@@ -84,7 +100,11 @@ const RegionDetails = () => {
 
   return (
     <Layout userRole="super-admin">
-      <RegionHeader region={region} />
+      <RegionHeader 
+        region={region}
+        onEdit={() => {}}
+        onExport={() => {}}
+      />
 
       <RegionStats region={region} />
 
