@@ -2,7 +2,15 @@
 import { Tables } from '@/integrations/supabase/types';
 
 // Base School type
-export type School = Tables<'schools'>;
+export type School = Tables<'schools'> & {
+  archived?: boolean;
+  director?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+  student_count?: number;
+  teacher_count?: number;
+};
 
 // Database row type
 export interface SchoolDatabaseRow {
@@ -48,26 +56,37 @@ export interface SchoolPaginationParams {
   pageSize: number;
 }
 
-export interface SchoolWithStats extends School {
-  student_count: number;
-  teacher_count: number;
-  status: 'active' | 'inactive';
-  type: string;
-  region: { name: string };
-  sector: { name: string };
+export interface SchoolWithStats {
+  id: string;
+  name: string;
+  code?: string;
+  type_id: string;
+  region_id: string;
+  sector_id: string;
+  address?: string;
+  created_at: string;
+  updated_at?: string;
+  status: string;
   director?: string;
   email?: string;
   phone?: string;
-  completionRate: number;
-  address?: string;
+  student_count: number;
+  teacher_count: number;
+  archived: boolean;
+  
+  // Virtual properties derived from joined tables or calculations
+  type?: string;
+  region?: string;
+  sector?: string;
+  completionRate?: number;
   contactEmail?: string;
   contactPhone?: string;
   adminName?: string;
+  adminId?: string;
+  
   // For backward compatibility
   studentCount?: number;
   teacherCount?: number;
-  type_id?: string;
-  archived?: boolean;
 }
 
 export interface CreateSchoolDto {

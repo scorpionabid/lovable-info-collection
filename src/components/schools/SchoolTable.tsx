@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Table,
@@ -26,44 +25,74 @@ import {
   AlertCircle 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { School } from "@/services/supabase/school/types";
+import { SchoolWithStats } from "@/services/supabase/school/types";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-interface SchoolTableProps {
-  schools: School[];
+export interface SchoolTableProps {
+  schools: SchoolWithStats[];
   isLoading: boolean;
-  onEditSchool: (school: School) => void;
-  onDeleteSchool: (school: School) => void;
+  totalCount?: number;
+  currentPage?: number;
+  pageSize?: number;
+  setCurrentPage?: (page: number) => void;
+  sortColumn?: string;
+  sortDirection?: "asc" | "desc";
+  onSortChange?: (column: string) => void;
+  isError?: boolean;
+  onRefresh?: () => void;
+  onEditSchool: (school: SchoolWithStats) => void;
+  onDeleteSchool: (school: SchoolWithStats) => void;
 }
 
-export const SchoolTable = ({
+export const SchoolTable: React.FC<SchoolTableProps> = ({
   schools,
   isLoading,
+  totalCount,
+  currentPage,
+  pageSize,
+  setCurrentPage,
+  sortColumn: externalSortColumn,
+  sortDirection: externalSortDirection,
+  onSortChange: externalSortChange,
+  isError,
+  onRefresh,
   onEditSchool,
   onDeleteSchool,
-}: SchoolTableProps) => {
+}) => {
   const navigate = useNavigate();
-  const [sortField, setSortField] = useState<string>("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [internalSortField, setInternalSortField] = useState<string>("name");
+  const [internalSortDirection, setInternalSortDirection] = useState<"asc" | "desc">("asc");
+
+  const sortField = externalSortColumn || internalSortField;
+  const sortDirection = externalSortDirection || internalSortDirection;
 
   const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    if (externalSortChange) {
+      externalSortChange(field);
     } else {
-      setSortField(field);
-      setSortDirection("asc");
+      if (internalSortField === field) {
+        setInternalSortDirection(internalSortDirection === "asc" ? "desc" : "asc");
+      } else {
+        setInternalSortField(field);
+        setInternalSortDirection("asc");
+      }
     }
   };
 
   const sortedSchools = [...schools].sort((a, b) => {
-    let aValue: any = a[sortField as keyof School];
-    let bValue: any = b[sortField as keyof School];
+    let aValue: any = a[sortField as keyof SchoolWithStats];
+    let bValue: any = b[sortField as keyof SchoolWithStats];
 
-    // Handle special cases for sorting
     if (sortField === "completionRate") {
-      aValue = Number(aValue);
-      bValue = Number(bValue);
+      aValue = Number(a.completionRate || 0);
+      bValue = Number(b.completionRate || 0);
+    } else if (sortField === "studentCount" || sortField === "student_count") {
+      aValue = Number(a.student_count || a.studentCount || 0);
+      bValue = Number(b.student_count || b.studentCount || 0);
+    } else if (sortField === "teacherCount" || sortField === "teacher_count") {
+      aValue = Number(a.teacher_count || a.teacherCount || 0);
+      bValue = Number(b.teacher_count || b.teacherCount || 0);
     } else if (typeof aValue === "string" && typeof bValue === "string") {
       aValue = aValue.toLowerCase();
       bValue = bValue.toLowerCase();
@@ -78,13 +107,13 @@ export const SchoolTable = ({
     navigate(`/schools/${schoolId}`);
   };
 
-  const copySchoolInfo = (school: School) => {
+  const copySchoolInfo = (school: SchoolWithStats) => {
     const info = `${school.name}
-Növ: ${school.type}
-Region: ${school.region}
-Sektor: ${school.sector}
-Şagird sayı: ${school.studentCount}
-Müəllim sayı: ${school.teacherCount}
+Növ: ${school.type || school.type_id || 'N/A'}
+Region: ${school.region || 'N/A'}
+Sektor: ${school.sector || 'N/A'}
+Şagird sayı: ${school.student_count || school.studentCount || 0}
+Müəllim sayı: ${school.teacher_count || school.teacherCount || 0}
 `;
     navigator.clipboard.writeText(info);
     toast.success("Məktəb məlumatları kopyalandı");
@@ -107,6 +136,23 @@ Müəllim sayı: ${school.teacherCount}
     );
   }
 
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Xəta baş verdi</h3>
+        <p className="text-infoline-dark-gray mb-4">
+          Məlumatları yükləyərkən xəta baş verdi
+        </p>
+        {onRefresh && (
+          <Button variant="outline" onClick={onRefresh}>
+            Yenidən cəhd edin
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (schools.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -115,7 +161,11 @@ Müəllim sayı: ${school.teacherCount}
         <p className="text-infoline-dark-gray mb-4">
           Axtarış kriteriyalarına uyğun məktəb yoxdur
         </p>
-        <Button variant="outline">Filtirləri sıfırla</Button>
+        {onRefresh && (
+          <Button variant="outline" onClick={onRefresh}>
+            Filtirləri sıfırla
+          </Button>
+        )}
       </div>
     );
   }
@@ -159,10 +209,10 @@ Müəllim sayı: ${school.teacherCount}
             </TableHead>
             <TableHead
               className="cursor-pointer hover:text-infoline-blue text-right"
-              onClick={() => handleSort("studentCount")}
+              onClick={() => handleSort("student_count")}
             >
               <div className="flex items-center justify-end">
-                Şagird sayı {renderSortIcon("studentCount")}
+                Şagird sayı {renderSortIcon("student_count")}
               </div>
             </TableHead>
             <TableHead
@@ -185,21 +235,21 @@ Müəllim sayı: ${school.teacherCount}
           {sortedSchools.map((school) => (
             <TableRow key={school.id}>
               <TableCell className="font-medium">{school.name}</TableCell>
-              <TableCell>{school.type}</TableCell>
-              <TableCell>{school.region}</TableCell>
-              <TableCell>{school.sector}</TableCell>
-              <TableCell className="text-right">{school.studentCount}</TableCell>
+              <TableCell>{school.type || 'N/A'}</TableCell>
+              <TableCell>{school.region || 'N/A'}</TableCell>
+              <TableCell>{school.sector || 'N/A'}</TableCell>
+              <TableCell className="text-right">{school.student_count || school.studentCount || 0}</TableCell>
               <TableCell className="text-right">
                 <Badge
                   className={`${
-                    school.completionRate < 50
+                    (school.completionRate || 0) < 50
                       ? "bg-red-100 text-red-800"
-                      : school.completionRate < 80
+                      : (school.completionRate || 0) < 80
                       ? "bg-yellow-100 text-yellow-800"
                       : "bg-green-100 text-green-800"
                   }`}
                 >
-                  {school.completionRate}%
+                  {school.completionRate || 0}%
                 </Badge>
               </TableCell>
               <TableCell>

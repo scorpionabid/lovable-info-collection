@@ -1,38 +1,43 @@
+
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { useSupabaseQuery } from '@/hooks/useSupabaseQuery';
-import { supabase } from '@/lib/supabase';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { SchoolWithStats } from '@/services/supabase/school/types';
+import * as schoolService from '@/services/supabase/school';
 
-// Define schema for form validation
+// Define the form schema
 const schoolSchema = z.object({
-  name: z.string().min(3, { message: "Məktəb adı ən azı 3 simvol olmalıdır" }),
-  region_id: z.string({ required_error: "Region seçilməlidir" }),
-  sector_id: z.string({ required_error: "Sektor seçilməlidir" }),
+  name: z.string().min(3, { message: 'Məktəb adı ən azı 3 simvol olmalıdır' }),
+  code: z.string().optional(),
+  region_id: z.string().optional(),
+  sector_id: z.string().min(1, { message: 'Sektor seçilməlidir' }),
   type_id: z.string().optional(),
   address: z.string().optional(),
-  code: z.string().optional(),
-  student_count: z.coerce.number().min(0).optional(),
-  teacher_count: z.coerce.number().min(0).optional(),
-  status: z.string().default('active'),
-  email: z.string().email({ message: "Düzgün email formatı daxil edin" }).optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  director: z.string().optional().or(z.literal(""))
+  status: z.string().optional(),
+  student_count: z.number().min(0).optional(),
+  teacher_count: z.number().min(0).optional(),
+  director: z.string().optional(),
+  email: z.string().email({ message: 'Düzgün email formatı daxil edin' }).optional().or(z.literal('')),
+  phone: z.string().optional()
 });
 
-type SchoolFormValues = z.infer<typeof schoolSchema>;
+export type SchoolFormValues = z.infer<typeof schoolSchema>;
 
-interface SchoolFormProps {
+export interface SchoolFormProps {
   mode: 'create' | 'edit';
   initialData?: any;
   onSuccess: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   defaultRegionId?: string;
   defaultSectorId?: string;
 }
@@ -45,126 +50,168 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
   defaultRegionId,
   defaultSectorId
 }) => {
-  const { toast } = useToast();
-  const [selectedRegion, setSelectedRegion] = React.useState(defaultRegionId || '');
-  
-  // Fetch regions
-  const { data: regions = [] } = useSupabaseQuery({
-    queryKey: ['regions'],
+  // Get regions for dropdown
+  const regionsQuery = useQuery({
+    queryKey: ['regions-dropdown'],
     queryFn: async () => {
-      const { data } = await supabase.from('regions').select('id, name').order('name');
+      const { data, error } = await supabase
+        .from('regions')
+        .select('id, name')
+        .order('name');
+        
+      if (error) throw error;
       return data || [];
     }
   });
-  
-  // Fetch sectors based on selected region
-  const { data: sectors = [] } = useSupabaseQuery({
-    queryKey: ['sectors', selectedRegion],
+
+  // Get sectors for dropdown
+  const sectorsQuery = useQuery({
+    queryKey: ['sectors-dropdown', initialData?.region_id || defaultRegionId],
     queryFn: async () => {
-      if (!selectedRegion) return [];
-      const { data } = await supabase.from('sectors')
+      const regionId = initialData?.region_id || defaultRegionId;
+      let query = supabase
+        .from('sectors')
         .select('id, name')
-        .eq('region_id', selectedRegion)
         .order('name');
+        
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
       return data || [];
     },
-    enabled: !!selectedRegion
+    enabled: !!initialData?.region_id || !!defaultRegionId
   });
-  
-  // Fetch school types
-  const { data: schoolTypes = [] } = useSupabaseQuery({
-    queryKey: ['schoolTypes'],
+
+  // Get school types for dropdown
+  const typesQuery = useQuery({
+    queryKey: ['school-types-dropdown'],
     queryFn: async () => {
-      const { data } = await supabase.from('school_types').select('id, name').order('name');
-      return data || [];
+      // Use RPC function if available, otherwise fallback to direct query
+      try {
+        const { data, error } = await supabase.rpc('get_school_types');
+        if (error) throw error;
+        return data || [];
+      } catch (e) {
+        // Fallback to direct query
+        const { data, error } = await supabase
+          .from('school_types')
+          .select('id, name')
+          .order('name');
+          
+        if (error) throw error;
+        return data || [];
+      }
     }
   });
-  
-  // Initialize form with default values or data from props
+
+  // Form setup with react-hook-form and zod validation
   const form = useForm<SchoolFormValues>({
     resolver: zodResolver(schoolSchema),
     defaultValues: {
       name: initialData?.name || '',
+      code: initialData?.code || '',
       region_id: initialData?.region_id || defaultRegionId || '',
       sector_id: initialData?.sector_id || defaultSectorId || '',
       type_id: initialData?.type_id || '',
       address: initialData?.address || '',
-      code: initialData?.code || '',
-      student_count: initialData?.student_count || 0,
-      teacher_count: initialData?.teacher_count || 0,
       status: initialData?.status || 'active',
+      student_count: initialData?.student_count || initialData?.studentCount || 0,
+      teacher_count: initialData?.teacher_count || initialData?.teacherCount || 0,
+      director: initialData?.director || '',
       email: initialData?.email || '',
-      phone: initialData?.phone || '',
-      director: initialData?.director || ''
+      phone: initialData?.phone || ''
     }
   });
-  
-  // Set selected region when form values change
-  React.useEffect(() => {
-    const regionId = form.getValues('region_id');
-    if (regionId) {
-      setSelectedRegion(regionId);
+
+  // Create school mutation
+  const createSchoolMutation = useMutation({
+    mutationFn: async (data: SchoolFormValues) => {
+      return await schoolService.createSchool(data);
+    },
+    onSuccess: () => {
+      toast.success('Məktəb uğurla yaradıldı');
+      onSuccess();
+    },
+    onError: (error) => {
+      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
     }
-  }, [form.getValues('region_id')]);
-  
-  // Handle region change
-  const handleRegionChange = (value: string) => {
-    setSelectedRegion(value);
-    form.setValue('region_id', value);
-    form.setValue('sector_id', ''); // Reset sector when region changes
-  };
-  
+  });
+
+  // Update school mutation
+  const updateSchoolMutation = useMutation({
+    mutationFn: async (data: SchoolFormValues) => {
+      if (!initialData?.id) throw new Error('Məktəb ID-i mövcud deyil');
+      return await schoolService.updateSchool(initialData.id, data);
+    },
+    onSuccess: () => {
+      toast.success('Məktəb məlumatları uğurla yeniləndi');
+      onSuccess();
+    },
+    onError: (error) => {
+      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
+
   // Handle form submission
-  const onSubmit = async (values: SchoolFormValues) => {
-    try {
-      // In a real implementation, this would call your API
-      console.log('School form values:', values);
-      
-      // Mock submit
-      setTimeout(() => {
-        toast({
-          title: mode === 'create' ? 'Məktəb yaradıldı' : 'Məktəb yeniləndi',
-          description: `${values.name} uğurla ${mode === 'create' ? 'yaradıldı' : 'yeniləndi'}`,
-        });
-        onSuccess();
-      }, 500);
-    } catch (error) {
-      console.error('Error submitting school form:', error);
-      toast({
-        title: 'Xəta baş verdi',
-        description: 'Məktəb məlumatları saxlanılmadı',
-        variant: 'destructive',
-      });
+  const onSubmit = (values: SchoolFormValues) => {
+    if (mode === 'create') {
+      createSchoolMutation.mutate(values);
+    } else {
+      updateSchoolMutation.mutate(values);
     }
+  };
+
+  // Handle region change to filter sectors
+  const handleRegionChange = (regionId: string) => {
+    form.setValue('region_id', regionId);
+    form.setValue('sector_id', ''); // Reset sector when region changes
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Məktəb adı</FormLabel>
-              <FormControl>
-                <Input placeholder="Məktəb adını daxil edin" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəbin adı*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Məktəbin adını daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəb kodu</FormLabel>
+                <FormControl>
+                  <Input placeholder="Kod daxil edin" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="region_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Region</FormLabel>
-                <Select
+                <Select 
+                  onValueChange={handleRegionChange} 
                   value={field.value}
-                  onValueChange={handleRegionChange}
+                  disabled={regionsQuery.isLoading}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -172,7 +219,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {regions.map((region) => (
+                    {regionsQuery.data?.map((region) => (
                       <SelectItem key={region.id} value={region.id}>
                         {region.name}
                       </SelectItem>
@@ -183,17 +230,17 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="sector_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Sektor</FormLabel>
-                <Select
+                <FormLabel>Sektor*</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
                   value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={!selectedRegion || sectors.length === 0}
+                  disabled={sectorsQuery.isLoading || !form.getValues('region_id')}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -201,7 +248,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {sectors.map((sector) => (
+                    {sectorsQuery.data?.map((sector) => (
                       <SelectItem key={sector.id} value={sector.id}>
                         {sector.name}
                       </SelectItem>
@@ -212,15 +259,166 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="type_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəb növü</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value}
+                  disabled={typesQuery.isLoading}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Növ seçin" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {typesQuery.data?.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status seçin" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="active">Aktiv</SelectItem>
+                    <SelectItem value="inactive">Deaktiv</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="student_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Şagird sayı</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="0" 
+                    {...field} 
+                    onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="teacher_count"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Müəllim sayı</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="0" 
+                    {...field} 
+                    onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="director"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Direktor</FormLabel>
+                <FormControl>
+                  <Input placeholder="Direktor adı" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>E-mail</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="example@domain.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Telefon</FormLabel>
+                <FormControl>
+                  <Input placeholder="+994 XX XXX XX XX" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
-        
-        {/* Additional form fields would go here */}
-        
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Ləğv et
-          </Button>
-          <Button type="submit">
+
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ünvan</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Məktəbin ünvanı" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2 pt-4">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              İmtina et
+            </Button>
+          )}
+          <Button 
+            type="submit" 
+            disabled={createSchoolMutation.isPending || updateSchoolMutation.isPending}
+          >
             {mode === 'create' ? 'Yarat' : 'Yenilə'}
           </Button>
         </div>

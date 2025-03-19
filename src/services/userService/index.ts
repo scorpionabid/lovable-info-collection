@@ -25,34 +25,68 @@ import userService from '../userService-bridge';
 // Add missing methods to userService
 const enhancedUserService = {
   ...userService,
-  // Add missing methods for compatibility
+  
+  // Add missing methods for backward compatibility
   deleteUser: (userId: string) => {
     console.warn('deleteUser is deprecated and will be removed in a future version');
-    return userService.deleteUserById(userId);
+    return userService.deleteUser ? 
+      userService.deleteUser(userId) : 
+      userService.deleteUserById ? 
+        userService.deleteUserById(userId) : 
+        Promise.resolve(false);
   },
+  
   blockUser: (userId: string) => {
     console.warn('blockUser is deprecated and will be removed in a future version');
-    return userService.updateUser(userId, { is_active: false });
+    return userService.updateUser(userId, { isActive: false });
   },
-  resetPassword: (email: string) => {
+  
+  activateUser: (userId: string) => {
+    console.warn('activateUser is deprecated and will be removed in a future version');
+    return userService.updateUser(userId, { isActive: true });
+  },
+  
+  resetPassword: (userId: string) => {
     console.warn('resetPassword is deprecated and will be removed in a future version');
-    return userService.resetUserPassword(email);
+    return userService.resetUserPassword ? 
+      userService.resetUserPassword(userId) : 
+      Promise.resolve(false);
   },
+  
   getRoles: () => {
     console.warn('getRoles is deprecated and will be removed in a future version');
-    return userService.getUserRoles();
+    return userService.getRoles ? 
+      userService.getRoles() : 
+      userService.getUserRoles ? 
+        userService.getUserRoles() : 
+        Promise.resolve([]);
   },
+  
   getRegions: () => {
     console.warn('getRegions is deprecated and will be removed in a future version');
-    return userService.getUserRegions();
+    return userService.getRegions ? 
+      userService.getRegions() : 
+      userService.getUserRegions ? 
+        userService.getUserRegions() : 
+        Promise.resolve([]);
   },
+  
   getSectors: (regionId?: string) => {
     console.warn('getSectors is deprecated and will be removed in a future version');
-    return userService.getUserSectors(regionId);
+    return userService.getSectors ? 
+      userService.getSectors(regionId) : 
+      userService.getUserSectors ? 
+        userService.getUserSectors(regionId) : 
+        Promise.resolve([]);
   },
+  
   getSchools: (sectorId?: string) => {
     console.warn('getSchools is deprecated and will be removed in a future version');
-    return userService.getUserSchools(sectorId);
+    return userService.getSchools ? 
+      userService.getSchools(sectorId) : 
+      userService.getUserSchools ? 
+        userService.getUserSchools(sectorId) : 
+        Promise.resolve([]);
   }
 };
 

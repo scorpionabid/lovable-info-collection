@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { SectorWithStats, FilterParams, SortParams } from '@/services/supabase/sector/types';
-import sectorService from '@/services/supabase/sectorService';
+import { SectorWithStats, FilterParams, SortParams, PaginationParams } from '@/services/supabase/sector/types';
+import sectorService, { getSectors } from '@/services/supabase/sector';
 
 interface UseSectorDataProps {
   currentPage: number;
@@ -24,25 +24,26 @@ export const useSectorData = ({
   sortDirection,
   filters
 }: UseSectorDataProps) => {
+  const paginationParams: PaginationParams = {
+    page: currentPage,
+    pageSize: pageSize
+  };
+  
   const sortParams: SortParams = {
     column: sortColumn,
     direction: sortDirection
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['sectors', currentPage, pageSize, sortParams, filters],
+    queryKey: ['sectors', currentPage, pageSize, sortColumn, sortDirection, filters],
     queryFn: async () => {
       try {
-        const result = await sectorService.getSectors({
-          page: currentPage,
-          pageSize: pageSize,
-          sort: sortParams,
-          filters: filters
-        });
-
+        // Use the getSectors function from the imported sectorService
+        const result = await getSectors(paginationParams, sortParams, filters);
+        
         return {
-          data: result.data,
-          count: result.count
+          data: result.data || [],
+          count: result.count || 0
         } as SectorDataResponse;
       } catch (error) {
         console.error('Error fetching sectors:', error);

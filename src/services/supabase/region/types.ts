@@ -1,9 +1,10 @@
 
-// RegionWithStats type definition
 import { Tables } from '@/integrations/supabase/types';
 
 // Base Region type
-export type Region = Tables<'regions'>;
+export type Region = Tables<'regions'> & {
+  description?: string;
+};
 
 // Define additional types needed for regions
 export interface FilterParams {
@@ -34,6 +35,8 @@ export interface Sector {
   description: string;
   created_at: string;
   archived: boolean;
+  code?: string;
+  updated_at?: string;
 }
 
 // SectorData type for data submission
@@ -41,6 +44,7 @@ export interface SectorData {
   name: string;
   region_id: string;
   description?: string;
+  code?: string;
 }
 
 // Extended Region type with calculated stats

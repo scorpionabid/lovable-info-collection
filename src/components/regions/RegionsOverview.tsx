@@ -51,21 +51,22 @@ export const RegionsOverview = () => {
   // Convert region data to ensure it matches the RegionWithStats type
   const convertedRegionsData = regionsData ? {
     data: regionsData.data.map(region => {
-      // Ensure all required properties are present with defaults if needed
-      return {
+      // Create a new object with all the required properties
+      const completeRegion: RegionWithStats = {
         ...region,
-        // Prioritize standard property names, fall back to legacy names if needed
+        // Ensure all required properties are present
+        description: region.description || '',
         sectorCount: region.sectorCount || region.sectors_count || 0,
         schoolCount: region.schoolCount || region.schools_count || 0,
-        completionRate: region.completionRate || region.completion_rate || 0,
         studentCount: region.studentCount || 0,
         teacherCount: region.teacherCount || 0,
-        description: region.description || '',
-        // Add backward compatibility properties if they don't exist
+        completionRate: region.completionRate || region.completion_rate || 0,
+        // Add backward compatibility properties
         sectors_count: region.sectors_count || region.sectorCount || 0,
         schools_count: region.schools_count || region.schoolCount || 0,
         completion_rate: region.completion_rate || region.completionRate || 0
-      } as RegionWithStats;
+      };
+      return completeRegion;
     }),
     count: regionsData.count
   } : { data: [], count: 0 };

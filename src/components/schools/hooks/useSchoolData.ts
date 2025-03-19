@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { School, SchoolFilter } from '@/services/supabase/school/types';
-import schoolService from '@/services/supabase/schoolService';
+import * as schoolService from '@/services/supabase/school';
 
 interface UseSchoolDataProps {
   currentPage: number;

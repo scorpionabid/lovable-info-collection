@@ -1,60 +1,60 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { SchoolForm } from './SchoolForm';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { SchoolForm } from "./SchoolForm";
 
-interface SchoolModalProps {
+export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
-  school?: any;
-  regionId?: string;
+  school?: any; // School data for edit mode
+  regionId?: string; // Added for RegionDetails.tsx
   sectorId?: string;
+  onSuccess?: () => void;
   onCreated?: () => void;
   onUpdated?: () => void;
-  onSuccess?: () => void;
 }
 
-export const SchoolModal: React.FC<SchoolModalProps> = ({
-  isOpen,
-  onClose,
-  mode,
+export const SchoolModal: React.FC<SchoolModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  mode, 
   school,
   regionId,
   sectorId,
+  onSuccess,
   onCreated,
-  onUpdated,
-  onSuccess
+  onUpdated
 }) => {
   const handleSuccess = () => {
-    if (mode === 'create' && onCreated) {
+    // Call the appropriate callback based on availability and mode
+    if (onSuccess) {
+      onSuccess();
+    } else if (mode === 'create' && onCreated) {
       onCreated();
     } else if (mode === 'edit' && onUpdated) {
       onUpdated();
     }
-    
-    if (onSuccess) {
-      onSuccess();
-    }
-    
     onClose();
   };
 
-  const title = mode === 'create' ? 'Yeni Məktəb' : 'Məktəb Redaktəsi';
-
-  // If regionId is provided, add it to the initial data
-  const initialData = regionId ? { ...school, region_id: regionId } : school;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>
+            {mode === 'create' ? 'Yeni məktəb yarat' : 'Məktəb məlumatlarını redaktə et'}
+          </DialogTitle>
         </DialogHeader>
         <SchoolForm 
           mode={mode} 
-          initialData={initialData} 
-          onSuccess={handleSuccess}
+          initialData={school} 
+          onSuccess={handleSuccess} 
           onCancel={onClose}
           defaultRegionId={regionId}
           defaultSectorId={sectorId}

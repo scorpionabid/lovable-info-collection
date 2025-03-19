@@ -11,17 +11,18 @@ import { SectorModal } from "@/components/sectors/SectorModal";
 import { SchoolModal } from "@/components/schools/modal/SchoolModal";
 import { getRegionById } from "@/services/supabase/region";
 import { getSectorsByRegionId } from "@/services/supabase/sector/helperFunctions";
+import { RegionWithStats, Sector, SectorWithStats } from "@/services/supabase/region/types";
 
 const RegionDetails = () => {
   const { id } = useParams();
-  const [region, setRegion] = useState(null);
-  const [sectors, setSectors] = useState([]);
+  const [region, setRegion] = useState<RegionWithStats | null>(null);
+  const [sectors, setSectors] = useState<SectorWithStats[]>([]);
   const [createSectorModalOpen, setCreateSectorModalOpen] = useState(false);
   const [createSchoolModalOpen, setCreateSchoolModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [sortColumn, setSortColumn] = useState("name");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     if (!id) return;
@@ -29,7 +30,7 @@ const RegionDetails = () => {
       const data = await getRegionById(id);
       if (data) {
         // Ensure all required properties exist with default values if needed
-        const regionWithDefaults = {
+        const regionWithDefaults: RegionWithStats = {
           ...data,
           sectorCount: data.sectorCount || data.sectors_count || 0,
           schoolCount: data.schoolCount || data.schools_count || 0,
@@ -50,19 +51,24 @@ const RegionDetails = () => {
 
   const fetchSectors = async () => {
     if (!id) return;
-    const data = await getSectorsByRegionId(id);
-    setSectors(data.map(sector => ({
-      ...sector,
-      id: sector.id,
-      name: sector.name,
-      region_id: sector.region_id,
-      regionName: sector.regionName || (region ? region.name : ''),
-      description: sector.description || '',
-      created_at: sector.created_at || new Date().toISOString(),
-      schoolCount: sector.schoolCount || sector.schools_count || 0,
-      completionRate: sector.completionRate || sector.completion_rate || 0,
-      archived: sector.archived || false
-    })));
+    try {
+      const data = await getSectorsByRegionId(id);
+      setSectors(data.map((sector) => ({
+        ...sector,
+        id: sector.id,
+        name: sector.name,
+        region_id: sector.region_id,
+        regionName: sector.regionName || (region ? region.name : ''),
+        description: sector.description || '',
+        created_at: sector.created_at || new Date().toISOString(),
+        schoolCount: sector.schoolCount || sector.schools_count || 0,
+        completionRate: sector.completionRate || sector.completion_rate || 0,
+        archived: sector.archived || false
+      })));
+    } catch (error) {
+      console.error("Error fetching sectors:", error);
+      setSectors([]);
+    }
   };
 
   useEffect(() => {
@@ -79,7 +85,7 @@ const RegionDetails = () => {
     setCreateSchoolModalOpen(false);
   };
 
-  const handleSortChange = (column) => {
+  const handleSortChange = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -98,13 +104,19 @@ const RegionDetails = () => {
 
   return (
     <Layout userRole="super-admin">
-      <RegionHeader region={region} onEdit={() => {}} onExport={() => {}} />
+      <RegionHeader 
+        region={region} 
+        onEdit={() => {}} 
+        onExport={() => {}}
+      />
       
       <RegionStats region={region} />
       
       <div className="md:px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="py-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Sektorlar</h3>
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+            Sektorlar
+          </h3>
           <Button onClick={() => setCreateSectorModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Yeni Sektor

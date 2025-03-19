@@ -1,34 +1,49 @@
 
-import { supabase } from '../supabaseClient';
-import { CreateSchoolDto, School, SchoolFilter, UpdateSchoolDto } from './types';
-import { getSchoolById, getSchools } from './queries/schoolQueries';
-import { getSchoolStats, getSchoolActivities } from './queries/statsQueries';
+// Export all the necessary functions and types from the school service
+import { getSchools, getSchoolById, getSchoolWithAdmin, getSchoolsByRegion } from './queries/schoolQueries';
+import { createSchool, updateSchool, deleteSchool, archiveSchool } from './crudOperations';
+import { getSchoolStats } from './queries/statsQueries';
+import { getSchoolTypes } from './helperFunctions';
+import { School, SchoolWithStats, SchoolStats, SchoolFilter, SchoolSortParams, SchoolPaginationParams, CreateSchoolDto, UpdateSchoolDto } from './types';
 
-// Generate a random school code
-export const generateSchoolCode = (): string => {
-  return `SCH-${Math.floor(1000 + Math.random() * 9000)}`;
+// Export type definitions
+export type {
+  School,
+  SchoolWithStats,
+  SchoolStats,
+  SchoolFilter,
+  SchoolSortParams,
+  SchoolPaginationParams,
+  CreateSchoolDto,
+  UpdateSchoolDto
 };
 
-// Delete a school by ID
-export const deleteSchool = async (schoolId: string) => {
-  const { data, error } = await supabase
-    .from('schools')
-    .delete()
-    .eq('id', schoolId);
-  
-  if (error) throw error;
-  return data;
-};
-
-// Add dedicated function for querying schools with filters
-export const querySchools = async (filters: SchoolFilter = {}) => {
-  return getSchools(filters);
-};
-
-// Export everything
+// Export query functions
 export {
-  getSchoolById,
   getSchools,
+  getSchoolById,
+  getSchoolWithAdmin,
+  getSchoolsByRegion,
+  createSchool,
+  updateSchool,
+  deleteSchool,
+  archiveSchool,
   getSchoolStats,
-  getSchoolActivities
+  getSchoolTypes
 };
+
+// Default export for backward compatibility
+const schoolService = {
+  getSchools,
+  getSchoolById,
+  getSchoolWithAdmin,
+  getSchoolsByRegion,
+  createSchool,
+  updateSchool,
+  deleteSchool,
+  archiveSchool,
+  getSchoolStats,
+  getSchoolTypes
+};
+
+export default schoolService;
