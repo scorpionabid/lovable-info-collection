@@ -1,11 +1,12 @@
 
-import userService, { User } from './userService';
+import userService from './userService';
 import type { 
   UserFilter, 
   UserResponse, 
   CreateUserDto, 
   UpdateUserDto
 } from './userService/types';
+import { User } from './userService'; // Fixed import from './userService'
 
 // Export the User interface properly
 export type { User };

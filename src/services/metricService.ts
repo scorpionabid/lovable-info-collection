@@ -1,402 +1,923 @@
 /**
- * Metrik xidməti - API sorğuları və sistem performansının izlənməsi üçün
+ * Metric Service - Fetches and processes metrics data
  */
 import { supabase } from '@/lib/supabase';
-import { Json } from '@/types/supabase';
 import { logger } from '@/utils/logger';
 
-export interface ApiMetric {
+interface Metric {
   id: string;
-  endpoint: string;
-  method: string;
-  duration_ms: number;
-  status_code: number | null;
-  request_params: Json | null;
-  request_size: number | null;
-  response_size: number | null;
-  response_summary: Json | null;
-  user_id: string | null;
+  name: string;
+  value: number;
   timestamp: string;
 }
 
-export interface MetricFilter {
-  endpoint?: string;
-  method?: string;
-  minDuration?: number;
-  maxDuration?: number;
-  statusCode?: number;
-  userId?: string;
+interface FilterOptions {
   startDate?: string;
   endDate?: string;
-  page?: number;
-  pageSize?: number;
+  category?: string;
+  schoolId?: string;
+  regionId?: string;
+  sectorId?: string;
 }
 
-export interface MetricResponse {
-  data: ApiMetric[] | null;
-  count: number;
-  error: any | null;
-}
-
-/**
- * Metrik xidməti
- */
 const metricService = {
   /**
-   * API metrikalarını əldə et
+   * Fetches metrics data based on specified filters.
+   * @param {FilterOptions} filters - Filters to apply to the query.
+   * @returns {Promise<Metric[]>} - A promise that resolves to an array of metrics.
    */
-  getApiMetrics: async (filters?: MetricFilter): Promise<MetricResponse> => {
+  getMetrics: async (filters: FilterOptions): Promise<Metric[]> => {
     try {
       let query = supabase
-        .from('api_metrics')
-        .select(`
-          *,
-          users:user_id(id, first_name, last_name, email)
-        `, { count: 'exact' });
-      
-      // Filtrləri tətbiq et
-      if (filters) {
-        if (filters.endpoint) {
-          query = query.ilike('endpoint', `%${filters.endpoint}%`);
-        }
-        if (filters.method) {
-          query = query.eq('method', filters.method);
-        }
-        if (filters.minDuration !== undefined) {
-          query = query.gte('duration_ms', filters.minDuration);
-        }
-        if (filters.maxDuration !== undefined) {
-          query = query.lte('duration_ms', filters.maxDuration);
-        }
-        if (filters.statusCode !== undefined) {
-          query = query.eq('status_code', filters.statusCode);
-        }
-        if (filters.userId) {
-          query = query.eq('user_id', filters.userId);
-        }
-        if (filters.startDate) {
-          query = query.gte('timestamp', filters.startDate);
-        }
-        if (filters.endDate) {
-          query = query.lte('timestamp', filters.endDate);
-        }
+        .from('metrics')
+        .select('*');
+
+      if (filters.startDate) {
+        query = query.gte('timestamp', filters.startDate);
       }
-      
-      // Sıralama
-      query = query.order('timestamp', { ascending: false });
-      
-      // Səhifələmə
-      if (filters?.page && filters?.pageSize) {
-        const from = (filters.page - 1) * filters.pageSize;
-        const to = from + filters.pageSize - 1;
-        query = query.range(from, to);
+
+      if (filters.endDate) {
+        query = query.lte('timestamp', filters.endDate);
       }
-      
-      const { data, error, count } = await query;
-      
+
+      if (filters.category) {
+        query = query.eq('category', filters.category);
+      }
+
+      if (filters.schoolId) {
+        query = query.eq('school_id', filters.schoolId);
+      }
+
+      if (filters.regionId) {
+        query = query.eq('region_id', filters.regionId);
+      }
+
+      if (filters.sectorId) {
+        query = query.eq('sector_id', filters.sectorId);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
-        logger.error('API metrikalarını əldə etmə xətası:', error);
-        return { data: null, count: 0, error };
+        logger.error('Error fetching metrics:', error);
+        throw error;
       }
-      
-      return { data: data as ApiMetric[], count: count || 0, error: null };
+
+      return data as Metric[];
     } catch (error) {
-      logger.error('API metrikalarını əldə etmə xətası:', error);
-      return { data: null, count: 0, error };
-    }
-  },
-  
-  /**
-   * API metrikası əlavə et
-   */
-  addApiMetric: async (metric: Omit<ApiMetric, 'id' | 'timestamp'>): Promise<ApiMetric | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('api_metrics')
-        .insert({
-          ...metric,
-          timestamp: new Date().toISOString()
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        logger.error('API metrikası əlavə etmə xətası:', error);
-        return null;
-      }
-      
-      return data as ApiMetric;
-    } catch (error) {
-      logger.error('API metrikası əlavə etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * API sorğusunu izlə
-   */
-  trackApiRequest: async (
-    endpoint: string,
-    method: string,
-    userId: string | null,
-    requestParams?: any,
-    requestSize?: number
-  ): Promise<string> => {
-    try {
-      // Yeni metrika yaratmaq üçün unikal ID
-      const metricId = crypto.randomUUID();
-      
-      // Başlanğıc vaxtını qeyd et
-      const startTime = performance.now();
-      
-      // Metrika obyektini saxla
-      const metricData = {
-        id: metricId,
-        endpoint,
-        method,
-        user_id: userId,
-        request_params: requestParams,
-        request_size: requestSize,
-        duration_ms: 0, // Tamamlandıqdan sonra yenilənəcək
-        status_code: null, // Tamamlandıqdan sonra yenilənəcək
-        response_size: null, // Tamamlandıqdan sonra yenilənəcək
-        response_summary: null // Tamamlandıqdan sonra yenilənəcək
-      };
-      
-      // Metrika ID-ni qaytar ki, sorğu tamamlandıqdan sonra yeniləmək mümkün olsun
-      return metricId;
-    } catch (error) {
-      logger.error('API sorğusu izləmə xətası:', error);
-      return '';
-    }
-  },
-  
-  /**
-   * API sorğusunu tamamla
-   */
-  completeApiRequest: async (
-    metricId: string,
-    statusCode: number,
-    responseData?: any,
-    responseSize?: number
-  ): Promise<boolean> => {
-    try {
-      if (!metricId) return false;
-      
-      // Əvvəlcə metrika məlumatlarını əldə et
-      const { data: metricData, error: fetchError } = await supabase
-        .from('api_metrics')
-        .select('*')
-        .eq('id', metricId)
-        .single();
-      
-      if (fetchError) {
-        logger.error('Metrika əldə etmə xətası:', fetchError);
-        return false;
-      }
-      
-      // Sorğu müddətini hesabla
-      const endTime = performance.now();
-      const duration = Math.round(endTime - performance.timeOrigin);
-      
-      // Metrika məlumatlarını yenilə
-      const { error } = await supabase
-        .from('api_metrics')
-        .update({
-          duration_ms: duration,
-          status_code: statusCode,
-          response_size: responseSize,
-          response_summary: responseData
-        })
-        .eq('id', metricId);
-      
-      if (error) {
-        logger.error('Metrika yeniləmə xətası:', error);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      logger.error('API sorğusu tamamlama xətası:', error);
-      return false;
-    }
-  },
-  
-  /**
-   * API metrika statistikasını əldə et
-   */
-  getApiMetricStats: async (days: number = 30): Promise<any> => {
-    try {
-      // Son N gün üçün tarix hesabla
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      // Endpoint-lərə görə statistika
-      const { data: endpointStats, error: endpointError } = await supabase
-        .from('api_metrics')
-        .select('endpoint, count, avg(duration_ms)')
-        .gte('timestamp', startDate.toISOString())
-        .group('endpoint');
-      
-      if (endpointError) {
-        logger.error('Endpoint statistikası əldə etmə xətası:', endpointError);
-        return null;
-      }
-      
-      // Status kodlarına görə statistika
-      const { data: statusStats, error: statusError } = await supabase
-        .from('api_metrics')
-        .select('status_code, count')
-        .gte('timestamp', startDate.toISOString())
-        .group('status_code');
-      
-      if (statusError) {
-        logger.error('Status statistikası əldə etmə xətası:', statusError);
-        return null;
-      }
-      
-      // Metodlara görə statistika
-      const { data: methodStats, error: methodError } = await supabase
-        .from('api_metrics')
-        .select('method, count')
-        .gte('timestamp', startDate.toISOString())
-        .group('method');
-      
-      if (methodError) {
-        logger.error('Metod statistikası əldə etmə xətası:', methodError);
-        return null;
-      }
-      
-      // Günlük sorğu sayı
-      const { data: dailyStats, error: dailyError } = await supabase
-        .from('api_metrics')
-        .select('timestamp')
-        .gte('timestamp', startDate.toISOString());
-      
-      if (dailyError) {
-        logger.error('Günlük statistika əldə etmə xətası:', dailyError);
-        return null;
-      }
-      
-      // Günlük sorğu sayını hesabla
-      const dailyCounts: Record<string, number> = {};
-      if (dailyStats) {
-        dailyStats.forEach(metric => {
-          const date = new Date(metric.timestamp).toISOString().split('T')[0];
-          dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-        });
-      }
-      
-      // Ən yavaş sorğular
-      const { data: slowestRequests, error: slowestError } = await supabase
-        .from('api_metrics')
-        .select('*')
-        .gte('timestamp', startDate.toISOString())
-        .order('duration_ms', { ascending: false })
-        .limit(10);
-      
-      if (slowestError) {
-        logger.error('Ən yavaş sorğular əldə etmə xətası:', slowestError);
-        return null;
-      }
-      
-      return {
-        endpointStats,
-        statusStats,
-        methodStats,
-        dailyCounts: Object.entries(dailyCounts).map(([date, count]) => ({ date, count })),
-        slowestRequests
-      };
-    } catch (error) {
-      logger.error('API metrika statistikası əldə etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Ən çox istifadə edilən endpoint-ləri əldə et
-   */
-  getMostUsedEndpoints: async (days: number = 30, limit: number = 10): Promise<any[]> => {
-    try {
-      // Son N gün üçün tarix hesabla
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      const { data, error } = await supabase
-        .from('api_metrics')
-        .select('endpoint, count')
-        .gte('timestamp', startDate.toISOString())
-        .group('endpoint')
-        .order('count', { ascending: false })
-        .limit(limit);
-      
-      if (error) {
-        logger.error('Ən çox istifadə edilən endpoint-ləri əldə etmə xətası:', error);
-        return [];
-      }
-      
-      return data || [];
-    } catch (error) {
-      logger.error('Ən çox istifadə edilən endpoint-ləri əldə etmə xətası:', error);
+      logger.error('Error in getMetrics:', error);
       return [];
     }
   },
-  
+
   /**
-   * Ən yavaş endpoint-ləri əldə et
+   * Calculates the average value of a specific metric over a time range.
+   * @param {string} metricName - The name of the metric to average.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the average value of the metric.
    */
-  getSlowestEndpoints: async (days: number = 30, limit: number = 10): Promise<any[]> => {
+  getAverageMetric: async (metricName: string, startDate: string, endDate: string): Promise<number | null> => {
     try {
-      // Son N gün üçün tarix hesabla
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
       const { data, error } = await supabase
-        .from('api_metrics')
-        .select('endpoint, avg(duration_ms)')
-        .gte('timestamp', startDate.toISOString())
-        .group('endpoint')
-        .order('avg', { ascending: false })
-        .limit(limit);
-      
+        .from('metrics')
+        .select('value')
+        .eq('name', metricName)
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
       if (error) {
-        logger.error('Ən yavaş endpoint-ləri əldə etmə xətası:', error);
-        return [];
+        logger.error(`Error fetching average metric ${metricName}:`, error);
+        return null;
       }
-      
-      return data || [];
-    } catch (error) {
-      logger.error('Ən yavaş endpoint-ləri əldə etmə xətası:', error);
-      return [];
-    }
-  },
-  
-  /**
-   * Xəta sayını əldə et
-   */
-  getErrorCount: async (days: number = 30): Promise<number> => {
-    try {
-      // Son N gün üçün tarix hesabla
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      const { count, error } = await supabase
-        .from('api_metrics')
-        .select('id', { count: 'exact', head: true })
-        .gte('timestamp', startDate.toISOString())
-        .gte('status_code', 400);
-      
-      if (error) {
-        logger.error('Xəta sayını əldə etmə xətası:', error);
+
+      if (!data || data.length === 0) {
         return 0;
       }
-      
-      return count || 0;
-    } catch (error) {
-      logger.error('Xəta sayını əldə etmə xətası:', error);
-      return 0;
-    }
-  }
-};
 
-export default metricService;
+      const total = data.reduce((sum, metric) => sum + metric.value, 0);
+      return total / data.length;
+    } catch (error) {
+      logger.error(`Error calculating average metric ${metricName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the total count of data entries for a specific category within a time range.
+   * @param {string} categoryName - The name of the category to count.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the total count of data entries.
+   */
+  getTotalDataEntries: async (categoryName: string, startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error, count } = await supabase
+        .from('data_entries')
+        .select('*', { count: 'exact' })
+        .eq('category', categoryName)
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (error) {
+        logger.error(`Error fetching total data entries for ${categoryName}:`, error);
+        return null;
+      }
+
+      return count;
+    } catch (error) {
+      logger.error(`Error getting total data entries for ${categoryName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Fetches the submission rate for a specific school within a time range.
+   * @param {string} schoolId - The ID of the school.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the submission rate.
+   */
+  getSubmissionRate: async (schoolId: string, startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      // Fetch total number of data entries for the school
+      const { count: totalEntries, error: totalError } = await supabase
+        .from('data_entries')
+        .select('*', { count: 'exact' })
+        .eq('school_id', schoolId)
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (totalError) {
+        logger.error(`Error fetching total data entries for school ${schoolId}:`, totalError);
+        return null;
+      }
+
+      // Fetch number of submitted data entries for the school
+      const { count: submittedEntries, error: submittedError } = await supabase
+        .from('data_entries')
+        .select('*', { count: 'exact' })
+        .eq('school_id', schoolId)
+        .eq('status', 'submitted')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (submittedError) {
+        logger.error(`Error fetching submitted data entries for school ${schoolId}:`, submittedError);
+        return null;
+      }
+
+      if (totalEntries === 0) {
+        return 0;
+      }
+
+      return (submittedEntries || 0) / totalEntries;
+    } catch (error) {
+      logger.error(`Error getting submission rate for school ${schoolId}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the approval rate for data entries within a specific time range.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the approval rate.
+   */
+  getApprovalRate: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      // Fetch total number of data entries
+      const { count: totalEntries, error: totalError } = await supabase
+        .from('data_entries')
+        .select('*', { count: 'exact' })
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (totalError) {
+        logger.error('Error fetching total data entries:', totalError);
+        return null;
+      }
+
+      // Fetch number of approved data entries
+      const { count: approvedEntries, error: approvedError } = await supabase
+        .from('data_entries')
+        .select('*', { count: 'exact' })
+        .eq('status', 'approved')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (approvedError) {
+        logger.error('Error fetching approved data entries:', approvedError);
+        return null;
+      }
+
+      if (totalEntries === 0) {
+        return 0;
+      }
+
+      return (approvedEntries || 0) / totalEntries;
+    } catch (error) {
+      logger.error('Error getting approval rate:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Calculates the average completion time for data entries.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the average completion time in milliseconds.
+   */
+  getAverageCompletionTime: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('submitted_at, created_at')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
+        .not('submitted_at', 'is', null);
+
+      if (error) {
+        logger.error('Error fetching data entries for completion time:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      // Calculate the total completion time
+      const totalCompletionTime = data.reduce((sum, entry) => {
+        const submittedAt = new Date(entry.submitted_at).getTime();
+        const createdAt = new Date(entry.created_at).getTime();
+        return sum + (submittedAt - createdAt);
+      }, 0);
+
+      // Calculate the average completion time
+      return totalCompletionTime / data.length;
+    } catch (error) {
+      logger.error('Error calculating average completion time:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the distribution of data entry statuses (e.g., draft, submitted, approved).
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the distribution of statuses.
+   */
+  getDataEntryStatusDistribution: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('status')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching data entry statuses:', error);
+        return null;
+      }
+
+      if (!data) {
+        return { draft: 0, submitted: 0, approved: 0, rejected: 0 };
+      }
+
+      // Count the occurrences of each status
+      const statusCounts: Record<string, number> = data.reduce((counts, entry) => {
+        counts[entry.status] = (counts[entry.status] || 0) + 1;
+        return counts;
+      }, {});
+
+      // Ensure all possible statuses are represented
+      return {
+        draft: statusCounts.draft || 0,
+        submitted: statusCounts.submitted || 0,
+        approved: statusCounts.approved || 0,
+        rejected: statusCounts.rejected || 0,
+      };
+    } catch (error) {
+      logger.error('Error getting data entry status distribution:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the average number of data entries per school within a specified time range.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the average number of data entries per school.
+   */
+  getAverageDataEntriesPerSchool: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('school_id')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching data entries for schools:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      // Count the number of entries per school
+      const entriesPerSchool: Record<string, number> = data.reduce((counts, entry) => {
+        counts[entry.school_id] = (counts[entry.school_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      // Calculate the total number of schools and total entries
+      const numberOfSchools = Object.keys(entriesPerSchool).length;
+      const totalEntries = data.length;
+
+      // Calculate the average number of entries per school
+      return totalEntries / numberOfSchools;
+    } catch (error) {
+      logger.error('Error getting average data entries per school:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the number of active users within a specified time range.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the number of active users.
+   */
+  getActiveUsersCount: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error, count } = await supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        .gte('last_login', startDate)
+        .lte('last_login', endDate);
+
+      if (error) {
+        logger.error('Error fetching active users:', error);
+        return null;
+      }
+
+      return count;
+    } catch (error) {
+      logger.error('Error getting active users count:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the average session duration for users within a specified time range.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the average session duration in milliseconds.
+   */
+  getAverageSessionDuration: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      // This is a placeholder as session data is not directly available
+      logger.warn('Session duration metric is not implemented.');
+      return null;
+    } catch (error) {
+      logger.error('Error getting average session duration:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the most frequent actions performed by users.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each action.
+   */
+  getMostFrequentActions: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('action')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (error) {
+        logger.error('Error fetching audit log actions:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each action
+      const actionCounts: Record<string, number> = data.reduce((counts, log) => {
+        counts[log.action] = (counts[log.action] || 0) + 1;
+        return counts;
+      }, {});
+
+      return actionCounts;
+    } catch (error) {
+      logger.error('Error getting most frequent actions:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the number of unique users who performed actions within a specified time range.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the number of unique users.
+   */
+  getUniqueUsersCount: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('user_id')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (error) {
+        logger.error('Error fetching audit log for unique users:', error);
+        return null;
+      }
+
+      if (!data) {
+        return 0;
+      }
+
+      // Extract unique user IDs
+      const uniqueUserIds = new Set(data.map(log => log.user_id));
+      return uniqueUserIds.size;
+    } catch (error) {
+      logger.error('Error getting unique users count:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the average time spent per data entry.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the average time spent per data entry in milliseconds.
+   */
+  getAverageTimePerDataEntry: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('created_at, submitted_at')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
+        .not('submitted_at', 'is', null);
+
+      if (error) {
+        logger.error('Error fetching data entries for time spent:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      // Calculate the total time spent on data entries
+      const totalTimeSpent = data.reduce((sum, entry) => {
+        const createdAt = new Date(entry.created_at).getTime();
+        const submittedAt = new Date(entry.submitted_at).getTime();
+        return sum + (submittedAt - createdAt);
+      }, 0);
+
+      // Calculate the average time spent per data entry
+      return totalTimeSpent / data.length;
+    } catch (error) {
+      logger.error('Error getting average time per data entry:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of most visited endpoints.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each endpoint.
+   */
+  getMostVisitedEndpoints: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('endpoint')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (error) {
+        logger.error('Error fetching audit log endpoints:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each endpoint
+      const endpointCounts: Record<string, number> = data.reduce((counts, log) => {
+        counts[log.endpoint] = (counts[log.endpoint] || 0) + 1;
+        return counts;
+      }, {});
+
+      return endpointCounts;
+    } catch (error) {
+      logger.error('Error getting most visited endpoints:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of least visited endpoints.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each endpoint.
+   */
+  getLeastVisitedEndpoints: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('endpoint')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (error) {
+        logger.error('Error fetching audit log endpoints:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each endpoint
+      const endpointCounts: Record<string, number> = data.reduce((counts, log) => {
+        counts[log.endpoint] = (counts[log.endpoint] || 0) + 1;
+        return counts;
+      }, {});
+
+      return endpointCounts;
+    } catch (error) {
+      logger.error('Error getting least visited endpoints:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the average number of data entries per user.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<number>} - A promise that resolves to the average number of data entries per user.
+   */
+  getAverageDataEntriesPerUser: async (startDate: string, endDate: string): Promise<number | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('user_id')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching data entries for users:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        return 0;
+      }
+
+      // Count the number of entries per user
+      const entriesPerUser: Record<string, number> = data.reduce((counts, entry) => {
+        counts[entry.user_id] = (counts[entry.user_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      // Calculate the total number of users and total entries
+      const numberOfUsers = Object.keys(entriesPerUser).length;
+      const totalEntries = data.length;
+
+      // Calculate the average number of entries per user
+      return totalEntries / numberOfUsers;
+    } catch (error) {
+      logger.error('Error getting average data entries per user:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of most active users.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each user.
+   */
+  getMostActiveUsers: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('user_id')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (error) {
+        logger.error('Error fetching audit log for users:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each user
+      const userCounts: Record<string, number> = data.reduce((counts, log) => {
+        counts[log.user_id] = (counts[log.user_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return userCounts;
+    } catch (error) {
+      logger.error('Error getting most active users:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of least active users.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each user.
+   */
+  getLeastActiveUsers: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_log')
+        .select('user_id')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+
+      if (error) {
+        logger.error('Error fetching audit log for users:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each user
+      const userCounts: Record<string, number> = data.reduce((counts, log) => {
+        counts[log.user_id] = (counts[log.user_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return userCounts;
+    } catch (error) {
+      logger.error('Error getting least active users:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of most frequent categories.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each category.
+   */
+  getMostFrequentCategories: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('category_id')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching data entries for categories:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each category
+      const categoryCounts: Record<string, number> = data.reduce((counts, entry) => {
+        counts[entry.category_id] = (counts[entry.category_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return categoryCounts;
+    } catch (error) {
+      logger.error('Error getting most frequent categories:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of least frequent categories.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each category.
+   */
+  getLeastFrequentCategories: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('data_entries')
+        .select('category_id')
+        .gte('submitted_at', startDate)
+        .lte('submitted_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching data entries for categories:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each category
+      const categoryCounts: Record<string, number> = data.reduce((counts, entry) => {
+        counts[entry.category_id] = (counts[entry.category_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return categoryCounts;
+    } catch (error) {
+      logger.error('Error getting least frequent categories:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of most frequent school types.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each school type.
+   */
+  getMostFrequentSchoolTypes: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('type_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching schools for types:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each school type
+      const typeCounts: Record<string, number> = data.reduce((counts, school) => {
+        counts[school.type_id] = (counts[school.type_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return typeCounts;
+    } catch (error) {
+      logger.error('Error getting most frequent school types:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of least frequent school types.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each school type.
+   */
+  getLeastFrequentSchoolTypes: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('type_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching schools for types:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each school type
+      const typeCounts: Record<string, number> = data.reduce((counts, school) => {
+        counts[school.type_id] = (counts[school.type_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return typeCounts;
+    } catch (error) {
+      logger.error('Error getting least frequent school types:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of most frequent regions.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each region.
+   */
+  getMostFrequentRegions: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('region_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching schools for regions:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each region
+      const regionCounts: Record<string, number> = data.reduce((counts, school) => {
+        counts[school.region_id] = (counts[school.region_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return regionCounts;
+    } catch (error) {
+      logger.error('Error getting most frequent regions:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of least frequent regions.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each region.
+   */
+  getLeastFrequentRegions: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('region_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching schools for regions:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each region
+      const regionCounts: Record<string, number> = data.reduce((counts, school) => {
+        counts[school.region_id] = (counts[school.region_id] || 0) + 1;
+        return counts;
+      }, {});
+
+      return regionCounts;
+    } catch (error) {
+      logger.error('Error getting least frequent regions:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Retrieves the list of most frequent sectors.
+   * @param {string} startDate - The start date for the time range.
+   * @param {string} endDate - The end date for the time range.
+   * @returns {Promise<Record<string, number>>} - A promise that resolves to an object representing the frequency of each sector.
+   */
+  getMostFrequentSectors: async (startDate: string, endDate: string): Promise<Record<string, number> | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('sector_id')
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
+
+      if (error) {
+        logger.error('Error fetching schools for sectors:', error);
+        return null;
+      }
+
+      if (!data) {
+        return {};
+      }
+
+      // Count the occurrences of each sector
+      const sectorCounts: Record<string, number> = data.reduce((counts, school) => {
+        counts[school.sector_

@@ -41,7 +41,6 @@ export interface SchoolFormProps {
   sectors?: { id: string; name: string }[];
   schoolTypes?: { id: string; name: string }[];
   onRegionChange?: (regionId: string) => void;
-  handleSubmit?: (values: SchoolFormValues) => Promise<void>;
   onSubmit: (values: SchoolFormValues) => Promise<void>;
 }
 

@@ -1,422 +1,446 @@
 /**
- * Audit log xidməti - sistem əməliyyatlarının izlənməsi üçün
+ * Audit Log Service - Manages audit logs for the application
  */
 import { supabase } from '@/lib/supabase';
-import { Json } from '@/types/supabase';
 import { logger } from '@/utils/logger';
 
-export interface AuditLogEntry {
+export interface AuditLog {
   id: string;
-  action: string;
-  table_name: string;
-  record_id?: string;
-  user_id?: string;
-  old_data?: Json;
-  new_data?: Json;
-  metadata?: Json;
-  ip_address?: string;
-  user_agent?: string;
-  component?: string;
-  success?: boolean;
-  duration_ms?: number;
+  user_id: string;
+  timestamp: string;
+  event_type: string;
+  resource_type: string;
+  resource_id: string;
+  details: any;
+  ip_address: string;
+  user_agent: string;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  error_message: string;
   created_at: string;
 }
 
 export interface AuditLogFilter {
-  action?: string;
-  tableName?: string;
+  search?: string;
   userId?: string;
-  recordId?: string;
-  component?: string;
-  startDate?: string;
-  endDate?: string;
-  success?: boolean;
+  eventType?: string;
+  resourceType?: string;
+  resourceId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  endpoint?: string;
+  method?: string;
+  statusCode?: string;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
 }
 
 export interface AuditLogResponse {
-  data: AuditLogEntry[] | null;
+  data: AuditLog[] | null;
   count: number;
   error: any | null;
 }
 
-/**
- * Audit log xidməti
- */
 const auditLogService = {
   /**
-   * Audit logları əldə et
+   * Get audit logs with filters and pagination
    */
   getAuditLogs: async (filters?: AuditLogFilter): Promise<AuditLogResponse> => {
     try {
       let query = supabase
         .from('audit_logs')
-        .select(`
-          *,
-          users:user_id(id, first_name, last_name, email)
-        `, { count: 'exact' });
-      
-      // Filtrləri tətbiq et
+        .select('*', { count: 'exact' });
+
+      // Apply filters
       if (filters) {
-        if (filters.action) {
-          query = query.eq('action', filters.action);
-        }
-        if (filters.tableName) {
-          query = query.eq('table_name', filters.tableName);
+        if (filters.search) {
+          query = query.or(`event_type.ilike.%${filters.search}%,resource_type.ilike.%${filters.search}%,resource_id.ilike.%${filters.search}%`);
         }
         if (filters.userId) {
           query = query.eq('user_id', filters.userId);
         }
-        if (filters.recordId) {
-          query = query.eq('record_id', filters.recordId);
+        if (filters.eventType) {
+          query = query.eq('event_type', filters.eventType);
         }
-        if (filters.component) {
-          query = query.eq('component', filters.component);
+        if (filters.resourceType) {
+          query = query.eq('resource_type', filters.resourceType);
         }
-        if (filters.startDate) {
-          query = query.gte('created_at', filters.startDate);
+        if (filters.resourceId) {
+          query = query.eq('resource_id', filters.resourceId);
         }
-        if (filters.endDate) {
-          query = query.lte('created_at', filters.endDate);
+        if (filters.dateFrom) {
+          query = query.gte('created_at', filters.dateFrom);
         }
-        if (filters.success !== undefined) {
-          query = query.eq('success', filters.success);
+        if (filters.dateTo) {
+          query = query.lte('created_at', filters.dateTo);
+        }
+        if (filters.endpoint) {
+          query = query.eq('endpoint', filters.endpoint);
+        }
+        if (filters.method) {
+          query = query.eq('method', filters.method);
+        }
+        if (filters.statusCode) {
+          query = query.eq('status_code', filters.statusCode);
         }
       }
-      
-      // Sıralama
-      query = query.order('created_at', { ascending: false });
-      
-      // Səhifələmə
+
+      // Apply sorting
+      if (filters?.sortField) {
+        query = query.order(filters.sortField, { ascending: filters.sortOrder === 'asc' });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
       if (filters?.page && filters?.pageSize) {
         const from = (filters.page - 1) * filters.pageSize;
         const to = from + filters.pageSize - 1;
         query = query.range(from, to);
       }
-      
+
       const { data, error, count } = await query;
-      
+
       if (error) {
-        logger.error('Audit logları əldə etmə xətası:', error);
+        logger.error('Audit log əldə etmə xətası:', error);
         return { data: null, count: 0, error };
       }
-      
-      return { data: data as AuditLogEntry[], count: count || 0, error: null };
+
+      return { data: data as AuditLog[], count: count || 0, error: null };
     } catch (error) {
-      logger.error('Audit logları əldə etmə xətası:', error);
+      logger.error('Audit log əldə etmə xətası:', error);
       return { data: null, count: 0, error };
     }
   },
-  
+
   /**
-   * Audit log əlavə et
+   * Get audit log by ID
    */
-  addAuditLog: async (entry: Omit<AuditLogEntry, 'id' | 'created_at'>): Promise<AuditLogEntry | null> => {
+  getAuditLogById: async (id: string): Promise<AuditLog | null> => {
     try {
       const { data, error } = await supabase
         .from('audit_logs')
-        .insert(entry)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        logger.error('Audit log əldə etmə xətası:', error);
+        return null;
+      }
+
+      return data as AuditLog;
+    } catch (error) {
+      logger.error('Audit log əldə etmə xətası:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Create audit log
+   */
+  createAuditLog: async (auditLogData: Omit<AuditLog, 'id' | 'created_at'>): Promise<AuditLog | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .insert([auditLogData])
         .select()
         .single();
-      
+
       if (error) {
-        logger.error('Audit log əlavə etmə xətası:', error);
+        logger.error('Audit log yaratma xətası:', error);
         return null;
       }
-      
-      return data as AuditLogEntry;
+
+      return data as AuditLog;
     } catch (error) {
-      logger.error('Audit log əlavə etmə xətası:', error);
+      logger.error('Audit log yaratma xətası:', error);
       return null;
     }
   },
-  
+
   /**
-   * Cədvəl üzrə audit log əlavə et
+   * Update audit log
    */
-  logTableAction: async (
-    action: string,
-    tableName: string,
-    userId: string,
-    recordId?: string,
-    oldData?: any,
-    newData?: any,
-    metadata?: any,
-    success: boolean = true
-  ): Promise<AuditLogEntry | null> => {
+  updateAuditLog: async (id: string, auditLogData: Partial<AuditLog>): Promise<AuditLog | null> => {
     try {
-      const entry = {
-        action,
-        table_name: tableName,
-        user_id: userId,
-        record_id: recordId,
-        old_data: oldData,
-        new_data: newData,
-        metadata,
-        success,
-        ip_address: await auditLogService.getClientIp(),
-        user_agent: navigator.userAgent,
-        duration_ms: 0 // Bu, real tətbiqdə ölçüləcək
-      };
-      
-      return await auditLogService.addAuditLog(entry);
-    } catch (error) {
-      logger.error('Cədvəl əməliyyatı loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Komponentin əməliyyatını loq et
-   */
-  logComponentAction: async (
-    action: string,
-    component: string,
-    userId: string,
-    metadata?: any,
-    success: boolean = true,
-    durationMs?: number
-  ): Promise<AuditLogEntry | null> => {
-    try {
-      const entry = {
-        action,
-        table_name: 'components',
-        user_id: userId,
-        component,
-        metadata,
-        success,
-        ip_address: await auditLogService.getClientIp(),
-        user_agent: navigator.userAgent,
-        duration_ms: durationMs || 0
-      };
-      
-      return await auditLogService.addAuditLog(entry);
-    } catch (error) {
-      logger.error('Komponent əməliyyatı loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Giriş əməliyyatını loq et
-   */
-  logLogin: async (
-    userId: string,
-    success: boolean,
-    metadata?: any
-  ): Promise<AuditLogEntry | null> => {
-    try {
-      return await auditLogService.logComponentAction(
-        'login',
-        'auth',
-        userId,
-        metadata,
-        success
-      );
-    } catch (error) {
-      logger.error('Giriş loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Çıxış əməliyyatını loq et
-   */
-  logLogout: async (userId: string): Promise<AuditLogEntry | null> => {
-    try {
-      return await auditLogService.logComponentAction(
-        'logout',
-        'auth',
-        userId
-      );
-    } catch (error) {
-      logger.error('Çıxış loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Məlumat əməliyyatını loq et
-   */
-  logDataAction: async (
-    action: string,
-    userId: string,
-    dataId: string,
-    oldData?: any,
-    newData?: any,
-    metadata?: any,
-    success: boolean = true
-  ): Promise<AuditLogEntry | null> => {
-    try {
-      return await auditLogService.logTableAction(
-        action,
-        'data',
-        userId,
-        dataId,
-        oldData,
-        newData,
-        metadata,
-        success
-      );
-    } catch (error) {
-      logger.error('Məlumat əməliyyatı loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Kateqoriya əməliyyatını loq et
-   */
-  logCategoryAction: async (
-    action: string,
-    userId: string,
-    categoryId: string,
-    oldData?: any,
-    newData?: any,
-    metadata?: any,
-    success: boolean = true
-  ): Promise<AuditLogEntry | null> => {
-    try {
-      return await auditLogService.logTableAction(
-        action,
-        'categories',
-        userId,
-        categoryId,
-        oldData,
-        newData,
-        metadata,
-        success
-      );
-    } catch (error) {
-      logger.error('Kateqoriya əməliyyatı loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * İstifadəçi əməliyyatını loq et
-   */
-  logUserAction: async (
-    action: string,
-    userId: string,
-    targetUserId: string,
-    oldData?: any,
-    newData?: any,
-    metadata?: any,
-    success: boolean = true
-  ): Promise<AuditLogEntry | null> => {
-    try {
-      return await auditLogService.logTableAction(
-        action,
-        'users',
-        userId,
-        targetUserId,
-        oldData,
-        newData,
-        metadata,
-        success
-      );
-    } catch (error) {
-      logger.error('İstifadəçi əməliyyatı loq etmə xətası:', error);
-      return null;
-    }
-  },
-  
-  /**
-   * Müştəri IP ünvanını əldə et
-   */
-  getClientIp: async (): Promise<string | undefined> => {
-    try {
-      // Bu, real tətbiqdə daha mürəkkəb ola bilər
-      // Burada sadə bir nümunə göstərilir
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;
-    } catch (error) {
-      logger.error('IP ünvanı əldə etmə xətası:', error);
-      return undefined;
-    }
-  },
-  
-  /**
-   * Audit log statistikasını əldə et
-   */
-  getAuditStats: async (days: number = 30): Promise<any> => {
-    try {
-      // Son N gün üçün tarix hesabla
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-      
-      // Əməliyyat növlərinə görə statistika
-      const { data: actionStats, error: actionError } = await supabase
+      const { data, error } = await supabase
         .from('audit_logs')
-        .select('action, count')
-        .gte('created_at', startDate.toISOString())
-        .group('action');
-      
-      if (actionError) {
-        logger.error('Əməliyyat statistikası əldə etmə xətası:', actionError);
+        .update(auditLogData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('Audit log yeniləmə xətası:', error);
         return null;
       }
-      
-      // İstifadəçilərə görə statistika
-      const { data: userStats, error: userError } = await supabase
-        .from('audit_logs')
-        .select('user_id, users:user_id(first_name, last_name), count')
-        .gte('created_at', startDate.toISOString())
-        .group('user_id, users:user_id(first_name, last_name)')
-        .order('count', { ascending: false })
-        .limit(10);
-      
-      if (userError) {
-        logger.error('İstifadəçi statistikası əldə etmə xətası:', userError);
-        return null;
-      }
-      
-      // Cədvəllərə görə statistika
-      const { data: tableStats, error: tableError } = await supabase
-        .from('audit_logs')
-        .select('table_name, count')
-        .gte('created_at', startDate.toISOString())
-        .group('table_name');
-      
-      if (tableError) {
-        logger.error('Cədvəl statistikası əldə etmə xətası:', tableError);
-        return null;
-      }
-      
-      // Günlük əməliyyat sayı
-      const { data: dailyStats, error: dailyError } = await supabase
-        .from('audit_logs')
-        .select('created_at')
-        .gte('created_at', startDate.toISOString());
-      
-      if (dailyError) {
-        logger.error('Günlük statistika əldə etmə xətası:', dailyError);
-        return null;
-      }
-      
-      // Günlük əməliyyat sayını hesabla
-      const dailyCounts: Record<string, number> = {};
-      if (dailyStats) {
-        dailyStats.forEach(log => {
-          const date = new Date(log.created_at).toISOString().split('T')[0];
-          dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-        });
-      }
-      
-      return {
-        actionStats,
-        userStats,
-        tableStats,
-        dailyCounts: Object.entries(dailyCounts).map(([date, count]) => ({ date, count }))
-      };
+
+      return data as AuditLog;
     } catch (error) {
-      logger.error('Audit statistikası əldə etmə xətası:', error);
+      logger.error('Audit log yeniləmə xətası:', error);
       return null;
     }
-  }
+  },
+
+  /**
+   * Delete audit log
+   */
+  deleteAuditLog: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('audit_logs')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        logger.error('Audit log silmə xətası:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      logger.error('Audit log silmə xətası:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Get audit log counts by event type
+   */
+  getAuditLogCountsByEventType: async (filters?: Omit<AuditLogFilter, 'eventType'>): Promise<{ event_type: string, count: number }[] | null> => {
+    try {
+      let query = supabase
+        .from('audit_logs')
+        .select('event_type, count(*)');
+
+      // Apply filters
+      if (filters) {
+        if (filters.search) {
+          query = query.or(`event_type.ilike.%${filters.search}%,resource_type.ilike.%${filters.search}%,resource_id.ilike.%${filters.search}%`);
+        }
+        if (filters.userId) {
+          query = query.eq('user_id', filters.userId);
+        }
+        if (filters.resourceType) {
+          query = query.eq('resource_type', filters.resourceType);
+        }
+        if (filters.resourceId) {
+          query = query.eq('resource_id', filters.resourceId);
+        }
+        if (filters.dateFrom) {
+          query = query.gte('created_at', filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          query = query.lte('created_at', filters.dateTo);
+        }
+        if (filters.endpoint) {
+          query = query.eq('endpoint', filters.endpoint);
+        }
+        if (filters.method) {
+          query = query.eq('method', filters.method);
+        }
+        if (filters.statusCode) {
+          query = query.eq('status_code', filters.statusCode);
+        }
+      }
+
+      // Group by event type
+      // query = query.group('event_type');
+      const result = await query;
+      // Process the data in memory to group by endpoint
+      const groupedByEventType = result.data?.reduce((groups: Record<string, any[]>, item) => {
+        const key = item.event_type;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(item);
+        return groups;
+      }, {});
+
+      if (result.error) {
+        logger.error('Audit log sayı əldə etmə xətası:', result.error);
+        return null;
+      }
+
+      // Manually transform the grouped data into the desired format
+      const transformedData = Object.entries(groupedByEventType || {}).map(([event_type, items]) => ({
+        event_type,
+        count: items.length,
+      }));
+
+      return transformedData as { event_type: string; count: number }[];
+    } catch (error) {
+      logger.error('Audit log sayı əldə etmə xətası:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get audit log counts by resource type
+   */
+  getAuditLogCountsByResourceType: async (filters?: Omit<AuditLogFilter, 'resourceType'>): Promise<{ resource_type: string, count: number }[] | null> => {
+    try {
+      let query = supabase
+        .from('audit_logs')
+        .select('resource_type, count(*)');
+
+      // Apply filters
+      if (filters) {
+        if (filters.search) {
+          query = query.or(`event_type.ilike.%${filters.search}%,resource_type.ilike.%${filters.search}%,resource_id.ilike.%${filters.search}%`);
+        }
+        if (filters.userId) {
+          query = query.eq('user_id', filters.userId);
+        }
+        if (filters.eventType) {
+          query = query.eq('event_type', filters.eventType);
+        }
+        if (filters.resourceId) {
+          query = query.eq('resource_id', filters.resourceId);
+        }
+        if (filters.dateFrom) {
+          query = query.gte('created_at', filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          query = query.lte('created_at', filters.dateTo);
+        }
+        if (filters.endpoint) {
+          query = query.eq('endpoint', filters.endpoint);
+        }
+        if (filters.method) {
+          query = query.eq('method', filters.method);
+        }
+        if (filters.statusCode) {
+          query = query.eq('status_code', filters.statusCode);
+        }
+      }
+
+      // Group by resource type
+      // query = query.group('resource_type');
+      const result = await query;
+      // Process the data in memory to group by endpoint
+      const groupedByResourceType = result.data?.reduce((groups: Record<string, any[]>, item) => {
+        const key = item.resource_type;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(item);
+        return groups;
+      }, {});
+
+      if (result.error) {
+        logger.error('Audit log sayı əldə etmə xətası:', result.error);
+        return null;
+      }
+
+      const transformedData = Object.entries(groupedByResourceType || {}).map(([resource_type, items]) => ({
+        resource_type,
+        count: items.length,
+      }));
+
+      return transformedData as { resource_type: string; count: number }[];
+    } catch (error) {
+      logger.error('Audit log sayı əldə etmə xətası:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get audit log counts by endpoint
+   */
+  getAuditLogCountsByEndpoint: async (filters?: Omit<AuditLogFilter, 'endpoint'>): Promise<{ endpoint: string, count: number }[] | null> => {
+    try {
+      let query = supabase
+        .from('audit_logs')
+        .select('endpoint, count(*)');
+
+      // Apply filters
+      if (filters) {
+        if (filters.search) {
+          query = query.or(`event_type.ilike.%${filters.search}%,resource_type.ilike.%${filters.search}%,resource_id.ilike.%${filters.search}%`);
+        }
+        if (filters.userId) {
+          query = query.eq('user_id', filters.userId);
+        }
+        if (filters.eventType) {
+          query = query.eq('event_type', filters.eventType);
+        }
+        if (filters.resourceType) {
+          query = query.eq('resource_type', filters.resourceType);
+        }
+        if (filters.resourceId) {
+          query = query.eq('resource_id', filters.resourceId);
+        }
+        if (filters.dateFrom) {
+          query = query.gte('created_at', filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          query = query.lte('created_at', filters.dateTo);
+        }
+        if (filters.method) {
+          query = query.eq('method', filters.method);
+        }
+        if (filters.statusCode) {
+          query = query.eq('status_code', filters.statusCode);
+        }
+      }
+
+      // Group by endpoint
+      // query = query.group('endpoint');
+      const result = await query;
+      // Process the data in memory to group by endpoint
+      const groupedByEndpoint = result.data?.reduce((groups: Record<string, any[]>, item) => {
+        const key = item.endpoint;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(item);
+        return groups;
+      }, {});
+
+      if (result.error) {
+        logger.error('Audit log sayı əldə etmə xətası:', result.error);
+        return null;
+      }
+
+      const transformedData = Object.entries(groupedByEndpoint || {}).map(([endpoint, items]) => ({
+        endpoint,
+        count: items.length,
+      }));
+
+      return transformedData as { endpoint: string; count: number }[];
+    } catch (error) {
+      logger.error('Audit log sayı əldə etmə xətası:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get recent audit logs
+   */
+  getRecentAuditLogs: async (limit: number = 5): Promise<AuditLog[] | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        logger.error('Son audit logları əldə etmə xətası:', error);
+        return null;
+      }
+
+      return data as AuditLog[];
+    } catch (error) {
+      logger.error('Son audit logları əldə etmə xətası:', error);
+      return null;
+    }
+  },
 };
 
 export default auditLogService;

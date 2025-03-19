@@ -1,8 +1,10 @@
+
 /**
  * Baza Supabase servis - bütün digər servislər üçün əsas funksionallıq təmin edir
  */
 import { supabase, withRetry, queryWithCache, isOfflineMode, checkConnection } from '@/lib/supabase';
 import { logger } from '@/utils/logger';
+import { PostgrestFilterBuilder, PostgrestBuilder } from '@supabase/supabase-js';
 
 // Sorğu parametrləri üçün tip
 export interface QueryOptions {
@@ -108,9 +110,12 @@ export class BaseSupabaseService {
     options: QueryOptions = {}
   ): Promise<{ data: T[] | null; error: any }> {
     return this.query<T[]>(
-      () => this.getClient()
-        .from(this.tableName)
-        .select(columns),
+      async () => {
+        const response = await this.getClient()
+          .from(this.tableName)
+          .select(columns);
+        return response;
+      },
       options
     );
   }
@@ -124,11 +129,14 @@ export class BaseSupabaseService {
     options: QueryOptions = {}
   ): Promise<{ data: T | null; error: any }> {
     return this.query<T>(
-      () => this.getClient()
-        .from(this.tableName)
-        .select(columns)
-        .eq('id', id)
-        .maybeSingle(),
+      async () => {
+        const response = await this.getClient()
+          .from(this.tableName)
+          .select(columns)
+          .eq('id', id)
+          .maybeSingle();
+        return response;
+      },
       options
     );
   }
@@ -141,11 +149,14 @@ export class BaseSupabaseService {
     options: QueryOptions = { useCache: false }
   ): Promise<{ data: T | null; error: any }> {
     return this.query<T>(
-      () => this.getClient()
-        .from(this.tableName)
-        .insert(data)
-        .select()
-        .maybeSingle(),
+      async () => {
+        const response = await this.getClient()
+          .from(this.tableName)
+          .insert(data)
+          .select()
+          .maybeSingle();
+        return response;
+      },
       options
     );
   }
@@ -159,12 +170,15 @@ export class BaseSupabaseService {
     options: QueryOptions = { useCache: false }
   ): Promise<{ data: T | null; error: any }> {
     return this.query<T>(
-      () => this.getClient()
-        .from(this.tableName)
-        .update(data)
-        .eq('id', id)
-        .select()
-        .maybeSingle(),
+      async () => {
+        const response = await this.getClient()
+          .from(this.tableName)
+          .update(data)
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+        return response;
+      },
       options
     );
   }
@@ -177,12 +191,15 @@ export class BaseSupabaseService {
     options: QueryOptions = { useCache: false }
   ): Promise<{ data: T | null; error: any }> {
     return this.query<T>(
-      () => this.getClient()
-        .from(this.tableName)
-        .delete()
-        .eq('id', id)
-        .select()
-        .maybeSingle(),
+      async () => {
+        const response = await this.getClient()
+          .from(this.tableName)
+          .delete()
+          .eq('id', id)
+          .select()
+          .maybeSingle();
+        return response;
+      },
       options
     );
   }
@@ -198,7 +215,7 @@ export class BaseSupabaseService {
     options: QueryOptions = {}
   ): Promise<{ data: T[] | null; error: any }> {
     return this.query<T[]>(
-      () => {
+      async () => {
         let query = this.getClient()
           .from(this.tableName)
           .select(columns);
@@ -236,7 +253,7 @@ export class BaseSupabaseService {
             query = query.eq(column, value);
         }
         
-        return query;
+        return await query;
       },
       options
     );
@@ -257,18 +274,24 @@ export class BaseSupabaseService {
     try {
       // Əvvəlcə ümumi sayı əldə et
       const countResult = await this.query<{ count: number }[]>(
-        () => this.getClient()
-          .from(this.tableName)
-          .select('count', { count: 'exact', head: true }),
+        async () => {
+          const response = await this.getClient()
+            .from(this.tableName)
+            .select('count', { count: 'exact', head: true });
+          return response;
+        },
         options
       );
       
       // Sonra məlumatları əldə et
       const dataResult = await this.query<T[]>(
-        () => this.getClient()
-          .from(this.tableName)
-          .select(columns)
-          .range(from, to),
+        async () => {
+          const response = await this.getClient()
+            .from(this.tableName)
+            .select(columns)
+            .range(from, to);
+          return response;
+        },
         options
       );
       
