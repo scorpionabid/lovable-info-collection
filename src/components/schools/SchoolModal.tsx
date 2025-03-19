@@ -17,6 +17,7 @@ export interface SchoolModalProps {
   onSchoolCreated?: () => void;
   onSchoolUpdated?: () => void;
   regionId?: string; // Added for RegionDetails.tsx
+  sectorId?: string;
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({ 
@@ -27,7 +28,8 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   onSuccess,
   onSchoolCreated,
   onSchoolUpdated,
-  regionId
+  regionId,
+  sectorId
 }) => {
   const handleSuccess = () => {
     // Call the appropriate callback based on availability and mode
@@ -56,8 +58,11 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         </DialogHeader>
         <SchoolForm 
           mode={mode} 
-          school={schoolData} 
+          initialData={schoolData} 
           onSuccess={handleSuccess}
+          onCancel={onClose}
+          defaultRegionId={regionId}
+          defaultSectorId={sectorId}
         />
       </DialogContent>
     </Dialog>

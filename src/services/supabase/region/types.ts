@@ -41,17 +41,17 @@ export interface Sector {
   id: string;
   name: string;
   region_id: string;
-  description: string;
+  description?: string;
   created_at: string;
-  archived: boolean;
+  archived?: boolean;
   code?: string;
   updated_at?: string;
 }
 
 // SectorWithStats interface for RegionDetails page
 export interface SectorWithStats extends Sector {
-  schoolCount: number;
-  completionRate: number;
+  schoolCount?: number;
+  completionRate?: number;
   regionName?: string;
   // Backward compatibility
   schools_count?: number;

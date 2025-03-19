@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { School, SchoolFilter } from '@/services/supabase/school/types';
+import { School, SchoolFilter, SchoolSortParams } from '@/services/supabase/school/types';
 import * as schoolService from '@/services/supabase/school';
 
 interface UseSchoolDataProps {
@@ -24,14 +24,9 @@ export const useSchoolData = ({
   sortDirection,
   filters
 }: UseSchoolDataProps) => {
-  const sortParams = {
+  const sortParams: SchoolSortParams = {
     field: sortColumn,
     direction: sortDirection
-  };
-
-  const paginationParams = {
-    page: currentPage,
-    pageSize: pageSize
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -39,15 +34,13 @@ export const useSchoolData = ({
     queryFn: async () => {
       try {
         const result = await schoolService.getSchools({
-          pagination: paginationParams,
+          page: currentPage,
+          pageSize: pageSize,
           sort: sortParams,
           filters: filters
         });
 
-        return {
-          data: result.data || [],
-          count: result.count || 0
-        } as SchoolDataResponse;
+        return result || { data: [], count: 0 };
       } catch (error) {
         console.error('Error fetching schools:', error);
         throw error;

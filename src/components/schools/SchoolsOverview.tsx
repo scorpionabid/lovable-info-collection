@@ -28,7 +28,19 @@ export const SchoolsOverview = () => {
   });
 
   // Hooks for actions
-  const { isCreateModalOpen, setIsCreateModalOpen, handleRefresh, handleCreateSuccess, handleExport, handleImport, handleEditSchool, handleDeleteSchool } = useSchoolActions(refetch);
+  const { 
+    isCreateModalOpen, 
+    setIsCreateModalOpen, 
+    isEditModalOpen,
+    setIsEditModalOpen,
+    selectedSchool,
+    handleRefresh, 
+    handleCreateSuccess, 
+    handleExport, 
+    handleImport, 
+    handleEditSchool, 
+    handleDeleteSchool 
+  } = useSchoolActions(refetch);
 
   const toggleFilters = () => {
     setShowFilters((prev) => !prev);
@@ -74,12 +86,27 @@ export const SchoolsOverview = () => {
         onDeleteSchool={handleDeleteSchool}
       />
 
-      <SchoolModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        mode="create"
-        onSuccess={handleCreateSuccess}
-      />
+      {isCreateModalOpen && (
+        <SchoolModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          mode="create"
+          onSuccess={handleCreateSuccess}
+        />
+      )}
+
+      {isEditModalOpen && selectedSchool && (
+        <SchoolModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          mode="edit"
+          school={selectedSchool}
+          onSuccess={() => {
+            refetch();
+            setIsEditModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

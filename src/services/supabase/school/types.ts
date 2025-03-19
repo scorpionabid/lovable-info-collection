@@ -20,9 +20,11 @@ export type School = Tables<'schools'> & {
   contactPhone?: string;
   adminName?: string;
   adminId?: string;
+  code?: string;
   // Backward compatibility fields
   studentCount?: number;
   teacherCount?: number;
+  type_id?: string;
 };
 
 // Database row type
@@ -53,7 +55,7 @@ export interface SchoolFilter {
   status?: 'all' | 'active' | 'inactive';
   min_student_count?: number | string;
   max_student_count?: number | string;
-  // Pagination parameters
+  // Add fields for pagination
   page?: number;
   pageSize?: number;
   // Backwards compatibility
@@ -72,23 +74,23 @@ export interface SchoolPaginationParams {
   pageSize: number;
 }
 
-export interface SchoolWithStats {
+export interface SchoolWithStats extends Partial<School> {
   id: string;
   name: string;
   code?: string;
-  type_id: string;
-  region_id: string;
-  sector_id: string;
+  type_id?: string;
+  region_id?: string;
+  sector_id?: string;
   address?: string;
   created_at: string;
   updated_at?: string;
-  status: string;
+  status?: string;
   director?: string;
   email?: string;
   phone?: string;
-  student_count: number;
-  teacher_count: number;
-  archived: boolean;
+  student_count?: number;
+  teacher_count?: number;
+  archived?: boolean;
   
   // Virtual properties derived from joined tables or calculations
   type?: string;
