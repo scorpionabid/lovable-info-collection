@@ -1,0 +1,67 @@
+
+[
+  {
+    "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "email": "superadmin@edu.az",
+    "first_name": "Super",
+    "last_name": "Admin",
+    "role_id": "11111111-1111-1111-1111-111111111111",
+    "role": "SuperAdmin",
+    "permissions": ["read:all", "write:all", "delete:all"],
+    "last_login": "2023-11-01T10:30:00Z",
+    "is_active": true
+  },
+  {
+    "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "email": "region@infoline.az",
+    "first_name": "Region",
+    "last_name": "Admin",
+    "role_id": "22222222-2222-2222-2222-222222222222",
+    "region_id": "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1",
+    "role": "RegionAdmin",
+    "permissions": ["read:region", "write:region", "read:sector", "write:sector"],
+    "last_login": "2023-11-02T14:20:00Z",
+    "is_active": true
+  },
+  {
+    "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    "email": "sector@infoline.az",
+    "first_name": "Sector",
+    "last_name": "Admin",
+    "role_id": "33333333-3333-3333-3333-333333333333",
+    "region_id": "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1",
+    "sector_id": "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3",
+    "role": "SectorAdmin",
+    "permissions": ["read:sector", "write:sector", "read:school", "write:school"],
+    "last_login": "2023-11-03T09:45:00Z",
+    "is_active": true
+  },
+  {
+    "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+    "email": "school@infoline.az",
+    "first_name": "School",
+    "last_name": "Admin",
+    "role_id": "44444444-4444-4444-4444-444444444444",
+    "region_id": "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1",
+    "sector_id": "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3",
+    "school_id": "f6f6f6f6-f6f6-f6f6-f6f6-f6f6f6f6f6f6",
+    "role": "SchoolAdmin",
+    "permissions": ["read:school", "write:school"],
+    "last_login": "2023-11-04T11:15:00Z",
+    "is_active": true
+  },
+  {
+    "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+    "email": "inactive@example.com",
+    "first_name": "Inactive",
+    "last_name": "User",
+    "role_id": "44444444-4444-4444-4444-444444444444",
+    "region_id": "b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2",
+    "sector_id": "e5e5e5e5-e5e5-e5e5-e5e5-e5e5e5e5e5e5",
+    "school_id": "h8h8h8h8-h8h8-h8h8-h8h8-h8h8h8h8h8h8",
+    "role": "SchoolAdmin",
+    "permissions": ["read:school"],
+    "last_login": "2023-10-01T08:30:00Z",
+    "is_active": false
+  }
+]

@@ -1,0 +1,58 @@
+
+[
+  {
+    "id": "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3",
+    "name": "Bakı Mərkəz",
+    "description": "Bakı mərkəz rayonu",
+    "region_id": "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1",
+    "code": "BM",
+    "school_count": 15,
+    "created_at": "2023-01-15T12:00:00Z",
+    "updated_at": "2023-05-20T14:30:00Z",
+    "status": "active"
+  },
+  {
+    "id": "d4d4d4d4-d4d4-d4d4-d4d4-d4d4d4d4d4d4",
+    "name": "Bakı Sabunçu",
+    "description": "Bakı Sabunçu rayonu",
+    "region_id": "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1",
+    "code": "BS",
+    "school_count": 12,
+    "created_at": "2023-01-16T10:15:00Z",
+    "updated_at": "2023-05-21T11:45:00Z",
+    "status": "active"
+  },
+  {
+    "id": "e5e5e5e5-e5e5-e5e5-e5e5-e5e5e5e5e5e5",
+    "name": "Sumqayıt Mərkəz",
+    "description": "Sumqayıt mərkəz rayonu",
+    "region_id": "b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2",
+    "code": "SM",
+    "school_count": 8,
+    "created_at": "2023-01-17T09:30:00Z",
+    "updated_at": "2023-05-22T16:20:00Z",
+    "status": "active"
+  },
+  {
+    "id": "f6f6f6f6-f6f6-f6f6-f6f6-f6f6f6f6f6f6",
+    "name": "Sumqayıt Şərq",
+    "description": "Sumqayıt şərq rayonu",
+    "region_id": "b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2",
+    "code": "SŞ",
+    "school_count": 6,
+    "created_at": "2023-01-18T14:45:00Z",
+    "updated_at": "2023-05-23T10:10:00Z",
+    "status": "active"
+  },
+  {
+    "id": "g7g7g7g7-g7g7-g7g7-g7g7-g7g7g7g7g7g7",
+    "name": "Gəncə Mərkəz",
+    "description": "Gəncə mərkəz rayonu",
+    "region_id": "c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3",
+    "code": "GM",
+    "school_count": 10,
+    "created_at": "2023-01-19T11:30:00Z",
+    "updated_at": "2023-05-24T13:25:00Z",
+    "status": "active"
+  }
+]

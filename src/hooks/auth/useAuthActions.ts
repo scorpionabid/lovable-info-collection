@@ -57,39 +57,49 @@ export const useAuthActions = (
       }
       
       console.log("Attempting password login for:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pwd,
-      });
-      
-      if (error) {
-        console.error('Login error:', error);
-        let errorMessage = "Giriş zamanı xəta baş verdi";
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password: pwd,
+        });
         
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = "E-poçt və ya şifrə yanlışdır";
-        } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = "E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu yoxlayın";
+        if (error) {
+          console.error('Login error:', error);
+          let errorMessage = "Giriş zamanı xəta baş verdi";
+          
+          if (error.message.includes('Invalid login credentials')) {
+            errorMessage = "E-poçt və ya şifrə yanlışdır";
+          } else if (error.message.includes('Email not confirmed')) {
+            errorMessage = "E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu yoxlayın";
+          }
+          
+          toast({
+            title: "Giriş xətası",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          
+          throw error;
         }
         
+        if (data.user) {
+          console.log("Login successful for:", data.user.email);
+          toast({
+            title: "Uğurlu giriş",
+            description: "Sistemə uğurla daxil oldunuz",
+          });
+          
+          // Redirect to dashboard after successful login
+          navigate("/dashboard");
+        }
+      } catch (authError) {
+        console.error('Supabase auth error:', authError);
         toast({
-          title: "Giriş xətası",
-          description: errorMessage,
+          title: "Şəbəkə xətası",
+          description: "Şəbəkə xətası, offline rejimə keçildi",
           variant: "destructive",
         });
-        
-        throw error;
-      }
-      
-      if (data.user) {
-        console.log("Login successful for:", data.user.email);
-        toast({
-          title: "Uğurlu giriş",
-          description: "Sistemə uğurla daxil oldunuz",
-        });
-        
-        // Redirect to dashboard after successful login
-        navigate("/");
+        throw authError;
       }
     } catch (error: any) {
       console.error('Login error:', error);
