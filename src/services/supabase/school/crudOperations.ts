@@ -24,9 +24,13 @@ export const createSchool = async (schoolData: CreateSchoolDto) => {
       address: schoolData.address,
       email: schoolData.contactEmail,
       phone: schoolData.contactPhone,
-      status: schoolData.status,
       director: schoolData.director
     };
+
+    // If status exists, include it
+    if (schoolData.status) {
+      dbData.status = schoolData.status;
+    }
 
     // Only include type_id if it exists
     if (schoolData.type) {

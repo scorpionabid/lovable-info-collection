@@ -156,7 +156,10 @@ const userService = {
   getRoles: async (): Promise<EntityOption[]> => {
     try {
       const roles = await supabaseUserService.getRoles();
-      return roles as EntityOption[];
+      return roles.map(role => ({
+        id: role.id,
+        name: role.name
+      }));
     } catch (error) {
       console.error("Error in getRoles bridge:", error);
       return [];
@@ -166,7 +169,10 @@ const userService = {
   getRegions: async (userId?: string, userRole?: string): Promise<EntityOption[]> => {
     try {
       const regions = await supabaseUserService.getRegions();
-      return regions as EntityOption[];
+      return regions.map(region => ({
+        id: region.id,
+        name: region.name
+      }));
     } catch (error) {
       console.error("Error in getRegions bridge:", error);
       return [];
@@ -176,7 +182,10 @@ const userService = {
   getSectors: async (regionId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
     try {
       const sectors = await supabaseUserService.getSectors(regionId);
-      return sectors as EntityOption[];
+      return sectors.map(sector => ({
+        id: sector.id,
+        name: sector.name
+      }));
     } catch (error) {
       console.error("Error in getSectors bridge:", error);
       return [];
@@ -186,7 +195,10 @@ const userService = {
   getSchools: async (sectorId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
     try {
       const schools = await supabaseUserService.getSchools(sectorId);
-      return schools as EntityOption[];
+      return schools.map(school => ({
+        id: school.id,
+        name: school.name
+      }));
     } catch (error) {
       console.error("Error in getSchools bridge:", error);
       return [];

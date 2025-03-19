@@ -4,6 +4,7 @@ export interface School {
   id: string;
   name: string;
   type?: string;
+  type_id?: string;
   region?: string;
   region_id?: string;
   sector?: string;
@@ -19,11 +20,15 @@ export interface School {
   address?: string;
   adminName?: string | null;
   adminId?: string | null;
-  // Add properties to match database schema
+  // Database field names
   email?: string;
   phone?: string;
   student_count?: number;
   teacher_count?: number;
+  code?: string;
+  created_at?: string;
+  updated_at?: string;
+  archived?: boolean;
 }
 
 export interface CreateSchoolDto {
@@ -31,6 +36,7 @@ export interface CreateSchoolDto {
   region_id: string;
   sector_id: string;
   type?: string;
+  type_id?: string;
   address?: string;
   studentCount?: number;
   teacherCount?: number;
@@ -38,11 +44,12 @@ export interface CreateSchoolDto {
   contactPhone?: string;
   director?: string;
   status?: string;
-  // Add missing properties
+  // Database field names
   email?: string;
   phone?: string;
   student_count?: number;
   teacher_count?: number;
+  code?: string;
 }
 
 export interface UpdateSchoolDto {
@@ -50,6 +57,7 @@ export interface UpdateSchoolDto {
   region_id?: string;
   sector_id?: string;
   type?: string;
+  type_id?: string;
   address?: string;
   studentCount?: number;
   teacherCount?: number;
@@ -57,11 +65,13 @@ export interface UpdateSchoolDto {
   contactPhone?: string;
   director?: string;
   status?: string;
-  // Add missing properties
+  // Database field names
   email?: string;
   phone?: string;
   student_count?: number;
   teacher_count?: number;
+  code?: string;
+  archived?: boolean;
 }
 
 export interface SchoolFilter {
@@ -70,7 +80,7 @@ export interface SchoolFilter {
   sectorId?: string;
   type?: string;
   status?: string;
-  // Add missing properties
+  // Min/Max completion rate for filtering
   minCompletionRate?: number;
   maxCompletionRate?: number;
 }
@@ -99,4 +109,5 @@ export interface SchoolStats {
   totalSchools: number;
   activeSchools: number;
   averageCompletionRate: number;
+  completionHistory?: any[]; // Add this to fix the type error
 }

@@ -1,47 +1,40 @@
 
-// Export core region operations
-import { 
-  createRegion, updateRegion, deleteRegion, archiveRegion,
-  createSector, updateSector, deleteSector, archiveSector
-} from './crudOperations';
+import { getRegions, getRegionById, searchRegions } from './queries';
+import { getSectorsByRegion } from './sectorQueries';
+import { createRegion, updateRegion, deleteRegion, archiveRegion, createSector, updateSector, deleteSector, archiveSector } from './crudOperations';
+import { Region, RegionWithStats, Sector, FilterParams, SortConfig, PaginationParams } from './types';
 
-// Export other region functionality
-import { getRegions, getRegionById, getRegionWithStats } from './queries';
-import { searchRegionsByName } from './search';
-import { getRegionSectors, getSectorById, getSectorsWithSchoolCounts } from './sectorQueries';
-import { FilterParams, SortConfig, RegionWithStats, Region, Sector } from './types';
+// Export type definitions
+export type { Region, RegionWithStats, Sector, FilterParams, SortConfig, PaginationParams };
 
-// Combined exports
+// Export queries and operations
 export {
-  // Core operations
-  createRegion, updateRegion, deleteRegion, archiveRegion,
-  createSector, updateSector, deleteSector, archiveSector,
-  
-  // Queries
-  getRegions, getRegionById, getRegionWithStats,
-  
-  // Search
-  searchRegionsByName,
-  
-  // Sector queries
-  getRegionSectors, getSectorById, getSectorsWithSchoolCounts
+  getRegions,
+  getRegionById,
+  searchRegions,
+  getSectorsByRegion,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  archiveRegion,
+  createSector,
+  updateSector,
+  deleteSector,
+  archiveSector
 };
 
-// Export types
-export type { FilterParams, SortConfig, RegionWithStats, Region, Sector };
-
-// Default export with all functions
+// Default export providing all region functionality
 export default {
-  // Core operations
-  createRegion, updateRegion, deleteRegion, archiveRegion,
-  createSector, updateSector, deleteSector, archiveSector,
-  
-  // Queries
-  getRegions, getRegionById, getRegionWithStats,
-  
-  // Search
-  searchRegionsByName,
-  
-  // Sector queries
-  getRegionSectors, getSectorById, getSectorsWithSchoolCounts
+  getRegions,
+  getRegionById,
+  searchRegions,
+  getSectorsByRegion,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  archiveRegion,
+  createSector,
+  updateSector,
+  deleteSector,
+  archiveSector
 };

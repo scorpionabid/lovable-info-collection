@@ -19,17 +19,21 @@ export interface Sector {
   created_at: string;
   updated_at?: string;
   archived?: boolean;
-  // Add fields needed for the UI components
+  // Add fields needed for the UI components - making them optional to avoid type conflicts
   schoolCount?: number;
   completionRate?: number;
+  // DB field names
+  schools_count?: number;
+  completion_rate?: number;
 }
 
 export interface RegionWithStats extends Region {
+  // DB field names
   sectors_count?: number;
   schools_count?: number;
   completion_rate?: number;
-  userCount?: number; // Added for UI components
-  // Alias properties for backward compatibility
+  userCount?: number;
+  // UI field names for backward compatibility
   sectorCount?: number;
   schoolCount?: number;
   completionRate?: number;
@@ -56,7 +60,7 @@ export interface PaginationParams {
   pageSize: number;
 }
 
-// Add SortParams for getRegions.ts
+// Add SortParams for getRegions
 export interface SortParams {
   column: string;
   direction: 'asc' | 'desc';
