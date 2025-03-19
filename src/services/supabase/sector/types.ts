@@ -16,6 +16,8 @@ export interface FilterParams {
   dateTo?: string;
   archived?: boolean;
   completionRate?: string;
+  // For backward compatibility
+  regionId?: string;
 }
 
 export interface SortParams {

@@ -42,6 +42,9 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
 
   const title = mode === 'create' ? 'Yeni Məktəb' : 'Məktəb Redaktəsi';
 
+  // If regionId is provided, add it to the initial data
+  const initialData = regionId ? { ...school, region_id: regionId } : school;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
@@ -50,7 +53,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
         </DialogHeader>
         <SchoolForm 
           mode={mode} 
-          initialData={school} 
+          initialData={initialData} 
           onSuccess={handleSuccess}
           onCancel={onClose}
           defaultRegionId={regionId}

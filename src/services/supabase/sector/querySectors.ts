@@ -1,3 +1,4 @@
+
 import { PostgrestError } from '@supabase/supabase-js';
 import { 
   supabase, 
@@ -25,10 +26,14 @@ const buildSectorFilters = (query: any, filters: FilterParams) => {
   // Search filter
   if (filters.searchQuery) {
     filteredQuery = filteredQuery.ilike('name', `%${filters.searchQuery}%`);
+  } else if (filters.search) {
+    filteredQuery = filteredQuery.ilike('name', `%${filters.search}%`);
   }
   
   // Region filter
-  if (filters.regionId) {
+  if (filters.region_id) {
+    filteredQuery = filteredQuery.eq('region_id', filters.region_id);
+  } else if (filters.regionId) {
     filteredQuery = filteredQuery.eq('region_id', filters.regionId);
   }
   
@@ -42,8 +47,12 @@ const buildSectorFilters = (query: any, filters: FilterParams) => {
   }
   
   // Archived filter
-  if (filters.archived) {
-    filteredQuery = filteredQuery.eq('archived', filters.archived === 'true');
+  if (filters.archived !== undefined) {
+    if (typeof filters.archived === 'string') {
+      filteredQuery = filteredQuery.eq('archived', filters.archived === 'true');
+    } else {
+      filteredQuery = filteredQuery.eq('archived', filters.archived);
+    }
   } else {
     // Default - show only non-archived
     filteredQuery = filteredQuery.eq('archived', false);
@@ -77,20 +86,20 @@ export const getSectors = async (
           id,
           name,
           region_id,
+          description,
           created_at,
+          archived,
           regions!left (id, name)
         `, { count: 'exact' });
       
-      // Sadəcə əsas filtri tətbiq edirik
-      if (filters.regionId) {
-        query = query.eq('region_id', filters.regionId);
-      }
+      // Apply all filters
+      query = buildSectorFilters(query, filters);
       
       // Sadə sıralama
       query = query.order('name', { ascending: sort.direction === 'asc' });
       
       // Səhifələmə üçün limit
-      query = query.limit(Math.min(pagination.pageSize, 5)); // Maksimum 5 nəticə qaytaraq
+      query = query.limit(Math.min(pagination.pageSize, 50)); // Maksimum 50 nəticə qaytaraq
       
       // Offset əlavə edirik
       if (pagination.page > 1) {
@@ -104,64 +113,55 @@ export const getSectors = async (
         pagination,
         sort,
         filters,
-        pageSize: Math.min(pagination.pageSize, 5)
+        pageSize: Math.min(pagination.pageSize, 50)
       });
       
       // Performans üçün sorğu başlamazdan əvvəl vaxtı qeyd edirik
       const startTime = Date.now();
       
-      // Daha sadə sorğu - təkrar cəhdsiz
-      try {
-        // Timeout-u 5 saniyəyə endiririk
-        const result = await Promise.race([
-          query,
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Local query timeout (5s)')), 5000))
-        ]);
-        
-        // Sorğu müddətini ölçürük
-        const queryTime = Date.now() - startTime;
-        sectorQueryLogger.info(`Query completed in ${queryTime}ms`);
-        
-        const { data, error, count } = result as { data: any, error: any, count: number };
-        
-        if (error) {
-          // Xəta idarəetməsini təkmilləşdirək
-          sectorQueryLogger.error('Error fetching sectors', { 
-            error, 
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined
-          });
-          // Xəta olsa da boş nəticə qaytarırıq
-          return { data: [], count: 0 };
-        }
-        
-        // Process results
-        const processedData: SectorWithStats[] = data?.map((sector: any) => {
-          // Tipə uyğun olaraq obyekti yaradırıq
-          return {
-            id: sector.id,
-            name: sector.name || 'N/A',
-            description: sector.description || '',
-            region_id: sector.region_id,
-            regionName: sector.regions?.name || 'N/A',
-            created_at: sector.created_at,
-            schoolCount: 0,
-            completionRate: 0,
-            archived: Boolean(sector.archived)
-          };
-        }) || [];
-        
-        sectorQueryLogger.info(`Successfully fetched ${processedData.length} sectors out of ${count} total`);
-        
-        return {
-          data: processedData,
-          count: count || 0
-        };
-      } catch (error) {
-        // Əgər timeout baş verərsə, boş nəticə qaytarırıq
-        sectorQueryLogger.error('Query timed out, returning empty result', { error });
+      // Execute the query
+      const { data, error, count } = await query;
+      
+      // Sorğu müddətini ölçürük
+      const queryTime = Date.now() - startTime;
+      sectorQueryLogger.info(`Query completed in ${queryTime}ms`);
+      
+      if (error) {
+        // Xəta idarəetməsini təkmilləşdirək
+        sectorQueryLogger.error('Error fetching sectors', { 
+          error, 
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        // Xəta olsa da boş nəticə qaytarırıq
         return { data: [], count: 0 };
       }
+      
+      // Process results
+      const processedData: SectorWithStats[] = data?.map((sector: any) => {
+        // Tipə uyğun olaraq obyekti yaradırıq
+        return {
+          id: sector.id,
+          name: sector.name || 'N/A',
+          description: sector.description || '',
+          region_id: sector.region_id,
+          regionName: sector.regions?.name || 'N/A',
+          created_at: sector.created_at,
+          schoolCount: 0,
+          completionRate: 0,
+          archived: Boolean(sector.archived),
+          // Backward compatibility
+          schools_count: 0,
+          completion_rate: 0
+        };
+      }) || [];
+      
+      sectorQueryLogger.info(`Successfully fetched ${processedData.length} sectors out of ${count} total`);
+      
+      return {
+        data: processedData,
+        count: count || 0
+      };
     } catch (error) {
       const errorInfo: Record<string, unknown> = {
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -262,13 +262,16 @@ export const getSectorById = async (id: string): Promise<SectorWithStats> => {
       const response: SectorWithStats = {
         id: data.id,
         name: data.name,
-        description: (data as any).description || '',
+        description: data.description || '',
         region_id: data.region_id,
         regionName: data.regions?.name || 'Unknown Region',
         created_at: data.created_at,
         schoolCount: 0,
         completionRate: 0,
-        archived: Boolean((data as any).archived)
+        archived: Boolean(data.archived),
+        // Backward compatibility
+        schools_count: 0,
+        completion_rate: 0
       };
       
       sectorQueryLogger.info(`Successfully fetched sector ${id}`);

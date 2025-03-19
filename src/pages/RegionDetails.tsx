@@ -10,20 +10,18 @@ import { Plus } from "lucide-react";
 import { SectorModal } from "@/components/sectors/SectorModal";
 import { SchoolModal } from "@/components/schools/modal/SchoolModal";
 import { getRegionById } from "@/services/supabase/region";
-import { getSectorsByRegionId } from "@/services/supabase/sector/sectorQueries";
-import { RegionWithStats } from "@/services/supabase/region/types";
-import { SectorWithStats } from "@/services/supabase/sector/types";
+import { getSectorsByRegionId } from "@/services/supabase/sector/helperFunctions";
 
 const RegionDetails = () => {
   const { id } = useParams();
-  const [region, setRegion] = useState<RegionWithStats | null>(null);
-  const [sectors, setSectors] = useState<SectorWithStats[]>([]);
+  const [region, setRegion] = useState(null);
+  const [sectors, setSectors] = useState([]);
   const [createSectorModalOpen, setCreateSectorModalOpen] = useState(false);
   const [createSchoolModalOpen, setCreateSchoolModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [sortColumn, setSortColumn] = useState("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   useEffect(() => {
     if (!id) return;
@@ -31,7 +29,7 @@ const RegionDetails = () => {
       const data = await getRegionById(id);
       if (data) {
         // Ensure all required properties exist with default values if needed
-        const regionWithDefaults: RegionWithStats = {
+        const regionWithDefaults = {
           ...data,
           sectorCount: data.sectorCount || data.sectors_count || 0,
           schoolCount: data.schoolCount || data.schools_count || 0,
@@ -53,7 +51,7 @@ const RegionDetails = () => {
   const fetchSectors = async () => {
     if (!id) return;
     const data = await getSectorsByRegionId(id);
-    setSectors(data.map((sector) => ({
+    setSectors(data.map(sector => ({
       ...sector,
       id: sector.id,
       name: sector.name,
@@ -81,7 +79,7 @@ const RegionDetails = () => {
     setCreateSchoolModalOpen(false);
   };
 
-  const handleSortChange = (column: string) => {
+  const handleSortChange = (column) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -100,14 +98,10 @@ const RegionDetails = () => {
 
   return (
     <Layout userRole="super-admin">
-      <RegionHeader 
-        region={region}
-        onEdit={() => {}}
-        onExport={() => {}}
-      />
-
+      <RegionHeader region={region} onEdit={() => {}} onExport={() => {}} />
+      
       <RegionStats region={region} />
-
+      
       <div className="md:px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="py-3 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Sektorlar</h3>
@@ -117,7 +111,7 @@ const RegionDetails = () => {
           </Button>
         </div>
       </div>
-
+      
       <SectorTable 
         sectors={sectors}
         isLoading={false}
@@ -132,23 +126,23 @@ const RegionDetails = () => {
         onRefresh={fetchSectors}
         onDataChange={fetchSectors}
       />
-
+      
       <div className="md:px-6 mt-4">
         <Button onClick={() => setCreateSchoolModalOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Yeni Məktəb
         </Button>
       </div>
-
-      <SectorModal
+      
+      <SectorModal 
         isOpen={createSectorModalOpen}
         onClose={() => setCreateSectorModalOpen(false)}
         mode="create"
         regionId={id || ''}
         onSuccess={handleSectorCreated}
       />
-
-      <SchoolModal
+      
+      <SchoolModal 
         isOpen={createSchoolModalOpen}
         onClose={() => setCreateSchoolModalOpen(false)}
         mode="create"

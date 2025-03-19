@@ -32,6 +32,10 @@ export interface SchoolFilter {
   status?: 'all' | 'active' | 'inactive';
   min_student_count?: number | string;
   max_student_count?: number | string;
+  // Backwards compatibility
+  regionId?: string;
+  sectorId?: string;
+  type?: string;
 }
 
 export interface SchoolSortParams {
@@ -59,6 +63,11 @@ export interface SchoolWithStats extends School {
   contactEmail?: string;
   contactPhone?: string;
   adminName?: string;
+  // For backward compatibility
+  studentCount?: number;
+  teacherCount?: number;
+  type_id?: string;
+  archived?: boolean;
 }
 
 export interface CreateSchoolDto {
@@ -76,6 +85,9 @@ export interface CreateSchoolDto {
   phone?: string;
   contactEmail?: string;
   contactPhone?: string;
+  // For backward compatibility
+  studentCount?: number;
+  teacherCount?: number;
 }
 
 export interface UpdateSchoolDto {
