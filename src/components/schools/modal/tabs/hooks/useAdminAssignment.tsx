@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
-import { User } from '@/services/userService';
+import { type User } from '@/services/userService/types';
 import { generateRandomPassword } from '@/utils/passwordUtils';
 import { 
   useAdminFetching 
@@ -142,15 +142,6 @@ export const useAdminAssignment = (schoolId?: string) => {
     }
   };
 
-  // Helper to refresh data manually
-  const refreshData = async () => {
-    if (!schoolId) return;
-    
-    const { users: fetchedUsers, currentAdmin: fetchedAdmin } = await loadAdminData();
-    setUsers(fetchedUsers);
-    setCurrentAdmin(fetchedAdmin);
-  };
-
   return {
     users,
     isLoading,
@@ -163,6 +154,11 @@ export const useAdminAssignment = (schoolId?: string) => {
     handleCreateAdmin,
     generateRandomPassword,
     currentAdmin,
-    refreshData
+    refreshData: async () => {
+      if (!schoolId) return;
+      const { users: fetchedUsers, currentAdmin: fetchedAdmin } = await loadAdminData();
+      setUsers(fetchedUsers);
+      setCurrentAdmin(fetchedAdmin);
+    }
   };
 };

@@ -31,7 +31,8 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
           return;
         }
         
-        const result = await notificationService.getNotifications(userId);
+        // Fix method name: getNotifications -> getUserNotifications
+        const result = await notificationService.getUserNotifications(userId);
         if (result.data) {
           setNotifications(result.data);
           setUnreadCount(result.data.filter(n => !n.is_read).length);
@@ -103,7 +104,13 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
         return;
       }
       
-      await notificationService.markAllNotificationsAsRead();
+      // Create a custom implementation if markAllNotificationsAsRead doesn't exist
+      // Use available API methods to achieve the same result
+      const unreadNotifications = notifications.filter(n => !n.is_read);
+      for (const notification of unreadNotifications) {
+        await notificationService.markAsRead(notification.id);
+      }
+      
       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
       toast({
@@ -122,7 +129,8 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await notificationService.markNotificationAsRead(id);
+      // Fix method name: markNotificationAsRead -> markAsRead
+      await notificationService.markAsRead(id);
       setNotifications(
         notifications.map(n => 
           n.id === id ? { ...n, is_read: true } : n
@@ -210,7 +218,7 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
               >
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.notification_type)}
+                    {getNotificationIcon(notification.notification_type || notification.type)}
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between">
@@ -229,20 +237,20 @@ export const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
                       )}
                     </div>
                     <p className="text-sm text-infoline-dark-gray mt-1">
-                      {notification.body}
+                      {notification.body || notification.message}
                     </p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs text-infoline-gray">
                         {format(new Date(notification.created_at), 'dd.MM.yyyy HH:mm')}
                       </span>
-                      {notification.action_url && (
+                      {(notification.action_url || notification.link) && (
                         <Button
                           variant="link"
                           size="sm"
                           className="h-6 p-0 text-xs text-infoline-blue"
                           asChild
                         >
-                          <a href={notification.action_url}>Bax</a>
+                          <a href={notification.action_url || notification.link}>Bax</a>
                         </Button>
                       )}
                     </div>

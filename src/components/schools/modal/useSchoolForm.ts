@@ -1,204 +1,221 @@
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from "sonner";
-import { schoolSchema, SchoolFormValues } from './types';
-import { createSchool, updateSchool } from "@/services/supabase/schoolService";
-import { getRegionsForDropdown } from "@/services/supabase/sector/helperFunctions";
-import { getSectorsByRegionId } from "@/services/supabase/sector/helperFunctions";
-import { getSchoolTypes } from "@/services/supabase/school/helperFunctions";
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { School, CreateSchoolDto } from '@/services/supabase/school/types';
+import { useSchoolHelpers } from './useSchoolHelpers';
 
-export const useSchoolForm = (
-  mode: 'create' | 'edit',
-  school?: any,
-  onSchoolCreated?: () => void,
-  onSchoolUpdated?: () => void,
-  onClose?: () => void
-) => {
-  const [activeTab, setActiveTab] = useState('general');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingSchoolTypes, setIsLoadingSchoolTypes] = useState(true);
-  const [isLoadingRegions, setIsLoadingRegions] = useState(true);
-  const [regions, setRegions] = useState<Array<{id: string, name: string}>>([]);
-  const [sectors, setSectors] = useState<Array<{id: string, name: string}>>([]);
-  const [schoolTypes, setSchoolTypes] = useState<Array<{id: string, name: string}>>([]);
-  
-  const form = useForm<SchoolFormValues>({
-    resolver: zodResolver(schoolSchema),
-    defaultValues: {
-      name: school?.name || '',
-      type: school?.type || '',
-      regionId: school?.region_id || '',
-      sectorId: school?.sector_id || '',
-      studentCount: school?.studentCount || 0,
-      teacherCount: school?.teacherCount || 0,
-      address: school?.address || '',
-      contactEmail: school?.contactEmail || '',
-      contactPhone: school?.contactPhone || '',
-      status: school?.status || 'Aktiv'
-    }
+export const useSchoolForm = ({ mode, school, onSchoolUpdated, onClose }: {
+  mode: 'create' | 'edit';
+  school?: School;
+  onSchoolUpdated?: () => void;
+  onClose?: () => void;
+}) => {
+  const [formData, setFormData] = useState<CreateSchoolDto>({
+    name: '',
+    type: '',
+    region_id: '',
+    sector_id: '',
+    studentCount: 0,
+    teacherCount: 0,
+    address: '',
+    contactEmail: '',
+    contactPhone: '',
+    status: 'active',
+    director: ''
   });
   
-  // Watch for region changes to load sectors
-  const watchedRegionId = form.watch('regionId');
-  
-  // Reset sector selection when region changes
+  const [isLoading, setIsLoading] = useState(false);
+  const [regions, setRegions] = useState<{ id: string; name: string; }[]>([]);
+  const [sectors, setSectors] = useState<{ id: string; name: string; }[]>([]);
+  const [types, setTypes] = useState<{ id: string; name: string; }[]>([]);
+  const { clearFormErrorsOnChange, validateForm, getErrorMessage, formErrors, setFormErrors } = useSchoolHelpers();
+  const navigate = useNavigate();
+
   useEffect(() => {
-    if (watchedRegionId) {
-      form.setValue('sectorId', '');
-    }
-  }, [watchedRegionId, form]);
-  
-  // Load school types when component mounts
-  useEffect(() => {
-    const loadSchoolTypes = async () => {
-      setIsLoadingSchoolTypes(true);
-      try {
-        const data = await getSchoolTypes();
-        console.log('Loaded school types:', data);
-        setSchoolTypes(data);
-      } catch (error) {
-        console.error('Error loading school types:', error);
-        toast.error("Məktəb növləri yüklənərkən xəta baş verdi", {
-          description: "Zəhmət olmasa yenidən cəhd edin"
-        });
-      } finally {
-        setIsLoadingSchoolTypes(false);
-      }
-    };
-    
-    loadSchoolTypes();
-  }, []);
-  
-  // Load regions when component mounts
-  useEffect(() => {
-    const loadRegions = async () => {
-      setIsLoadingRegions(true);
-      try {
-        const data = await getRegionsForDropdown();
-        setRegions(data);
-      } catch (error) {
-        console.error('Error loading regions:', error);
-        toast.error("Regionlar yüklənərkən xəta baş verdi", {
-          description: "Zəhmət olmasa yenidən cəhd edin"
-        });
-      } finally {
-        setIsLoadingRegions(false);
-      }
-    };
-    
-    loadRegions();
-  }, []);
-  
-  // Load sectors when a region is selected
-  useEffect(() => {
-    const loadSectors = async () => {
-      if (!watchedRegionId) {
-        setSectors([]);
-        return;
-      }
-      
-      try {
-        const sectorData = await getSectorsByRegionId(watchedRegionId);
-        setSectors(sectorData);
-      } catch (error) {
-        console.error('Error loading sectors:', error);
-        toast.error("Sektorlar yüklənərkən xəta baş verdi", {
-          description: "Zəhmət olmasa yenidən cəhd edin"
-        });
-      }
-    };
-    
-    loadSectors();
-  }, [watchedRegionId]);
-  
-  const onSubmit = async (data: SchoolFormValues) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Validate that we have valid UUIDs for required fields
-      if (!data.regionId || !data.sectorId) {
-        toast.error("Məcburi sahələri doldurun", {
-          description: "Region və sektor seçilməlidir"
-        });
-        return;
-      }
-      
-      // Log the form data for debugging
-      console.log('Form data before submission:', data);
-      
-      if (mode === 'create') {
-        // Create the school with properly formatted data
-        await createSchool({
-          name: data.name,
-          type: data.type, // Now optional
-          region_id: data.regionId,
-          sector_id: data.sectorId,
-          region: '', // These will be filled by the backend
-          sector: '', // These will be filled by the backend
-          studentCount: data.studentCount || 0,
-          teacherCount: data.teacherCount || 0,
-          address: data.address,
-          contactEmail: data.contactEmail || '',
-          contactPhone: data.contactPhone || '',
-          status: data.status || 'Aktiv'
-        });
-        
-        toast.success("Məktəb uğurla yaradıldı");
-        
-        if (onSchoolCreated) {
-          onSchoolCreated();
-        }
-      } else {
-        if (school?.id) {
-          // Update the school with properly formatted data
-          await updateSchool(school.id, {
-            name: data.name,
-            type: data.type,
-            region_id: data.regionId,
-            sector_id: data.sectorId,
-            studentCount: data.studentCount || 0,
-            teacherCount: data.teacherCount || 0,
-            address: data.address,
-            contactEmail: data.contactEmail || '',
-            contactPhone: data.contactPhone || '',
-            status: data.status || 'Aktiv'
-          });
-          
-          toast.success("Məktəb uğurla yeniləndi");
-          
-          if (onSchoolUpdated) {
-            onSchoolUpdated();
-          }
-        }
-      }
-      
-      if (onClose) {
-        onClose();
-      }
-      
-    } catch (error) {
-      console.error('Error submitting school:', error);
-      toast.error("Məktəb məlumatları yadda saxlanılmadı", {
-        description: "Xəta baş verdi. Zəhmət olmasa yenidən cəhd edin."
+    // If editing, populate the form with existing data
+    if (mode === 'edit' && school) {
+      setFormData({
+        name: school.name,
+        type: school.type || '',
+        region_id: school.region_id,
+        sector_id: school.sector_id || '',
+        studentCount: school.studentCount,
+        teacherCount: school.teacherCount,
+        address: school.address || '',
+        contactEmail: school.contactEmail,
+        contactPhone: school.contactPhone,
+        status: school.status,
+        director: school.director || ''
       });
+    }
+    
+    // Fetch lookup data
+    const fetchLookupData = async () => {
+      try {
+        // Fetch regions
+        const { data: regionsData } = await supabase
+          .from('regions')
+          .select('id, name')
+          .order('name');
+        
+        if (regionsData) {
+          setRegions(regionsData);
+        }
+        
+        // Fetch school types
+        const { data: typesData } = await supabase
+          .from('school_types')
+          .select('id, name')
+          .order('name');
+        
+        if (typesData) {
+          setTypes(typesData.map(type => ({
+            id: type.id,
+            name: type.name
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching lookup data', error);
+        toast.error('Məlumatlar yüklənərkən xəta baş verdi');
+      }
+    };
+    
+    fetchLookupData();
+  }, [mode, school]);
+  
+  // Fetch sectors when region changes
+  useEffect(() => {
+    if (!formData.region_id) {
+      setSectors([]);
+      return;
+    }
+    
+    const fetchSectors = async () => {
+      try {
+        const { data } = await supabase
+          .from('sectors')
+          .select('id, name')
+          .eq('region_id', formData.region_id)
+          .order('name');
+        
+        // Add a null check before setting state
+        if (data) {
+          setSectors(data.map(sector => ({
+            id: sector.id,
+            name: sector.name
+          })));
+        } else {
+          setSectors([]);
+        }
+      } catch (error) {
+        console.error('Error fetching sectors', error);
+        setSectors([]);
+      }
+    };
+    
+    fetchSectors();
+  }, [formData.region_id]);
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    // Convert numeric values to numbers
+    const val = type === 'number' ? (value ? parseInt(value, 10) : 0) : value;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: val
+    }));
+    
+    // Clear errors for this field when it changes
+    clearFormErrorsOnChange(name);
+  };
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Validate form data
+    if (!validateForm(formData)) {
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      if (mode === 'create') {
+        // Create new school
+        const { data, error } = await supabase
+          .from('schools')
+          .insert({
+            name: formData.name,
+            type_id: formData.type,
+            region_id: formData.region_id,
+            sector_id: formData.sector_id || null,
+            student_count: formData.studentCount,
+            teacher_count: formData.teacherCount,
+            address: formData.address,
+            contact_email: formData.contactEmail,
+            contact_phone: formData.contactPhone,
+            status: formData.status,
+            director: formData.director
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        
+        toast.success('Məktəb uğurla yaradıldı');
+        navigate(`/schools/${data.id}`);
+      } else if (mode === 'edit' && school) {
+        // Update existing school
+        const { error } = await supabase
+          .from('schools')
+          .update({
+            name: formData.name,
+            type_id: formData.type,
+            region_id: formData.region_id,
+            sector_id: formData.sector_id || null,
+            student_count: formData.studentCount,
+            teacher_count: formData.teacherCount,
+            address: formData.address,
+            contact_email: formData.contactEmail,
+            contact_phone: formData.contactPhone,
+            status: formData.status,
+            director: formData.director
+          })
+          .eq('id', school.id);
+          
+        if (error) throw error;
+        
+        toast.success('Məktəb məlumatları uğurla yeniləndi');
+        
+        if (onSchoolUpdated) {
+          onSchoolUpdated();
+        }
+        
+        if (onClose) {
+          onClose();
+        }
+      }
+    } catch (error) {
+      console.error('Error saving school:', error);
+      toast.error('Məktəb məlumatları saxlanılmadı');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
-
+  
   return {
-    form,
-    activeTab,
-    setActiveTab,
-    isSubmitting,
-    isLoadingSchoolTypes,
-    isLoadingRegions,
+    formData,
+    handleChange,
+    handleSubmit,
+    isLoading,
     regions,
     sectors,
-    schoolTypes,
-    watchedRegionId,
-    onSubmit
+    types,
+    formErrors,
+    getErrorMessage
   };
 };

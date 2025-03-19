@@ -1,3 +1,4 @@
+
 /**
  * Xidmət ixracları
  */
@@ -6,7 +7,7 @@
 export { default as authService } from './authService';
 export { default as dataService } from './dataService';
 export { default as categoryService } from './categoryService';
-export { default as userService } from './userService';
+export { default as userService } from './userService-bridge';
 export { default as regionService } from './regionService';
 export { default as notificationService } from './notificationService';
 export { default as auditLogService } from './auditLogService';
