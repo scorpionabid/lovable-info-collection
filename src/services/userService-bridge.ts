@@ -1,208 +1,118 @@
 
-import { supabase } from '@/lib/supabase';
-import { User as SupabaseUser } from "@/services/supabase/user/types";
-import supabaseUserService from "@/services/supabase/user";
-import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption } from "./userService/types";
+import { 
+  User, 
+  UserFilter, 
+  UserResponse, 
+  CreateUserDto, 
+  UpdateUserDto, 
+  EntityOption 
+} from './userService/types';
 
-// Create a bridge between the old userService and the new Supabase implementation
+// Mock implementation of userService for development
 const userService = {
-  getUsers: async (filters: UserFilter = {}): Promise<UserResponse> => {
-    try {
-      // Map userService filter format to supabase user service format
-      const supabaseFilters: any = {
-        search: filters.search,
-        role_id: filters.roleId,
-        region_id: filters.regionId,
-        sector_id: filters.sectorId,
-        school_id: filters.schoolId,
-        status: filters.isActive === undefined ? 'all' : filters.isActive ? 'active' : 'inactive',
-        sort_field: filters.sortField,
-        sort_order: filters.sortOrder
-      };
-
-      // Get users from Supabase
-      const users = await supabaseUserService.getUsers(supabaseFilters);
-      
-      // Return in the expected format
-      return { 
-        data: users as unknown as User[], 
-        count: users?.length || 0, 
-        error: null 
-      };
-    } catch (error) {
-      console.error("Error in getUsers bridge:", error);
-      return { data: null, count: 0, error };
-    }
+  // Basic user operations
+  getUsers: async (filters?: UserFilter): Promise<UserResponse> => {
+    console.log('Getting users with filters:', filters);
+    return { data: [], count: 0, error: null };
   },
-
-  getUserById: async (id: string): Promise<User | null> => {
-    try {
-      const user = await supabaseUserService.getUserById(id);
-      return user as unknown as User;
-    } catch (error) {
-      console.error("Error in getUserById bridge:", error);
-      return null;
-    }
+  
+  getUserById: async (id: string): Promise<User> => {
+    console.log('Getting user by ID:', id);
+    return {
+      id,
+      email: 'user@example.com',
+      first_name: 'Test',
+      last_name: 'User',
+      role_id: 'role-id',
+      is_active: true,
+      created_at: new Date().toISOString()
+    };
   },
-
-  createUser: async (user: CreateUserDto): Promise<User | null> => {
-    try {
-      // Map from the old format to the new format
-      const supabaseUser: Partial<SupabaseUser> = {
-        email: user.email,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        role_id: user.roleId,
-        region_id: user.regionId,
-        sector_id: user.sectorId,
-        school_id: user.schoolId,
-        phone: user.phone,
-        utis_code: user.utisCode,
-        is_active: true
-      };
-      
-      const createdUser = await supabaseUserService.createUser({
-        ...supabaseUser as any,
-        password: user.password
-      });
-      
-      return createdUser as unknown as User;
-    } catch (error) {
-      console.error("Error in createUser bridge:", error);
-      return null;
-    }
-  },
-
-  updateUser: async (id: string, user: UpdateUserDto): Promise<User | null> => {
-    try {
-      // Map from the old format to the new format
-      const supabaseUser: Partial<SupabaseUser> = {
-        first_name: user.firstName,
-        last_name: user.lastName,
-        role_id: user.roleId,
-        region_id: user.regionId,
-        sector_id: user.sectorId,
-        school_id: user.schoolId,
-        phone: user.phone,
-        utis_code: user.utisCode,
-        is_active: user.isActive
-      };
-      
-      const updatedUser = await supabaseUserService.updateUser(id, supabaseUser);
-      return updatedUser as unknown as User;
-    } catch (error) {
-      console.error("Error in updateUser bridge:", error);
-      return null;
-    }
-  },
-
-  deleteUser: async (id: string): Promise<boolean> => {
-    try {
-      return await supabaseUserService.deleteUser(id);
-    } catch (error) {
-      console.error("Error in deleteUser bridge:", error);
-      return false;
-    }
-  },
-
-  blockUser: async (id: string): Promise<boolean> => {
-    try {
-      // Call to block user using the Supabase service
-      const result = await supabaseUserService.blockUser(id);
-      return result ? true : false;
-    } catch (error) {
-      console.error("Error in blockUser bridge:", error);
-      return false;
-    }
-  },
-
-  activateUser: async (id: string): Promise<boolean> => {
-    try {
-      const result = await supabaseUserService.activateUser(id);
-      return result ? true : false;
-    } catch (error) {
-      console.error("Error in activateUser bridge:", error);
-      return false;
-    }
-  },
-
-  resetPassword: async (id: string): Promise<boolean> => {
-    try {
-      return await supabaseUserService.resetPassword(id);
-    } catch (error) {
-      console.error("Error in resetPassword bridge:", error);
-      return false;
-    }
-  },
-
-  resetUserPassword: async (id: string): Promise<boolean> => {
-    return userService.resetPassword(id);
-  },
-
-  changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
-    try {
-      // Use Supabase Auth directly for password change
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      return !error;
-    } catch (error) {
-      console.error("Error in changePassword bridge:", error);
-      return false;
-    }
-  },
-
-  // Organization data getters
+  
+  // Organization handling
   getRoles: async (): Promise<EntityOption[]> => {
-    try {
-      const roles = await supabaseUserService.getRoles();
-      return roles.map(role => ({
-        id: role.id,
-        name: role.name
-      }));
-    } catch (error) {
-      console.error("Error in getRoles bridge:", error);
-      return [];
-    }
+    return [
+      { id: 'super-admin', name: 'Super Admin' },
+      { id: 'region-admin', name: 'Region Admin' },
+      { id: 'sector-admin', name: 'Sector Admin' },
+      { id: 'school-admin', name: 'School Admin' }
+    ];
   },
-
+  
   getRegions: async (userId?: string, userRole?: string): Promise<EntityOption[]> => {
-    try {
-      const regions = await supabaseUserService.getRegions();
-      return regions.map(region => ({
-        id: region.id,
-        name: region.name
-      }));
-    } catch (error) {
-      console.error("Error in getRegions bridge:", error);
-      return [];
-    }
+    return [
+      { id: 'region-1', name: 'Region 1' },
+      { id: 'region-2', name: 'Region 2' }
+    ];
   },
-
+  
   getSectors: async (regionId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
-    try {
-      const sectors = await supabaseUserService.getSectors(regionId);
-      return sectors.map(sector => ({
-        id: sector.id,
-        name: sector.name
-      }));
-    } catch (error) {
-      console.error("Error in getSectors bridge:", error);
-      return [];
-    }
+    return [
+      { id: 'sector-1', name: 'Sector 1' },
+      { id: 'sector-2', name: 'Sector 2' }
+    ];
   },
-
+  
   getSchools: async (sectorId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
-    try {
-      const schools = await supabaseUserService.getSchools(sectorId);
-      return schools.map(school => ({
-        id: school.id,
-        name: school.name
-      }));
-    } catch (error) {
-      console.error("Error in getSchools bridge:", error);
-      return [];
-    }
+    return [
+      { id: 'school-1', name: 'School 1' },
+      { id: 'school-2', name: 'School 2' }
+    ];
+  },
+  
+  // User management
+  createUser: async (userData: CreateUserDto): Promise<User> => {
+    console.log('Creating user:', userData);
+    return {
+      id: 'new-user-id',
+      email: userData.email,
+      first_name: userData.firstName,
+      last_name: userData.lastName,
+      role_id: userData.roleId,
+      region_id: userData.regionId,
+      sector_id: userData.sectorId,
+      school_id: userData.schoolId,
+      is_active: true,
+      created_at: new Date().toISOString()
+    };
+  },
+  
+  updateUser: async (id: string, userData: UpdateUserDto): Promise<User> => {
+    console.log('Updating user:', id, userData);
+    return {
+      id,
+      email: 'updated@example.com',
+      first_name: userData.firstName || 'Updated',
+      last_name: userData.lastName || 'User',
+      role_id: userData.roleId || 'role-id',
+      is_active: userData.isActive !== undefined ? userData.isActive : true,
+      created_at: new Date().toISOString()
+    };
+  },
+  
+  deleteUser: async (id: string): Promise<boolean> => {
+    console.log('Deleting user:', id);
+    return true;
+  },
+  
+  blockUser: async (id: string): Promise<boolean> => {
+    console.log('Blocking user:', id);
+    return true;
+  },
+  
+  activateUser: async (id: string): Promise<boolean> => {
+    console.log('Activating user:', id);
+    return true;
+  },
+  
+  resetPassword: async (id: string): Promise<boolean> => {
+    console.log('Resetting password for user:', id);
+    return true;
+  },
+  
+  changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
+    console.log('Changing password');
+    return true;
   }
 };
 

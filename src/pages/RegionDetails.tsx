@@ -19,9 +19,9 @@ import { RegionWithStats, Sector } from "@/services/supabase/region/types";
 import { School } from "@/services/supabase/school/types";
 
 export default function RegionDetails() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const [region, setRegion] = useState<RegionWithStats | null>(null);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [sectors, setSectors] = useState<SectorWithStats[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
@@ -29,12 +29,11 @@ export default function RegionDetails() {
   // Modals
   const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
   const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
-  
+
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
-      
       setIsLoading(true);
       try {
         // Fetch region details
@@ -46,11 +45,14 @@ export default function RegionDetails() {
           const sectorsData = await getSectorsByRegion(id);
           if (sectorsData) {
             // Add UI fields for compatibility
-            const processedSectors = sectorsData.map(sector => ({
-              ...sector,
-              schoolCount: sector.schools_count,
-              completionRate: sector.completion_rate
-            }));
+            const processedSectors = sectorsData.map((sector) => {
+              return {
+                ...sector,
+                schoolCount: sector.schools_count,
+                completionRate: sector.completion_rate,
+                regionName: sector.region?.name || 'Unknown'
+              } as SectorWithStats;
+            });
             setSectors(processedSectors);
           }
           
@@ -66,7 +68,7 @@ export default function RegionDetails() {
         setIsLoading(false);
       }
     };
-
+    
     fetchData();
   }, [id]);
 
@@ -134,18 +136,18 @@ export default function RegionDetails() {
       </div>
 
       <RegionStats region={region} />
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sectors">Sectors</TabsTrigger>
           <TabsTrigger value="schools">Schools</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview" className="mt-6">
           <RegionCharts region={region} />
         </TabsContent>
-        
+
         <TabsContent value="sectors" className="mt-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Sectors in {region.name}</h2>
@@ -154,9 +156,14 @@ export default function RegionDetails() {
               Add Sector
             </Button>
           </div>
-          <SectorTable sectors={sectors} regionId={id} onDataChange={handleDataChange} />
+          
+          <SectorTable 
+            sectors={sectors} 
+            regionId={id || ''} 
+            onDataChange={handleDataChange} 
+          />
         </TabsContent>
-        
+
         <TabsContent value="schools" className="mt-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Schools in {region.name}</h2>
@@ -165,26 +172,33 @@ export default function RegionDetails() {
               Add School
             </Button>
           </div>
-          <SchoolTable schools={schools} />
+          
+          <SchoolTable 
+            schools={schools} 
+            isLoading={false}
+            onEditSchool={() => {}}
+            onDeleteSchool={() => {}}
+            onDataChange={handleDataChange} 
+          />
         </TabsContent>
       </Tabs>
-      
-      {/* Modals */}
+
       {isSectorModalOpen && (
-        <SectorModal 
+        <SectorModal
           isOpen={isSectorModalOpen}
           onClose={() => setIsSectorModalOpen(false)}
           mode="create"
-          onSectorCreated={handleDataChange}
+          region={region}
+          onSuccess={handleDataChange}
         />
       )}
-      
+
       {isSchoolModalOpen && (
-        <SchoolModal 
+        <SchoolModal
           isOpen={isSchoolModalOpen}
           onClose={() => setIsSchoolModalOpen(false)}
           mode="create"
-          onSchoolCreated={handleDataChange}
+          onSuccess={handleDataChange}
         />
       )}
     </div>

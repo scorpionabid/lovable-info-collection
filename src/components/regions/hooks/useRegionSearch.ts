@@ -14,7 +14,7 @@ export const useRegionSearch = () => {
       if (debouncedSearchTerm) {
         setIsSearching(true);
         try {
-          const results = await regionService.searchRegionsByName(debouncedSearchTerm);
+          const results = await regionService.searchRegions(debouncedSearchTerm);
           setSearchResults(results);
         } catch (error) {
           console.error('Error searching regions:', error);

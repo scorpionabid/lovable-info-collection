@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getSchoolTypes } from '@/services/supabase/school/helperFunctions';
+import { SchoolDatabaseRow } from '@/services/supabase/school/types';
 
 // Define the form schema
 const schoolFormSchema = z.object({
@@ -74,25 +75,26 @@ export const useSchoolForm = (schoolId?: string, onSuccess?: () => void) => {
             if (error) throw error;
 
             if (school) {
+              const schoolData = school as SchoolDatabaseRow;
               // Set form values with optional fields handled safely
               form.reset({
-                name: school.name || '',
-                sector_id: school.sector_id || '',
-                region_id: school.region_id || '',
-                type_id: school.type_id || '',
-                code: school.code || '',
-                address: school.address || '',
-                email: school.email || '',
-                phone: school.phone || '',
-                director: school.director || '',
-                student_count: school.student_count || 0,
-                teacher_count: school.teacher_count || 0,
-                status: school.status || 'Aktiv',
+                name: schoolData.name || '',
+                sector_id: schoolData.sector_id || '',
+                region_id: schoolData.region_id || '',
+                type_id: schoolData.type_id || '',
+                code: schoolData.code || '',
+                address: schoolData.address || '',
+                email: schoolData.email || '',
+                phone: schoolData.phone || '',
+                director: schoolData.director || '',
+                student_count: schoolData.student_count || 0,
+                teacher_count: schoolData.teacher_count || 0,
+                status: schoolData.status || 'Aktiv',
               });
 
               // Set the selected region to load sectors
-              if (school.region_id) {
-                setSelectedRegion(school.region_id);
+              if (schoolData.region_id) {
+                setSelectedRegion(schoolData.region_id);
               }
             }
           } catch (fetchError) {

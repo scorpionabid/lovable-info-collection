@@ -31,6 +31,24 @@ export interface School {
   archived?: boolean;
 }
 
+export interface SchoolDatabaseRow {
+  id: string;
+  name: string;
+  region_id?: string;
+  sector_id: string;
+  type_id?: string;
+  address?: string;
+  email?: string;
+  phone?: string;
+  director?: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  code?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
 export interface CreateSchoolDto {
   name: string;
   region_id: string;

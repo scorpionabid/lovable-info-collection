@@ -1,58 +1,57 @@
 
-// Define types for the region module
+// Region types
 export interface Region {
   id: string;
   name: string;
   code?: string;
-  description?: string;
-  created_at: string;
+  created_at?: string;
   updated_at?: string;
-  archived?: boolean;
-}
-
-export interface Sector {
-  id: string;
-  name: string;
-  code?: string;
-  description?: string;
-  region_id: string;
-  created_at: string;
-  updated_at?: string;
-  archived?: boolean;
-  // Add fields needed for the UI components - making them optional to avoid type conflicts
-  schoolCount?: number;
-  completionRate?: number;
-  // DB field names
-  schools_count?: number;
-  completion_rate?: number;
 }
 
 export interface RegionWithStats extends Region {
-  // DB field names
-  sectors_count?: number;
-  schools_count?: number;
-  completion_rate?: number;
-  userCount?: number;
-  // UI field names for backward compatibility
+  sectors_count: number;
+  schools_count: number;
+  completion_rate: number;
+  // Backward compatibility for old components
   sectorCount?: number;
   schoolCount?: number;
   completionRate?: number;
 }
 
-export interface FilterParams {
-  name?: string;
+export interface Sector {
+  id: string;
+  name: string;
+  region_id: string;
   code?: string;
-  status?: 'active' | 'archived';
-  // Add additional filter params needed by components
+  region?: {
+    id: string;
+    name: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+  schools?: any[];
+  schools_count?: number;
+  completion_rate?: number;
+  // Backward compatibility for old components
+  schoolCount?: number;
+  completionRate?: number;
+  regionName?: string;
+}
+
+export interface SectorWithStats extends Sector {
+  schools_count: number;
+  completion_rate: number;
+  regionName: string;
+  // Backward compatibility for old components
+  schoolCount?: number;
+  completionRate?: number;
+}
+
+export interface FilterParams {
   searchQuery?: string;
   dateFrom?: string;
   dateTo?: string;
-  completionRate?: string;
-}
-
-export interface SortConfig {
-  column: string;
-  direction: 'asc' | 'desc';
+  completionRate?: 'all' | 'high' | 'medium' | 'low';
 }
 
 export interface PaginationParams {
@@ -60,8 +59,7 @@ export interface PaginationParams {
   pageSize: number;
 }
 
-// Add SortParams for getRegions
-export interface SortParams {
-  column: string;
+export interface SortConfig {
+  field: string;
   direction: 'asc' | 'desc';
 }
