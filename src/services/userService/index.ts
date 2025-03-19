@@ -1,6 +1,4 @@
 
-import { EntityOption } from './types';
-
 // Export the User interface from userService
 export interface User {
   id: string;
@@ -33,7 +31,7 @@ export * from './types';
 // Create mock API functions for development
 const userService = {
   // User management
-  getUsers: async () => {
+  getUsers: async (filters?: any) => {
     console.log('Mock: fetching users');
     return { data: [], count: 0, error: null };
   },
@@ -73,13 +71,19 @@ const userService = {
     return true;
   },
   
+  resetUserPassword: async (id: string, newPassword: string) => {
+    console.log(`Mock: resetting password for user ${id}`);
+    return true;
+  },
+  
   changePassword: async (oldPassword: string, newPassword: string) => {
     console.log('Mock: changing password');
     return true;
   },
   
   // Organization data methods
-  getRoles: async (currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
+  getRoles: async (currentUserId?: string, currentUserRole?: string) => {
+    console.log('Mock: fetching roles');
     return [
       { id: 'super_admin', name: 'Super Admin' },
       { id: 'region_admin', name: 'Region Admin' },
@@ -88,7 +92,8 @@ const userService = {
     ];
   },
 
-  getRegions: async (currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
+  getRegions: async (currentUserId?: string, currentUserRole?: string) => {
+    console.log('Mock: fetching regions');
     return [
       { id: '1', name: 'Bakı' },
       { id: '2', name: 'Sumqayıt' },
@@ -96,8 +101,8 @@ const userService = {
     ];
   },
 
-  getSectors: async (regionId?: string, currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
-    console.log(`Fetching sectors for region ID: ${regionId}`);
+  getSectors: async (regionId?: string, currentUserId?: string, currentUserRole?: string) => {
+    console.log(`Mock: fetching sectors for region ID: ${regionId}`);
     return [
       { id: '1', name: 'Sektor 1' },
       { id: '2', name: 'Sektor 2' },
@@ -105,8 +110,8 @@ const userService = {
     ];
   },
 
-  getSchools: async (sectorId?: string, currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
-    console.log(`Fetching schools for sector ID: ${sectorId}`);
+  getSchools: async (sectorId?: string, currentUserId?: string, currentUserRole?: string) => {
+    console.log(`Mock: fetching schools for sector ID: ${sectorId}`);
     return [
       { id: '1', name: 'Məktəb 1' },
       { id: '2', name: 'Məktəb 2' },

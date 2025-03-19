@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { School } from "@/services/supabase/school/types";
+import { type UseFormReturn } from "react-hook-form";
 
 // Define the form schema
 export const schoolFormSchema = z.object({
@@ -33,7 +34,7 @@ export interface SchoolFormProps {
   onCancel: () => void;
   defaultRegionId?: string;
   defaultSectorId?: string;
-  form?: any;
+  form: UseFormReturn<SchoolFormValues>;
   isSubmitting?: boolean;
   errorMessage?: string | null;
   regions?: { id: string; name: string }[];
@@ -41,6 +42,7 @@ export interface SchoolFormProps {
   schoolTypes?: { id: string; name: string }[];
   onRegionChange?: (regionId: string) => void;
   handleSubmit?: (values: SchoolFormValues) => Promise<void>;
+  onSubmit: (values: SchoolFormValues) => Promise<void>;
 }
 
 export const SchoolForm = ({
@@ -49,47 +51,15 @@ export const SchoolForm = ({
   onCancel,
   defaultRegionId,
   defaultSectorId,
-  form: externalForm,
-  isSubmitting,
+  form,
+  isSubmitting = false,
   errorMessage,
   regions = [],
   sectors = [],
   schoolTypes = [],
   onRegionChange,
-  handleSubmit: externalSubmit
+  onSubmit
 }: SchoolFormProps) => {
-  // Create a local form if none is provided
-  const internalForm = useForm<SchoolFormValues>({
-    resolver: zodResolver(schoolFormSchema),
-    defaultValues: {
-      name: initialData?.name || "",
-      sector_id: initialData?.sector_id || defaultSectorId || "",
-      region_id: initialData?.region_id || defaultRegionId || "",
-      type_id: initialData?.type_id || "",
-      code: initialData?.code || "",
-      address: initialData?.address || "",
-      email: initialData?.email || initialData?.contactEmail || "",
-      status: initialData?.status || "Aktiv",
-      phone: initialData?.phone || initialData?.contactPhone || "",
-      director: initialData?.director || "",
-      student_count: initialData?.student_count || initialData?.studentCount || 0,
-      teacher_count: initialData?.teacher_count || initialData?.teacherCount || 0,
-    }
-  });
-
-  // Use either the provided form or the internal one
-  const form = externalForm || internalForm;
-
-  // Create a local submit function if none is provided
-  const localSubmit = async (values: SchoolFormValues) => {
-    // In a real implementation, this would save to the database
-    console.log("Submitting form with values:", values);
-    // Would typically make an API call here
-  };
-
-  // Use either the provided submit function or the local one
-  const onSubmit = externalSubmit || localSubmit;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

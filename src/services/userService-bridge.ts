@@ -24,11 +24,11 @@ export interface EntityOption {
   name: string;
 }
 
-// Enhanced userService with missing methods
+// Enhanced userService with any missing methods
 const enhancedUserService = {
   ...userService,
   
-  // Add missing methods to fix type errors
+  // User management methods
   deleteUser: async (userId: string): Promise<boolean> => {
     console.log(`Deleting user with ID: ${userId}`);
     return userService.deleteUser(userId);
