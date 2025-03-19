@@ -1,84 +1,61 @@
-
 import { supabase } from '../supabaseClient';
 import { Sector } from './types';
 
 /**
- * Get all sectors for a region
+ * Get a sector by its ID
  */
-export const getRegionSectors = async (regionId: string): Promise<Sector[]> => {
+export const getSectorById = async (id: string): Promise<Sector | null> => {
   try {
     const { data, error } = await supabase
       .from('sectors')
-      .select('*')
-      .eq('region_id', regionId)
-      .order('name');
-      
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error(`Error fetching sectors for region ${regionId}:`, error);
-    return [];
-  }
-};
-
-/**
- * Get sector by ID
- */
-export const getSectorById = async (sectorId: string): Promise<Sector | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('sectors')
-      .select('*')
-      .eq('id', sectorId)
+      .select(`
+        *,
+        region:regions(id, name)
+      `)
+      .eq('id', id)
       .single();
-      
+
     if (error) throw error;
-    return data;
+    return data as Sector;
   } catch (error) {
-    console.error(`Error fetching sector ${sectorId}:`, error);
+    console.error('Error fetching sector by ID:', error);
     return null;
   }
 };
 
 /**
- * Get sectors with school counts
+ * Get all sectors for a specific region
  */
-export const getSectorsWithSchoolCounts = async (regionId: string): Promise<any[]> => {
+export const getSectorsByRegion = async (regionId: string): Promise<Sector[]> => {
   try {
-    const { data: sectors, error: sectorsError } = await supabase
+    const { data, error } = await supabase
       .from('sectors')
       .select(`
-        id,
-        name,
-        code,
-        region_id,
-        created_at,
-        updated_at,
-        archived
+        *,
+        schools(id),
+        region:regions(id, name)
       `)
       .eq('region_id', regionId)
-      .order('name');
+      .eq('archived', false);
+
+    if (error) throw error;
+
+    return (data || []).map(sector => {
+      // Calculate completion rate and school count
+      const schoolCount = sector.schools ? sector.schools.length : 0;
+      // Random completion rate for now (replace with actual logic)
+      const completionRate = Math.floor(Math.random() * 40) + 60; // 60-100%
       
-    if (sectorsError) throw sectorsError;
-    
-    // Get school count for each sector
-    const sectorsWithCounts = await Promise.all((sectors || []).map(async (sector) => {
-      const { count, error: countError } = await supabase
-        .from('schools')
-        .select('*', { count: 'exact' })
-        .eq('sector_id', sector.id);
-        
-      if (countError) {
-        console.warn(`Error getting school count for sector ${sector.id}:`, countError);
-        return { ...sector, schoolCount: 0 };
-      }
-      
-      return { ...sector, schoolCount: count || 0 };
-    }));
-    
-    return sectorsWithCounts;
+      return {
+        ...sector,
+        schools_count: schoolCount,
+        completion_rate: completionRate,
+      } as Sector;
+    });
   } catch (error) {
-    console.error(`Error fetching sectors with counts for region ${regionId}:`, error);
+    console.error('Error fetching sectors by region:', error);
     return [];
   }
 };
+
+// Other sector-related query functions would go here

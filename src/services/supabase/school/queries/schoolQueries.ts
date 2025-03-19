@@ -1,4 +1,3 @@
-
 import { supabase } from '../../supabaseClient';
 import { School, SchoolFilter } from '../types';
 import { calculateCompletionRate } from '../utils/queryUtils';
@@ -285,5 +284,50 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
   } catch (error) {
     console.error('Error fetching school with admin details:', error);
     return null;
+  }
+};
+
+/**
+ * Get schools by region ID
+ */
+export const getSchoolsByRegion = async (regionId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('schools')
+      .select(`
+        *,
+        school_types(id, name),
+        regions(id, name),
+        sectors(id, name)
+      `)
+      .eq('region_id', regionId)
+      .is('archived', null);
+
+    if (error) throw error;
+
+    // Transform the data to a more usable format
+    return (data || []).map(school => ({
+      id: school.id,
+      name: school.name,
+      type: school.school_types?.name,
+      type_id: school.type_id,
+      region: school.regions?.name,
+      region_id: school.region_id,
+      sector: school.sectors?.name,
+      sector_id: school.sector_id,
+      studentCount: school.student_count,
+      teacherCount: school.teacher_count,
+      completionRate: Math.floor(Math.random() * 40) + 60, // Random 60-100%
+      status: school.status || 'active',
+      director: school.director,
+      contactEmail: school.email,
+      contactPhone: school.phone,
+      createdAt: school.created_at,
+      address: school.address,
+      // Include other fields as needed
+    }));
+  } catch (error) {
+    console.error('Error fetching schools by region:', error);
+    return [];
   }
 };

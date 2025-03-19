@@ -1,5 +1,6 @@
 
-import { getRegions, getRegionById, searchRegions } from './queries';
+import { getRegions, getRegionById } from './queries';
+import { searchRegions } from './search';
 import { getSectorsByRegion } from './sectorQueries';
 import { createRegion, updateRegion, deleteRegion, archiveRegion, createSector, updateSector, deleteSector, archiveSector } from './crudOperations';
 import { Region, RegionWithStats, Sector, FilterParams, SortConfig, PaginationParams } from './types';

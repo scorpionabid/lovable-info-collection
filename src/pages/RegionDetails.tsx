@@ -165,7 +165,7 @@ export default function RegionDetails() {
               Add School
             </Button>
           </div>
-          <SchoolTable schools={schools} onDataChange={handleDataChange} />
+          <SchoolTable schools={schools} />
         </TabsContent>
       </Tabs>
       
@@ -175,7 +175,6 @@ export default function RegionDetails() {
           isOpen={isSectorModalOpen}
           onClose={() => setIsSectorModalOpen(false)}
           mode="create"
-          region={region}
           onSectorCreated={handleDataChange}
         />
       )}

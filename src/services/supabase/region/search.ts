@@ -4,24 +4,17 @@ import { Region } from './types';
 
 /**
  * Search regions by name
- * @param searchTerm The term to search for in region names
- * @returns List of regions matching the search term
  */
-export const searchRegionsByName = async (searchTerm: string): Promise<Region[]> => {
+export const searchRegions = async (searchTerm: string): Promise<Region[]> => {
   try {
-    if (!searchTerm || searchTerm.trim() === '') {
-      return [];
-    }
-
     const { data, error } = await supabase
       .from('regions')
       .select('*')
       .ilike('name', `%${searchTerm}%`)
-      .order('name')
-      .limit(10);
+      .order('name');
 
     if (error) throw error;
-    return data || [];
+    return data as Region[];
   } catch (error) {
     console.error('Error searching regions:', error);
     return [];
