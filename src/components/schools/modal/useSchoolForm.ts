@@ -143,11 +143,27 @@ export const useSchoolForm = (school?: School, onSuccess?: () => void) => {
   // Handle form submission
   const onSubmit = async (values: SchoolFormValues) => {
     try {
+      // Ensure required fields are present
+      if (!values.name || !values.sector_id) {
+        toast({
+          title: 'Xəta',
+          description: 'Məktəb adı və sektor məlumatlarını daxil edin',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Convert string numbers to actual numbers
       const formattedValues = {
-        ...values,
-        name: values.name, // Ensure name is present and non-optional
-        sector_id: values.sector_id, // Ensure sector_id is present and non-optional
+        name: values.name,
+        region_id: values.region_id,
+        sector_id: values.sector_id,
+        type_id: values.type_id,
+        address: values.address,
+        code: values.code,
+        email: values.email,
+        phone: values.phone,
+        director: values.director,
         student_count: values.student_count || null,
         teacher_count: values.teacher_count || null,
       };

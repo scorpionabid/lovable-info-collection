@@ -1,7 +1,7 @@
 
 import { User as SupabaseUser } from "@/services/supabase/user/types";
 import supabaseUserService from "@/services/supabase/user";
-import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto } from "./userService/types";
+import { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto } from "./services/userService/types";
 
 // Create a bridge between the old userService and the new Supabase implementation
 const userService = {
@@ -14,7 +14,9 @@ const userService = {
         region_id: filters.regionId,
         sector_id: filters.sectorId,
         school_id: filters.schoolId,
-        status: filters.isActive === undefined ? 'all' : filters.isActive ? 'active' : 'inactive'
+        status: filters.isActive === undefined ? 'all' : filters.isActive ? 'active' : 'inactive',
+        sort_field: filters.sortField,
+        sort_order: filters.sortOrder
       };
 
       // Get users from Supabase
@@ -135,8 +137,7 @@ const userService = {
 
   changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      // This probably needs special handling based on the supabase way to change password
-      throw new Error("Not implemented");
+      return await supabaseUserService.changePassword(oldPassword, newPassword);
     } catch (error) {
       console.error("Error in changePassword bridge:", error);
       return false;

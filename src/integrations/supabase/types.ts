@@ -1672,6 +1672,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_school_types: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_user_region_id: {
         Args: Record<PropertyKey, never>
         Returns: string

@@ -1,5 +1,6 @@
 
-// Define the User interface to be consistent across the application
+// User-related types for the service
+
 export interface User {
   id: string;
   email: string;
@@ -35,14 +36,19 @@ export interface UserFilter {
 export interface UserResponse {
   data: User[] | null;
   count: number;
-  error: any | null;
+  error: any;
+}
+
+export interface EntityOption {
+  id: string;
+  name: string;
 }
 
 export interface CreateUserDto {
   email: string;
-  password: string;
   firstName: string;
   lastName: string;
+  password: string;
   roleId: string;
   regionId?: string;
   sectorId?: string;
@@ -61,9 +67,4 @@ export interface UpdateUserDto {
   phone?: string;
   utisCode?: string;
   isActive?: boolean;
-}
-
-export interface EntityOption {
-  id: string;
-  name: string;
 }

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { User, UserFilter } from '@/services/userService';
+import { User, UserFilter } from '@/services/userService/types';
 import userService from '@/services/userService';
 
 export const useUsersData = (initialFilters: UserFilter = {}) => {
