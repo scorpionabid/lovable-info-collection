@@ -1,3 +1,4 @@
+
 // Import supabase client
 import { supabase } from '../supabaseClient';
 
