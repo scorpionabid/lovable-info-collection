@@ -1,4 +1,3 @@
-
 import { X } from "lucide-react";
 import { 
   Dialog, 
@@ -7,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { User } from "@/services/userService";
+import { User } from '@/services/userService-bridge';
 import { useContext } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserModalContent } from "./modals/UserModalContent";

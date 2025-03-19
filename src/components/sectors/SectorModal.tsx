@@ -1,5 +1,5 @@
-
-import React, { useState, useEffect } from "react";
+import React from 'react';
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 export interface SectorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: "create" | "edit";
-  region?: { id: string; name: string };
-  sectorId?: string;
-  sector?: SectorWithStats;
+  mode: 'create' | 'edit';
+  sector?: any; // The sector data for edit mode
+  sectorId?: string; // Alternative way to specify the sector
   onSuccess?: () => void;
 }
 
@@ -23,9 +22,8 @@ export const SectorModal = ({
   isOpen, 
   onClose, 
   mode, 
-  region, 
-  sectorId,
   sector, 
+  sectorId,
   onSuccess 
 }: SectorModalProps) => {
   const { toast } = useToast();
@@ -43,14 +41,14 @@ export const SectorModal = ({
         description: sector.description || "",
         regionId: sector.region_id,
       });
-    } else if (mode === "create" && region) {
+    } else if (mode === "create") {
       setFormData({
         name: "",
         description: "",
-        regionId: region.id,
+        regionId: "",
       });
     }
-  }, [mode, sector, region]);
+  }, [mode, sector]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -83,7 +81,7 @@ export const SectorModal = ({
           title: "Uğurlu",
           description: "Sektor uğurla yaradıldı",
         });
-      } else if (mode === "edit" && sector) {
+      } else if (mode === "edit") {
         await updateSector(sector.id, {
           name: formData.name,
           description: formData.description,

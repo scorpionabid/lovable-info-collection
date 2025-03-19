@@ -1,4 +1,3 @@
-
 // Sorğu filtrləri
 export interface FilterParams {
   searchQuery?: string;
@@ -36,7 +35,7 @@ export interface SectorWithStats {
   description?: string;
   region_id: string;
   regionName: string;
-  created_at: string;
+  created_at: string; // Make this required
   schoolCount: number;
   completionRate: number;
   archived: boolean;

@@ -1,127 +1,86 @@
+import { UserFilter, UserResponse } from './userService/types';
 
-import { 
-  User as UserType, 
-  UserFilter, 
-  UserResponse, 
-  CreateUserDto, 
-  UpdateUserDto, 
-  EntityOption 
-} from './userService/types';
-
-// Re-export User type
-export type { UserType as User };
-
-// Mock implementation of userService for development
-const userService = {
-  // Basic user operations
-  getUsers: async (filters?: UserFilter): Promise<UserResponse> => {
-    console.log('Getting users with filters:', filters);
-    return { data: [], count: 0, error: null };
-  },
-  
-  getUserById: async (id: string): Promise<UserType> => {
-    console.log('Getting user by ID:', id);
-    return {
-      id,
-      email: 'user@example.com',
-      first_name: 'Test',
-      last_name: 'User',
-      role_id: 'role-id',
-      is_active: true,
-      created_at: new Date().toISOString()
-    };
-  },
-  
-  // Organization handling
-  getRoles: async (): Promise<EntityOption[]> => {
-    return [
-      { id: 'super-admin', name: 'Super Admin' },
-      { id: 'region-admin', name: 'Region Admin' },
-      { id: 'sector-admin', name: 'Sector Admin' },
-      { id: 'school-admin', name: 'School Admin' }
-    ];
-  },
-  
-  getRegions: async (userId?: string, userRole?: string): Promise<EntityOption[]> => {
-    return [
-      { id: 'region-1', name: 'Region 1' },
-      { id: 'region-2', name: 'Region 2' }
-    ];
-  },
-  
-  getSectors: async (regionId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
-    return [
-      { id: 'sector-1', name: 'Sector 1' },
-      { id: 'sector-2', name: 'Sector 2' }
-    ];
-  },
-  
-  getSchools: async (sectorId: string, userId?: string, userRole?: string): Promise<EntityOption[]> => {
-    return [
-      { id: 'school-1', name: 'School 1' },
-      { id: 'school-2', name: 'School 2' }
-    ];
-  },
-  
-  // User management
-  createUser: async (userData: CreateUserDto): Promise<UserType> => {
-    console.log('Creating user:', userData);
-    return {
-      id: 'new-user-id',
-      email: userData.email,
-      first_name: userData.firstName,
-      last_name: userData.lastName,
-      role_id: userData.roleId,
-      region_id: userData.regionId,
-      sector_id: userData.sectorId,
-      school_id: userData.schoolId,
-      is_active: true,
-      created_at: new Date().toISOString()
-    };
-  },
-  
-  updateUser: async (id: string, userData: UpdateUserDto): Promise<UserType> => {
-    console.log('Updating user:', id, userData);
-    return {
-      id,
-      email: 'updated@example.com',
-      first_name: userData.firstName || 'Updated',
-      last_name: userData.lastName || 'User',
-      role_id: userData.roleId || 'role-id',
-      is_active: userData.isActive !== undefined ? userData.isActive : true,
-      created_at: new Date().toISOString()
-    };
-  },
-  
-  deleteUser: async (id: string): Promise<boolean> => {
-    console.log('Deleting user:', id);
-    return true;
-  },
-  
-  blockUser: async (id: string): Promise<boolean> => {
-    console.log('Blocking user:', id);
-    return true;
-  },
-  
-  activateUser: async (id: string): Promise<boolean> => {
-    console.log('Activating user:', id);
-    return true;
-  },
-  
-  resetPassword: async (id: string): Promise<boolean> => {
-    console.log('Resetting password for user:', id);
-    return true;
-  },
-  
-  resetUserPassword: async (id: string, newPassword: string): Promise<boolean> => {
-    console.log('Resetting user password:', id);
-    return true;
-  },
-  
-  changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
-    console.log('Changing password');
-    return true;
+// Re-export the User type for components
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role_id: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  phone?: string;
+  utis_code?: string;
+  is_active: boolean;
+  last_login?: string;
+  created_at: string;
+  updated_at?: string;
+  roles?: {
+    id: string;
+    name: string;
+    description?: string;
+    permissions?: string[];
   }
+}
+
+// Define missing functions for userService
+const deleteUser = async (userId: string): Promise<boolean> => {
+  console.log('Deleting user', userId);
+  // Implementation would go here
+  return true;
 };
 
-export default userService;
+const blockUser = async (userId: string): Promise<boolean> => {
+  console.log('Blocking user', userId);
+  // Implementation would go here
+  return true;
+};
+
+const resetPassword = async (userId: string): Promise<boolean> => {
+  console.log('Resetting password for user', userId);
+  // Implementation would go here
+  return true;
+};
+
+const getRoles = async (): Promise<any[]> => {
+  // Implementation would go here
+  return [];
+};
+
+const getRegions = async (): Promise<any[]> => {
+  // Implementation would go here
+  return [];
+};
+
+const getSectors = async (regionId?: string): Promise<any[]> => {
+  // Implementation would go here
+  return [];
+};
+
+const getSchools = async (sectorId?: string): Promise<any[]> => {
+  // Implementation would go here
+  return [];
+};
+
+// Export the complete userService with missing methods
+export default {
+  // Existing methods (assumed to be exported from userService)
+  getUsers: async (filters?: UserFilter): Promise<UserResponse> => ({ data: [], count: 0, error: null }),
+  getUserById: async (id: string): Promise<any> => ({}),
+  createUser: async (userData: any): Promise<any> => ({}),
+  updateUser: async (id: string, userData: any): Promise<any> => ({}),
+  resetUserPassword: async (email: string): Promise<any> => ({}),
+  activateUser: async (id: string): Promise<any> => ({}),
+  deactivateUser: async (id: string): Promise<any> => ({}),
+  changePassword: async (oldPassword: string, newPassword: string): Promise<any> => ({}),
+  
+  // Additional methods
+  deleteUser,
+  blockUser,
+  resetPassword,
+  getRoles,
+  getRegions,
+  getSectors,
+  getSchools,
+};

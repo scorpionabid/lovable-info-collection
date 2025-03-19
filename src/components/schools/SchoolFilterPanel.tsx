@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +31,6 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilter
   const [sectors, setSectors] = useState<Array<{id: string, name: string}>>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Load regions when component mounts
   useEffect(() => {
     const loadRegions = async () => {
       try {
@@ -49,7 +47,6 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilter
     loadRegions();
   }, []);
   
-  // Load sectors when a region is selected
   useEffect(() => {
     const loadSectors = async () => {
       if (!selectedRegionId) {
@@ -59,8 +56,6 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilter
       
       try {
         setIsLoading(true);
-        // This would be replaced with a call to get sectors by region ID
-        // For now, using the mock data
         const sectorsMock = [
           { id: '1', name: 'Nəsimi rayonu' },
           { id: '2', name: 'Yasamal rayonu' },
@@ -87,7 +82,6 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilter
     setMinRate('');
     setMaxRate('');
     
-    // Apply empty filters to reset the results
     onApplyFilters({});
   };
   
@@ -95,8 +89,8 @@ export const SchoolFilterPanel = ({ isVisible, onToggleVisibility, onApplyFilter
     const filters: SchoolFilter = {};
     
     if (searchTerm) filters.search = searchTerm;
-    if (selectedRegionId) filters.regionId = selectedRegionId;
-    if (selectedSectorId) filters.sectorId = selectedSectorId;
+    if (selectedRegionId) filters.region_id = selectedRegionId;
+    if (selectedSectorId) filters.sector_id = selectedSectorId;
     if (selectedType) filters.type = selectedType;
     if (selectedStatus) filters.status = selectedStatus;
     if (minRate) filters.minCompletionRate = parseInt(minRate);

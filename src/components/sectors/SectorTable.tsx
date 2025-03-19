@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,8 +24,9 @@ import {
   PaginationPrevious 
 } from "@/components/ui/pagination";
 
-interface SectorTableProps {
-  sectors: SectorWithStats[];
+export interface SectorTableProps {
+  sectors: any[];
+  onDataChange?: () => void;
   isLoading: boolean;
   isError: boolean;
   errorDetails?: string;
@@ -50,7 +52,8 @@ export const SectorTable = ({
   sortColumn,
   sortDirection,
   onSortChange,
-  onRefresh
+  onRefresh,
+  onDataChange
 }: SectorTableProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -61,7 +64,6 @@ export const SectorTable = ({
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Log table state on props change
   logger.debug('SectorTable rendered', {
     sectorsCount: sectors?.length || 0,
     isLoading,
@@ -111,7 +113,6 @@ export const SectorTable = ({
     event.stopPropagation();
     logger.info(`Exporting single sector: ${sector.id}`);
     
-    // This would typically generate and download an export file
     toast({
       title: "Sektor ixrac edilir",
       description: `${sector.name} məlumatları ixrac edilir`,

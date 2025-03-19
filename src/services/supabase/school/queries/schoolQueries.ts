@@ -2,44 +2,34 @@ import { supabase } from '../../supabaseClient';
 import { School, SchoolFilter } from '../types';
 import { calculateCompletionRate } from '../utils/queryUtils';
 
-/**
- * Get all schools with optional filtering
- */
 export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
   try {
-    // Define the base query to fetch schools with their related data
-    let query = supabase
-      .from('schools')
-      .select(`
-        id,
-        name,
-        address,
-        email,
-        phone,
-        region_id,
-        sector_id,
-        student_count,
-        teacher_count,
-        status,
-        director,
-        created_at,
-        regions(id, name),
-        sectors(id, name),
-        school_types:type_id(id, name)
-      `);
+    let query = supabase.from('schools').select(`
+      id, name, address, email, phone, 
+      region_id, sector_id, student_count, teacher_count, 
+      status, director, created_at, code, type_id,
+      regions(id, name),
+      sectors(id, name),
+      school_types:type_id(id, name)
+    `);
 
-    // Apply filters if provided
     if (filters) {
       if (filters.search) {
         query = query.or(`name.ilike.%${filters.search}%,director.ilike.%${filters.search}%`);
       }
-      if (filters.regionId) {
+      if (filters.region_id) {
+        query = query.eq('region_id', filters.region_id);
+      } else if (filters.regionId) {
         query = query.eq('region_id', filters.regionId);
       }
-      if (filters.sectorId) {
+      if (filters.sector_id) {
+        query = query.eq('sector_id', filters.sector_id);
+      } else if (filters.sectorId) {
         query = query.eq('sector_id', filters.sectorId);
       }
-      if (filters.type) {
+      if (filters.type_id) {
+        query = query.eq('type_id', filters.type_id);
+      } else if (filters.type) {
         query = query.eq('school_types.name', filters.type);
       }
       if (filters.status) {
@@ -47,53 +37,15 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
       }
     }
 
-    // Execute the query and order by name
     const { data: schoolsData, error: schoolsError } = await query.order('name');
-
     if (schoolsError) throw schoolsError;
 
-    // Now let's get the admin information for each school in a separate query
-    const { data: adminData, error: adminError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        school_id,
-        role_id
-      `)
-      .eq('role_id', (await supabase.from('roles').select('id').eq('name', 'school-admin').single()).data?.id);
-
-    if (adminError) {
-      console.warn('Error fetching admin data:', adminError);
-      // Continue without admin data rather than failing completely
-    }
-
-    // Create a map of school_id to admin
-    const schoolAdmins = new Map();
-    if (adminData) {
-      adminData.forEach(admin => {
-        if (admin.school_id) {
-          schoolAdmins.set(admin.school_id, {
-            id: admin.id,
-            name: `${admin.first_name} ${admin.last_name}`
-          });
-        }
-      });
-    }
-
-    // Transform the data to match our expected School interface
-    // Handle the possibility of null data with default values
-    const schools = (schoolsData || []).map((school) => {
-      // Handle null response error case
+    const schools = schoolsData.map(school => {
       if ('error' in school) {
         console.error("Error in school data:", school.error);
         return null;
       }
       
-      const admin = schoolAdmins.get(school.id);
-      
-      // Safely extract values from nested objects
       const schoolType = school.school_types?.name || 'N/A';
       const regionName = school.regions?.name || 'N/A';
       const sectorName = school.sectors?.name || 'N/A';
@@ -101,24 +53,31 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
       return {
         id: school.id || '',
         name: school.name || '',
+        code: school.code || '',
+        type_id: school.type_id || '',
+        region_id: school.region_id || '',
+        sector_id: school.sector_id || '',
+        address: school.address || '',
+        created_at: school.created_at || '',
+        updated_at: school.updated_at || '',
+        student_count: school.student_count || 0,
+        teacher_count: school.teacher_count || 0,
+        status: school.status || 'Active',
+        director: school.director || '',
+        email: school.email || '',
+        phone: school.phone || '',
+        
         type: schoolType,
         region: regionName,
-        region_id: school.region_id || '',
         sector: sectorName,
-        sector_id: school.sector_id || '',
         studentCount: school.student_count || 0,
         teacherCount: school.teacher_count || 0,
-        completionRate: Math.floor(Math.random() * 40) + 60, // Placeholder
-        status: school.status || 'Aktiv',
-        director: school.director || 'N/A',
-        contactEmail: school.email || 'N/A',
-        contactPhone: school.phone || 'N/A',
+        completionRate: Math.floor(Math.random() * 40) + 60,
+        contactEmail: school.email || '',
+        contactPhone: school.phone || '',
         createdAt: school.created_at || '',
-        address: school.address || '',
-        adminName: admin?.name || null,
-        adminId: admin?.id || null
       };
-    }).filter(Boolean) as School[]; // Remove any null items
+    }).filter(Boolean) as School[];
 
     return schools;
   } catch (error) {
@@ -127,9 +86,6 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
   }
 };
 
-/**
- * Get a single school by ID with all details
- */
 export const getSchoolById = async (id: string): Promise<School | null> => {
   try {
     const { data, error } = await supabase
@@ -156,13 +112,10 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
 
     if (error) throw error;
     
-    // If no data returned, return null
     if (!data) return null;
 
-    // Calculate completion rate - in a real app, this would be based on actual data
     const completionRate = await calculateCompletionRate(id);
 
-    // Handle nested objects safely
     const schoolType = data.school_types?.name || 'N/A';
     const regionName = data.regions?.name || 'N/A';
     const sectorName = data.sectors?.name || 'N/A';
@@ -175,14 +128,14 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
       region_id: data.region_id || '',
       sector: sectorName,
       sector_id: data.sector_id || '',
-      studentCount: data.student_count || 0,
-      teacherCount: data.teacher_count || 0,
+      student_count: data.student_count || 0,
+      teacher_count: data.teacher_count || 0,
       completionRate,
       status: data.status || 'Aktiv',
       director: data.director || 'N/A',
-      contactEmail: data.email || 'N/A',
-      contactPhone: data.phone || 'N/A',
-      createdAt: data.created_at || '',
+      email: data.email || 'N/A',
+      phone: data.phone || 'N/A',
+      created_at: data.created_at || '',
       address: data.address || ''
     };
   } catch (error) {
@@ -191,9 +144,6 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
   }
 };
 
-/**
- * Get school by ID with admin details
- */
 export const getSchoolWithAdmin = async (id: string): Promise<{school: School, admin: any} | null> => {
   try {
     const { data, error } = await supabase
@@ -222,7 +172,6 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
     
     if (!data) return null;
 
-    // Get the admin information separately
     const roleResult = await supabase.from('roles').select('id').eq('name', 'school-admin').single();
     
     let adminData = null;
@@ -242,19 +191,17 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
         .eq('role_id', roleResult.data.id)
         .maybeSingle();
 
-      if (adminError && adminError.code !== 'PGRST116') { // PGRST116 is "No rows returned" which is OK
+      if (adminError && adminError.code !== 'PGRST116') {
         console.warn('Error fetching admin data:', adminError);
       } else {
         adminData = adminResult;
       }
     }
 
-    // Calculate completion rate
     const completionRate = await calculateCompletionRate(id);
     
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
-    // Handle nested objects safely
     const schoolType = data.school_types?.name || 'N/A';
     const regionName = data.regions?.name || 'N/A';
     const sectorName = data.sectors?.name || 'N/A';
@@ -267,14 +214,14 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
       region_id: data.region_id || '',
       sector: sectorName,
       sector_id: data.sector_id || '',
-      studentCount: data.student_count || 0,
-      teacherCount: data.teacher_count || 0,
+      student_count: data.student_count || 0,
+      teacher_count: data.teacher_count || 0,
       completionRate,
       status: data.status || 'Aktiv',
       director: data.director || 'N/A',
-      contactEmail: data.email || 'N/A',
-      contactPhone: data.phone || 'N/A',
-      createdAt: data.created_at || '',
+      email: data.email || 'N/A',
+      phone: data.phone || 'N/A',
+      created_at: data.created_at || '',
       address: data.address || '',
       adminName: adminName,
       adminId: adminData?.id || null
@@ -287,9 +234,6 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
   }
 };
 
-/**
- * Get schools by region ID
- */
 export const getSchoolsByRegion = async (regionId: string) => {
   try {
     const { data, error } = await supabase
@@ -305,7 +249,6 @@ export const getSchoolsByRegion = async (regionId: string) => {
 
     if (error) throw error;
 
-    // Transform the data to a more usable format
     return (data || []).map(school => ({
       id: school.id,
       name: school.name,
@@ -317,14 +260,13 @@ export const getSchoolsByRegion = async (regionId: string) => {
       sector_id: school.sector_id,
       studentCount: school.student_count,
       teacherCount: school.teacher_count,
-      completionRate: Math.floor(Math.random() * 40) + 60, // Random 60-100%
+      completionRate: Math.floor(Math.random() * 40) + 60,
       status: school.status || 'active',
       director: school.director,
       contactEmail: school.email,
       contactPhone: school.phone,
       createdAt: school.created_at,
       address: school.address,
-      // Include other fields as needed
     }));
   } catch (error) {
     console.error('Error fetching schools by region:', error);

@@ -1,4 +1,3 @@
-
 // School types
 export interface School {
   id: string;
@@ -16,6 +15,18 @@ export interface School {
   director?: string;
   email?: string;
   phone?: string;
+  // Additional properties for UI components
+  type?: string;
+  region?: string;
+  sector?: string;
+  studentCount?: number;
+  teacherCount?: number;
+  completionRate?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  createdAt?: string;
+  adminName?: string;
+  adminId?: string;
 }
 
 export interface CreateSchoolDto {
@@ -31,6 +42,11 @@ export interface CreateSchoolDto {
   director?: string;
   email?: string;
   phone?: string;
+  // Additional properties for form handling
+  contactEmail?: string;
+  contactPhone?: string;
+  studentCount?: number;
+  teacherCount?: number;
 }
 
 export interface UpdateSchoolDto {
@@ -54,6 +70,12 @@ export interface SchoolFilter {
   type_id?: string;
   search?: string;
   status?: string;
+  // Additional properties used in UI components
+  regionId?: string;
+  sectorId?: string;
+  type?: string;
+  minCompletionRate?: number;
+  maxCompletionRate?: number;
 }
 
 export interface SchoolSummary {
@@ -73,6 +95,9 @@ export interface SchoolStats {
   student_teacher_ratio: number;
   completion_percentage: number;
   last_updated: string;
+  // Additional properties for charts
+  categories?: any[];
+  completionHistory?: any[];
 }
 
 export interface SchoolWithAdmin extends School {
