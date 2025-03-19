@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SchoolFilter } from '@/services/supabase/school/types';
 
@@ -12,7 +12,7 @@ export const useSchoolFilters = () => {
   const debouncedSearch = useDebounce(searchQuery, 500);
   
   // Update filters when debounced search changes
-  useState(() => {
+  useEffect(() => {
     if (debouncedSearch) {
       setFilters(prev => ({ ...prev, search: debouncedSearch }));
       setCurrentPage(1); // Reset to first page on search
@@ -23,10 +23,10 @@ export const useSchoolFilters = () => {
         return newFilters;
       });
     }
-  });
+  }, [debouncedSearch]);
   
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
   
   const handleApplyFilters = (newFilters: SchoolFilter) => {

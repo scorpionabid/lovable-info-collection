@@ -30,9 +30,9 @@ export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => 
     if (latestError) throw latestError;
 
     return {
-      totalStudents: schoolData?.student_count || 0,
-      totalTeachers: schoolData?.teacher_count || 0,
-      completionRate,
+      total_students: schoolData?.student_count || 0,
+      total_teachers: schoolData?.teacher_count || 0,
+      completion_rate: completionRate,
       lastUpdate: latestData?.updated_at || new Date().toISOString()
     };
   } catch (error) {
@@ -40,9 +40,9 @@ export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => 
     
     // Return default stats if error occurs
     return {
-      totalStudents: 0,
-      totalTeachers: 0,
-      completionRate: 0,
+      total_students: 0,
+      total_teachers: 0,
+      completion_rate: 0,
       lastUpdate: new Date().toISOString()
     };
   }

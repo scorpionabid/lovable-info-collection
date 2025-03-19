@@ -35,17 +35,17 @@ export const useSchoolHelpers = () => {
     }
 
     // Email validation
-    if (data.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contactEmail)) {
-      errors.contactEmail = 'Düzgün email formatı daxil edin';
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      errors.email = 'Düzgün email formatı daxil edin';
     }
 
     // Number validation
-    if (data.studentCount < 0) {
-      errors.studentCount = 'Şagird sayı mənfi ola bilməz';
+    if (data.student_count !== undefined && data.student_count < 0) {
+      errors.student_count = 'Şagird sayı mənfi ola bilməz';
     }
 
-    if (data.teacherCount < 0) {
-      errors.teacherCount = 'Müəllim sayı mənfi ola bilməz';
+    if (data.teacher_count !== undefined && data.teacher_count < 0) {
+      errors.teacher_count = 'Müəllim sayı mənfi ola bilməz';
     }
 
     setFormErrors(errors);

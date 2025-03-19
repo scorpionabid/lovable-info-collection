@@ -8,7 +8,7 @@ import { useSchoolData } from './hooks/useSchoolData';
 import { useSchoolFilters } from './hooks/useSchoolFilters';
 import { useSchoolSort } from './hooks/useSchoolSort';
 import { useSchoolActions } from './hooks/useSchoolActions';
-import { School } from '@/services/supabase/school/types';
+import { School, SchoolWithStats } from '@/services/supabase/school/types';
 
 export const SchoolsOverview = () => {
   const [pageSize, setPageSize] = useState(10);
@@ -55,6 +55,12 @@ export const SchoolsOverview = () => {
   const schools = schoolsData?.data || [];
   const totalCount = schoolsData?.count || 0;
 
+  // Convert schools to SchoolWithStats by ensuring completionRate is not undefined
+  const schoolsWithStats: SchoolWithStats[] = schools.map(school => ({
+    ...school,
+    completionRate: school.completionRate ?? 0 // Ensure completionRate is always present
+  }));
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <SchoolToolbar
@@ -75,7 +81,7 @@ export const SchoolsOverview = () => {
       )}
 
       <SchoolTable
-        schools={schools}
+        schools={schoolsWithStats}
         totalCount={totalCount}
         currentPage={currentPage}
         pageSize={pageSize}

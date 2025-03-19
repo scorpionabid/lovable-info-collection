@@ -42,6 +42,8 @@ export const useSchoolData = ({
     queryKey: ['schools', currentPage, pageSize, sortParams, filters],
     queryFn: async () => {
       try {
+        // Here we're using the existing getSchools function without parameters
+        // since our custom filters are in the queryParams but not used by the function
         const result = await schoolService.getSchools();
 
         // Ensure we always return an object with data and count properties

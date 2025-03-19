@@ -62,6 +62,8 @@ export interface SchoolFilter {
   sort?: SchoolSortParams;
   sort_field?: string;
   sort_direction?: 'asc' | 'desc';
+  min_student_count?: string | number;
+  max_student_count?: string | number;
 }
 
 // Sort parameters for school queries
@@ -84,6 +86,10 @@ export interface CreateSchoolDto {
   status?: string;
   student_count?: number;
   teacher_count?: number;
+  contactEmail?: string;
+  contactPhone?: string;
+  studentCount?: number;
+  teacherCount?: number;
 }
 
 // Data transfer object for updating a school
@@ -128,9 +134,10 @@ export interface SchoolStats {
   total_students: number;
   total_teachers: number;
   completion_rate: number;
+  lastUpdate?: string;
 }
 
-// Add other interfaces as needed
+// School activity interface
 export interface SchoolActivity {
   id: string;
   action: string;

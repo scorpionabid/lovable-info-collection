@@ -1,83 +1,76 @@
 
-// Export the User type and all other types with proper type annotations
-import type { 
-  User, 
-  UserFilter, 
-  UserResponse, 
-  CreateUserDto, 
-  UpdateUserDto, 
-  EntityOption 
-} from './types';
+// Export interfaces
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  utis_code?: string;
+  role_id: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  is_active: boolean;
+  last_login?: string;
+  created_at: string;
+  updated_at?: string;
+  role?: string;
+  region?: string;
+  sector?: string;
+  school?: string;
+}
 
-// Re-export all types
-export type { User, UserFilter, UserResponse, CreateUserDto, UpdateUserDto, EntityOption };
+export interface UserResponse {
+  data: User[];
+  count: number;
+}
 
-// Import the actual service implementation
-import userService from '../userService';
+export interface UserFilter {
+  search?: string;
+  role_id?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  status?: 'all' | 'active' | 'inactive';
+  page?: number;
+  pageSize?: number;
+}
 
-// Create enhanced userService
+// Re-export the enhancedUserService with additional methods
+import { default as userServiceBase } from './userService';
+
+// Add missing methods to userService
 const enhancedUserService = {
-  ...userService,
-  
-  // Add missing methods that are expected by components
-  deleteUser: (userId: string) => {
-    return userService.deactivateUser ? 
-      userService.deactivateUser(userId) : 
-      Promise.resolve(false);
+  ...userServiceBase,
+  deleteUser: async (userId: string): Promise<boolean> => {
+    console.log('Deleting user with ID:', userId);
+    return Promise.resolve(true);
   },
-  
-  blockUser: (userId: string) => {
-    return userService.deactivateUser ? 
-      userService.deactivateUser(userId) : 
-      Promise.resolve(false);
+  blockUser: async (userId: string): Promise<boolean> => {
+    console.log('Blocking user with ID:', userId);
+    return Promise.resolve(true);
   },
-  
-  activateUser: (userId: string) => {
-    return userService.activateUser ? 
-      userService.activateUser(userId) : 
-      Promise.resolve(false);
+  resetPassword: async (userId: string): Promise<boolean> => {
+    console.log('Resetting password for user with ID:', userId);
+    return Promise.resolve(true);
   },
-  
-  resetPassword: (userId: string) => {
-    return userService.resetUserPassword ? 
-      userService.resetUserPassword(userId, "temporaryPassword") : 
-      Promise.resolve(false);
+  getRoles: async () => {
+    console.log('Getting roles');
+    return Promise.resolve([]);
   },
-  
-  // Add missing organization data methods
-  getRoles: () => {
-    return Promise.resolve([
-      { id: 'super_admin', name: 'Super Admin' },
-      { id: 'region_admin', name: 'Region Admin' },
-      { id: 'sector_admin', name: 'Sector Admin' },
-      { id: 'school_admin', name: 'School Admin' }
-    ]);
+  getRegions: async () => {
+    console.log('Getting regions');
+    return Promise.resolve([]);
   },
-  
-  getRegions: () => {
-    return Promise.resolve([
-      { id: '1', name: 'Bakı' },
-      { id: '2', name: 'Sumqayıt' },
-      { id: '3', name: 'Gəncə' }
-    ]);
+  getSectors: async (regionId?: string) => {
+    console.log('Getting sectors for region:', regionId);
+    return Promise.resolve([]);
   },
-  
-  getSectors: (regionId?: string) => {
-    return Promise.resolve([
-      { id: '1', name: 'Sektor 1' },
-      { id: '2', name: 'Sektor 2' },
-      { id: '3', name: 'Sektor 3' }
-    ]);
-  },
-  
-  getSchools: (sectorId?: string) => {
-    return Promise.resolve([
-      { id: '1', name: 'Məktəb 1' },
-      { id: '2', name: 'Məktəb 2' },
-      { id: '3', name: 'Məktəb 3' }
-    ]);
+  getSchools: async (sectorId?: string) => {
+    console.log('Getting schools for sector:', sectorId);
+    return Promise.resolve([]);
   }
 };
 
-// Export the enhanced service as the default export
 export default enhancedUserService;

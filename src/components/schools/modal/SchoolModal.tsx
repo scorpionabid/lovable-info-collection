@@ -27,6 +27,10 @@ export const SchoolModal = ({
     form,
     isSubmitting,
     errorMessage,
+    regions,
+    sectors,
+    schoolTypes,
+    handleRegionChange,
     handleSubmit
   } = useSchoolForm({
     mode,
@@ -53,6 +57,10 @@ export const SchoolModal = ({
           errorMessage={errorMessage}
           onSubmit={handleSubmit}
           mode={mode}
+          regions={regions}
+          sectors={sectors}
+          schoolTypes={schoolTypes}
+          onRegionChange={handleRegionChange}
         />
       </DialogContent>
     </Dialog>
