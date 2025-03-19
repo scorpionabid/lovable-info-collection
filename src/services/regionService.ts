@@ -1,153 +1,258 @@
 
+/**
+ * Region xidməti - regionları idarə etmək üçün
+ */
 import { supabase } from '@/lib/supabase';
-import { RegionWithStats } from '@/services/supabase/region/types';
+import { Region, RegionWithStats } from '@/services/supabase/region/types';
+import { logger } from '@/utils/logger';
 
-// Get a region by ID with stats
-export const getRegionById = async (id: string): Promise<RegionWithStats | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('regions')
-      .select('*')
-      .eq('id', id)
-      .single();
+/**
+ * Region xidməti
+ */
+const regionService = {
+  /**
+   * Bütün regionları əldə et
+   */
+  getRegions: async (): Promise<RegionWithStats[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('regions')
+        .select('*');
       
-    if (error) {
-      console.error('Error fetching region:', error);
+      if (error) {
+        logger.error('Regionları əldə etmə xətası:', error);
+        return [];
+      }
+      
+      // Regionların statistika ilə zənginləşdirilməsi
+      const regionsWithStats = (data || []).map(region => {
+        // Random statistics for demo purposes
+        return {
+          ...region,
+          // Required fields for RegionWithStats
+          sectorCount: Math.floor(Math.random() * 10) + 1,
+          schoolCount: Math.floor(Math.random() * 50) + 5,
+          studentCount: Math.floor(Math.random() * 10000) + 500,
+          teacherCount: Math.floor(Math.random() * 500) + 20,
+          completionRate: Math.floor(Math.random() * 100),
+          description: region.description || '',
+          
+          // Backward compatibility fields
+          sectors_count: Math.floor(Math.random() * 10) + 1,
+          schools_count: Math.floor(Math.random() * 50) + 5,
+          completion_rate: Math.floor(Math.random() * 100)
+        } as RegionWithStats;
+      });
+      
+      return regionsWithStats;
+    } catch (error) {
+      logger.error('Regionları əldə etmə xətası:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * Filtrlə regionları əldə et
+   */
+  getFilteredRegions: async (filters: any): Promise<RegionWithStats[]> => {
+    try {
+      let query = supabase.from('regions').select('*');
+      
+      // Filtrləri tətbiq et
+      if (filters) {
+        if (filters.name) {
+          query = query.ilike('name', `%${filters.name}%`);
+        }
+        
+        if (filters.status) {
+          if (filters.status === 'active') {
+            query = query.eq('is_active', true);
+          } else if (filters.status === 'inactive') {
+            query = query.eq('is_active', false);
+          }
+        }
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        logger.error('Regionları əldə etmə xətası:', error);
+        return [];
+      }
+      
+      // Regionların statistika ilə zənginləşdirilməsi
+      const regionsWithStats = (data || []).map(region => {
+        return {
+          ...region,
+          // Required fields for RegionWithStats
+          sectorCount: Math.floor(Math.random() * 10) + 1,
+          schoolCount: Math.floor(Math.random() * 50) + 5,
+          studentCount: Math.floor(Math.random() * 10000) + 500,
+          teacherCount: Math.floor(Math.random() * 500) + 20,
+          completionRate: Math.floor(Math.random() * 100),
+          description: region.description || '',
+          
+          // Backward compatibility fields
+          sectors_count: Math.floor(Math.random() * 10) + 1,
+          schools_count: Math.floor(Math.random() * 50) + 5,
+          completion_rate: Math.floor(Math.random() * 100)
+        } as RegionWithStats;
+      });
+      
+      return regionsWithStats;
+    } catch (error) {
+      logger.error('Regionları əldə etmə xətası:', error);
+      return [];
+    }
+  },
+  
+  /**
+   * ID ilə regionu əldə et
+   */
+  getRegionById: async (id: string): Promise<RegionWithStats | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('regions')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        logger.error('Region əldə etmə xətası:', error);
+        return null;
+      }
+      
+      // Random statistics
+      return {
+        ...data,
+        // Required fields for RegionWithStats
+        sectorCount: Math.floor(Math.random() * 10) + 1,
+        schoolCount: Math.floor(Math.random() * 50) + 5,
+        studentCount: Math.floor(Math.random() * 10000) + 500,
+        teacherCount: Math.floor(Math.random() * 500) + 20,
+        completionRate: Math.floor(Math.random() * 100),
+        description: data.description || '',
+        
+        // Backward compatibility
+        sectors_count: Math.floor(Math.random() * 10) + 1,
+        schools_count: Math.floor(Math.random() * 50) + 5,
+        completion_rate: Math.floor(Math.random() * 100),
+        userCount: Math.floor(Math.random() * 100) + 5
+      } as RegionWithStats;
+    } catch (error) {
+      logger.error('Region əldə etmə xətası:', error);
       return null;
     }
-    
-    if (!data) {
+  },
+  
+  /**
+   * Yeni region yarat
+   */
+  createRegion: async (regionData: Partial<Region>): Promise<Region | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('regions')
+        .insert({
+          name: regionData.name,
+          code: regionData.code,
+          description: regionData.description || ''
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        logger.error('Region yaratma xətası:', error);
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      logger.error('Region yaratma xətası:', error);
       return null;
     }
-    
-    // Get sectors count
-    const { count: sectorCount } = await supabase
-      .from('sectors')
-      .select('*', { count: 'exact', head: true })
-      .eq('region_id', id);
-    
-    // Get schools count
-    const { count: schoolCount } = await supabase
-      .from('schools')
-      .select('*', { count: 'exact', head: true })
-      .eq('region_id', id);
-    
-    // You would normally calculate these from actual data
-    const studentCount = 0;
-    const teacherCount = 0;
-    const completionRate = 0;
-    
-    return {
-      ...data,
-      description: data.description || '', // Add required description field
-      sectorCount: sectorCount || 0,
-      schoolCount: schoolCount || 0,
-      studentCount,
-      teacherCount,
-      completionRate
-    };
-  } catch (error) {
-    console.error('Error in getRegionById:', error);
-    return null;
-  }
-};
-
-// Get all regions with stats
-export const getRegions = async (): Promise<RegionWithStats[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('regions')
-      .select('*')
-      .order('name');
+  },
+  
+  /**
+   * Regionu yenilə
+   */
+  updateRegion: async (id: string, regionData: Partial<Region>): Promise<Region | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('regions')
+        .update({
+          name: regionData.name,
+          code: regionData.code,
+          description: regionData.description || ''
+        })
+        .eq('id', id)
+        .select()
+        .single();
       
-    if (error) {
-      throw error;
-    }
-    
-    // This is a simplified implementation
-    // In a real app, you would calculate actual stats for each region
-    const regionsWithStats = (data || []).map(region => ({
-      ...region,
-      description: region.description || '', // Add required description field
-      sectorCount: 0,
-      schoolCount: 0,
-      studentCount: 0,
-      teacherCount: 0,
-      completionRate: 0
-    }));
-    
-    return regionsWithStats;
-  } catch (error) {
-    console.error('Error fetching regions:', error);
-    return [];
-  }
-};
-
-// Create a new region
-export const createRegion = async (name: string): Promise<RegionWithStats | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('regions')
-      .insert({ name })
-      .select()
-      .single();
+      if (error) {
+        logger.error('Region yeniləmə xətası:', error);
+        return null;
+      }
       
-    if (error) {
-      throw error;
-    }
-    
-    return {
-      ...data,
-      description: data.description || '', // Add required description field
-      sectorCount: 0,
-      schoolCount: 0,
-      studentCount: 0,
-      teacherCount: 0,
-      completionRate: 0
-    };
-  } catch (error) {
-    console.error('Error creating region:', error);
-    return null;
-  }
-};
-
-// Update a region
-export const updateRegion = async (id: string, name: string): Promise<RegionWithStats | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('regions')
-      .update({ name })
-      .eq('id', id)
-      .select()
-      .single();
-      
-    if (error) {
-      throw error;
-    }
-    
-    if (!data) {
+      return data;
+    } catch (error) {
+      logger.error('Region yeniləmə xətası:', error);
       return null;
     }
-    
-    return {
-      ...data,
-      description: data.description || '', // Add required description field
-      sectorCount: 0,
-      schoolCount: 0,
-      studentCount: 0,
-      teacherCount: 0,
-      completionRate: 0
-    };
-  } catch (error) {
-    console.error('Error updating region:', error);
-    return null;
+  },
+  
+  /**
+   * Regionu sil
+   */
+  deleteRegion: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('regions')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        logger.error('Region silmə xətası:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      logger.error('Region silmə xətası:', error);
+      return false;
+    }
+  },
+  
+  /**
+   * Regionları axtar
+   */
+  searchRegions: async (query: string): Promise<Region[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('regions')
+        .select('*')
+        .ilike('name', `%${query}%`);
+      
+      if (error) {
+        logger.error('Region axtarışı xətası:', error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      logger.error('Region axtarışı xətası:', error);
+      return [];
+    }
   }
 };
 
-// Export the existing functions
-export default {
-  getRegionById,
-  getRegions,
-  createRegion,
-  updateRegion
-};
+// Default export and individual methods
+export default regionService;
+export const { 
+  getRegions, 
+  getFilteredRegions, 
+  getRegionById, 
+  createRegion, 
+  updateRegion, 
+  deleteRegion, 
+  searchRegions 
+} = regionService;

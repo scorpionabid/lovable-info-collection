@@ -51,12 +51,12 @@ export interface RegionWithStats extends Region {
   studentCount: number;
   teacherCount: number;
   completionRate: number;
-  description: string; // Required according to error messages
+  description: string; 
 
   // Optional fields for UI elements
   userCount?: number;
 
-  // Backward compatibility fields (to support both naming conventions)
+  // Backward compatibility fields
   sectors_count?: number;
   schools_count?: number;
   completion_rate?: number;

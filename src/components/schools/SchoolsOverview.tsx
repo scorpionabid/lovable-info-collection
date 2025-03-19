@@ -1,122 +1,101 @@
 
-import { useState, useEffect } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { 
-  Plus, 
-  Download,
-  School
-} from "lucide-react";
+import { useState } from 'react';
 import { SchoolTable } from "./SchoolTable";
+import { SchoolToolbar } from "./SchoolToolbar";
 import { SchoolFilterPanel } from "./SchoolFilterPanel";
-import { SchoolModal } from "./SchoolModal";
-import { School as SchoolType, SchoolFilter, getSchools } from "@/services/supabase/schoolService";
+import { SchoolModal } from './modal/SchoolModal';
+import { useSchoolData } from './hooks/useSchoolData';
+import { useSchoolFilters } from './hooks/useSchoolFilters';
+import { useSchoolSort } from './hooks/useSchoolSort';
+import { useSchoolActions } from './hooks/useSchoolActions';
+import { SchoolFilter } from '@/services/supabase/school/types';
 
 export const SchoolsOverview = () => {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(true);
-  const [schools, setSchools] = useState<SchoolType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filters, setFilters] = useState<SchoolFilter>({});
-  const { toast } = useToast();
+  const [pageSize, setPageSize] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
   
-  // Load schools from API
-  useEffect(() => {
-    loadSchools();
-  }, [filters]);
-  
-  const loadSchools = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getSchools(filters);
-      setSchools(data);
-    } catch (error) {
-      console.error('Error loading schools:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Məktəb məlumatları yüklənərkən xəta baş verdi.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleFiltersChange = (newFilters: SchoolFilter) => {
-    setFilters(newFilters);
-  };
-  
-  const handleSchoolCreated = () => {
-    loadSchools();
-    setIsCreateModalOpen(false);
-    toast({
-      title: "Məktəb yaradıldı",
-      description: "Yeni məktəb uğurla yaradıldı."
-    });
+  // Hooks to manage state
+  const { sortColumn, sortDirection, handleSortChange } = useSchoolSort();
+  const { 
+    currentPage, 
+    searchQuery, 
+    filters, 
+    setCurrentPage, 
+    handleSearchChange, 
+    handleApplyFilters 
+  } = useSchoolFilters();
+
+  // Hook for fetching data
+  const { 
+    schoolsData, 
+    isLoading, 
+    isError, 
+    refetch 
+  } = useSchoolData({ 
+    currentPage, 
+    pageSize, 
+    sortColumn, 
+    sortDirection, 
+    filters 
+  });
+
+  // Hooks for actions
+  const { 
+    isCreateModalOpen, 
+    setIsCreateModalOpen, 
+    handleRefresh,
+    handleCreateSuccess,
+    handleExport,
+    handleImport
+  } = useSchoolActions(refetch);
+
+  const toggleFilters = () => {
+    setShowFilters(prev => !prev);
   };
 
-  const handleEditSchool = (school: SchoolType) => {
-    // This would typically open an edit modal
-    console.log('Edit school:', school);
-    // Add edit school functionality later
-  };
-  
-  const handleDeleteSchool = (school: SchoolType) => {
-    // This would typically show a confirmation dialog
-    console.log('Delete school:', school);
-    // Add delete school functionality later
+  const handleApplyNewFilters = (newFilters: SchoolFilter) => {
+    handleApplyFilters(newFilters);
+    setShowFilters(false);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-infoline-dark-blue">Məktəblər</h1>
-          <p className="text-infoline-dark-gray">Sistemdəki bütün məktəblər və onların idarə edilməsi</p>
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            onClick={() => setIsImportModalOpen(true)}
-          >
-            <Download className="h-4 w-4" />
-            Toplu İdxal
-          </Button>
-          <Button 
-            className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            Yeni Məktəb
-          </Button>
-        </div>
-      </div>
+    <div className="container mx-auto py-6 space-y-6">
+      <SchoolToolbar 
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onRefresh={handleRefresh}
+        onExport={() => handleExport(schoolsData?.data || [])}
+        onImport={handleImport}
+        onCreateSchool={() => setIsCreateModalOpen(true)}
+        onToggleFilters={toggleFilters}
+      />
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {showFilters && (
         <SchoolFilterPanel 
-          isVisible={filterVisible} 
-          onToggleVisibility={() => setFilterVisible(!filterVisible)}
-          onApplyFilters={handleFiltersChange}
+          onApplyFilters={handleApplyNewFilters}
+          onClose={toggleFilters}
         />
-        
-        <div className={`${filterVisible ? 'lg:col-span-9' : 'lg:col-span-12'}`}>
-          <SchoolTable 
-            schools={schools} 
-            isLoading={isLoading}
-            onEditSchool={handleEditSchool}
-            onDeleteSchool={handleDeleteSchool}
-          />
-        </div>
-      </div>
+      )}
+      
+      <SchoolTable 
+        schools={schoolsData?.data || []}
+        totalCount={schoolsData?.count || 0}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        setCurrentPage={setCurrentPage}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
+        isLoading={isLoading}
+        isError={isError}
+        onRefresh={handleRefresh}
+      />
       
       <SchoolModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         mode="create"
-        onSchoolCreated={handleSchoolCreated}
+        onSuccess={handleCreateSuccess}
       />
     </div>
   );

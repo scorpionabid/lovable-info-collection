@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -174,8 +175,8 @@ export const SchoolFilterPanel: React.FC<SchoolFilterPanelProps> = ({
           <Input
             id="min_student_count"
             name="min_student_count"
-            type="number"
-            placeholder="Minimum"
+            type="text"
+            placeholder="Min."
             value={filters.min_student_count}
             onChange={handleInputChange}
           />
@@ -186,15 +187,15 @@ export const SchoolFilterPanel: React.FC<SchoolFilterPanelProps> = ({
           <Input
             id="max_student_count"
             name="max_student_count"
-            type="number"
-            placeholder="Maksimum"
+            type="text"
+            placeholder="Max."
             value={filters.max_student_count}
             onChange={handleInputChange}
           />
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+      <div className="flex justify-end space-x-2 mt-6">
         <Button variant="outline" onClick={handleReset}>
           Sıfırla
         </Button>

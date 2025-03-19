@@ -12,6 +12,11 @@ export interface FilterParams {
   status?: 'active' | 'inactive' | 'all';
   min_completion_rate?: number;
   max_completion_rate?: number;
+  searchQuery?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  archived?: boolean;
+  completionRate?: string;
 }
 
 export interface SortParams {
@@ -32,13 +37,21 @@ export interface SectorData {
 }
 
 // Extended Sector type with calculated stats
-export interface SectorWithStats extends Sector {
+export interface SectorWithStats {
+  id: string;
+  name: string;
+  region_id: string;
+  description: string;
+  created_at: string;
+  archived: boolean;
   schoolCount: number;
   completionRate: number;
   regionName?: string;
-  archived?: boolean;
-  description: string; // Required according to error messages
-  // If you need more stats, add them here
+  code?: string;
+  updated_at?: string;
+  // Backward compatibility fields
+  schools_count?: number;
+  completion_rate?: number;
 }
 
 // Filter for sectors
