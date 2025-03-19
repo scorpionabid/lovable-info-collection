@@ -1,426 +1,370 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { CreateSchoolDto, SchoolWithStats } from '@/services/supabase/school/types';
-import * as schoolService from '@/services/supabase/school';
 
-// Define the form schema
+import React, { useEffect, useState } from 'react';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { School, CreateSchoolDto, UpdateSchoolDto } from '@/services/supabase/school/types';
+import * as schoolService from '@/services/supabase/school';
+import { supabase } from '@/services/supabase/client';
+import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+// Define the schema for school form validation
 const schoolSchema = z.object({
-  name: z.string().min(3, { message: 'Məktəb adı ən azı 3 simvol olmalıdır' }),
+  name: z.string().min(2, "Ad minimum 2 simvol olmalıdır"),
   code: z.string().optional(),
   region_id: z.string().optional(),
-  sector_id: z.string().min(1, { message: 'Sektor seçilməlidir' }),
+  sector_id: z.string().min(1, "Sektor seçilməlidir"),
   type_id: z.string().optional(),
   address: z.string().optional(),
-  status: z.string().optional(),
-  student_count: z.number().min(0).optional(),
-  teacher_count: z.number().min(0).optional(),
+  status: z.enum(["active", "inactive"]).default("active"),
+  student_count: z.coerce.number().int().optional(),
+  teacher_count: z.coerce.number().int().optional(),
   director: z.string().optional(),
-  email: z.string().email({ message: 'Düzgün email formatı daxil edin' }).optional().or(z.literal('')),
-  phone: z.string().optional()
+  email: z.string().email("Düzgün email daxil edin").optional().or(z.literal("")),
+  phone: z.string().optional(),
+  archived: z.boolean().default(false)
 });
 
-export type SchoolFormValues = z.infer<typeof schoolSchema>;
+type SchoolFormValues = z.infer<typeof schoolSchema>;
 
 export interface SchoolFormProps {
   mode: 'create' | 'edit';
-  initialData?: any;
+  initialData?: School;
   onSuccess: () => void;
-  onCancel?: () => void;
-  defaultRegionId?: string;
-  defaultSectorId?: string;
 }
 
-export const SchoolForm: React.FC<SchoolFormProps> = ({
-  mode,
-  initialData,
-  onSuccess,
-  onCancel,
-  defaultRegionId,
-  defaultSectorId
-}) => {
-  // Get regions for dropdown
-  const regionsQuery = useQuery({
-    queryKey: ['regions-dropdown'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('regions')
-        .select('id, name')
-        .order('name');
-        
-      if (error) throw error;
-      return data || [];
-    }
-  });
+export const SchoolForm = ({ mode, initialData, onSuccess }: SchoolFormProps) => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [regions, setRegions] = useState<any[]>([]);
+  const [sectors, setSectors] = useState<any[]>([]);
+  const [schoolTypes, setSchoolTypes] = useState<any[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState(initialData?.region_id || '');
 
-  // Get sectors for dropdown
-  const sectorsQuery = useQuery({
-    queryKey: ['sectors-dropdown', initialData?.region_id || defaultRegionId],
-    queryFn: async () => {
-      const regionId = initialData?.region_id || defaultRegionId;
-      let query = supabase
-        .from('sectors')
-        .select('id, name')
-        .order('name');
-        
-      if (regionId) {
-        query = query.eq('region_id', regionId);
-      }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!initialData?.region_id || !!defaultRegionId
-  });
-
-  // Get school types for dropdown
-  const typesQuery = useQuery({
-    queryKey: ['school-types-dropdown'],
-    queryFn: async () => {
-      return await schoolService.getSchoolTypes();
-    }
-  });
-
-  // Form setup with react-hook-form and zod validation
   const form = useForm<SchoolFormValues>({
     resolver: zodResolver(schoolSchema),
     defaultValues: {
       name: initialData?.name || '',
       code: initialData?.code || '',
-      region_id: initialData?.region_id || defaultRegionId || '',
-      sector_id: initialData?.sector_id || defaultSectorId || '',
+      region_id: initialData?.region_id || '',
+      sector_id: initialData?.sector_id || '',
       type_id: initialData?.type_id || '',
       address: initialData?.address || '',
-      status: initialData?.status || 'active',
-      student_count: initialData?.student_count || initialData?.studentCount || 0,
-      teacher_count: initialData?.teacher_count || initialData?.teacherCount || 0,
+      status: (initialData?.status as "active" | "inactive") || 'active',
+      student_count: initialData?.student_count || 0,
+      teacher_count: initialData?.teacher_count || 0,
       director: initialData?.director || '',
       email: initialData?.email || '',
-      phone: initialData?.phone || ''
+      phone: initialData?.phone || '',
+      archived: initialData?.archived || false
     }
   });
 
-  // Create school mutation
-  const createSchoolMutation = useMutation({
-    mutationFn: async (data: SchoolFormValues) => {
-      const schoolData: CreateSchoolDto = {
-        name: data.name,
-        sector_id: data.sector_id,
-        region_id: data.region_id,
-        type_id: data.type_id,
-        code: data.code,
-        address: data.address,
-        status: data.status,
-        student_count: data.student_count,
-        teacher_count: data.teacher_count,
-        director: data.director,
-        email: data.email,
-        phone: data.phone
-      };
-      return await schoolService.createSchool(schoolData);
-    },
-    onSuccess: () => {
-      toast.success('Məktəb uğurla yaradıldı');
-      onSuccess();
-    },
-    onError: (error) => {
-      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
-    }
-  });
+  // Fetch regions, sectors, and school types on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch regions
+        const { data: regionsData, error: regionsError } = await supabase
+          .from('regions')
+          .select('id, name')
+          .order('name');
+        
+        if (regionsError) throw regionsError;
+        setRegions(regionsData || []);
 
-  // Update school mutation
-  const updateSchoolMutation = useMutation({
-    mutationFn: async (data: SchoolFormValues) => {
-      if (!initialData?.id) throw new Error('Məktəb ID-i mövcud deyil');
-      return await schoolService.updateSchool(initialData.id, data);
-    },
-    onSuccess: () => {
-      toast.success('Məktəb məlumatları uğurla yeniləndi');
-      onSuccess();
-    },
-    onError: (error) => {
-      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
-    }
-  });
+        // Fetch sectors
+        await fetchSectors(initialData?.region_id);
 
-  // Handle form submission
-  const onSubmit = (values: SchoolFormValues) => {
-    if (mode === 'create') {
-      createSchoolMutation.mutate(values);
-    } else {
-      updateSchoolMutation.mutate(values);
+        // Fetch school types using the helper function
+        const schoolTypesData = await schoolService.getSchoolTypes();
+        setSchoolTypes(schoolTypesData || []);
+      } catch (error) {
+        console.error('Error fetching form data:', error);
+        toast({
+          title: "Məlumat yüklənmə xətası",
+          description: "Məlumatları yükləyərkən xəta baş verdi",
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchData();
+  }, [initialData]);
+
+  // Fetch sectors when region selection changes
+  const fetchSectors = async (regionId?: string) => {
+    try {
+      let query = supabase.from('sectors').select('id, name');
+      
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+      
+      const { data, error } = await query.order('name');
+      
+      if (error) throw error;
+      setSectors(data || []);
+    } catch (error) {
+      console.error('Error fetching sectors:', error);
     }
   };
 
-  // Handle region change to filter sectors
+  // Handle region change
   const handleRegionChange = (regionId: string) => {
+    setSelectedRegion(regionId);
     form.setValue('region_id', regionId);
     form.setValue('sector_id', ''); // Reset sector when region changes
+    fetchSectors(regionId);
+  };
+
+  // Handle form submission
+  const onSubmit = async (values: SchoolFormValues) => {
+    setIsLoading(true);
+    try {
+      if (mode === 'create') {
+        // Create new school
+        const schoolData: CreateSchoolDto = {
+          name: values.name,
+          code: values.code,
+          region_id: values.region_id,
+          sector_id: values.sector_id,
+          type_id: values.type_id,
+          address: values.address,
+          status: values.status,
+          student_count: values.student_count,
+          teacher_count: values.teacher_count,
+          director: values.director,
+          email: values.email,
+          phone: values.phone,
+          archived: values.archived
+        };
+        
+        await schoolService.createSchool(schoolData);
+        toast({
+          title: "Məktəb yaradıldı",
+          description: "Məktəb uğurla əlavə edildi",
+        });
+      } else if (initialData?.id) {
+        // Update existing school
+        const schoolData: UpdateSchoolDto = {
+          name: values.name,
+          code: values.code,
+          region_id: values.region_id,
+          sector_id: values.sector_id,
+          type_id: values.type_id,
+          address: values.address,
+          status: values.status,
+          student_count: values.student_count,
+          teacher_count: values.teacher_count,
+          director: values.director,
+          email: values.email,
+          phone: values.phone,
+          archived: values.archived
+        };
+        
+        await schoolService.updateSchool(initialData.id, schoolData);
+        toast({
+          title: "Məktəb yeniləndi",
+          description: "Məktəb məlumatları uğurla yeniləndi",
+        });
+      }
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Error saving school:', error);
+      toast({
+        title: "Xəta baş verdi",
+        description: "Məktəb məlumatları saxlanarkən xəta baş verdi",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Məktəbin adı*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Məktəbin adını daxil edin" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Məktəb adı</Label>
+          <Input
+            id="name"
+            {...form.register('name')}
+            placeholder="Məktəb adını daxil edin"
           />
-          
-          <FormField
-            control={form.control}
-            name="code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Məktəb kodu</FormLabel>
-                <FormControl>
-                  <Input placeholder="Kod daxil edin" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {form.formState.errors.name && (
+            <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+          )}
+        </div>
 
-          <FormField
-            control={form.control}
-            name="region_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Region</FormLabel>
-                <Select 
-                  onValueChange={handleRegionChange} 
-                  value={field.value}
-                  disabled={regionsQuery.isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Region seçin" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {regionsQuery.data && regionsQuery.data.map((region) => (
-                      <SelectItem key={region.id} value={region.id}>
-                        {region.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="sector_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sektor*</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
-                  disabled={sectorsQuery.isLoading || !form.getValues('region_id')}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sektor seçin" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {sectorsQuery.data?.map((sector) => (
-                      <SelectItem key={sector.id} value={sector.id}>
-                        {sector.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="type_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Məktəb növü</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
-                  disabled={typesQuery.isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Növ seçin" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {typesQuery.data?.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status seçin" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="active">Aktiv</SelectItem>
-                    <SelectItem value="inactive">Deaktiv</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="student_count"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Şagird sayı</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
-                    {...field} 
-                    onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="teacher_count"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Müəllim sayı</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
-                    {...field} 
-                    onChange={e => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="director"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Direktor</FormLabel>
-                <FormControl>
-                  <Input placeholder="Direktor adı" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>E-mail</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="example@domain.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Telefon</FormLabel>
-                <FormControl>
-                  <Input placeholder="+994 XX XXX XX XX" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+        <div className="space-y-2">
+          <Label htmlFor="code">Kod</Label>
+          <Input
+            id="code"
+            {...form.register('code')}
+            placeholder="Məktəb kodu"
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ünvan</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Məktəbin ünvanı" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end space-x-2 pt-4">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              İmtina et
-            </Button>
-          )}
-          <Button 
-            type="submit" 
-            disabled={createSchoolMutation.isPending || updateSchoolMutation.isPending}
+        <div className="space-y-2">
+          <Label htmlFor="region">Region</Label>
+          <Select
+            value={selectedRegion}
+            onValueChange={handleRegionChange}
           >
-            {mode === 'create' ? 'Yarat' : 'Yenilə'}
-          </Button>
+            <SelectTrigger>
+              <SelectValue placeholder="Region seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {regions.map(region => (
+                <SelectItem key={region.id} value={region.id}>
+                  {region.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </form>
-    </Form>
+
+        <div className="space-y-2">
+          <Label htmlFor="sector">Sektor</Label>
+          <Select
+            value={form.watch('sector_id')}
+            onValueChange={(value) => form.setValue('sector_id', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sektor seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {sectors.map(sector => (
+                <SelectItem key={sector.id} value={sector.id}>
+                  {sector.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.sector_id && (
+            <p className="text-sm text-red-500">{form.formState.errors.sector_id.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="type">Məktəb növü</Label>
+          <Select
+            value={form.watch('type_id')}
+            onValueChange={(value) => form.setValue('type_id', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Məktəb növü seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {schoolTypes.map(type => (
+                <SelectItem key={type.id} value={type.id}>
+                  {type.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="address">Ünvan</Label>
+          <Input
+            id="address"
+            {...form.register('address')}
+            placeholder="Məktəb ünvanı"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="studentCount">Şagird sayı</Label>
+          <Input
+            id="studentCount"
+            type="number"
+            {...form.register('student_count')}
+            placeholder="Şagird sayı"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="teacherCount">Müəllim sayı</Label>
+          <Input
+            id="teacherCount"
+            type="number"
+            {...form.register('teacher_count')}
+            placeholder="Müəllim sayı"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="director">Direktor</Label>
+          <Input
+            id="director"
+            {...form.register('director')}
+            placeholder="Direktor adı"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">E-poçt</Label>
+          <Input
+            id="email"
+            type="email"
+            {...form.register('email')}
+            placeholder="E-poçt ünvanı"
+          />
+          {form.formState.errors.email && (
+            <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefon</Label>
+          <Input
+            id="phone"
+            {...form.register('phone')}
+            placeholder="Telefon nömrəsi"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <Select
+            value={form.watch('status')}
+            onValueChange={(value: 'active' | 'inactive') => form.setValue('status', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Status seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Aktiv</SelectItem>
+              <SelectItem value="inactive">Deaktiv</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="archived"
+            checked={form.watch('archived')}
+            onCheckedChange={(value) => form.setValue('archived', value)}
+          />
+          <Label htmlFor="archived">Arxivləşdirilib</Label>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {mode === 'create' ? 'Yarat' : 'Yadda saxla'}
+        </Button>
+      </div>
+    </form>
   );
 };

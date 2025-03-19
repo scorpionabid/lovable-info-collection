@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { School, SchoolFilter, SchoolSortParams } from '@/services/supabase/school/types';
 import * as schoolService from '@/services/supabase/school';
@@ -29,21 +28,21 @@ export const useSchoolData = ({
     direction: sortDirection
   };
 
-  // Create a new filter object that includes pagination and sorting
-  const requestParams = {
+  // Create a combined filter object for the API request
+  const queryParams: SchoolFilter = {
+    ...filters,
     page: currentPage,
     pageSize: pageSize,
-    sort: sortParams
+    sort: sortParams,
+    sort_field: sortColumn,
+    sort_direction: sortDirection
   };
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['schools', currentPage, pageSize, sortParams, filters],
     queryFn: async () => {
       try {
-        const result = await schoolService.getSchools({
-          ...filters,
-          ...requestParams
-        });
+        const result = await schoolService.getSchools(queryParams);
 
         // Ensure we always return an object with data and count properties
         if (Array.isArray(result)) {

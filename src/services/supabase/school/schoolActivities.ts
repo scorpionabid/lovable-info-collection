@@ -1,5 +1,5 @@
 
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../client';
 
 /**
  * Get recent activities/audit logs for a specific school

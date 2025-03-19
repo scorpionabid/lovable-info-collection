@@ -60,6 +60,9 @@ export interface SchoolFilter {
   pageSize?: number;
   sort?: SchoolSortParams;
   filters?: any;
+  // New properties added to fix errors
+  sort_field?: string;
+  sort_direction?: 'asc' | 'desc';
   // Backwards compatibility
   regionId?: string;
   sectorId?: string;

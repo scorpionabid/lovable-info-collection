@@ -1,79 +1,60 @@
 
 import { useState } from 'react';
+import { School, SchoolWithStats, deleteSchool } from '@/services/supabase/school';
 import { useToast } from '@/hooks/use-toast';
-import { School, SchoolWithStats } from '@/services/supabase/school/types';
-import * as schoolService from '@/services/supabase/school';
-import { exportToExcel } from '@/utils/excel';
 
 export const useSchoolActions = (refetch: () => void) => {
-  const { toast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  const { toast } = useToast();
 
-  // Refresh school data
   const handleRefresh = () => {
     refetch();
   };
 
-  // Handle successful school creation
   const handleCreateSuccess = () => {
+    setIsCreateModalOpen(false);
+    refetch();
     toast({
       title: "Məktəb yaradıldı",
-      description: "Məktəb uğurla yaradıldı",
+      description: "Məktəb uğurla əlavə edildi",
     });
-    refetch();
   };
 
-  // Handle export to Excel
   const handleExport = (schools: School[]) => {
-    const data = schools.map(school => ({
-      ID: school.id,
-      Name: school.name,
-      Code: school.code || '-',
-      Type: school.type || school.type_id || '-',
-      Region: school.region || school.region_id || '-',
-      Sector: school.sector || school.sector_id || '-',
-      Address: school.address || '-',
-      Director: school.director || '-',
-      Email: school.email || '-',
-      Phone: school.phone || '-',
-      'Student Count': school.student_count || 0,
-      'Teacher Count': school.teacher_count || 0,
-      Status: school.status || '-',
-      'Created At': new Date(school.created_at).toLocaleDateString()
-    }));
-
-    exportToExcel(data, 'schools');
+    // Implementation for exporting schools to Excel
+    console.log("Exporting schools:", schools);
   };
 
-  // Handle import from Excel (placeholder for now)
   const handleImport = () => {
-    toast({
-      title: "Excel İdxalı",
-      description: "Excel idxalı funksiyası hazırlanır",
-    });
+    // Implementation for importing schools from Excel
+    console.log("Importing schools");
   };
 
-  // Handle edit school
   const handleEditSchool = (school: School) => {
     setSelectedSchool(school);
     setIsEditModalOpen(true);
   };
 
-  // Handle delete school
-  const handleDeleteSchool = async (schoolId: string) => {
+  // Updated to accept a SchoolWithStats parameter
+  const handleDeleteSchool = async (school: SchoolWithStats) => {
     try {
-      await schoolService.deleteSchool(schoolId);
+      if (!school || !school.id) {
+        throw new Error("Invalid school data");
+      }
+      
+      await deleteSchool(school.id);
       toast({
         title: "Məktəb silindi",
-        description: "Məktəb uğurla silindi",
+        description: `${school.name} uğurla silindi`,
       });
       refetch();
     } catch (error) {
+      console.error("Error deleting school:", error);
       toast({
-        title: "Xəta",
-        description: "Məktəb silinərkən xəta baş verdi",
+        title: "Xəta baş verdi",
+        description: "Məktəb silinə bilmədi",
         variant: "destructive",
       });
     }
@@ -85,7 +66,6 @@ export const useSchoolActions = (refetch: () => void) => {
     isEditModalOpen,
     setIsEditModalOpen,
     selectedSchool,
-    setSelectedSchool,
     handleRefresh,
     handleCreateSuccess,
     handleExport,

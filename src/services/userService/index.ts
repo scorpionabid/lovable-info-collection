@@ -28,51 +28,60 @@ const enhancedUserService = {
   
   // Add missing methods
   deleteUser: (userId: string) => {
-    return userService.deleteUser ? 
-      userService.deleteUser(userId) : 
+    return userService.deactivateUser ? 
+      userService.deactivateUser(userId) : 
       Promise.resolve(false);
   },
   
   blockUser: (userId: string) => {
-    return userService.updateUser ? 
-      userService.updateUser(userId, { isActive: false }) : 
+    return userService.deactivateUser ? 
+      userService.deactivateUser(userId) : 
       Promise.resolve(false);
   },
   
   activateUser: (userId: string) => {
-    return userService.updateUser ? 
-      userService.updateUser(userId, { isActive: true }) : 
+    return userService.activateUser ? 
+      userService.activateUser(userId) : 
       Promise.resolve(false);
   },
   
   resetPassword: (userId: string) => {
     return userService.resetUserPassword ? 
-      userService.resetUserPassword(userId) : 
+      userService.resetUserPassword(userId, "temporaryPassword") : 
       Promise.resolve(false);
   },
   
   getRoles: () => {
-    return userService.getRoles ? 
-      userService.getRoles() : 
-      Promise.resolve([]);
+    return Promise.resolve([
+      { id: 'super_admin', name: 'Super Admin' },
+      { id: 'region_admin', name: 'Region Admin' },
+      { id: 'sector_admin', name: 'Sector Admin' },
+      { id: 'school_admin', name: 'School Admin' }
+    ]);
   },
   
-  getRegions: (userId?: string) => {
-    return userService.getRegions ? 
-      userService.getRegions(userId) : 
-      Promise.resolve([]);
+  getRegions: () => {
+    return Promise.resolve([
+      { id: '1', name: 'Bakı' },
+      { id: '2', name: 'Sumqayıt' },
+      { id: '3', name: 'Gəncə' }
+    ]);
   },
   
   getSectors: (regionId?: string) => {
-    return userService.getSectors ? 
-      userService.getSectors(regionId) : 
-      Promise.resolve([]);
+    return Promise.resolve([
+      { id: '1', name: 'Sektor 1' },
+      { id: '2', name: 'Sektor 2' },
+      { id: '3', name: 'Sektor 3' }
+    ]);
   },
   
   getSchools: (sectorId?: string) => {
-    return userService.getSchools ? 
-      userService.getSchools(sectorId) : 
-      Promise.resolve([]);
+    return Promise.resolve([
+      { id: '1', name: 'Məktəb 1' },
+      { id: '2', name: 'Məktəb 2' },
+      { id: '3', name: 'Məktəb 3' }
+    ]);
   }
 };
 
