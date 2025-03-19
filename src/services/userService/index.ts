@@ -79,7 +79,7 @@ const userService = {
   },
   
   // Organization data methods
-  getRoles: async (): Promise<EntityOption[]> => {
+  getRoles: async (currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
     return [
       { id: 'super_admin', name: 'Super Admin' },
       { id: 'region_admin', name: 'Region Admin' },
@@ -88,7 +88,7 @@ const userService = {
     ];
   },
 
-  getRegions: async (): Promise<EntityOption[]> => {
+  getRegions: async (currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
     return [
       { id: '1', name: 'Bakı' },
       { id: '2', name: 'Sumqayıt' },
@@ -96,7 +96,7 @@ const userService = {
     ];
   },
 
-  getSectors: async (regionId?: string): Promise<EntityOption[]> => {
+  getSectors: async (regionId?: string, currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
     console.log(`Fetching sectors for region ID: ${regionId}`);
     return [
       { id: '1', name: 'Sektor 1' },
@@ -105,7 +105,7 @@ const userService = {
     ];
   },
 
-  getSchools: async (sectorId?: string): Promise<EntityOption[]> => {
+  getSchools: async (sectorId?: string, currentUserId?: string, currentUserRole?: string): Promise<EntityOption[]> => {
     console.log(`Fetching schools for sector ID: ${sectorId}`);
     return [
       { id: '1', name: 'Məktəb 1' },

@@ -6,7 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SchoolForm } from "./modal/SchoolForm";
+import { SchoolForm, SchoolFormValues } from "./modal/SchoolForm";
+import { useSchoolForm } from "./modal/useSchoolForm";
 
 export interface SchoolModalProps {
   isOpen: boolean;
@@ -48,6 +49,24 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
     ? { ...school, region_id: regionId } 
     : school;
 
+  // Use the hook to get form functionality
+  const {
+    form,
+    isLoading,
+    isSubmitting,
+    errorMessage,
+    regions,
+    sectors,
+    schoolTypes,
+    handleRegionChange,
+    handleSubmit
+  } = useSchoolForm({
+    mode,
+    initialData: schoolData,
+    onSuccess: handleSuccess,
+    regionId
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -57,12 +76,19 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
           </DialogTitle>
         </DialogHeader>
         <SchoolForm 
-          mode={mode} 
-          initialData={schoolData} 
-          onSuccess={handleSuccess}
+          mode={mode}
+          initialData={schoolData}
           onCancel={onClose}
           defaultRegionId={regionId}
           defaultSectorId={sectorId}
+          form={form}
+          isSubmitting={isSubmitting}
+          errorMessage={errorMessage}
+          regions={regions}
+          sectors={sectors}
+          schoolTypes={schoolTypes}
+          onRegionChange={handleRegionChange}
+          handleSubmit={handleSubmit}
         />
       </DialogContent>
     </Dialog>

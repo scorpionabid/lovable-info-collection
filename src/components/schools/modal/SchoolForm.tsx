@@ -1,105 +1,126 @@
 
-import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UseFormReturn } from "react-hook-form";
-import { SchoolFormValues } from "./useSchoolForm";
+import { Loader2 } from "lucide-react";
+import { School } from "@/services/supabase/school/types";
+
+// Define the form schema
+export const schoolFormSchema = z.object({
+  name: z.string().min(3, { message: "Məktəb adı ən azı 3 simvol olmalıdır" }),
+  region_id: z.string().optional(),
+  sector_id: z.string().min(1, { message: "Sektor seçilməlidir" }),
+  status: z.string().optional(),
+  code: z.string().optional(),
+  address: z.string().optional(),
+  type_id: z.string().optional(),
+  email: z.string().email({ message: "Düzgün email formatı daxil edin" }).optional().or(z.literal("")),
+  phone: z.string().optional(),
+  director: z.string().optional(),
+  student_count: z.coerce.number().min(0).optional(),
+  teacher_count: z.coerce.number().min(0).optional(),
+});
+
+export type SchoolFormValues = z.infer<typeof schoolFormSchema>;
 
 export interface SchoolFormProps {
-  mode: 'create' | 'edit';
-  initialData?: any;
-  onSubmit: (values: SchoolFormValues) => void;
-  onCancel?: () => void;
+  mode: "create" | "edit";
+  initialData?: School;
+  onCancel: () => void;
   defaultRegionId?: string;
   defaultSectorId?: string;
-  form: UseFormReturn<SchoolFormValues, any, undefined>;
-  isSubmitting: boolean;
-  errorMessage: string | null;
-  regions: { id: string; name: string }[];
-  sectors: { id: string; name: string }[];
-  schoolTypes: { id: string; name: string }[];
-  onRegionChange: (regionId: string) => void;
+  form?: any;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
+  regions?: { id: string; name: string }[];
+  sectors?: { id: string; name: string }[];
+  schoolTypes?: { id: string; name: string }[];
+  onRegionChange?: (regionId: string) => void;
+  handleSubmit?: (values: SchoolFormValues) => Promise<void>;
 }
 
-export const SchoolForm: React.FC<SchoolFormProps> = ({ 
-  mode, 
-  initialData = {}, 
-  onSubmit,
+export const SchoolForm = ({
+  mode,
+  initialData,
   onCancel,
-  form,
+  defaultRegionId,
+  defaultSectorId,
+  form: externalForm,
   isSubmitting,
   errorMessage,
-  regions,
-  sectors,
-  schoolTypes,
-  onRegionChange
-}) => {
-  // Set default values when component mounts
-  React.useEffect(() => {
-    // If we have initialData, use it
-    if (mode === 'edit' && initialData) {
-      form.reset({
-        name: initialData.name || '',
-        sector_id: initialData.sector_id || '',
-        region_id: initialData.region_id || '',
-        type_id: initialData.type_id || '',
-        code: initialData.code || '',
-        address: initialData.address || '',
-        email: initialData.email || '',
-        phone: initialData.phone || '',
-        director: initialData.director || '',
-        student_count: initialData.student_count || 0,
-        teacher_count: initialData.teacher_count || 0,
-        status: initialData.status || 'Aktiv',
-      });
+  regions = [],
+  sectors = [],
+  schoolTypes = [],
+  onRegionChange,
+  handleSubmit: externalSubmit
+}: SchoolFormProps) => {
+  // Create a local form if none is provided
+  const internalForm = useForm<SchoolFormValues>({
+    resolver: zodResolver(schoolFormSchema),
+    defaultValues: {
+      name: initialData?.name || "",
+      sector_id: initialData?.sector_id || defaultSectorId || "",
+      region_id: initialData?.region_id || defaultRegionId || "",
+      type_id: initialData?.type_id || "",
+      code: initialData?.code || "",
+      address: initialData?.address || "",
+      email: initialData?.email || initialData?.contactEmail || "",
+      status: initialData?.status || "Aktiv",
+      phone: initialData?.phone || initialData?.contactPhone || "",
+      director: initialData?.director || "",
+      student_count: initialData?.student_count || initialData?.studentCount || 0,
+      teacher_count: initialData?.teacher_count || initialData?.teacherCount || 0,
     }
-  }, [form, initialData, mode]);
+  });
+
+  // Use either the provided form or the internal one
+  const form = externalForm || internalForm;
+
+  // Create a local submit function if none is provided
+  const localSubmit = async (values: SchoolFormValues) => {
+    // In a real implementation, this would save to the database
+    console.log("Submitting form with values:", values);
+    // Would typically make an API call here
+  };
+
+  // Use either the provided submit function or the local one
+  const onSubmit = externalSubmit || localSubmit;
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Məktəb adı *</FormLabel>
-                <FormControl>
-                  <Input placeholder="Məktəb adını daxil edin" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Məktəb adı *</FormLabel>
+              <FormControl>
+                <Input placeholder="Məktəb adını daxil edin" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Məktəb kodu</FormLabel>
-                <FormControl>
-                  <Input placeholder="Məktəb kodunu daxil edin" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="region_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Region *</FormLabel>
+                <FormLabel>Region</FormLabel>
                 <Select
                   value={field.value}
                   onValueChange={(value) => {
                     field.onChange(value);
-                    onRegionChange(value);
+                    if (onRegionChange) {
+                      onRegionChange(value);
+                    }
                   }}
                 >
                   <FormControl>
@@ -126,10 +147,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Sektor *</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                >
+                <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Sektor seçin" />
@@ -147,17 +165,16 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="type_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Məktəb növü</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                >
+                <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Məktəb növünü seçin" />
@@ -182,10 +199,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                >
+                <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Status seçin" />
@@ -193,9 +207,25 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="Aktiv">Aktiv</SelectItem>
-                    <SelectItem value="Deaktiv">Deaktiv</SelectItem>
+                    <SelectItem value="Qeyri-aktiv">Qeyri-aktiv</SelectItem>
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Məktəb kodu</FormLabel>
+                <FormControl>
+                  <Input placeholder="Məktəb kodunu daxil edin" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -214,7 +244,9 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="director"
@@ -222,7 +254,7 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               <FormItem>
                 <FormLabel>Direktor</FormLabel>
                 <FormControl>
-                  <Input placeholder="Direktor adını daxil edin" {...field} />
+                  <Input placeholder="Direktorun adını daxil edin" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -234,15 +266,17 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>E-poçt</FormLabel>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="E-poçt ünvanını daxil edin" {...field} />
+                  <Input placeholder="Email daxil edin" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="phone"
@@ -256,7 +290,9 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="student_count"
@@ -264,7 +300,12 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               <FormItem>
                 <FormLabel>Şagird sayı</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number" 
+                    placeholder="Şagird sayını daxil edin" 
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -278,7 +319,12 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
               <FormItem>
                 <FormLabel>Müəllim sayı</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input 
+                    type="number" 
+                    placeholder="Müəllim sayını daxil edin" 
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -287,15 +333,32 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
         </div>
 
         {errorMessage && (
-          <div className="text-red-500 text-sm mt-2">{errorMessage}</div>
+          <div className="text-red-500 bg-red-50 border border-red-200 p-3 rounded-md">
+            {errorMessage}
+          </div>
         )}
 
         <div className="flex justify-end space-x-2 pt-4">
-          <Button variant="outline" type="button" onClick={onCancel}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
             Ləğv et
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Yüklənir..." : mode === 'create' ? "Yarat" : "Saxla"}
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {mode === "create" ? "Yaradılır..." : "Yenilənir..."}
+              </>
+            ) : (
+              mode === "create" ? "Yarat" : "Yadda saxla"
+            )}
           </Button>
         </div>
       </form>
