@@ -1,43 +1,47 @@
-import { X } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { User } from '@/services/userService-bridge';
-import { useContext } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { UserModalContent } from "./modals/UserModalContent";
+
+import React from 'react';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { UserModalContent } from './modals/UserModalContent';
+import { UserViewModal } from './modals/viewModal';
 
 interface UserModalProps {
-  user?: User;
+  isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  user?: any;
+  mode?: 'create' | 'edit' | 'view';
+  currentUserId?: string;
+  currentUserRole?: string;
 }
 
-export const UserModal = ({ user, onClose, onSuccess }: UserModalProps) => {
-  const { user: authUser } = useAuth();
-  const currentUserId = authUser?.id;
-  const currentUserRole = authUser?.role;
+export const UserModal: React.FC<UserModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  user,
+  mode = 'create',
+  currentUserId,
+  currentUserRole
+}) => {
+  // If in view mode, use the view-specific modal
+  if (mode === 'view' && user) {
+    return (
+      <UserViewModal
+        isOpen={isOpen}
+        onClose={onClose}
+        user={user}
+      />
+    );
+  }
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>
-            {user ? "İstifadəçi Redaktəsi" : "Yeni İstifadəçi"}
-          </DialogTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </DialogHeader>
-
-        <UserModalContent 
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <UserModalContent
           user={user}
-          onClose={onClose}
+          mode={mode}
           onSuccess={onSuccess}
+          onClose={onClose}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
         />

@@ -1,9 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { supabaseUrl, supabaseKey } from './config';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
 
 // Create the Supabase client with better error handling and session persistence
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -42,6 +42,35 @@ export const refreshToken = async () => {
     console.error('Exception during token refresh:', error);
     return false;
   }
+};
+
+// Add withRetry helper
+export const withRetry = async <T>(
+  queryFn: () => Promise<T>, 
+  maxRetries = 2,
+  retryDelay = 1000
+): Promise<T> => {
+  let retries = 0;
+  let lastError: unknown;
+  
+  while (retries <= maxRetries) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      lastError = error;
+      
+      if (retries === maxRetries) {
+        break;
+      }
+      
+      retries++;
+      const delay = retryDelay * Math.pow(1.5, retries - 1);
+      console.log(`Retry ${retries}/${maxRetries}, waiting ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
 };
 
 // Check if connection is successful and log info in development

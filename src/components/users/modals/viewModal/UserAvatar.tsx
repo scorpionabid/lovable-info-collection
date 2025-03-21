@@ -12,7 +12,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md' }) => 
   // Get initials from user's name
   const getInitials = () => {
     if (!user) return '??';
-    return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
+    return `${user.first_name?.charAt(0) || '?'}${user.last_name?.charAt(0) || '?'}`.toUpperCase();
   };
 
   // Get background color based on user role
@@ -37,9 +37,12 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md' }) => 
     }
   };
 
+  // Using optional chaining to safely access avatar_url which may not exist
+  const avatarUrl = (user as any)?.avatar_url || '';
+
   return (
     <Avatar className={`${getSizeClass()}`}>
-      <AvatarImage src={user.avatar_url} alt={`${user.first_name} ${user.last_name}`} />
+      <AvatarImage src={avatarUrl} alt={`${user.first_name} ${user.last_name}`} />
       <AvatarFallback className={`${getBackgroundColor()} text-white font-medium`}>
         {getInitials()}
       </AvatarFallback>

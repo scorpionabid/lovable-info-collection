@@ -24,5 +24,5 @@ export * from './hooks/useSectors';
 export * from './hooks/useSchools';
 export * from './hooks/useUsers';
 
-// Fix ambiguity by re-exporting LoginCredentials from types
-export { LoginCredentials } from './types';
+// Fix ambiguity by explicitly exporting type
+export type { LoginCredentials } from './types';

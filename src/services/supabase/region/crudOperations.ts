@@ -1,3 +1,4 @@
+
 import { supabase } from '../supabaseClient';
 import { Region, CreateRegionDto, UpdateRegionDto } from './types';
 
@@ -13,7 +14,12 @@ export const createRegion = async (regionData: CreateRegionDto): Promise<Region 
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Ensure the returned data has a description field even if it's empty
+    return {
+      ...data,
+      description: data.description || '' // Add description if missing
+    } as Region;
   } catch (error) {
     console.error('Error creating region:', error);
     return null;
@@ -33,7 +39,12 @@ export const updateRegion = async (id: string, regionData: UpdateRegionDto): Pro
       .single();
     
     if (error) throw error;
-    return data;
+    
+    // Ensure the returned data has a description field even if it's empty
+    return {
+      ...data,
+      description: data.description || '' // Add description if missing
+    } as Region;
   } catch (error) {
     console.error(`Error updating region with ID ${id}:`, error);
     return null;

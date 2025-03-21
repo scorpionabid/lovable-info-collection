@@ -48,28 +48,24 @@ export const RegionsOverview = () => {
     handleCreateSuccess
   } = useRegionActions(refetch);
 
-  // Convert region data to ensure it matches the RegionWithStats type
-  const convertedRegionsData = regionsData ? {
-    data: regionsData.data.map(region => {
-      // Create a new object with all the required properties
-      const completeRegion: RegionWithStats = {
+  // Prepare data structure for the RegionTable component
+  const processedRegionsData = {
+    data: regionsData?.data?.map(region => {
+      return {
         ...region,
-        // Ensure all required properties are present
         description: region.description || '',
         sectorCount: region.sectorCount || region.sectors_count || 0,
         schoolCount: region.schoolCount || region.schools_count || 0,
         studentCount: region.studentCount || 0,
         teacherCount: region.teacherCount || 0,
         completionRate: region.completionRate || region.completion_rate || 0,
-        // Add backward compatibility properties
         sectors_count: region.sectors_count || region.sectorCount || 0,
         schools_count: region.schools_count || region.schoolCount || 0,
         completion_rate: region.completion_rate || region.completionRate || 0
-      };
-      return completeRegion;
-    }),
-    count: regionsData.count
-  } : { data: [], count: 0 };
+      } as RegionWithStats;
+    }) || [],
+    count: regionsData?.count || 0
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -80,7 +76,7 @@ export const RegionsOverview = () => {
           handleSearchChange(e);
         }}
         onRefresh={handleRefresh}
-        onExport={() => handleExport(convertedRegionsData)}
+        onExport={() => handleExport(processedRegionsData)}
         onImport={handleImport}
         onCreateRegion={() => setIsCreateModalOpen(true)}
         onToggleFilters={toggleFilters}
@@ -95,8 +91,8 @@ export const RegionsOverview = () => {
       )}
       
       <RegionTable 
-        regions={convertedRegionsData.data}
-        totalCount={convertedRegionsData.count}
+        regions={processedRegionsData.data}
+        totalCount={processedRegionsData.count}
         currentPage={currentPage}
         pageSize={pageSize}
         setCurrentPage={setCurrentPage}

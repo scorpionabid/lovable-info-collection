@@ -105,6 +105,55 @@ export const withRetry = async <T>(
   throw lastError;
 };
 
+// Function for cached queries
+export const queryWithCache = async <T>(
+  key: string,
+  queryFn: () => Promise<T>,
+  ttlMs = CACHE_CONFIG.defaultTTL
+): Promise<T> => {
+  if (!CACHE_CONFIG.enabled) {
+    return queryFn();
+  }
+  
+  const cacheKey = `${CACHE_CONFIG.storagePrefix}${key}`;
+  
+  // Try to get from cache
+  if (CACHE_CONFIG.persistToLocalStorage) {
+    try {
+      const cachedItem = localStorage.getItem(cacheKey);
+      if (cachedItem) {
+        const { data, expiry } = JSON.parse(cachedItem);
+        if (expiry > Date.now()) {
+          console.log(`Cache hit for ${key}`);
+          return data as T;
+        }
+        localStorage.removeItem(cacheKey); // Clear expired item
+      }
+    } catch (e) {
+      console.warn('Error accessing cache:', e);
+      // Continue with query if cache access fails
+    }
+  }
+  
+  // Execute the query
+  const result = await queryFn();
+  
+  // Store in cache
+  if (CACHE_CONFIG.persistToLocalStorage) {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data: result,
+        expiry: Date.now() + ttlMs
+      }));
+    } catch (e) {
+      console.warn('Error storing in cache:', e);
+      // Continue even if caching fails
+    }
+  }
+  
+  return result;
+};
+
 // Export helper functions for query building
 export const buildPaginatedQuery = (query: any, page: number, pageSize: number) => {
   const from = (page - 1) * pageSize;

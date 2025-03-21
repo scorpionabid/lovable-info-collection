@@ -1,77 +1,58 @@
-
-import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getUsers } from '@/supabase/services/users';
-import { UserFilters } from '@/supabase/types';
+import userService from '@/services/userService';
+import { UserFilters } from '@/services/supabase/user/types';
 
-export const useUsersData = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [regionFilter, setRegionFilter] = useState('');
-  const [sectorFilter, setSectorFilter] = useState('');
-  const [schoolFilter, setSchoolFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+interface UseUsersDataProps {
+  page?: number;
+  limit?: number;
+  filters?: UserFilters;
+}
 
-  // When search term changes, reset to page 1
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, roleFilter, regionFilter, sectorFilter, schoolFilter, statusFilter]);
-
-  // Build filters object
-  const filters: UserFilters = {
-    search: searchTerm,
-    role_id: roleFilter,
-    region_id: regionFilter,
-    sector_id: sectorFilter,
-    school_id: schoolFilter,
-    status: statusFilter,
+export const useUsersData = ({ 
+  page = 1, 
+  limit = 10,
+  filters = {}
+}: UseUsersDataProps = {}) => {
+  // Get all users with pagination and filters
+  const fetchUsers = async () => {
+    const combinedFilters = {
+      ...filters,
+      page,
+      limit
+    };
+    
+    return await userService.getUsers(combinedFilters);
   };
 
-  // Query users with filters and pagination
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['users', filters, currentPage, itemsPerPage, sortBy, sortOrder],
-    queryFn: () => getUsers(filters, {
-      page: currentPage,
-      pageSize: itemsPerPage
-    }, {
-      field: sortBy,
-      direction: sortOrder
-    }),
+  const {
+    data: usersData,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['users', page, limit, filters],
+    queryFn: fetchUsers
   });
 
-  // Transform API response format if needed
-  const users = data?.data || [];
-  const totalItems = data?.count || 0;
+  // Format the data to meet the expected structure
+  const formattedData = usersData 
+    ? { 
+        data: usersData.data || [], 
+        count: usersData.count || 0 
+      }
+    : { data: [], count: 0 };
 
   return {
-    users,
-    totalItems,
+    users: formattedData.data,
+    totalItems: formattedData.count,
+    currentPage: page,
+    setCurrentPage: (newPage: number) => {}, // This will be handled by the parent component
+    itemsPerPage: limit,
+    setItemsPerPage: (newLimit: number) => {}, // This will be handled by the parent component
     isLoading,
+    isError,
     error,
-    currentPage,
-    setCurrentPage,
-    itemsPerPage,
-    setItemsPerPage,
-    searchTerm,
-    setSearchTerm,
-    roleFilter,
-    setRoleFilter,
-    regionFilter,
-    setRegionFilter,
-    sectorFilter,
-    setSectorFilter,
-    schoolFilter,
-    setSchoolFilter,
-    statusFilter,
-    setStatusFilter,
-    sortBy,
-    setSortBy,
-    sortOrder,
-    setSortOrder,
     refetch
   };
 };

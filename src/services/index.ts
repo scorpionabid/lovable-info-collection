@@ -3,7 +3,7 @@
  * Re-export all services for easier imports
  */
 
-// Base services
+// Base services - explicitly name exports to avoid ambiguity
 export * from './userService';
 export * from './regionService';
 export * from './sectorService';
@@ -13,16 +13,19 @@ export * from './notificationService';
 export * from './exportService';
 export * from './metricService';
 
-// Supabase client from new location - avoid ambiguity by using specific imports
-export { 
-  supabase, 
-  // No more re-exporting these to avoid conflicts
-  // SUPABASE_URL, 
-  // SUPABASE_ANON_KEY, 
-  // CACHE_CONFIG
-} from '@/supabase/client';
+// Import constants from supabase config
+import { 
+  SUPABASE_URL, 
+  SUPABASE_ANON_KEY, 
+  CACHE_CONFIG 
+} from '@/lib/supabase/config';
 
-// If we still need these constants, re-export with different names
-export { SUPABASE_URL as SUPABASE_BASE_URL } from '@/supabase/client';
-export { SUPABASE_ANON_KEY as SUPABASE_API_KEY } from '@/supabase/client';
-export { CACHE_CONFIG as CACHE_SETTINGS } from '@/supabase/client';
+// Export Supabase client
+export { supabase } from '@/supabase/client';
+
+// Re-export config values with different names to avoid conflicts
+export {
+  SUPABASE_URL as SUPABASE_BASE_URL,
+  SUPABASE_ANON_KEY as SUPABASE_API_KEY,
+  CACHE_CONFIG as CACHE_SETTINGS
+};

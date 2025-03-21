@@ -1,21 +1,28 @@
+
 import { supabase } from '../supabaseClient';
 import { Region } from './types';
 
-export const getRegions = async (): Promise<Region[]> => {
+export const getRegions = async (): Promise<{data: Region[], count: number}> => {
   try {
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from('regions')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('name');
 
     if (error) {
       console.error("Error fetching regions:", error);
-      return [];
+      return { data: [], count: 0 };
     }
 
-    return data || [];
+    // Ensure each region has a description field, even if it's empty
+    const regionsWithDescription = data.map(region => ({
+      ...region,
+      description: region.description || ''
+    })) as Region[];
+
+    return { data: regionsWithDescription, count: count || regionsWithDescription.length };
   } catch (error) {
     console.error("Unexpected error fetching regions:", error);
-    return [];
+    return { data: [], count: 0 };
   }
 };

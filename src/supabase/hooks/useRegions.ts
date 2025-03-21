@@ -1,142 +1,84 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  getRegions, 
-  getRegionById, 
-  createRegion, 
-  updateRegion, 
-  deleteRegion,
-  getRegionsForDropdown
-} from '../services/regions';
-import { useState } from 'react';
-import { 
-  Region, 
-  RegionWithStats, 
-  CreateRegionDto, 
-  UpdateRegionDto, 
-  PaginationParams,
-  RegionFilters
-} from '../types';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import * as regionsService from '../services/regions';
+import type { RegionWithStats, Region } from '../types';
 
-export const useRegions = (filters: Partial<PaginationParams & RegionFilters> = {}) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortField, setSortField] = useState('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  
+// Define FilterParams type for use with regions
+export interface FilterParams {
+  search?: string;
+  status?: 'active' | 'archived' | 'all';
+  dateFrom?: string;
+  dateTo?: string;
+  minCompletionRate?: number;
+  maxCompletionRate?: number;
+}
+
+export const useRegions = (initialFilters?: FilterParams) => {
   const queryClient = useQueryClient();
-  
-  const queryParams = {
-    page: currentPage,
-    pageSize,
-    search: searchQuery,
-    ...filters
-  };
-  
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['regions', queryParams, sortField, sortDirection],
-    queryFn: () => getRegions(queryParams, sortField, sortDirection),
+  const [filters, setFilters] = useState<FilterParams>(initialFilters || {});
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const {
+    data: regions = [],
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
+    queryKey: ['regions', filters, sortField, sortDirection],
+    queryFn: () => regionsService.getRegions(filters, { field: sortField || 'name', direction: sortDirection }),
+    refetchOnWindowFocus: false
   });
-  
-  const createMutation = useMutation({
-    mutationFn: (data: CreateRegionDto) => createRegion(data),
-    onSuccess: () => {
-      toast.success('Region created successfully');
-      queryClient.invalidateQueries({ queryKey: ['regions'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Error creating region: ${error.message}`);
-    }
-  });
-  
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateRegionDto }) => 
-      updateRegion(id, data),
-    onSuccess: () => {
-      toast.success('Region updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['regions'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Error updating region: ${error.message}`);
-    }
-  });
-  
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteRegion(id),
-    onSuccess: () => {
-      toast.success('Region deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['regions'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Error deleting region: ${error.message}`);
-    }
-  });
-  
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page on search
-  };
-  
+
   const handleSort = (field: string) => {
-    if (field === sortField) {
+    if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
   };
-  
-  const invalidateCache = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['regions'] });
-    return refetch();
+
+  const handleFilterChange = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
-  
+
+  const resetFilters = () => {
+    setFilters({});
+    setSortField(null);
+    setSortDirection('asc');
+  };
+
+  useEffect(() => {
+    if (initialFilters && JSON.stringify(initialFilters) !== JSON.stringify(filters)) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters]);
+
+  // Process the data to ensure it has the expected structure
+  const processedData = {
+    data: Array.isArray(regions) 
+      ? regions
+      : Array.isArray(regions.data) 
+        ? regions.data 
+        : [],
+    count: typeof regions.count === 'number' ? regions.count : (Array.isArray(regions) ? regions.length : 0)
+  };
+
   return {
-    regions: data?.data || [],
-    count: data?.count || 0,
+    regions: processedData,
     isLoading,
     isError,
-    filters: { ...queryParams },
+    filters,
     sortField,
     sortDirection,
-    handleSearch,
     handleSort,
-    setCurrentPage,
-    setPageSize,
-    createRegion: createMutation.mutate,
-    updateRegion: updateMutation.mutate,
-    deleteRegion: deleteMutation.mutate,
-    invalidateCache
+    handleFilterChange,
+    resetFilters,
+    refetch,
+    invalidateCache: () => queryClient.invalidateQueries({ queryKey: ['regions'] })
   };
 };
 
-// Hook for dropdowns
-export const useRegionsDropdown = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['regions-dropdown'],
-    queryFn: getRegionsForDropdown,
-  });
-
-  return {
-    regions: data || [],
-    isLoading,
-    error
-  };
-};
-
-// Hook for getting a single region
-export const useRegion = (id: string) => {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['region', id],
-    queryFn: () => getRegionById(id),
-    enabled: !!id,
-  });
-
-  return {
-    region: data as RegionWithStats | undefined,
-    isLoading,
-    isError
-  };
-};
+export const useRegionsData = useRegions;

@@ -1,29 +1,41 @@
 
-// İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
-// Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
-import { useSectorsDropdown } from '@/supabase/hooks/useSectors';
-import { Sector } from '@/supabase/types';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/services/supabase/supabaseClient';
 
-// Tip definisiyası
-export type { Sector };
-
-// Public API
-export const useSectors = useSectorsDropdown;
-
-// Default export sektorları almaq üçün hook (geriyə uyğunluq üçün)
-export default function useSectorsDefault() {
-  const { sectors, isLoading, error } = useSectorsDropdown();
-  
-  // Köhnə struktura uyğun data qaytarırıq
-  const formattedSectors = sectors.map(sector => ({
-    ...sector,
-    // Make sure we don't access a property that doesn't exist
-    description: sector.description || '' // Əskik sahələri əlavə edirik
-  }));
-  
-  return {
-    sectors: formattedSectors,
-    isLoading,
-    error
+// Fetch sectors based on selected region
+export const useSectors = (regionId?: string) => {
+  const fetchSectors = async () => {
+    try {
+      let query = supabase.from('sectors').select('id, name, region_id, code');
+      
+      if (regionId) {
+        query = query.eq('region_id', regionId);
+      }
+      
+      const { data, error } = await query.order('name');
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data.map(sector => ({
+        id: sector.id,
+        name: sector.name,
+        region_id: sector.region_id,
+        description: '', // Adding description to satisfy type requirements
+        archived: false  // Adding archived to satisfy type requirements
+      }));
+    } catch (error) {
+      console.error('Error fetching sectors:', error);
+      return [];
+    }
   };
-}
+
+  const { data: sectors = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['sectors_dropdown', regionId],
+    queryFn: fetchSectors,
+    enabled: !!regionId
+  });
+
+  return { sectors, isLoading, isError, refetch };
+};

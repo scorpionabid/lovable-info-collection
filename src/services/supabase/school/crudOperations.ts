@@ -1,15 +1,20 @@
 
 import { supabase } from '../supabaseClient';
-import { School, CreateSchoolDto, UpdateSchoolDto } from './types';
 
 /**
  * Creates a new school
  */
-export const createSchool = async (schoolData: CreateSchoolDto): Promise<School | null> => {
+export const createSchool = async (schoolData) => {
   try {
+    // Ensure the school has an archived field set to false by default
+    const dataToInsert = {
+      ...schoolData,
+      archived: false
+    };
+
     const { data, error } = await supabase
       .from('schools')
-      .insert([schoolData])
+      .insert([dataToInsert])
       .select('*')
       .single();
     
@@ -24,7 +29,7 @@ export const createSchool = async (schoolData: CreateSchoolDto): Promise<School 
 /**
  * Updates an existing school
  */
-export const updateSchool = async (id: string, schoolData: UpdateSchoolDto): Promise<School | null> => {
+export const updateSchool = async (id, schoolData) => {
   try {
     const { data, error } = await supabase
       .from('schools')
@@ -44,8 +49,9 @@ export const updateSchool = async (id: string, schoolData: UpdateSchoolDto): Pro
 /**
  * Deletes a school by setting its archived flag to true (soft delete)
  */
-export const deleteSchool = async (id: string): Promise<boolean> => {
+export const deleteSchool = async (id) => {
   try {
+    // Update the archived field, which is allowed in the update operation
     const { error } = await supabase
       .from('schools')
       .update({ archived: true })
@@ -62,7 +68,7 @@ export const deleteSchool = async (id: string): Promise<boolean> => {
 /**
  * Hard deletes a school from the database
  */
-export const hardDeleteSchool = async (id: string): Promise<boolean> => {
+export const hardDeleteSchool = async (id) => {
   try {
     const { error } = await supabase
       .from('schools')

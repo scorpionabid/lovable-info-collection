@@ -1,161 +1,124 @@
 
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { userFormSchema, type UserFormValues } from './UserFormSchema';
-import { User } from '@/supabase/types';
-import { PersonalTab } from './tabs/PersonalTab';
-import { RoleTab } from './role/RoleTab';
-import { SecurityTab } from './tabs/SecurityTab';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+import { UserForm } from './UserForm';
+import { RoleTab } from './role/RoleTab';
+import { useUserFormSubmit } from '../hooks/useUserFormSubmit';
 import { useOrganizationData } from '../hooks/useOrganizationData';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { useUserFormHandling } from '../hooks/useUserFormHandling';
 
-interface UserModalContentProps {
-  user?: User;
-  onSubmit: (values: UserFormValues) => void;
-  onCancel: () => void;
-  isSubmitting: boolean;
+export interface UserModalContentProps {
+  user?: any;
+  mode?: 'create' | 'edit' | 'view';
+  onSuccess?: () => void;
+  onClose?: () => void;
+  currentUserId?: string;
+  currentUserRole?: string;
 }
 
 export const UserModalContent: React.FC<UserModalContentProps> = ({
   user,
-  onSubmit,
-  onCancel,
-  isSubmitting
+  mode = 'create',
+  onSuccess,
+  onClose,
+  currentUserId,
+  currentUserRole
 }) => {
-  const [activeTab, setActiveTab] = useState('personal');
-  const { 
-    roles, 
-    regions, 
-    sectors, 
-    schools, 
-    isLoading, 
-    regionId, 
-    setRegionId, 
-    sectorId, 
-    setSectorId, 
-    schoolId, 
-    setSchoolId 
-  } = useOrganizationData();
-
-  // Get current user role from auth
-  const [currentUserRole, setCurrentUserRole] = useState('unknown');
+  const [activeTab, setActiveTab] = useState('profile');
+  const { handleSubmit, submitStatus } = useUserFormSubmit(mode, onSuccess);
   
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        // This would normally be fetched from your auth system
-        // For now, let's assume the current user is a super admin
-        setCurrentUserRole('superadmin');
-      } catch (error) {
-        console.error('Error fetching user role:', error);
-        toast.error('Cari istifadəçi rolu alınarkən xəta baş verdi');
-      }
-    };
+  const {
+    formData,
+    setFormData,
+    errors,
+    validateForm,
+    handleInputChange,
+    handlePhoneChange,
+    handleRoleChange,
+    resetForm
+  } = useUserFormHandling(user, mode);
+  
+  const roleData = useOrganizationData(formData.roleId);
+  
+  const saveUser = async () => {
+    const isValid = validateForm();
+    if (!isValid) return;
     
-    fetchUserRole();
-  }, []);
-
-  // Initialize the form with user data if provided
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: user ? {
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      phone: user.phone || '',
-      utis_code: user.utis_code || '',
-      role_id: user.role_id,
-      region_id: user.region_id || '',
-      sector_id: user.sector_id || '',
-      school_id: user.school_id || '',
-      is_active: user.is_active,
-      password: '' // Don't prefill password
-    } : {
-      email: '',
-      first_name: '',
-      last_name: '',
-      phone: '',
-      utis_code: '',
-      role_id: '',
-      region_id: '',
-      sector_id: '',
-      school_id: '',
-      is_active: true,
-      password: ''
-    }
-  });
-
-  // Find role by ID for display purposes
-  const getRoleById = (roleId: string) => {
-    return roles.find(role => role.id === roleId);
+    await handleSubmit(formData);
   };
-
-  // When form is submitted
-  const handleSubmit = (values: UserFormValues) => {
-    onSubmit(values);
+  
+  // Check if user has permission to edit role
+  const canEditRole = () => {
+    if (mode === 'create') return true;
+    if (!currentUserRole || !currentUserId) return false;
+    
+    // SuperAdmin can edit all roles
+    if (currentUserRole === 'super-admin') return true;
+    
+    // Users can't edit their own role
+    if (user?.id === currentUserId) return false;
+    
+    return false;
   };
-
+  
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="personal">Şəxsi məlumatlar</TabsTrigger>
-          <TabsTrigger value="role">Rol və İcazələr</TabsTrigger>
-          <TabsTrigger value="security">Təhlükəsizlik</TabsTrigger>
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-4 pb-2 border-b">
+        <h2 className="text-xl font-semibold">
+          {mode === 'create' ? 'Yeni istifadəçi yarat' : 
+           mode === 'edit' ? 'İstifadəçini redaktə et' : 
+           'İstifadəçi məlumatları'}
+        </h2>
+        {onClose && (
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+        <TabsList className="mb-4 grid grid-cols-2">
+          <TabsTrigger value="profile">Şəxsi məlumatlar</TabsTrigger>
+          <TabsTrigger value="role" disabled={!canEditRole()}>Rol və təşkilat</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="personal" className="space-y-4 mt-6">
-          <PersonalTab form={form} />
-        </TabsContent>
-        
-        <TabsContent value="role" className="space-y-4 mt-6">
-          <RoleTab 
-            roles={roles}
-            regions={regions}
-            sectors={sectors}
-            schools={schools}
-            isEditing={!!user}
-            user={user}
-            currentUserRole={currentUserRole}
-            selectedRole={form.watch('role_id')}
-            selectedRegion={form.watch('region_id')}
-            selectedSector={form.watch('sector_id')}
-            selectedSchool={form.watch('school_id')}
-            onRoleChange={(value) => form.setValue('role_id', value)}
-            onRegionChange={(value) => {
-              form.setValue('region_id', value);
-              form.setValue('sector_id', '');
-              form.setValue('school_id', '');
-              setRegionId(value);
-            }}
-            onSectorChange={(value) => {
-              form.setValue('sector_id', value);
-              form.setValue('school_id', '');
-              setSectorId(value);
-            }}
-            onSchoolChange={(value) => {
-              form.setValue('school_id', value);
-              setSchoolId(value);
-            }}
+        <TabsContent value="profile" className="flex-1">
+          <UserForm 
+            formData={formData}
+            errors={errors}
+            mode={mode}
+            onChange={handleInputChange}
+            onPhoneChange={handlePhoneChange}
           />
         </TabsContent>
         
-        <TabsContent value="security" className="space-y-4 mt-6">
-          <SecurityTab form={form} isEditing={!!user} />
+        <TabsContent value="role" className="flex-1">
+          <RoleTab
+            formData={formData}
+            errors={errors}
+            onChange={handleRoleChange}
+            roleData={roleData}
+          />
         </TabsContent>
       </Tabs>
       
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Ləğv et
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Gözləyin...' : user ? 'Yenilə' : 'Əlavə et'}
-        </Button>
-      </div>
-    </form>
+      {(mode === 'create' || mode === 'edit') && (
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+          {onClose && (
+            <Button variant="outline" onClick={onClose}>
+              Ləğv et
+            </Button>
+          )}
+          <Button 
+            onClick={saveUser} 
+            disabled={submitStatus === 'loading'}
+          >
+            {submitStatus === 'loading' ? 'Yüklənir...' : 'Yadda saxla'}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };

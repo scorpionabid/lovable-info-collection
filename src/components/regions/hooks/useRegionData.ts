@@ -1,8 +1,8 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FilterParams, SortConfig } from "@/services/supabase/region";
-import regionService from "@/services/supabase/region";
+import { FilterParams } from "@/services/supabase/region/types";
+import regionService from "@/services/regionService";
 
 interface UseRegionDataProps {
   currentPage: number;
@@ -28,11 +28,7 @@ export const useRegionData = ({
     refetch 
   } = useQuery({
     queryKey: ['regions', currentPage, pageSize, sortColumn, sortDirection, filters],
-    queryFn: () => regionService.getRegions(
-      { page: currentPage, pageSize },
-      { field: sortColumn, direction: sortDirection },
-      filters
-    ),
+    queryFn: () => regionService.getRegions(filters, { field: sortColumn, direction: sortDirection }),
   });
 
   return {

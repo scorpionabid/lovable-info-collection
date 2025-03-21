@@ -1,110 +1,169 @@
 
-/**
- * Autentifikasiya üçün hook
- */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import * as authService from '../services/auth';
-import { LoginCredentials } from '../services/auth';
+import { useToast } from '@/hooks/use-toast';
 
-// Login, çıxış və istifadəçi məlumatlarını idarə etmək üçün hook
+// Import auth functions directly
+import * as authService from '@/services/supabase/authService';
+
+// Export the LoginCredentials type for consistency
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
 export const useAuth = () => {
-  const [loading, setLoading] = useState<boolean>(false);
-  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Sessiya məlumatlarını əldə etmək
-  const { data: session, isLoading: isSessionLoading } = useQuery({
-    queryKey: ['auth-session'],
-    queryFn: () => authService.getSession(),
-    retry: false
-  });
-
-  // Cari istifadəçi məlumatlarını əldə etmək (Aktiv sessiya varsa)
-  const { data: user, isLoading: isUserLoading } = useQuery({
-    queryKey: ['auth-user'],
-    queryFn: () => authService.getCurrentUser(),
-    enabled: !!session,
-    retry: false
-  });
-
-  // Login olmaq üçün mutasiya
-  const loginMutation = useMutation({
-    mutationFn: (credentials: LoginCredentials) => authService.login(credentials),
-    onMutate: () => {
+  const getSession = useCallback(async () => {
+    try {
       setLoading(true);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auth-session'] });
-      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
-      toast.success('Uğurla daxil oldunuz');
-      navigate('/dashboard');
-    },
-    onError: (error: any) => {
-      let message = 'Daxil olmaq mümkün olmadı';
-      if (error.message.includes('Invalid login')) {
-        message = 'E-mail və ya şifrə səhvdir';
+      setError(null);
+      const { data, error } = await authService.getSession();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error getting session'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error } = await authService.login(credentials);
+      
+      if (error) {
+        toast({
+          title: "Xəta",
+          description: "Giriş xətası. E-poçt və ya şifrə səhvdir.",
+          variant: "destructive",
+        });
+        throw error;
       }
-      toast.error(message);
-    },
-    onSettled: () => {
+      
+      toast({
+        title: "Uğurlu giriş",
+        description: "Sistemə daxil oldunuz.",
+      });
+      
+      navigate('/');
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown login error'));
+      return false;
+    } finally {
       setLoading(false);
     }
-  });
+  }, [navigate, toast]);
 
-  // Çıxış etmək üçün mutasiya
-  const logoutMutation = useMutation({
-    mutationFn: () => authService.logout(),
-    onMutate: () => {
+  const logout = useCallback(async () => {
+    try {
       setLoading(true);
-    },
-    onSuccess: () => {
-      queryClient.clear();
-      toast.success('Uğurla çıxış etdiniz');
+      setError(null);
+      
+      await authService.logout();
+      
+      toast({
+        title: "Çıxış",
+        description: "Sistemdən çıxış edildi.",
+      });
+      
       navigate('/login');
-    },
-    onError: (error: any) => {
-      toast.error(`Çıxış xətası: ${error.message}`);
-    },
-    onSettled: () => {
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown logout error'));
+      toast({
+        title: "Çıxış xətası",
+        description: "Sistemdən çıxış edərkən bir xəta baş verdi.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
       setLoading(false);
     }
-  });
+  }, [navigate, toast]);
 
-  // Şifrə sıfırlama linki göndərmək üçün mutasiya
-  const resetPasswordMutation = useMutation({
-    mutationFn: (email: string) => authService.sendPasswordResetEmail(email),
-    onSuccess: () => {
-      toast.success('Şifrə sıfırlama linki e-poçt ünvanınıza göndərildi');
-    },
-    onError: (error: any) => {
-      toast.error(`Şifrə sıfırlama xətası: ${error.message}`);
+  const sendPasswordResetEmail = useCallback(async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { success, error } = await authService.sendResetPasswordEmail(email);
+      
+      if (!success) {
+        throw error;
+      }
+      
+      toast({
+        title: "Şifrə sıfırlama e-poçtu göndərildi",
+        description: "Zəhmət olmasa e-poçtunuzu yoxlayın.",
+      });
+      
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error sending password reset'));
+      toast({
+        title: "Xəta",
+        description: "Şifrə sıfırlama e-poçtu göndərilərkən xəta baş verdi.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
     }
-  });
+  }, [toast]);
 
-  // Şifrə dəyişmək üçün mutasiya
-  const changePasswordMutation = useMutation({
-    mutationFn: (newPassword: string) => authService.changePassword(newPassword),
-    onSuccess: () => {
-      toast.success('Şifrəniz uğurla dəyişdirildi');
-      navigate('/dashboard');
-    },
-    onError: (error: any) => {
-      toast.error(`Şifrə dəyişmə xətası: ${error.message}`);
+  const changePassword = useCallback(async (newPassword: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { success, error } = await authService.resetPassword(newPassword);
+      
+      if (!success) {
+        throw error;
+      }
+      
+      toast({
+        title: "Şifrə yeniləndi",
+        description: "Şifrəniz uğurla yeniləndi.",
+      });
+      
+      navigate('/login');
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error changing password'));
+      toast({
+        title: "Xəta",
+        description: "Şifrə dəyişdirilməsi zamanı xəta baş verdi.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
     }
-  });
+  }, [navigate, toast]);
+
+  const hasRole = useCallback((userRole: string, requiredRole: string) => {
+    return authService.checkRole(userRole, requiredRole);
+  }, []);
 
   return {
-    user,
-    session,
-    isLoading: loading || isSessionLoading || isUserLoading,
-    isAuthenticated: !!session,
-    login: (credentials: LoginCredentials) => loginMutation.mutate(credentials),
-    logout: () => logoutMutation.mutate(),
-    sendPasswordResetEmail: (email: string) => resetPasswordMutation.mutate(email),
-    changePassword: (newPassword: string) => changePasswordMutation.mutate(newPassword),
-    hasRole: (role: string) => authService.hasRole(role)
+    loading,
+    error,
+    login,
+    logout,
+    getSession,
+    sendPasswordResetEmail,
+    changePassword,
+    hasRole,
   };
 };
