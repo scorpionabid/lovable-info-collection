@@ -1,162 +1,141 @@
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Pencil, ArrowLeft, Loader2 } from "lucide-react";
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getSchoolWithAdmin } from '@/services/supabase/school/queries/schoolQueries';
+import { 
+  getSchoolDetailsWithAdmin 
+} from '@/services/supabase/school/queries/schoolQueries';
 import { School } from '@/services/supabase/school/types';
+import SchoolInfo from './details/SchoolInfo';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AdminInfo from './details/AdminInfo';
+import SchoolStats from './details/SchoolStats';
+import { Button } from '@/components/ui/button';
+import { Edit } from 'lucide-react';
+import { useState } from 'react';
 import { SchoolModal } from './SchoolModal';
-import { toast } from 'sonner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Define proper type for params
-interface RouteParams {
-  schoolId: string;
-  [key: string]: string | undefined;
-}
-
-const SchoolDetailView: React.FC = () => {
-  const { schoolId } = useParams<RouteParams>();
-  const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
-  const [school, setSchool] = useState<School | null>(null);
-  const [admin, setAdmin] = useState<any | null>(null);
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['school', schoolId],
-    queryFn: () => getSchoolWithAdmin(schoolId as string),
-    enabled: !!schoolId,
-    onSuccess: (result) => {
-      if (result) {
-        setSchool(result.school);
-        setAdmin(result.admin);
-      }
-    },
-    onError: (error) => {
-      toast.error(`Məktəb məlumatları alınarkən xəta baş verdi: ${error}`);
-    }
+export default function SchoolDetailView() {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { schoolId } = useParams<{ schoolId: string }>();
+  
+  // Fetch school data with admin info
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['school', 'details', schoolId],
+    queryFn: () => getSchoolDetailsWithAdmin(schoolId as string),
+    enabled: !!schoolId
   });
 
-  useEffect(() => {
-    if (data) {
-      setSchool(data.school);
-      setAdmin(data.admin);
-    }
-  }, [data]);
-
-  const handleSchoolUpdated = () => {
+  const handleUpdateSuccess = () => {
     refetch();
+    setIsEditModalOpen(false);
   };
 
-  if (isLoading || !schoolId) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-infoline-blue" />
-      </div>
-    );
+  if (isLoading) {
+    return <SchoolDetailSkeleton />;
   }
 
-  if (!school) {
+  if (isError || !data) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <p className="text-lg">Məktəb tapılmadı.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto mt-8">
-      <Button onClick={() => navigate(-1)} className="mb-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Geri
-      </Button>
-
-      <Card className="w-full">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-2xl font-bold">{school.name}</CardTitle>
-          <Button onClick={() => setIsEditing(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
-            Redaktə et
+      <Card className="p-6">
+        <CardContent className="flex flex-col items-center justify-center">
+          <h2 className="text-xl font-bold text-red-600">Xəta</h2>
+          <p>Məktəb məlumatları yüklənərkən xəta baş verdi.</p>
+          <Button 
+            onClick={() => refetch()} 
+            variant="outline" 
+            className="mt-4"
+          >
+            Yenidən cəhd et
           </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Kod:</span>
-              <span>{school.code}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Tip:</span>
-              <span>{school.type}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Region:</span>
-              <span>{school.region}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Sektor:</span>
-              <span>{school.sector}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Ünvan:</span>
-              <span>{school.address}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Direktor:</span>
-              <span>{school.director}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Email:</span>
-              <span>{school.email}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Telefon:</span>
-              <span>{school.phone}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Şagird sayı:</span>
-              <span>{school.studentCount}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Müəllim sayı:</span>
-              <span>{school.teacherCount}</span>
-            </div>
-            <div className="flex items-center">
-              <span className="font-semibold w-32">Yaradılma tarixi:</span>
-              <span>{new Date(school.createdAt).toLocaleDateString()}</span>
-            </div>
-            {admin && (
-              <>
-                <div className="flex items-center">
-                  <span className="font-semibold w-32">Admin Adı:</span>
-                  <span>{admin.first_name} {admin.last_name}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold w-32">Admin Email:</span>
-                  <span>{admin.email}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-semibold w-32">Admin Telefon:</span>
-                  <span>{admin.phone}</span>
-                </div>
-              </>
-            )}
-          </div>
         </CardContent>
       </Card>
+    );
+  }
 
-      {isEditing && (
-        <SchoolModal
-          isOpen={isEditing}
-          onClose={() => setIsEditing(false)}
-          mode="edit"
+  const school = data.school;
+  const admin = data.admin;
+
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{school.name}</h1>
+          <p className="text-muted-foreground">
+            {school.sector?.name} / {school.region?.name}
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2"
+          onClick={() => setIsEditModalOpen(true)}
+        >
+          <Edit className="h-4 w-4" />
+          Redaktə et
+        </Button>
+      </div>
+
+      <Tabs defaultValue="info" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="info">Ümumi məlumat</TabsTrigger>
+          <TabsTrigger value="admin">Admin</TabsTrigger>
+          <TabsTrigger value="stats">Statistika</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info">
+          <SchoolInfo school={school} />
+        </TabsContent>
+
+        <TabsContent value="admin">
+          <AdminInfo admin={admin} />
+        </TabsContent>
+
+        <TabsContent value="stats">
+          <SchoolStats schoolId={school.id} />
+        </TabsContent>
+      </Tabs>
+
+      {isEditModalOpen && (
+        <SchoolModal 
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
           schoolId={school.id}
-          onSchoolUpdated={handleSchoolUpdated}
+          mode="edit"
+          onSuccess={handleUpdateSuccess}
         />
       )}
     </div>
   );
-};
+}
 
-export default SchoolDetailView;
+function SchoolDetailSkeleton() {
+  return (
+    <div className="container mx-auto py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-5 w-40 mt-2" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      <div className="mb-4">
+        <Skeleton className="h-10 w-80" />
+      </div>
+
+      <div className="grid gap-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-2/3" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

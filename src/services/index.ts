@@ -1,21 +1,19 @@
 
 /**
- * Xidmət ixracları
+ * İnfoLine servisləri
+ * Fayd, bu modul bütün servis funksiyalarını bir araya gətirir
+ * və tətbiqin müxtəlif hissələrindən istifadə olunması üçün ixrac edir
  */
 
-// Supabase xidmətləri
+// Service exports 
 export { default as authService } from './authService';
-export { default as dataService } from './dataService';
-export { default as categoryService } from './categoryService';
 export { default as userService } from './userService';
-export * as regionService from './regionService'; // Changed from regionService to export all named exports
+export { default as regionService } from './regionService';
+export { default as sectorService } from './sectorService';
+export { default as schoolService } from './schoolService';
+export { default as categoryService } from './categoryService';
 export { default as notificationService } from './notificationService';
-export { default as auditLogService } from './auditLogService';
-export { default as metricService } from './metricService';
-export { default as exportService } from './exportService';
-export { default as reportService } from './reportService';
-export { default as approvalService } from './approvalService';
-
-// Supabase müştərisi
-export { supabase } from '@/lib/supabase';
-export { checkConnection } from '@/lib/supabase';
+export { default as logService } from './logService';
+export { metricService } from './metricService';
+export { default as dataService } from './dataService';
+export { default as validationService } from './validationService';

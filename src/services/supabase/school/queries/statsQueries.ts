@@ -4,16 +4,23 @@ import { SchoolStats } from '../types';
 
 export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => {
   try {
-    // Fetch school data - handling case when student_count/teacher_count might not exist yet
+    // Fetch school data with student/teacher counts
     const { data: schoolData, error: schoolError } = await supabase
       .from('schools')
       .select('student_count, teacher_count')
       .eq('id', schoolId)
       .single();
 
+    // Handle the case when we get an error or no data
+    let studentCount = 0;
+    let teacherCount = 0;
+    
     if (schoolError) {
       console.warn('Could not fetch student/teacher counts, using defaults', schoolError);
-      // Continue with defaults instead of throwing
+    } else if (schoolData) {
+      // Use data from the database if available
+      studentCount = schoolData.student_count || 0;
+      teacherCount = schoolData.teacher_count || 0;
     }
 
     // Calculate completion rate - in a real scenario, this would be based on
@@ -32,16 +39,6 @@ export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => 
 
     if (latestError) {
       console.warn('Could not fetch last update time', latestError);
-      // Continue with current date instead of throwing
-    }
-
-    // Handle the case when student_count or teacher_count might not exist in the database yet
-    let studentCount = 0;
-    let teacherCount = 0;
-    
-    if (schoolData) {
-      studentCount = schoolData.student_count || 0;
-      teacherCount = schoolData.teacher_count || 0;
     }
 
     return {

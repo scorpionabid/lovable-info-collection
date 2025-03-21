@@ -14,7 +14,9 @@ export interface SchoolModalProps {
   mode?: "create" | "edit";
   onSuccess?: () => void;
   regionId?: string;
+  sectorId?: string;
   onSchoolUpdated?: () => void;
+  onCreated?: () => void;
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
@@ -24,17 +26,20 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   mode = "create",
   onSuccess,
   regionId,
-  onSchoolUpdated
+  sectorId,
+  onSchoolUpdated,
+  onCreated
 }) => {
   const { data: schoolData, isLoading } = useQuery({
     queryKey: ["school", schoolId],
     queryFn: () => getSchoolById(schoolId as string),
-    enabled: !!schoolId
+    enabled: !!schoolId && mode === "edit"
   });
 
   const handleSuccess = () => {
     if (onSuccess) onSuccess();
     if (onSchoolUpdated) onSchoolUpdated();
+    if (onCreated && mode === "create") onCreated();
     onClose();
   };
 
@@ -52,6 +57,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
             initialData={schoolData}
             mode={mode}
             regionId={regionId}
+            sectorId={sectorId}
           />
         )}
       </DialogContent>

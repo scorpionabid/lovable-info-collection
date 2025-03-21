@@ -48,31 +48,41 @@ export const useRegionsData = (options: RegionsQueryOptions) => {
   const fetchRegions = useCallback(async () => {
     try {
       // Ümumi sayı əldə et
-      const { count, error: countError } = await supabase
+      const countQuery = supabase
         .from(TABLES.REGIONS)
         .select('*', { count: 'exact', head: true });
         
+      if (allFilters && allFilters.name) {
+        countQuery.ilike('name', allFilters.name);
+      }
+      
+      const { count, error: countError } = await countQuery;
+      
       if (countError) throw countError;
       
       // Səhifələnmiş məlumatları əldə et
-      const { data: regionsData, error: dataError } = await supabase
+      let query = supabase
         .from(TABLES.REGIONS)
         .select(`
           *,
           sectors:sectors(count)
-        `)
-        .order(sortColumn || 'created_at', { ascending: sortDirection === 'asc' })
-        .range(
-          (page - 1) * pageSize,
-          page * pageSize - 1
-        );
+        `);
+      
+      if (allFilters && allFilters.name) {
+        query.ilike('name', allFilters.name);
+      }
+      
+      query = query.order(sortColumn || 'created_at', { ascending: sortDirection === 'asc' })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+        
+      const { data: regionsData, error: dataError } = await query;
         
       if (dataError) throw dataError;
       
       // Regionları formatla və lazımi məlumatları əlavə et
       const regionsWithStats: RegionWithStats[] = regionsData.map(region => ({
         ...region,
-        // Add default empty string for missing properties
+        // Add default values for missing properties
         description: region.description || '',
         sectorCount: region.sectors?.length || 0,
         schoolCount: 0, // This data would need to be fetched separately

@@ -1,150 +1,238 @@
+/**
+ * Metrika və monitoring funksiyaları
+ */
+import { supabase } from './supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
-import { supabase } from '@/lib/supabase';
-
-interface Metric {
-  duration_ms?: number;
-  endpoint?: string;
-  method?: string;
+// TypeScript Interface for Metrics
+export interface Metric {
+  id?: string;
+  endpoint: string;
+  method: string;
+  duration_ms: number;
+  status_code?: number;
   request_params?: any;
   response_summary?: any;
-  status_code?: number;
   request_size?: number;
   response_size?: number;
   user_id?: string;
+  timestamp?: string;
 }
 
-const BATCH_SIZE = 10;
-let metricsQueue: Metric[] = [];
-let flushTimeout: NodeJS.Timeout | null = null;
+// Batch metrics queue
+let metricQueue: Metric[] = [];
+const MAX_QUEUE_SIZE = 20;
+let flushTimeoutId: NodeJS.Timeout | null = null;
 
-// Flush metrics to the database
-const flushMetrics = async () => {
-  if (metricsQueue.length === 0) return;
+// Add a new metric to the queue
+export function addMetric(metric: Metric): void {
+  // Add timestamp if not provided
+  if (!metric.timestamp) {
+    metric.timestamp = new Date().toISOString();
+  }
+  
+  // Add UUID if not provided
+  if (!metric.id) {
+    metric.id = uuidv4();
+  }
+  
+  metricQueue.push(metric);
+  
+  // Schedule a flush if not already scheduled
+  if (!flushTimeoutId) {
+    flushTimeoutId = setTimeout(flushMetrics, 5000); // Flush every 5 seconds
+  }
+  
+  // Flush immediately if queue is full
+  if (metricQueue.length >= MAX_QUEUE_SIZE) {
+    if (flushTimeoutId) {
+      clearTimeout(flushTimeoutId);
+      flushTimeoutId = null;
+    }
+    flushMetrics();
+  }
+}
 
-  const metrics = [...metricsQueue];
-  metricsQueue = [];
+// Flush metrics to database
+export async function flushMetrics(): Promise<void> {
+  if (metricQueue.length === 0) {
+    return;
+  }
+  
+  const metricsToFlush = [...metricQueue];
+  metricQueue = [];
+  
+  if (flushTimeoutId) {
+    clearTimeout(flushTimeoutId);
+    flushTimeoutId = null;
+  }
   
   try {
-    // Make sure all required fields are present in each metric
-    const validMetrics = metrics.filter(metric => 
-      typeof metric.duration_ms === 'number' && 
-      typeof metric.endpoint === 'string' && 
-      typeof metric.method === 'string'
+    // Make sure all metrics have the required fields
+    const validMetrics = metricsToFlush.filter(metric => 
+      metric.endpoint && 
+      metric.method && 
+      typeof metric.duration_ms === 'number'
     );
     
-    if (validMetrics.length === 0) return;
+    if (validMetrics.length === 0) {
+      return;
+    }
     
-    // Insert metrics
-    const { error } = await supabase
-      .from('api_metrics')
-      .insert(validMetrics);
-      
-    if (error) {
-      console.error('Error logging metrics:', error);
+    // Insert each metric as an individual record
+    for (const metric of validMetrics) {
+      const { error } = await supabase
+        .from('api_metrics')
+        .insert(metric);
+        
+      if (error) {
+        console.error('Error inserting metric:', error);
+      }
     }
   } catch (error) {
     console.error('Failed to flush metrics:', error);
-    // Put metrics back in queue
-    metricsQueue = [...metricsQueue, ...metrics];
   }
-};
+}
 
-// Schedule metrics flush
-const scheduleFlush = () => {
-  if (flushTimeout) clearTimeout(flushTimeout);
-  flushTimeout = setTimeout(flushMetrics, 5000); // Flush every 5 seconds
-};
-
-// Add a metric to the queue
-export const logMetric = (metric: Metric) => {
-  metricsQueue.push({
-    ...metric,
-    timestamp: new Date().toISOString()
-  });
-  
-  if (metricsQueue.length >= BATCH_SIZE) {
-    flushMetrics();
-  } else {
-    scheduleFlush();
-  }
-};
-
-// Log an API request
-export const logApiRequest = async (
+// Measure API call performance
+export function measureApiCall<T>(
   endpoint: string,
   method: string,
-  startTime: number,
-  response: Response,
-  requestParams?: any,
-  requestSize?: number
-) => {
-  const endTime = Date.now();
-  const duration = endTime - startTime;
+  fn: () => Promise<T>,
+  params?: any
+): Promise<T> {
+  const start = performance.now();
   
-  let responseData;
-  let responseSize;
-  
-  try {
-    // Clone the response to avoid consuming it
-    const clonedResponse = response.clone();
-    const text = await clonedResponse.text();
-    responseSize = text.length;
-    
-    try {
-      responseData = JSON.parse(text);
-    } catch (e) {
-      responseData = { text: text.substring(0, 100) + (text.length > 100 ? '...' : '') };
-    }
-  } catch (error) {
-    console.warn('Could not extract response data for metrics', error);
-    responseData = { error: 'Could not extract response data' };
-  }
-  
-  logMetric({
-    endpoint,
-    method,
-    duration_ms: duration,
-    status_code: response.status,
-    request_params: requestParams,
-    response_summary: responseData,
-    request_size: requestSize,
-    response_size: responseSize
-  });
-};
-
-// Bulk log metrics
-export const bulkLogMetrics = async (metrics: Partial<Metric>[]) => {
-  if (!metrics.length) return;
-  
-  try {
-    // Process each metric individually to ensure it has required fields
-    metrics.forEach(metric => {
-      // Add timestamp if not present
-      if (!metric.timestamp) {
-        metric.timestamp = new Date().toISOString();
+  return fn()
+    .then(result => {
+      const duration = performance.now() - start;
+      
+      // Create metric object
+      const metric: Metric = {
+        endpoint,
+        method,
+        duration_ms: Math.round(duration),
+        status_code: 200,
+        request_params: params,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add response summary if available
+      if (result && typeof result === 'object') {
+        // Only include a subset of the response to keep the size reasonable
+        metric.response_summary = JSON.stringify(result).substring(0, 200);
       }
       
-      // Only add valid metrics to the queue
-      if (metric.duration_ms && metric.endpoint && metric.method) {
-        metricsQueue.push(metric as Metric);
+      addMetric(metric);
+      return result;
+    })
+    .catch(error => {
+      const duration = performance.now() - start;
+      
+      // Create error metric
+      const metric: Metric = {
+        endpoint,
+        method,
+        duration_ms: Math.round(duration),
+        status_code: error.status || 500,
+        request_params: params,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add error summary
+      if (error) {
+        metric.response_summary = {
+          message: error.message || 'Unknown error',
+          code: error.code || 'UNKNOWN'
+        };
       }
+      
+      addMetric(metric);
+      throw error;
+    });
+}
+
+// Get performance metrics for analysis
+export async function getPerformanceMetrics(
+  days: number = 7
+): Promise<{ endpoints: any[]; averages: any }> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  try {
+    const { data, error } = await supabase
+      .from('api_metrics')
+      .select('endpoint, method, duration_ms, status_code, timestamp')
+      .gte('timestamp', startDate.toISOString())
+      .order('timestamp', { ascending: false });
+      
+    if (error) throw error;
+    
+    // Calculate metrics by endpoint
+    const endpoints: Record<string, any> = {};
+    let totalDuration = 0;
+    let totalCalls = 0;
+    
+    data.forEach(metric => {
+      const key = `${metric.method} ${metric.endpoint}`;
+      
+      if (!endpoints[key]) {
+        endpoints[key] = {
+          calls: 0,
+          totalDuration: 0,
+          avgDuration: 0,
+          min: Infinity,
+          max: 0,
+          errorRate: 0,
+          errors: 0,
+          endpoint: metric.endpoint,
+          method: metric.method
+        };
+      }
+      
+      endpoints[key].calls++;
+      endpoints[key].totalDuration += metric.duration_ms;
+      endpoints[key].min = Math.min(endpoints[key].min, metric.duration_ms);
+      endpoints[key].max = Math.max(endpoints[key].max, metric.duration_ms);
+      
+      if (metric.status_code >= 400) {
+        endpoints[key].errors++;
+      }
+      
+      totalDuration += metric.duration_ms;
+      totalCalls++;
     });
     
-    if (metricsQueue.length >= BATCH_SIZE) {
-      flushMetrics();
-    } else {
-      scheduleFlush();
-    }
+    // Calculate averages and error rates
+    Object.keys(endpoints).forEach(key => {
+      const endpoint = endpoints[key];
+      endpoint.avgDuration = Math.round(endpoint.totalDuration / endpoint.calls);
+      endpoint.errorRate = (endpoint.errors / endpoint.calls) * 100;
+    });
+    
+    // Overall system averages
+    const averages = {
+      totalCalls,
+      avgDuration: totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0,
+      totalEndpoints: Object.keys(endpoints).length
+    };
+    
+    return {
+      endpoints: Object.values(endpoints),
+      averages
+    };
   } catch (error) {
-    console.error('Error bulk logging metrics:', error);
+    console.error('Error fetching performance metrics:', error);
+    throw error;
   }
+}
+
+// Default export for service
+const metricService = {
+  addMetric,
+  flushMetrics,
+  measureApiCall,
+  getPerformanceMetrics
 };
 
-// Flush metrics on page unload
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    if (metricsQueue.length > 0) {
-      flushMetrics();
-    }
-  });
-}
+export { metricService };
