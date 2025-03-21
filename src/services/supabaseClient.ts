@@ -1,5 +1,8 @@
 
-// Mərkəzləşdirilmiş Supabase müştərisinə körpü fayl
+/**
+ * Servis faylları üçün mərkəzləşdirilmiş Supabase müştərisi
+ * Bu fayl köhnə servislərin işləməsi üçün geriyə uyğunluq təmin edir
+ */
 import { supabase, withRetry, checkConnection } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
 
@@ -12,8 +15,7 @@ export { supabase, withRetry, checkConnection };
 // Əgər hər hansı bir servisdə supabaseAdmin istifadə olunursa
 export const supabaseAdmin = supabase;
 
-// Əgər başlanğıc supabaseClient.ts-dən başqa exportlar varsa,
-// onlar burada yenidən yaradılmalı və ya import edilməlidir
+// Data structure типы для обратной совместимости
 export type DataEntry = any;
 export type DataHistory = any;
 export type Region = any;

@@ -1,13 +1,13 @@
 
-// Bridge file to redirect to the centralized Supabase client
+// Mərkəzləşdirilmiş Supabase müştərisinə körpü fayl
 import { supabase, withRetry, checkConnection } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
 
-// Log usage of the old bridge file
-logger.warn('Legacy sector/supabaseClient.ts import used - consider updating to direct import from @/integrations/supabase/client');
+// Köhnə fayl istifadəsini günlüyə yaz
+logger.warn('Köhnə sector/supabaseClient.ts fayl yolu istifadə edilir - birbaşa @/integrations/supabase/client-dən import etməyi düşünün');
 
-// Re-export the supabase client and utilities
+// Supabase müştərisini və köməkçi funksiyaları ixrac et
 export { supabase, withRetry, checkConnection };
 
-// Mock the supabaseAdmin client if it was used
+// Əgər hər hansı bir servisdə supabaseAdmin istifadə olunursa
 export const supabaseAdmin = supabase;

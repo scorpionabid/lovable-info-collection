@@ -1,30 +1,25 @@
 
-// Constants for Supabase table names
+/**
+ * Supabase cədvəl adları üçün sabitlər
+ */
 export enum TableName {
-  API_METRICS = 'api_metrics',
-  AUDIT_LOGS = 'audit_logs',
+  USERS = 'users',
+  ROLES = 'roles',
+  REGIONS = 'regions',
+  SECTORS = 'sectors',
+  SCHOOLS = 'schools',
   CATEGORIES = 'categories',
   COLUMNS = 'columns',
   DATA = 'data',
   DATA_HISTORY = 'data_history',
   NOTIFICATIONS = 'notifications',
-  REGIONS = 'regions',
-  ROLES = 'roles',
-  SCHOOLS = 'schools',
-  SECTORS = 'sectors',
-  USERS = 'users',
-  SCHOOL_TYPES = 'school_types'
+  AUDIT_LOGS = 'audit_logs'
 }
 
-// Generic error handling wrapper for Supabase queries
-export const handleSupabaseResult = async <T>(
-  queryPromise: Promise<{ data: T | null; error: any }>
-): Promise<{ data: T | null; error: any }> => {
-  try {
-    const { data, error } = await queryPromise;
-    return { data, error };
-  } catch (caughtError) {
-    console.error('Supabase query error:', caughtError);
-    return { data: null, error: caughtError };
-  }
+/**
+ * Sorğu nəticəsini tipləşdirmək üçün köməkçi
+ */
+export type QueryResult<T> = {
+  data: T | null;
+  error: any;
 };
