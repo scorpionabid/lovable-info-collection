@@ -1,104 +1,341 @@
+
 /**
- * Supabase sorğuları üçün köməkçi funksiyalar
+ * Supabase sorğu köməkçiləri
  */
-import { logger } from '@/utils/logger';
 import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
-import { isNetworkError, handleSupabaseError } from './client';
+import { supabase } from './client';
+import { queryWithCache } from './cache';
+import { logger } from '@/utils/logger';
 
-// handleSupabaseError funksiya client.ts-dən export edilir
+// Sorğu parametrləri tipi
+export interface QueryOptions {
+  filters?: Record<string, any>;
+  sort?: {
+    column: string;
+    direction: 'asc' | 'desc';
+  };
+  pagination?: {
+    page: number;
+    pageSize: number;
+  };
+  select?: string;
+  useCache?: boolean;
+  cacheTime?: number;
+  cacheKey?: string;
+}
 
 /**
- * Səhifələmə üçün köməkçi funksiya
- * @param query Supabase sorğusu
- * @param pagination Səhifələmə parametrləri
+ * Sadə sorğu yaratmaq üçün funksiya
  */
-export const buildPaginatedQuery = (
-  query: PostgrestFilterBuilder<any, any, any>, 
-  pagination: { page: number, pageSize: number }
+export const createQuery = <T>(
+  tableName: string,
+  options: QueryOptions = {}
+) => {
+  const {
+    select = '*',
+    useCache = true,
+    cacheTime,
+    cacheKey
+  } = options;
+
+  let query = supabase.from(tableName).select(select);
+  
+  // Filter, sort və pagination əlavə et
+  query = applyFilters(query, options.filters);
+  query = applySort(query, options.sort);
+  query = applyPagination(query, options.pagination);
+
+  // Keşləmə istifadə ediləcəksə
+  if (useCache) {
+    // Keş açarını yaratmaq
+    const generatedCacheKey = cacheKey || `${tableName}_${JSON.stringify({
+      select,
+      filters: options.filters,
+      sort: options.sort,
+      pagination: options.pagination
+    })}`;
+
+    return queryWithCache(
+      generatedCacheKey,
+      async () => await query,
+      cacheTime
+    );
+  }
+
+  // Keşsiz sorğu
+  return query;
+};
+
+/**
+ * Filter əlavə etmək üçün köməkçi funksiya
+ */
+export const applyFilters = <T>(
+  query: PostgrestFilterBuilder<any, any, any>,
+  filters?: Record<string, any>
 ): PostgrestFilterBuilder<any, any, any> => {
-  const { page, pageSize } = pagination;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  if (!filters) return query;
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    // Array isə "in" operatoru istifadə et
+    if (Array.isArray(value)) {
+      query = query.in(key, value);
+      return;
+    }
+
+    // Obyekt isə operator və dəyər var
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      const { operator, value: opValue } = value as {
+        operator: string;
+        value: any;
+      };
+
+      if (opValue === undefined || opValue === null) return;
+
+      switch (operator) {
+        case 'eq':
+          query = query.eq(key, opValue);
+          break;
+        case 'neq':
+          query = query.neq(key, opValue);
+          break;
+        case 'gt':
+          query = query.gt(key, opValue);
+          break;
+        case 'gte':
+          query = query.gte(key, opValue);
+          break;
+        case 'lt':
+          query = query.lt(key, opValue);
+          break;
+        case 'lte':
+          query = query.lte(key, opValue);
+          break;
+        case 'like':
+          query = query.like(key, `%${opValue}%`);
+          break;
+        case 'ilike':
+          query = query.ilike(key, `%${opValue}%`);
+          break;
+        case 'in':
+          query = query.in(key, Array.isArray(opValue) ? opValue : [opValue]);
+          break;
+        case 'is':
+          query = query.is(key, opValue);
+          break;
+        default:
+          logger.warn(`Bilinməyən operator: ${operator}`);
+      }
+      return;
+    }
+
+    // Sadə dəyər isə equality operator istifadə et
+    query = query.eq(key, value);
+  });
+
+  return query;
+};
+
+/**
+ * Sıralama əlavə etmək üçün köməkçi funksiya
+ */
+export const applySort = <T>(
+  query: PostgrestFilterBuilder<any, any, any>,
+  sort?: { column: string; direction: 'asc' | 'desc' }
+): PostgrestFilterBuilder<any, any, any> => {
+  if (!sort || !sort.column) return query;
+  return query.order(sort.column, {
+    ascending: sort.direction === 'asc'
+  });
+};
+
+/**
+ * Səhifələmə əlavə etmək üçün köməkçi funksiya
+ */
+export const applyPagination = <T>(
+  query: PostgrestFilterBuilder<any, any, any>,
+  pagination?: { page: number; pageSize: number }
+): PostgrestFilterBuilder<any, any, any> => {
+  if (!pagination || !pagination.page || !pagination.pageSize) return query;
+
+  const from = (pagination.page - 1) * pagination.pageSize;
+  const to = from + pagination.pageSize - 1;
+
   return query.range(from, to);
 };
 
 /**
- * Sıralama üçün köməkçi funksiya
- * @param query Supabase sorğusu
- * @param sort Sıralama parametrləri
+ * Səhifələnmiş sorğu yaratmaq üçün funksiya
  */
-export const buildSortedQuery = (
-  query: PostgrestFilterBuilder<any, any, any>, 
-  sort: { column: string, direction: 'asc' | 'desc' }
-): PostgrestFilterBuilder<any, any, any> => {
-  const { column, direction } = sort;
-  return query.order(column, { ascending: direction === 'asc' });
+export const createPaginatedQuery = async <T>(
+  tableName: string,
+  options: QueryOptions = {}
+) => {
+  const {
+    select = '*',
+    useCache = true,
+    cacheTime,
+    cacheKey
+  } = options;
+
+  // Ümumi sayı əldə etmək üçün sorğu
+  const countQuery = supabase
+    .from(tableName)
+    .select('*', { count: 'exact', head: true });
+
+  // Əsas sorğu
+  let dataQuery = supabase.from(tableName).select(select);
+
+  // Filter və sort əlavə et
+  dataQuery = applyFilters(dataQuery, options.filters);
+  dataQuery = applySort(dataQuery, options.sort);
+
+  // Səhifələmə əlavə et
+  if (options.pagination) {
+    dataQuery = applyPagination(dataQuery, options.pagination);
+  }
+
+  // Keşləmə istifadə ediləcəksə
+  if (useCache) {
+    // Keş açarını yaratmaq
+    const dataKey = cacheKey
+      ? `${cacheKey}_data`
+      : `${tableName}_data_${JSON.stringify({
+          select,
+          filters: options.filters,
+          sort: options.sort,
+          pagination: options.pagination
+        })}`;
+
+    const countKey = cacheKey
+      ? `${cacheKey}_count`
+      : `${tableName}_count_${JSON.stringify({
+          filters: options.filters
+        })}`;
+
+    const [dataResult, countResult] = await Promise.all([
+      queryWithCache(
+        dataKey,
+        async () => await dataQuery,
+        cacheTime
+      ),
+      queryWithCache(
+        countKey,
+        async () => await countQuery,
+        cacheTime
+      )
+    ]);
+
+    return {
+      data: dataResult.data as T[],
+      error: dataResult.error,
+      count: countResult.count as number
+    };
+  }
+
+  // Keşsiz sorğu
+  const [dataResult, countResult] = await Promise.all([
+    dataQuery,
+    countQuery
+  ]);
+
+  return {
+    data: dataResult.data as T[],
+    error: dataResult.error,
+    count: countResult.count as number
+  };
 };
 
 /**
- * Filtrlər üçün köməkçi funksiya
- * @param query Supabase sorğusu
- * @param filters Filtr parametrləri
- * @param filterMap Xüsusi filtr funksiyaları
+ * ID ilə bir element əldə etmək üçün funksiya
  */
-export const buildFilteredQuery = (
-  query: PostgrestFilterBuilder<any, any, any>, 
-  filters: Record<string, any>, 
-  filterMap?: Record<string, (q: PostgrestFilterBuilder<any, any, any>, value: any) => PostgrestFilterBuilder<any, any, any>>
-): PostgrestFilterBuilder<any, any, any> => {
-  // Filtr yoxdursa, sorğunu olduğu kimi qaytar
-  if (!filters || Object.keys(filters).length === 0) {
-    return query;
+export const getById = async <T>(
+  tableName: string,
+  id: string,
+  options: {
+    select?: string;
+    useCache?: boolean;
+    cacheTime?: number;
+  } = {}
+) => {
+  const { select = '*', useCache = true, cacheTime } = options;
+
+  const query = supabase
+    .from(tableName)
+    .select(select)
+    .eq('id', id)
+    .maybeSingle();
+
+  // Keşləmə istifadə ediləcəksə
+  if (useCache) {
+    return queryWithCache(
+      `${tableName}_${id}_${select}`,
+      async () => await query,
+      cacheTime
+    );
   }
 
-  let filteredQuery = query;
-  
-  // Hər filtri tətbiq et
-  Object.entries(filters).forEach(([key, value]) => {
-    // Boş dəyərləri keç
-    if (value === null || value === undefined || value === '') {
-      return;
-    }
-    
-    // Xüsusi filtr funksiyası varsa, onu istifadə et
-    if (filterMap && filterMap[key]) {
-      filteredQuery = filterMap[key](filteredQuery, value);
-      return;
-    }
-    
-    // Filtr növünə görə uyğun operatoru seç
-    if (typeof value === 'string') {
-      // Axtarış sorğuları üçün ilike istifadə et
-      if (key === 'searchQuery' || key.includes('name') || key.includes('title') || key.includes('description')) {
-        filteredQuery = filteredQuery.ilike(key.replace('searchQuery', 'name'), `%${value}%`);
-      } else if (key.startsWith('exact_')) {
-        // Dəqiq uyğunluq üçün
-        filteredQuery = filteredQuery.eq(key.replace('exact_', ''), value);
-      } else if (value.includes('%')) {
-        // Dəyər özü '%' simvolunu saxlayırsa, ilike istifadə et
-        filteredQuery = filteredQuery.ilike(key, value);
-      } else {
-        filteredQuery = filteredQuery.eq(key, value);
-      }
-    } else if (Array.isArray(value)) {
-      // Massiv dəyərləri üçün in operatoru istifadə et
-      filteredQuery = filteredQuery.in(key, value);
-    } else if (typeof value === 'object' && value !== null) {
-      // Tarix aralığı üçün
-      if ('from' in value && value.from) {
-        filteredQuery = filteredQuery.gte(key, value.from);
-      }
-      if ('to' in value && value.to) {
-        filteredQuery = filteredQuery.lte(key, value.to);
-      }
-    } else {
-      // Digər dəyərlər üçün bərabərlik
-      filteredQuery = filteredQuery.eq(key, value);
-    }
-  });
-  
-  return filteredQuery;
+  // Keşsiz sorğu
+  return query;
 };
 
-// handleSupabaseError funksiya client.ts-dən export edilir
-export { handleSupabaseError };
+/**
+ * Yeni element yaratmaq üçün funksiya
+ */
+export const create = async <T>(
+  tableName: string,
+  data: any,
+  options: {
+    select?: string;
+  } = {}
+) => {
+  const { select = '*' } = options;
+
+  return supabase
+    .from(tableName)
+    .insert(data)
+    .select(select)
+    .maybeSingle();
+};
+
+/**
+ * Elementi yeniləmək üçün funksiya
+ */
+export const update = async <T>(
+  tableName: string,
+  id: string,
+  data: any,
+  options: {
+    select?: string;
+  } = {}
+) => {
+  const { select = '*' } = options;
+
+  return supabase
+    .from(tableName)
+    .update(data)
+    .eq('id', id)
+    .select(select)
+    .maybeSingle();
+};
+
+/**
+ * Elementi silmək üçün funksiya
+ */
+export const remove = async <T>(
+  tableName: string,
+  id: string,
+  options: {
+    select?: string;
+  } = {}
+) => {
+  const { select = '*' } = options;
+
+  return supabase
+    .from(tableName)
+    .delete()
+    .eq('id', id)
+    .select(select)
+    .maybeSingle();
+};

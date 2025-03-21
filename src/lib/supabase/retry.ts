@@ -1,86 +1,127 @@
+
 /**
- * Sorğuların təkrar cəhd mexanizmi
+ * Təkrar cəhd (retry) mexanizmi utilləri
  */
 import { logger } from '@/utils/logger';
-import { isOfflineMode, isNetworkError } from './client';
+import { isNetworkError } from './client';
 
-/**
- * Offline növbəyə sorğu əlavə etmək üçün
- * @param queryFn Yerinə yetiriləcək sorğu funksiyası
- */
-const addToOfflineQueue = <T>(queryFn: () => Promise<T>): Promise<T> => {
-  // Bu funksiyanın tam tətbiqi əsas client faylında mövcuddur
-  logger.info('Sorğu offline növbəyə əlavə edildi');
-  
-  // Xəta göndər (offline növbə funksiyası hələ köçürülməyib)
-  return Promise.reject(new Error('Offline rejim: sorğu icra edilə bilməz'));
+// Təkrar cəhd üçün default parametrlər
+export const DEFAULT_RETRY_OPTIONS = {
+  maxRetries: 2,
+  initialDelay: 1000,
+  maxDelay: 10000,
+  factor: 1.5
 };
 
 /**
- * Təkrar cəhd məntiqi
- * @param queryFn Yerinə yetiriləcək sorğu funksiyası
- * @param maxRetries Maksimum cəhd sayı
- * @param initialRetryDelay İlkin gecikmə (millisaniyə ilə)
- * @param offlineQueueable Offline növbəyə əlavə edilə bilər
+ * Təkrar cəhd mexanizmi - əgər şəbəkə xətası baş verərsə sorğunu təkrarlayır
+ * @param fn Təkrar cəhd ediləcək funksiya
+ * @param options Təkrar cəhd parametrləri
+ * @returns Funksiya nəticəsi
  */
-export const withRetry = async <T>(
-  queryFn: () => Promise<T>, 
-  maxRetries = 2, 
-  initialRetryDelay = 1000,
-  offlineQueueable = false
+export const retry = async <T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    initialDelay?: number;
+    maxDelay?: number;
+    factor?: number;
+    retryCondition?: (error: any) => boolean;
+    onRetry?: (error: any, attempt: number) => void;
+  } = {}
 ): Promise<T> => {
-  let retries = 0;
-  let lastError: unknown;
-  
-  // Offline rejim yoxlaması
-  if (isOfflineMode() && offlineQueueable) {
-    return addToOfflineQueue<T>(queryFn);
-  }
-  
-  while (retries <= maxRetries) {
+  const {
+    maxRetries = DEFAULT_RETRY_OPTIONS.maxRetries,
+    initialDelay = DEFAULT_RETRY_OPTIONS.initialDelay,
+    maxDelay = DEFAULT_RETRY_OPTIONS.maxDelay,
+    factor = DEFAULT_RETRY_OPTIONS.factor,
+    retryCondition = isNetworkError,
+    onRetry
+  } = options;
+
+  let attempt = 0;
+  let lastError: any;
+
+  while (attempt <= maxRetries) {
     try {
-      if (retries > 0) {
-        logger.info(`Təkrar cəhd ${retries}/${maxRetries}`);
-      }
-      
-      const result = await queryFn();
-      return result;
+      return await fn();
     } catch (error) {
       lastError = error;
-      
-      // Şəbəkə xətası baş verdikdə və sorğu növbələnə bilərsə
-      if (offlineQueueable && isNetworkError(error)) {
-        logger.warn('Şəbəkə xətası, sorğu offline növbəyə əlavə edilir');
-        return addToOfflineQueue<T>(queryFn);
+      attempt++;
+
+      // Təkrar cəhd şərti yoxla
+      if (attempt > maxRetries || !retryCondition(error)) {
+        throw error;
       }
-      
-      // Son cəhd idisə, gözləmə
-      if (retries === maxRetries) {
-        break;
+
+      // Təkrar cəhd gecikməsini hesabla (exponential backoff)
+      const delay = Math.min(
+        initialDelay * Math.pow(factor, attempt - 1),
+        maxDelay
+      );
+
+      // Təkrar cəhd callback-i çağır
+      if (onRetry) {
+        onRetry(error, attempt);
       }
-      
-      retries++;
-      
-      // Eksponensial gecikmə hesabla
-      const delay = initialRetryDelay * Math.pow(1.5, retries - 1) * (0.9 + Math.random() * 0.2);
-      
-      logger.warn(`Sorğu uğursuz oldu, ${Math.round(delay)}ms sonra təkrar cəhd ediləcək`, {
-        error,
-        attempt: retries,
-        maxRetries
-      });
-      
-      // Növbəti cəhddən əvvəl gözlə
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      logger.info(
+        `Təkrar cəhd ${attempt}/${maxRetries}, ${delay}ms gözləyir...`,
+        {
+          error: error instanceof Error ? error.message : String(error),
+          attempt,
+          maxRetries,
+          delay
+        }
+      );
+
+      // Geciktirmə 
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  
-  // Bütün cəhdlər uğursuz olduqda və sorğu növbələnə bilərsə
-  if (offlineQueueable) {
-    logger.warn('Bütün cəhdlər uğursuz oldu, sorğu offline növbəyə əlavə edilir');
-    return addToOfflineQueue<T>(queryFn);
-  }
-  
-  logger.error(`Sorğu ${maxRetries} təkrar cəhddən sonra uğursuz oldu`, lastError);
+
+  // Bu nöqtəyə gəlmək mümkün deyil, amma TypeScript-i xoşbəxt etmək üçün
   throw lastError;
 };
+
+/**
+ * Xüsusi vəziyyətlərdə təkrar cəhd yaratmaq üçün konfiqurator
+ */
+export const createRetry = (defaultOptions: Partial<typeof DEFAULT_RETRY_OPTIONS>) => {
+  return <T>(fn: () => Promise<T>, options = {}) =>
+    retry(fn, { ...defaultOptions, ...options });
+};
+
+/**
+ * Şəbəkə xətaları üçün təkrar cəhd
+ */
+export const retryNetworkErrors = createRetry({
+  retryCondition: isNetworkError,
+  maxRetries: 3
+});
+
+/**
+ * HTTP 5xx xətaları üçün təkrar cəhd
+ */
+export const retryServerErrors = createRetry({
+  retryCondition: (error: any) => {
+    if (!error) return false;
+    const status = error.status || error.statusCode;
+    return status >= 500 && status < 600;
+  },
+  maxRetries: 2
+});
+
+/**
+ * Rate limit xətaları üçün təkrar cəhd
+ */
+export const retryRateLimitErrors = createRetry({
+  retryCondition: (error: any) => {
+    if (!error) return false;
+    const status = error.status || error.statusCode;
+    return status === 429;
+  },
+  initialDelay: 2000,
+  factor: 2,
+  maxRetries: 3
+});

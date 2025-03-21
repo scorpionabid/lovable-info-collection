@@ -22,3 +22,28 @@ export interface ColumnData {
   options?: string[];
   description?: string;
 }
+
+// Add missing interfaces for components
+export interface CategoryColumnsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  categoryId: string;
+  categoryName?: string;
+  onColumnAdded?: () => void;
+  onColumnDeleted?: () => void;
+}
+
+export interface ColumnFormProps {
+  column?: CategoryColumn;
+  categoryId: string;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  isEditing?: boolean;
+}
+
+export interface ColumnsTableProps {
+  columns: CategoryColumn[];
+  categoryId: string;
+  onEditColumn: (column: CategoryColumn) => void;
+  onDeleteColumn: (column: CategoryColumn) => void;
+}

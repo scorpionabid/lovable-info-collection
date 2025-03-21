@@ -1,3 +1,4 @@
+
 /**
  * Mərkəzləşdirilmiş Supabase müştərisi
  */
@@ -174,8 +175,10 @@ const saveOfflineQueue = () => {
 
 // Keşi təmizləmək
 export const clearCache = (): void => {
-  window.dispatchEvent(new CustomEvent('supabase-cache-clear'));
-  logger.info('Supabase sorğu keşi təmizləndi');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('supabase-cache-clear'));
+    logger.info('Supabase sorğu keşi təmizləndi');
+  }
 };
 
 // Offline rejim vəziyyətini əldə etmək üçün
@@ -342,3 +345,6 @@ export const getCurrentUserId = async (): Promise<string | null> => {
   const user = await getCurrentUser();
   return user?.id || null;
 };
+
+// Export queryWithCache
+export { queryWithCache } from './cache';

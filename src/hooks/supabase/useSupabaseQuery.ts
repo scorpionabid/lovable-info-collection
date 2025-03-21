@@ -1,203 +1,120 @@
-/**
- * Universal Supabase sorğu hook-u
- * TanStack Query ilə Supabase sorğularını asanlaşdırmaq üçün ümumi hook
- */
 
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
-import { PostgrestFilterBuilder } from "@supabase/postgrest-js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { queryWithCache, handleSupabaseError, supabase } from "@/lib/supabase";
-import { logger } from "@/utils/logger";
-
-export interface QueryOptions<TData> {
-  // Sorğu və keşləmə üçün seçimlər
-  queryKey: readonly unknown[];
-  staleTime?: number;
-  gcTime?: number; // Əvvəlki cacheTime əvəzinə
-  enabled?: boolean;
-  refetchOnWindowFocus?: boolean;
-  refetchInterval?: number | false;
-  useCache?: boolean;
-  cacheTime?: number;
-  
-  // Supabase spesifik seçimlər
-  select?: string;
-  filters?: Record<string, any>;
-  sort?: { column: string; direction: 'asc' | 'desc' };
-  pagination?: { page: number; pageSize: number };
-  
-  // TanStack Query seçimləri
-  queryOptions?: Omit<UseQueryOptions<TData, Error, TData, readonly unknown[]>, 'queryKey' | 'queryFn'>;
-}
-
-export type SupabaseQueryFn<TData> = (
-  client: SupabaseClient,
-  options: Omit<QueryOptions<TData>, 'queryKey' | 'queryOptions'>
-) => Promise<{ data: TData | null; error: any }>;
+import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { supabase, withRetry } from '@/integrations/supabase/client';
+import { handleSupabaseError } from '@/lib/supabase';
+import { logger } from '@/utils/logger';
 
 /**
- * Universal Supabase sorğu hook-u
- * @param tableName Sorğulanan cədvəlin adı
- * @param queryFn Supabase sorğusunu icra edən funksiya
- * @param options Sorğu seçimləri
+ * Supabase ilə React Query inteqrasiyası
+ * @param key - sorğu keş açarı
+ * @param queryFn - sorğu funksiyası
+ * @param options - React Query seçimləri
  */
-export function useSupabaseQuery<TData>(
-  tableName: string,
-  queryFn: SupabaseQueryFn<TData>,
-  options: QueryOptions<TData>
+export function useSupabaseQuery<TData = unknown, TError = any>(
+  key: string | string[],
+  queryFn: () => Promise<{ data: TData | null; error: any }>,
+  options?: Omit<UseQueryOptions<TData, TError, TData, string[]>, 'queryKey' | 'queryFn'>
 ) {
-  const {
-    queryKey,
-    staleTime = 5 * 60 * 1000, // 5 dəqiqə
-    gcTime = 10 * 60 * 1000, // 10 dəqiqə
-    enabled = true,
-    refetchOnWindowFocus = import.meta.env.PROD, // Yalnız produksiya mühitində
-    refetchInterval = false,
-    useCache = true,
-    cacheTime = 5 * 60 * 1000, // 5 dəqiqə
-    queryOptions = {},
-    ...supabaseOptions
-  } = options;
+  const queryClient = useQueryClient();
+  const queryKey = Array.isArray(key) ? key : [key];
   
-  return useQuery<TData, Error, TData, readonly unknown[]>({
+  return useQuery<TData, TError, TData, string[]>({
     queryKey,
     queryFn: async () => {
-      logger.info(`[useSupabaseQuery] Sorğu icra olunur: ${tableName}`, {
-        queryKey,
-        options: supabaseOptions
-      });
-      
       try {
-        let result;
+        const start = performance.now();
+        const { data, error } = await withRetry(queryFn);
+        const duration = performance.now() - start;
         
-        // Keşləmə aktiv olduqda
-        if (useCache) {
-          result = await queryWithCache<TData>(
-            tableName,
-            () => queryFn(supabase, supabaseOptions),
-            cacheTime
-          );
-        } else {
-          // Keşləmə olmadan birbaşa sorğu
-          result = await queryFn(supabase, supabaseOptions);
+        // Performance metrikini yaz
+        logger.debug(`Query executed: ${queryKey.join('/')}`, { duration });
+        
+        if (error) {
+          throw handleSupabaseError(error, `Query ${queryKey.join('/')} failed`);
         }
         
-        // Xətanın idarə edilməsi
-        if (result.error) {
-          logger.error(`[useSupabaseQuery] Xəta: ${tableName}`, {
-            error: result.error,
-            queryKey
-          });
-          throw handleSupabaseError(result.error);
-        }
-        
-        return result.data as TData;
+        return data as TData;
       } catch (error) {
-        logger.error(`[useSupabaseQuery] İstisna: ${tableName}`, {
-          error,
-          queryKey
-        });
+        logger.error(`Query error for ${queryKey.join('/')}:`, error);
         throw error;
       }
     },
-    staleTime,
-    gcTime,
-    enabled,
-    refetchOnWindowFocus,
-    refetchInterval,
-    ...queryOptions
+    // Cache və refetch davranışlarını müəyyən etmək
+    ...options
   });
 }
 
-/**
- * Cədvəldən bütün məlumatları əldə etmək üçün hazır sorğu funksiyası
- */
-export function createSelectQuery<TData>(tableName: string) {
-  return async (
-    client: SupabaseClient,
-    options: Omit<QueryOptions<TData>, 'queryKey' | 'queryOptions'>
-  ): Promise<{ data: TData[] | null; error: any }> => {
-    const { select = '*', filters, sort, pagination } = options;
+// Supabase tərəfindən idarə olunan müəyyən cədvəlləri dinləmək üçün hook
+export function useRealtimeSubscription(
+  table: string,
+  filter?: { column: string; value: string },
+  callback?: (payload: any) => void
+) {
+  const queryClient = useQueryClient();
+  
+  React.useEffect(() => {
+    let subscription: ReturnType<typeof supabase.channel> | null = null;
     
     try {
-      // Əsas sorğunu yarat
-      let query = client.from(tableName).select(select, { count: 'exact' });
+      // Realtime subscription yaratmaq
+      const channel = supabase.channel(`table-changes-${table}`);
       
-      // Filtrlər tətbiq et
-      if (filters && Object.keys(filters).length > 0) {
-        query = applyFilters(query, filters);
+      let event = channel
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table
+        }, (payload) => {
+          logger.debug(`Realtime event for ${table}:`, payload);
+          
+          // Callback funksiyasını çağırmaq
+          if (callback) {
+            callback(payload);
+          }
+          
+          // Dəyişikliklərə əsasən keşi invalidasiya etmək
+          queryClient.invalidateQueries({ queryKey: [table] });
+        });
+      
+      // Filter varsa, əlavə etmək
+      if (filter) {
+        event = channel.on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table,
+          filter: `${filter.column}=eq.${filter.value}`
+        }, (payload) => {
+          logger.debug(`Realtime event for ${table}:${filter.column}=${filter.value}`, payload);
+          
+          // Callback funksiyasını çağırmaq
+          if (callback) {
+            callback(payload);
+          }
+          
+          // Dəyişikliklərə əsasən keşi invalidasiya etmək
+          queryClient.invalidateQueries({ queryKey: [table, filter.value] });
+        });
       }
       
-      // Sıralama tətbiq et
-      if (sort) {
-        query = query.order(sort.column, { ascending: sort.direction === 'asc' });
-      }
+      // Subscribe etmək
+      subscription = event.subscribe((status) => {
+        logger.debug(`Realtime subscription status for ${table}:`, status);
+      });
       
-      // Səhifələmə tətbiq et
-      if (pagination) {
-        const { page, pageSize } = pagination;
-        const from = (page - 1) * pageSize;
-        const to = from + pageSize - 1;
-        query = query.range(from, to);
-      }
-      
-      // Sorğunu icra et
-      const { data, error, count } = await query;
-      
-      // Əlavə məlumatla nəticəni qaytar (səhifələmə və say üçün)
-      return {
-        data: data ? { data, count: count || 0 } as unknown as TData[] : null,
-        error
-      };
     } catch (error) {
-      logger.error(`[createSelectQuery] Error in ${tableName} query:`, error);
-      return { data: null, error };
-    }
-  };
-}
-
-/**
- * Filtrlər tətbiq etmək üçün köməkçi funksiya
- */
-function applyFilters<T>(
-  query: PostgrestFilterBuilder<any, any, any>,
-  filters: Record<string, any>
-): PostgrestFilterBuilder<any, any, any> {
-  let filteredQuery = query;
-  
-  Object.entries(filters).forEach(([key, value]) => {
-    // Boş və ya undefined dəyərlərə görə filtr tətbiq etmə
-    if (value === undefined || value === null || value === '') {
-      return;
+      logger.error(`Error setting up realtime subscription for ${table}:`, error);
     }
     
-    // Filter növünə görə uyğun operatoru seç
-    if (typeof value === 'string') {
-      // Axtarış sorğuları üçün ilike istifadə et
-      if (key === 'searchQuery' || key.includes('name') || key.includes('title') || key.includes('description')) {
-        filteredQuery = filteredQuery.ilike(key.replace('searchQuery', 'name'), `%${value}%`);
-      } else if (key.startsWith('exact_')) {
-        // Dəqiq uyğunluq üçün
-        filteredQuery = filteredQuery.eq(key.replace('exact_', ''), value);
-      } else {
-        filteredQuery = filteredQuery.ilike(key, `%${value}%`);
+    // Cleanup
+    return () => {
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+          logger.debug(`Unsubscribed from ${table}`);
+        } catch (error) {
+          logger.error(`Error unsubscribing from ${table}:`, error);
+        }
       }
-    } else if (Array.isArray(value)) {
-      // Massiv dəyərləri üçün in operatoru istifadə et
-      filteredQuery = filteredQuery.in(key, value);
-    } else if (typeof value === 'object' && value !== null) {
-      // Tarix aralığı üçün
-      if ('from' in value && value.from) {
-        filteredQuery = filteredQuery.gte(key, value.from);
-      }
-      if ('to' in value && value.to) {
-        filteredQuery = filteredQuery.lte(key, value.to);
-      }
-    } else {
-      // Digər dəyərlər üçün bərabərlik
-      filteredQuery = filteredQuery.eq(key, value);
-    }
-  });
-  
-  return filteredQuery;
+    };
+  }, [table, filter, callback, queryClient]);
 }
