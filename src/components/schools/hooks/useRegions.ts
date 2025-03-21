@@ -2,6 +2,10 @@
 // İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
 // Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
 import { useRegionsDropdown } from '@/supabase/hooks/useRegions';
+import { Region } from '@/supabase/types';
+
+// Tip definisiyası
+export type { Region };
 
 // Public API
 export const useRegions = useRegionsDropdown;

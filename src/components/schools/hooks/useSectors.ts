@@ -2,6 +2,10 @@
 // İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
 // Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
 import { useSectorsDropdown } from '@/supabase/hooks/useSectors';
+import { Sector } from '@/supabase/types';
+
+// Tip definisiyası
+export type { Sector };
 
 // Public API
 export const useSectors = useSectorsDropdown;

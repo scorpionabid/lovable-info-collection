@@ -1,84 +1,59 @@
 
 import { User } from "@/supabase/types";
-import { UserRole } from "@/hooks/types/authTypes";
 
-// Tip çevirmə funksiyası
-export const getNormalizedRole = (role?: string): UserRole => {
-  if (!role) return "school-admin"; // Default
-
-  const normalizedRole = role.toLowerCase().replace("_", "-");
-  
-  switch (normalizedRole) {
-    case "super-admin":
-    case "superadmin":
-      return "super-admin";
-    case "region-admin":
-    case "regionadmin":
-      return "region-admin";
-    case "sector-admin":
-    case "sectoradmin":
-      return "sector-admin";
-    case "school-admin":
-    case "schooladmin":
-      return "school-admin";
-    default:
-      return "school-admin";
-  }
+// Get the display name for a user
+export const getUserDisplayName = (user: User): string => {
+  if (!user) return 'Unknown User';
+  return `${user.first_name} ${user.last_name}`;
 };
 
-// İstifadəçinin aid olduğu təşkilatın adını qaytarır
+// Get the entity name (region, sector, or school) for a user
 export const getEntityName = (user: User): string => {
-  if (!user) return "N/A";
-  
-  const roleName = user.roles?.name || "";
-  const normalizedRole = getNormalizedRole(roleName);
-  
-  switch (normalizedRole) {
-    case "super-admin":
-      return "Sistem";
-    case "region-admin":
-      return user.regions?.name || "Təyin edilməyib";
-    case "sector-admin":
-      return user.sectors?.name || "Təyin edilməyib";
-    case "school-admin":
-      return user.schools?.name || "Təyin edilməyib";
-    default:
-      return "Təyin edilməyib";
+  // Check if the user has relationships loaded
+  if (user.roles?.name === 'SuperAdmin') {
+    return 'Global';
   }
+  
+  // Try to get from relationships first
+  if (user.roles?.name === 'RegionAdmin' && user.region) {
+    return user.region.name || 'Unknown Region';
+  }
+  
+  if (user.roles?.name === 'SectorAdmin' && user.sector) {
+    return user.sector.name || 'Unknown Sector';
+  }
+  
+  if (user.roles?.name === 'SchoolAdmin' && user.school) {
+    return user.school.name || 'Unknown School';
+  }
+  
+  // Fallback to just showing the role without the entity
+  return user.roles?.name || 'Unknown Role';
 };
 
-// İstifadəçiləri sıralama
-export const sortUsers = (users: User[], sortField: string | null, sortDirection: 'asc' | 'desc' = 'asc'): User[] => {
-  if (!sortField) return [...users];
+// Get role display name
+export const getRoleDisplayName = (user: User): string => {
+  if (!user || !user.roles) {
+    return 'Unknown Role';
+  }
   
-  return [...users].sort((a, b) => {
-    let valueA: any;
-    let valueB: any;
-    
-    // Handle specific nested fields
-    if (sortField === 'role') {
-      valueA = a.roles?.name || '';
-      valueB = b.roles?.name || '';
-    } else if (sortField === 'entity') {
-      valueA = getEntityName(a);
-      valueB = getEntityName(b);
-    } else {
-      // Handle regular fields with safe access
-      valueA = a[sortField as keyof User] || '';
-      valueB = b[sortField as keyof User] || '';
-    }
-    
-    // Ensure string comparison for strings
-    if (typeof valueA === 'string') {
-      valueA = valueA.toLowerCase();
-    }
-    if (typeof valueB === 'string') {
-      valueB = valueB.toLowerCase();
-    }
-    
-    // Sort based on direction
-    if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
-    if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
+  return user.roles.name || 'Unknown Role';
+};
+
+// Get role color class based on role name
+export const getRoleColorClass = (user: User): string => {
+  const roleName = user.roles?.name || '';
+  
+  switch (roleName.toLowerCase()) {
+    case 'superadmin':
+      return 'bg-purple-500 text-white';
+    case 'regionadmin':
+      return 'bg-blue-500 text-white';
+    case 'sectoradmin':
+      return 'bg-green-500 text-white';
+    case 'schooladmin':
+      return 'bg-yellow-500 text-black';
+    default:
+      return 'bg-gray-500 text-white';
+  }
 };

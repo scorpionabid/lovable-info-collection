@@ -1,44 +1,69 @@
-
+import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import { User } from "@/services/userService";
-import { UserRole } from "@/contexts/AuthContext";
+import { User } from "@/supabase/types";
 
 interface UserRoleBadgeProps {
   user: User;
 }
 
-export const UserRoleBadge = ({ user }: UserRoleBadgeProps) => {
-  const getRoleName = (user: User) => {
-    // Try to get role name from roles relationship first
-    const roleName = user.roles?.name || '';
-    if (!roleName) return 'Rol təyin edilməyib';
+export const UserRoleBadge: React.FC<UserRoleBadgeProps> = ({ user }) => {
+  // Get role name from role relation if available
+  const roleName = user.roles?.name || getRoleNameFromId(user.role_id);
+  
+  // Determine badge color based on role
+  const getBadgeVariant = () => {
+    if (!roleName) return 'default';
     
-    const normalizedRole = roleName.toLowerCase();
+    const role = roleName.toLowerCase();
     
-    if (normalizedRole.includes('super')) return 'SuperAdmin';
-    if (normalizedRole.includes('region')) return 'Region Admin';
-    if (normalizedRole.includes('sector')) return 'Sektor Admin';
-    if (normalizedRole.includes('school')) return 'Məktəb Admin';
+    if (role.includes('super')) return 'destructive';
+    if (role.includes('region')) return 'blue';
+    if (role.includes('sector')) return 'green';
+    if (role.includes('school')) return 'yellow';
     
-    return roleName;
+    return 'default';
   };
   
-  const getRoleColor = (roleName: string | undefined) => {
-    if (!roleName) return 'bg-gray-100 text-gray-800';
+  // Get a human-readable role name
+  const getDisplayRoleName = () => {
+    if (!roleName) return 'Unknown Role';
     
-    const normalizedRole = (roleName || '').toLowerCase();
+    // If role comes from the roles relationship, use it directly
+    if (user.roles?.name) {
+      return user.roles.name;
+    }
     
-    if (normalizedRole.includes('super')) return 'bg-red-100 text-red-800';
-    if (normalizedRole.includes('region')) return 'bg-blue-100 text-blue-800';
-    if (normalizedRole.includes('sector')) return 'bg-green-100 text-green-800';
-    if (normalizedRole.includes('school')) return 'bg-purple-100 text-purple-800';
-    
-    return 'bg-gray-100 text-gray-800';
+    // Otherwise try to make the role ID more readable
+    switch (roleName.toLowerCase()) {
+      case 'superadmin':
+        return 'Super Admin';
+      case 'regionadmin':
+        return 'Region Admin';
+      case 'sectoradmin':
+        return 'Sector Admin';
+      case 'schooladmin':
+        return 'School Admin';
+      default:
+        return roleName;
+    }
   };
-
+  
   return (
-    <Badge className={`${getRoleColor(user.roles?.name)} font-normal`}>
-      {getRoleName(user)}
+    <Badge variant={getBadgeVariant() as any}>
+      {getDisplayRoleName()}
     </Badge>
   );
 };
+
+// Helper function to get role name from ID when relationship isn't loaded
+function getRoleNameFromId(roleId: string): string {
+  // This is a simple mapping - in a real app this would come from a mapping or API
+  const roleMap: Record<string, string> = {
+    '1': 'SuperAdmin',
+    '2': 'RegionAdmin',
+    '3': 'SectorAdmin',
+    '4': 'SchoolAdmin',
+  };
+  
+  return roleMap[roleId] || 'Unknown Role';
+}

@@ -1,61 +1,122 @@
 
-/**
- * Regionlar üçün hook
- */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import * as regionsService from "../services/regions";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  getRegions, 
+  getRegionById, 
+  createRegion, 
+  updateRegion, 
+  deleteRegion,
+  getRegionsForDropdown
+} from '../services/regions';
+import { useState } from 'react';
 import { 
   Region, 
   RegionWithStats, 
-  PaginationParams, 
-  SortParams, 
-  RegionFilters 
-} from "../types";
+  CreateRegionDto, 
+  UpdateRegionDto, 
+  PaginationParams,
+  RegionFilters
+} from '../types';
+import { toast } from 'sonner';
 
-// Bütün regionları almaq üçün hook
-export const useRegions = (
-  pagination?: PaginationParams,
-  sort?: SortParams,
-  filters?: RegionFilters
-) => {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['regions', pagination, sort, filters],
-    queryFn: () => regionsService.getRegions(pagination, sort, filters),
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
+export const useRegions = (filters: Partial<PaginationParams & RegionFilters> = {}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  const queryClient = useQueryClient();
+  
+  const queryParams = {
+    page: currentPage,
+    pageSize,
+    search: searchQuery,
+    ...filters
+  };
+  
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['regions', queryParams, sortField, sortDirection],
+    queryFn: () => getRegions(queryParams, sortField, sortDirection),
   });
-
+  
+  const createMutation = useMutation({
+    mutationFn: (data: CreateRegionDto) => createRegion(data),
+    onSuccess: () => {
+      toast.success('Region created successfully');
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Error creating region: ${error.message}`);
+    }
+  });
+  
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateRegionDto }) => 
+      updateRegion(id, data),
+    onSuccess: () => {
+      toast.success('Region updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Error updating region: ${error.message}`);
+    }
+  });
+  
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteRegion(id),
+    onSuccess: () => {
+      toast.success('Region deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Error deleting region: ${error.message}`);
+    }
+  });
+  
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page on search
+  };
+  
+  const handleSort = (field: string) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+  
+  const invalidateCache = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['regions'] });
+    return refetch();
+  };
+  
   return {
     regions: data?.data || [],
-    totalCount: data?.count || 0,
+    count: data?.count || 0,
     isLoading,
-    error,
-    refetch
+    isError,
+    filters: { ...queryParams },
+    sortField,
+    sortDirection,
+    handleSearch,
+    handleSort,
+    setCurrentPage,
+    setPageSize,
+    createRegion: createMutation.mutate,
+    updateRegion: updateMutation.mutate,
+    deleteRegion: deleteMutation.mutate,
+    invalidateCache
   };
 };
 
-// Region detaylarını almaq üçün hook
-export const useRegion = (id: string) => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['region', id],
-    queryFn: () => regionsService.getRegionById(id),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
-  });
-
-  return {
-    region: data,
-    isLoading,
-    error
-  };
-};
-
-// Dropdown üçün regionları almaq
+// Hook for dropdowns
 export const useRegionsDropdown = () => {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['regionsDropdown'],
-    queryFn: () => regionsService.getRegionsForDropdown(),
-    staleTime: 1000 * 60 * 10 // 10 dəqiqə
+    queryKey: ['regions-dropdown'],
+    queryFn: getRegionsForDropdown,
   });
 
   return {
@@ -65,62 +126,17 @@ export const useRegionsDropdown = () => {
   };
 };
 
-// Region yaratmaq üçün hook
-export const useCreateRegion = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: (regionData: Partial<Region>) => 
-      regionsService.createRegion(regionData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['regions'] });
-      queryClient.invalidateQueries({ queryKey: ['regionsDropdown'] });
-      toast.success('Region uğurla yaradıldı');
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Region yaradılarkən problem baş verdi'}`);
-    }
+// Hook for getting a single region
+export const useRegion = (id: string) => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['region', id],
+    queryFn: () => getRegionById(id),
+    enabled: !!id,
   });
 
-  return mutation;
-};
-
-// Region yeniləmək üçün hook
-export const useUpdateRegion = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: ({ id, regionData }: { id: string; regionData: Partial<Region> }) => 
-      regionsService.updateRegion(id, regionData),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['regions'] });
-      queryClient.invalidateQueries({ queryKey: ['region', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['regionsDropdown'] });
-      toast.success('Region uğurla yeniləndi');
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Region yenilənərkən problem baş verdi'}`);
-    }
-  });
-
-  return mutation;
-};
-
-// Region silmək üçün hook
-export const useDeleteRegion = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: (id: string) => regionsService.deleteRegion(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['regions'] });
-      queryClient.invalidateQueries({ queryKey: ['regionsDropdown'] });
-      toast.success('Region uğurla silindi');
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Region silinərkən problem baş verdi'}`);
-    }
-  });
-
-  return mutation;
+  return {
+    region: data as RegionWithStats | undefined,
+    isLoading,
+    isError
+  };
 };

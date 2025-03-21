@@ -85,7 +85,7 @@ export const UserTableRow = ({
       <td className="px-4 py-3 text-right">
         <UserActionMenu 
           user={user} 
-          onAction={onAction} 
+          onAction={(action) => onAction(action, user)} 
         />
       </td>
     </tr>

@@ -1,18 +1,110 @@
 
-import { type Tables, type TablesInsert, type TablesUpdate } from '@/integrations/supabase/types';
+// Database Tables
+export interface Region {
+  id: string;
+  name: string;
+  code?: string;
+  description?: string;
+  created_at: string;
+  updated_at?: string;
+}
 
-// Ümumi tiplər
-export type Region = Tables<'regions'>;
-export type Sector = Tables<'sectors'>;
-export type School = Tables<'schools'>;
-export type User = Tables<'users'>;
-export type Role = Tables<'roles'>;
-export type Category = Tables<'categories'>;
-export type Column = Tables<'columns'>;
+export interface Sector {
+  id: string;
+  name: string;
+  region_id: string;
+  description?: string;
+  archived?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
-// DTO tiplər (yaratma)
+export interface School {
+  id: string;
+  name: string;
+  address: string;
+  region_id: string;
+  sector_id: string;
+  type_id: string;
+  code?: string;
+  status: string;
+  director: string;
+  email: string;
+  phone: string;
+  student_count: number;
+  teacher_count: number;
+  archived: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface SchoolType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  scope: 'global' | 'region' | 'sector' | 'school';
+  scope_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CategoryColumn {
+  id: string;
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+  options?: string[] | null;
+  category_id: string;
+  order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  role_id: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  utis_code?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  last_login?: string;
+  roles?: Role; // Relationship field
+  region?: Region; // Relationship field
+  sector?: Sector; // Relationship field
+  school?: School; // Relationship field
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+// DTOs (Data Transfer Objects)
 export interface CreateRegionDto {
   name: string;
+  code?: string;
+  description?: string;
+}
+
+export interface UpdateRegionDto {
+  name?: string;
   code?: string;
   description?: string;
 }
@@ -20,23 +112,45 @@ export interface CreateRegionDto {
 export interface CreateSectorDto {
   name: string;
   region_id: string;
-  code?: string;
   description?: string;
+}
+
+export interface UpdateSectorDto {
+  name?: string;
+  region_id?: string;
+  description?: string;
+  archived?: boolean;
 }
 
 export interface CreateSchoolDto {
   name: string;
+  address?: string;
   region_id: string;
   sector_id: string;
   type_id?: string;
   code?: string;
-  address?: string;
   status?: string;
   director?: string;
   email?: string;
   phone?: string;
   student_count?: number;
   teacher_count?: number;
+}
+
+export interface UpdateSchoolDto {
+  name?: string;
+  address?: string;
+  region_id?: string;
+  sector_id?: string;
+  type_id?: string;
+  code?: string;
+  status?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
+  archived?: boolean;
 }
 
 export interface CreateUserDto {
@@ -48,38 +162,9 @@ export interface CreateUserDto {
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  is_active?: boolean;
   utis_code?: string;
+  is_active?: boolean;
   password?: string;
-}
-
-// DTO tiplər (yeniləmə)
-export interface UpdateRegionDto {
-  name?: string;
-  code?: string;
-  description?: string;
-}
-
-export interface UpdateSectorDto {
-  name?: string;
-  region_id?: string;
-  code?: string;
-  description?: string;
-}
-
-export interface UpdateSchoolDto {
-  name?: string;
-  region_id?: string;
-  sector_id?: string;
-  type_id?: string;
-  code?: string;
-  address?: string;
-  status?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-  student_count?: number;
-  teacher_count?: number;
 }
 
 export interface UpdateUserDto {
@@ -91,101 +176,94 @@ export interface UpdateUserDto {
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  is_active?: boolean;
   utis_code?: string;
+  is_active?: boolean;
 }
 
-// Genişləndirilmiş tiplər
-export interface RegionWithStats extends Region {
-  sectorCount?: number;
-  schoolCount?: number;
-  completionRate?: number;
+export interface LoginCredentials {
+  email: string;
+  password: string;
 }
 
-export interface SectorWithStats extends Sector {
-  regionName?: string;
-  schoolCount?: number;
-  completionRate?: number;
-}
-
-export interface SchoolWithStats extends School {
-  region?: string;
-  sector?: string;
-  completionRate?: number;
-  adminName?: string;
-  adminId?: string;
-}
-
-export interface UserWithRole extends User {
-  roleName?: string;
-}
-
-// Filter tipləri
-export interface FilterParams {
+// Filter interfaces
+export interface RegionFilters {
   search?: string;
+  status?: 'active' | 'archived' | 'all';
+}
+
+export interface SectorFilters {
+  region_id?: string;
+  search?: string;
+  status?: 'active' | 'archived' | 'all';
+}
+
+export interface SchoolFilter {
   region_id?: string;
   sector_id?: string;
-  status?: 'active' | 'inactive' | 'all';
-  min_completion_rate?: number;
-  max_completion_rate?: number;
-  searchQuery?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  archived?: boolean;
-  completionRate?: string;
-  // Geriyə uyğunluq
-  regionId?: string;
-  sectorId?: string;
-  type?: string;
   type_id?: string;
+  search?: string;
+  status?: 'active' | 'archived' | 'all';
 }
 
-export interface SortParams {
-  field: string;
-  direction: 'asc' | 'desc';
+export interface UserFilters {
+  role_id?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  search?: string;
+  status?: 'active' | 'inactive' | 'all';
 }
 
+// Pagination and sorting interfaces
 export interface PaginationParams {
   page: number;
   pageSize: number;
 }
 
-// Notification tiplər
-export interface Notification {
-  id: string;
-  title: string;
+export interface SchoolSortParams {
+  sortField?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+// Enhanced types with stats
+export interface RegionWithStats extends Region {
+  sectors_count: number;
+  schools_count: number;
+  completion_rate: number;
+}
+
+export interface SectorWithStats extends Sector {
+  schools_count: number;
+  completion_rate: number;
+  region?: { id: string; name: string };
+}
+
+export interface SchoolWithStats extends School {
+  completionRate: number;
+  region?: { id: string; name: string };
+  sector?: { id: string; name: string };
+  type?: { id: string; name: string };
+  adminName?: string;
+}
+
+// Results interfaces
+export interface PaginatedResult<T> {
+  data: T[];
+  count: number;
+}
+
+// Error interfaces
+export interface ServiceError {
   message: string;
-  type: string;
-  link?: string;
-  isRead: boolean;
-  createdAt: string;
-  readAt?: string;
+  code?: string;
+  details?: any;
 }
 
-export interface CreateNotificationDto {
-  title: string;
-  body: string;
-  notification_type: string;
-  user_id: string;
-  action_url?: string;
-  data?: any;
+export interface ValidationError extends ServiceError {
+  validationErrors: Record<string, string>;
 }
 
-export interface DbNotification {
-  id: string;
-  title: string;
-  body: string;
-  notification_type: string;
-  user_id: string;
-  is_read: boolean;
-  read_at: string | null;
-  created_at: string;
-  action_url: string | null;
-  data: any | null;
-}
-
-// Geriyə uyğunluq üçün interfeyslər
-export interface SchoolType {
-  id: string;
-  name: string;
-}
+// Utility types
+export type QueryResult<T> = Promise<{ data: T; error: ServiceError | null }>;
+export type ListQueryResult<T> = Promise<{ data: T[]; error: ServiceError | null }>;
+export type PaginatedQueryResult<T> = Promise<{ data: T[]; count: number; error: ServiceError | null }>;
