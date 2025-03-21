@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -214,8 +213,11 @@ export const UserModalContent: React.FC<UserModalContentProps> = ({
   };
   
   // If it's view mode, render the view modal instead
-  if (isViewMode && user) {
-    return <UserViewModal user={user} />;
+  if (mode === "view" && user) {
+    return <UserViewModal 
+      user={user} 
+      onClose={onSuccess} 
+    />;
   }
   
   // Return the edit/create form

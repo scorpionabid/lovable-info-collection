@@ -15,15 +15,18 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
     if (!typeId) return null;
 
     try {
-      // Fetch from school_types table directly
+      // Use a direct SQL query using RPC
       const { data, error } = await supabase
-        .from('school_types')
-        .select('id, name, description')
-        .eq('id', typeId)
-        .maybeSingle();
+        .rpc('get_school_type_by_id', { type_id: typeId });
 
       if (error) throw error;
-      return data as SchoolType;
+      
+      // Make sure we have valid data
+      if (data && typeof data === 'object' && 'id' in data && 'name' in data) {
+        return data as SchoolType;
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error fetching school type:', error);
       return null;

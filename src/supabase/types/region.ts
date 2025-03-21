@@ -3,7 +3,7 @@ import { Tables } from '@/types/supabase';
 
 // Base Region type from the database
 export type Region = Tables<'regions'> & {
-  code?: string;
+  code: string;
   description?: string;
 };
 

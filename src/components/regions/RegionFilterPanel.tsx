@@ -1,58 +1,85 @@
 
 import React from 'react';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
-import { FilterParams } from '@/supabase/types'; // Updated import
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FilterParams } from '@/supabase/types';
 
-interface RegionFilterPanelProps {
-  filters: FilterParams; // Using FilterParams instead of RegionFilters
-  onFilterChange: (name: string, value: any) => void;
-  onResetFilters: () => void;
+export interface RegionFilterPanelProps {
+  filters: FilterParams;
+  onFilterChange: (key: string, value: any) => void;
+  onFilterApply: () => Promise<void>;
+  onFiltersReset?: () => void;
 }
 
 export const RegionFilterPanel: React.FC<RegionFilterPanelProps> = ({
   filters,
   onFilterChange,
-  onResetFilters
+  onFilterApply,
+  onFiltersReset
 }) => {
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFilterChange('search', e.target.value);
+  const handleFilterChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFilterChange(key, e.target.value);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // Trigger search on enter if needed
+  const handleSelectChange = (key: string) => (value: string) => {
+    onFilterChange(key, value);
+  };
+
+  const handleApplyFilters = async () => {
+    await onFilterApply();
+  };
+
+  const handleResetFilters = () => {
+    if (onFiltersReset) {
+      onFiltersReset();
     }
   };
 
-  const hasActiveFilters = !!filters.search;
-
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div className="relative flex w-full md:max-w-sm">
-        <Input
-          placeholder="Search regions..."
-          value={filters.search || ''}
-          onChange={handleSearchChange}
-          onKeyDown={handleKeyDown}
-          className="pr-10"
-        />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
+    <div className="bg-white rounded-lg p-4 shadow-sm space-y-4">
+      <h3 className="text-lg font-medium mb-4">Filter Regions</h3>
+      
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="search">Search</Label>
+          <Input
+            id="search"
+            placeholder="Search by name or code..."
+            value={filters.search || ''}
+            onChange={handleFilterChange('search')}
+            className="mt-1"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select 
+            value={filters.status || 'all'} 
+            onValueChange={handleSelectChange('status')}
+          >
+            <SelectTrigger id="status" className="w-full mt-1">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex gap-2 pt-2">
+          <Button variant="outline" onClick={handleResetFilters} className="flex-1">
+            Reset
+          </Button>
+          <Button onClick={handleApplyFilters} className="flex-1">
+            Apply Filters
+          </Button>
         </div>
       </div>
-      {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          onClick={onResetFilters}
-          className="flex items-center text-xs"
-        >
-          <X className="mr-1 h-4 w-4" />
-          Reset filters
-        </Button>
-      )}
     </div>
   );
 };

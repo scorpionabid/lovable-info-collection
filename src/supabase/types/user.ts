@@ -1,7 +1,7 @@
 
 import { Tables } from '@/types/supabase';
 
-// Base User type from database
+// Base User type from the database
 export interface User {
   id: string;
   first_name: string;
@@ -18,78 +18,56 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   last_login?: string;
-  
-  // Virtual fields
   role?: string;
-  roleName?: string;
+  userRole?: string;
   
-  // For compatibility with existing code that uses roles instead of role
-  roles?: {
-    id?: string;
-    name?: string;
-  };
+  // Backward compatibility fields to support `roles` property
+  // These should be used as User.role, but some components use User.roles
+  roles?: string;
   
-  // Virtual fields for locations
-  region?: {
-    id?: string;
-    name?: string;
-  };
-  sector?: {
-    id?: string;
-    name?: string;
-  };
-  school?: {
-    id?: string;
-    name?: string;
-  };
+  // Organization entities names
+  region?: string;
+  sector?: string;
+  school?: string;
 }
 
 // User with role information
 export interface UserWithRole extends User {
   role: string;
-  roleName: string;
 }
 
-// User filter interface
+// User filters for API requests
 export interface UserFilters {
   search?: string;
   role_id?: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  status?: 'active' | 'inactive' | 'all';
+  status?: 'active' | 'inactive' | 'all' | 'blocked';
   page?: number;
-  page_size?: number;
+  pageSize?: number;
 }
 
-// Special type for auth.users with role claims
-export interface UserRoleClaims extends User {
-  app_metadata?: {
-    claims?: {
-      roles?: string | string[];
-    };
-  };
-}
-
-// Create DTO
+// Create user DTO
 export interface CreateUserDto {
-  email: string;
   first_name: string;
   last_name: string;
+  email: string;
   phone?: string;
+  password: string;
   role_id: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
   utis_code?: string;
   is_active?: boolean;
-  password?: string;
 }
 
-// Update DTO
+// Update user DTO
 export interface UpdateUserDto {
   first_name?: string;
   last_name?: string;
+  email?: string;
   phone?: string;
   role_id?: string;
   region_id?: string;
@@ -97,4 +75,5 @@ export interface UpdateUserDto {
   school_id?: string;
   utis_code?: string;
   is_active?: boolean;
+  avatar_url?: string;
 }

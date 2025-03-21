@@ -15,13 +15,8 @@ import { SectorWithStats } from '@/services/supabase/sector/types';
 import { useToast } from "@/hooks/use-toast";
 import { archiveSector } from '@/services/supabase/sector/crudOperations';
 import { useLogger } from '@/hooks/useLogger';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
+import {
+  Pagination,
 } from "@/components/ui/pagination";
 
 export interface SectorTableProps {
@@ -281,47 +276,51 @@ export const SectorTable = ({
       
       {totalPages > 1 && (
         <div className="flex justify-center p-4">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => {
-                    if (currentPage > 1) {
-                      logger.info(`Pagination: moving to previous page (${currentPage - 1})`);
-                      setCurrentPage(currentPage - 1);
-                    }
-                  }}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-              
+          <div className="flex justify-center items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (currentPage > 1) {
+                  logger.info(`Pagination: moving to previous page (${currentPage - 1})`);
+                  setCurrentPage(currentPage - 1);
+                }
+              }}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            
+            <div className="flex items-center gap-1">
               {Array.from({ length: totalPages }, (_, i) => (
-                <PaginationItem key={i + 1}>
-                  <PaginationLink 
-                    isActive={currentPage === i + 1}
-                    onClick={() => {
-                      logger.info(`Pagination: moving to page ${i + 1}`);
-                      setCurrentPage(i + 1);
-                    }}
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              
-              <PaginationItem>
-                <PaginationNext 
+                <Button 
+                  key={i + 1}
+                  variant={currentPage === i + 1 ? "default" : "outline"}
+                  size="sm"
                   onClick={() => {
-                    if (currentPage < totalPages) {
-                      logger.info(`Pagination: moving to next page (${currentPage + 1})`);
-                      setCurrentPage(currentPage + 1);
-                    }
+                    logger.info(`Pagination: moving to page ${i + 1}`);
+                    setCurrentPage(i + 1);
                   }}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                >
+                  {i + 1}
+                </Button>
+              ))}
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  logger.info(`Pagination: moving to next page (${currentPage + 1})`);
+                  setCurrentPage(currentPage + 1);
+                }
+              }}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
       

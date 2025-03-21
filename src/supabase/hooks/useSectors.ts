@@ -1,21 +1,27 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabase/client';
+import { Sector } from '@/supabase/types';
 
-export const useSectors = (regionId: string) => {
-  const fetchSectors = async () => {
-    if (!regionId) return [];
-    
+interface UseSectorsOptions {
+  regionId?: string;
+  enabled?: boolean;
+}
+
+export const useSectors = (options: UseSectorsOptions = {}) => {
+  const { regionId, enabled = true } = options;
+  
+  const fetchSectors = async (): Promise<Sector[]> => {
     try {
-      const { data, error } = await supabase
-        .from('sectors')
-        .select('id, name, code, description')
-        .eq('region_id', regionId)
-        .order('name');
+      let query = supabase.from('sectors').select('*').order('name');
       
-      if (error) {
-        throw error;
+      if (regionId) {
+        query = query.eq('region_id', regionId);
       }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
       
       return data || [];
     } catch (error) {
@@ -23,12 +29,16 @@ export const useSectors = (regionId: string) => {
       return [];
     }
   };
-
-  const { data: sectors = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ['sectors_dropdown', regionId],
+  
+  return useQuery({
+    queryKey: ['sectors', regionId],
     queryFn: fetchSectors,
-    enabled: !!regionId,
+    enabled: enabled
   });
-
-  return { sectors, isLoading, isError, refetch };
 };
+
+export const useSectorsByRegion = (regionId?: string, enabled: boolean = true) => {
+  return useSectors({ regionId, enabled });
+};
+
+export default useSectors;

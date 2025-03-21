@@ -1,8 +1,12 @@
 
-import { Tables } from '@/integrations/supabase/types';
+import { Tables } from '@/types/supabase';
 
 // Base Sector type
-export type Sector = Tables<'sectors'>;
+export type Sector = Tables<'sectors'> & {
+  code?: string;
+  description?: string;
+  region?: string;
+};
 
 // Filter parameters for sector queries
 export interface SectorFilters {
@@ -17,7 +21,6 @@ export interface SectorFilters {
 export interface SectorWithStats extends Sector {
   schoolCount: number;
   completionRate: number;
-  code?: string; // Explicitly included
   regionName?: string;
   // Support older property names for backward compatibility
   schools_count?: number;

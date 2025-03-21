@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,10 +49,12 @@ export const RegionTableRow: React.FC<RegionTableRowProps> = ({ region, onEdit, 
         </div>
         <div className="text-xs text-gray-500 mt-1">{region.completionRate}%</div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <Badge variant={region.status ? "success" : "secondary"}>
-          {region.status ? "Aktiv" : "Deaktiv"}
-        </Badge>
+      <td className="px-4 py-2">
+        <div className="flex justify-center">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${region.archived ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800'}`}>
+            {region.archived ? 'Archived' : 'Active'}
+          </span>
+        </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
         <DropdownMenu>

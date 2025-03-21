@@ -1,45 +1,92 @@
 
-import { ChartCard } from "@/components/dashboard/ChartCard";
-import { RegionWithStats } from '@/services/supabase/region';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RegionWithStats } from '@/supabase/types';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from 'recharts';
 
 interface RegionChartsProps {
-  region: RegionWithStats;
+  region: RegionWithStats & { userCount?: number };
 }
 
-export const RegionCharts = ({ region }: RegionChartsProps) => {
-  // Mock data for the charts - in a real scenario, you would probably get this from an API
-  const completionData = [
-    { name: 'Yan', value: Math.floor(Math.random() * 35) + 65 },
-    { name: 'Fev', value: Math.floor(Math.random() * 35) + 65 },
-    { name: 'Mar', value: Math.floor(Math.random() * 35) + 65 },
-    { name: 'Apr', value: Math.floor(Math.random() * 35) + 65 },
-    { name: 'May', value: Math.floor(Math.random() * 35) + 65 },
-    { name: 'İyn', value: region.completionRate || 0 },
-  ];
-  
-  const distributionData = [
-    { name: 'Məktəblər', value: region.schoolCount || 0 },
-    { name: 'Sektorlar', value: region.sectorCount || 0 },
-    { name: 'İstifadəçilər', value: region.userCount || 0 },
+export const RegionCharts: React.FC<RegionChartsProps> = ({ region }) => {
+  // Prepare data for bar chart
+  const barData = [
+    { name: 'Sectors', value: region.sectorCount || 0 },
+    { name: 'Schools', value: region.schoolCount || 0 },
+    { name: 'Users', value: region.userCount || 0 }
   ];
 
+  // Prepare data for pie chart
+  const pieData = [
+    { name: 'Collected', value: region.completionRate || 0 },
+    { name: 'Missing', value: 100 - (region.completionRate || 0) }
+  ];
+
+  const COLORS = ['#0088FE', '#FF8042'];
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <ChartCard 
-        title="Doldurulma Tendensiyası" 
-        subtitle="Son 6 ay"
-        type="bar"
-        data={completionData}
-        colors={['#60A5FA']}
-      />
-      
-      <ChartCard 
-        title="Region Strukturu" 
-        subtitle="Məktəb, sektor və istifadəçi paylanması"
-        type="pie"
-        data={distributionData}
-        colors={['#34D399', '#60A5FA', '#A78BFA']}
-      />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Region Statistics</CardTitle>
+        </CardHeader>
+        <CardContent className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={barData}
+              margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#3b82f6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Completion Rate</CardTitle>
+        </CardHeader>
+        <CardContent className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 };
+
+export default RegionCharts;

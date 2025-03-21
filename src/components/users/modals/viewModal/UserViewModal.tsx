@@ -1,4 +1,3 @@
-
 import React from "react";
 import { X } from "lucide-react";
 import { 
@@ -16,7 +15,7 @@ import { UserHeader } from "./UserHeader";
 import { UserDetails } from "./UserDetails";
 import { UserPermissions } from "./UserPermissions";
 
-interface UserViewModalProps {
+export interface UserViewModalProps {
   user: User;
   onClose: () => void;
 }

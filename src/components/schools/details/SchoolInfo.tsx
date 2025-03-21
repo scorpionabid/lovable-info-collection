@@ -1,80 +1,77 @@
 
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { School } from "@/supabase/types";
-import { useSchoolType } from "../hooks/useSchoolType";
+import { School } from '@/supabase/types';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSchoolType } from '@/components/schools/hooks/useSchoolType';
 
 interface SchoolInfoProps {
   school: School;
-  regionName?: string;
-  sectorName?: string;
 }
 
-export const SchoolInfo: React.FC<SchoolInfoProps> = ({ school, regionName, sectorName }) => {
-  const { schoolType } = useSchoolType(school.type_id);
+export const SchoolInfo = ({ school }: SchoolInfoProps) => {
+  // Correctly fetch the school type
+  const { data: schoolTypeData } = useSchoolType({ 
+    typeId: school.type_id,
+    enabled: !!school.type_id
+  });
+
+  // Only use the type if it's available
+  const schoolType = schoolTypeData ? schoolTypeData.name : 'Unknown';
 
   return (
-    <Card className="shadow-sm">
+    <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium text-infoline-dark-blue">Məktəb Məlumatları</CardTitle>
+        <CardTitle className="text-xl font-bold">School Information</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Məktəb Kodu:</p>
-            <p className="font-medium">{school.code || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">School Name</p>
+            <p className="font-medium">{school.name}</p>
           </div>
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">Region:</p>
-            <p className="font-medium">{regionName || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">Code</p>
+            <p className="font-medium">{school.code || '-'}</p>
           </div>
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">Sektor:</p>
-            <p className="font-medium">{sectorName || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">Type</p>
+            <p className="font-medium">{schoolType}</p>
           </div>
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">Məktəb Növü:</p>
-            <p className="font-medium">{schoolType?.name || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">Region</p>
+            <p className="font-medium">{school.region || '-'}</p>
           </div>
-        </div>
-
-        <Separator />
-
-        <div>
-          <p className="text-sm text-gray-500 mb-1">Ünvan:</p>
-          <p className="font-medium">{school.address || 'N/A'}</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">Telefon:</p>
-            <p className="font-medium">{school.phone || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">Sector</p>
+            <p className="font-medium">{school.sector || '-'}</p>
           </div>
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">E-poçt:</p>
-            <p className="font-medium">{school.email || 'N/A'}</p>
+            <p className="text-sm text-muted-foreground">Address</p>
+            <p className="font-medium">{school.address || '-'}</p>
           </div>
-        </div>
-
-        <Separator />
-
-        <div>
-          <p className="text-sm text-gray-500 mb-1">Direktor:</p>
-          <p className="font-medium">{school.director || 'N/A'}</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">Şagird Sayı:</p>
-            <p className="font-medium">{school.student_count || 0}</p>
+            <p className="text-sm text-muted-foreground">Status</p>
+            <Badge variant={school.archived ? "secondary" : "success"}>
+              {school.archived ? 'Archived' : 'Active'}
+            </Badge>
           </div>
+          
           <div>
-            <p className="text-sm text-gray-500 mb-1">Müəllim Sayı:</p>
-            <p className="font-medium">{school.teacher_count || 0}</p>
+            <p className="text-sm text-muted-foreground">Created At</p>
+            <p className="font-medium">
+              {new Date(school.created_at).toLocaleDateString()}
+            </p>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 };
+
+export default SchoolInfo;

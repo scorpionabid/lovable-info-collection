@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
-import { Region, RegionWithStats, CreateRegionDto, UpdateRegionDto } from '@/supabase/types';
+import { Region, RegionWithStats } from '@/supabase/types/region';
+import { CreateRegionDto, UpdateRegionDto } from '@/supabase/types/region';
 
 // Get region by ID
 export const getRegionById = async (id: string): Promise<RegionWithStats | null> => {
@@ -109,3 +110,32 @@ export const archiveRegion = async (id: string): Promise<boolean> => {
     throw error;
   }
 };
+
+// Search regions by name
+export const searchRegions = async (searchTerm: string): Promise<Region[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('regions')
+      .select('*')
+      .ilike('name', `%${searchTerm}%`)
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error searching regions:', error);
+    throw error;
+  }
+};
+
+// Export default object for backward compatibility
+const regionOperations = {
+  getRegionById,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  archiveRegion,
+  searchRegions
+};
+
+export default regionOperations;

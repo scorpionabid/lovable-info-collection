@@ -1,30 +1,36 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FilterParams } from '@/supabase/types'; // Updated import
+import { FilterParams } from '@/supabase/types';
+import { RegionWithStats } from '@/supabase/types/region';
 
-interface RegionExportModalProps {
+export interface RegionExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExport: (format: string, includeStats: boolean) => void;
-  filters: FilterParams; // Using FilterParams instead of RegionFilters
+  filters?: FilterParams;
+  region?: RegionWithStats;
+  onExport?: (format: string) => void;
 }
 
 export const RegionExportModal: React.FC<RegionExportModalProps> = ({
   isOpen,
   onClose,
-  onExport,
-  filters
+  filters,
+  region,
+  onExport
 }) => {
-  const [exportFormat, setExportFormat] = React.useState<string>("xlsx");
-  const [includeStats, setIncludeStats] = React.useState<boolean>(true);
+  const [format, setFormat] = useState<string>('excel');
 
   const handleExport = () => {
-    onExport(exportFormat, includeStats);
+    if (onExport) {
+      onExport(format);
+    }
     onClose();
   };
 
@@ -32,42 +38,61 @@ export const RegionExportModal: React.FC<RegionExportModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Export Regions</DialogTitle>
+          <DialogTitle>
+            {region ? `Export ${region.name} Data` : 'Export Regions Data'}
+          </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="format" className="text-right">
-              Format
-            </Label>
-            <Select
-              value={exportFormat}
-              onValueChange={setExportFormat}
-            >
-              <SelectTrigger id="format" className="col-span-3">
-                <SelectValue placeholder="Select format" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <div className="col-span-4 flex items-center space-x-2">
-              <Checkbox 
-                id="includeStats" 
-                checked={includeStats}
-                onCheckedChange={(checked) => setIncludeStats(checked as boolean)}
-              />
-              <Label htmlFor="includeStats">Include statistics</Label>
+        <div className="py-4 space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-medium">Export Format</h4>
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="excel"
+                  name="format"
+                  value="excel"
+                  checked={format === 'excel'}
+                  onChange={() => setFormat('excel')}
+                  className="h-4 w-4 text-infoline-blue"
+                />
+                <label htmlFor="excel" className="text-sm">Excel</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="csv"
+                  name="format"
+                  value="csv"
+                  checked={format === 'csv'}
+                  onChange={() => setFormat('csv')}
+                  className="h-4 w-4 text-infoline-blue"
+                />
+                <label htmlFor="csv" className="text-sm">CSV</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="pdf"
+                  name="format"
+                  value="pdf"
+                  checked={format === 'pdf'}
+                  onChange={() => setFormat('pdf')}
+                  className="h-4 w-4 text-infoline-blue"
+                />
+                <label htmlFor="pdf" className="text-sm">PDF</label>
+              </div>
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleExport}>Export</Button>
-        </DialogFooter>
+        <div className="flex justify-end space-x-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleExport}>
+            Export
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

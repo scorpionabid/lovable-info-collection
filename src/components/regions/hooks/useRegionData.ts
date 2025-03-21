@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import regionService from '@/services/supabase/region';
+import { getRegions } from '@/services/supabase/region';
 import { RegionWithStats } from '@/supabase/types';
 
 interface UseRegionDataParams {
@@ -31,7 +31,7 @@ export const useRegionData = ({
     };
 
     try {
-      return await regionService.getRegions(apiFilters);
+      return await getRegions(apiFilters);
     } catch (error) {
       console.error('Error fetching regions data:', error);
       throw error;

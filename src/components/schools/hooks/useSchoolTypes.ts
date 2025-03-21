@@ -6,26 +6,32 @@ import { SchoolType } from '@/supabase/types/school';
 export const useSchoolTypes = () => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
+      // Use a direct SQL query using RPC
       const { data, error } = await supabase
-        .from('school_types')
-        .select('id, name, description')
-        .order('name');
+        .rpc('get_school_types');
+
+      if (error) throw error;
       
-      if (error) {
-        throw error;
+      // Make sure we have valid data
+      if (data && Array.isArray(data)) {
+        return data.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description || ''
+        }));
       }
       
-      return (data || []) as SchoolType[];
+      return [];
     } catch (error) {
       console.error('Error fetching school types:', error);
       return [];
     }
   };
 
-  const { data: schoolTypes = [], isLoading, isError, refetch } = useQuery({
+  return useQuery({
     queryKey: ['school_types'],
     queryFn: fetchSchoolTypes
   });
-
-  return { schoolTypes, isLoading, isError, refetch };
 };
+
+export default useSchoolTypes;
