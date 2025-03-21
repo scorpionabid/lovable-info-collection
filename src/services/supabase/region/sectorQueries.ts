@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { Sector } from './types';
+import { Sector } from '../sector/types';
 
 /**
  * Get a sector by its ID

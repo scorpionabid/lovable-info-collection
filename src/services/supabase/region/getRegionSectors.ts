@@ -1,5 +1,5 @@
-
 import { supabase } from '../supabaseClient';
+import { Sector } from '../sector/types';
 
 // Get sectors by region ID
 export const getRegionSectors = async (regionId: string) => {
