@@ -1,127 +1,62 @@
-
 import * as XLSX from 'xlsx';
-import { CategoryColumn } from '@/services/categoryService';
+import { saveAs } from 'file-saver';
+import { ColumnData } from '@/components/categories/columns/types';
 
-// Define ColumnData type
-interface ColumnData extends CategoryColumn {
-  validation?: {
-    required?: boolean;
-    minLength?: number;
-    maxLength?: number;
-    minValue?: number;
-    maxValue?: number;
-    pattern?: string;
-    options?: string[];
-  };
-}
-
-// Function to export data to Excel
-export const exportToExcel = (data: any[], fileName: string) => {
-  try {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
-    
-    // Auto-size columns
-    const colWidths = estimateColumnWidths(data);
-    worksheet['!cols'] = colWidths.map(width => ({ wch: width }));
-    
-    // Generate file
-    XLSX.writeFile(workbook, `${fileName}.xlsx`);
-    
-    return true;
-  } catch (error) {
-    console.error('Error exporting to Excel:', error);
-    return false;
-  }
-};
-
-// Helper to estimate column widths based on content
-const estimateColumnWidths = (data: any[]) => {
-  if (!data || data.length === 0) return [];
+export const generateExcelTemplate = (
+  categoryName: string,
+  columns: ColumnData[]
+): Blob => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([createColumnHeaders(columns)]);
   
-  const headers = Object.keys(data[0]);
-  const widths = headers.map(header => {
-    // Start with header length + some padding
-    let maxWidth = header.length + 2;
-    
-    // Check content length in each row
-    data.forEach(row => {
-      const cellValue = row[header];
-      if (cellValue !== null && cellValue !== undefined) {
-        const cellValueStr = String(cellValue);
-        if (cellValueStr.length > maxWidth) {
-          maxWidth = cellValueStr.length + 2;
-        }
-      }
-    });
-    
-    // Cap maximum width
-    return Math.min(maxWidth, 50);
+  // Apply column validation
+  columns.forEach((column, index) => {
+    const validation = getColumnValidation(column);
+    if (validation) {
+      const cellAddress = XLSX.utils.encode_col(index) + '2:' + XLSX.utils.encode_col(index) + '1000';
+      ws['!dataValidation'] = ws['!dataValidation'] || [];
+      ws['!dataValidation'].push({
+        sqref: cellAddress,
+        ...validation
+      });
+    }
   });
   
-  return widths;
+  XLSX.utils.book_append_sheet(wb, ws, categoryName);
+  const wopts: XLSX.WritingOptions = { bookType: 'xlsx', type: 'array' };
+  const wbout = XLSX.write(wb, wopts);
+  const blob = new Blob([new Uint8Array(wbout)], { type: 'application/octet-stream' });
+  return blob;
 };
 
-// Function to generate Excel template based on columns definition
-export const generateExcelTemplate = (columns: ColumnData[], fileName: string) => {
-  try {
-    // Create template header row
-    const headerRow = columns.map(col => col.name);
-    
-    // Create empty data with just headers
-    const worksheet = XLSX.utils.aoa_to_sheet([headerRow]);
-    const workbook = XLSX.utils.book_new();
-    
-    // Set column widths
-    worksheet['!cols'] = columns.map(col => {
-      let width = col.name.length + 5;
-      
-      // Adjust width based on column type
-      if (col.type === 'textarea') {
-        width = 40;
-      } else if (col.type === 'date') {
-        width = 15;
-      } else if (col.type === 'select' && col.options) {
-        // Find longest option
-        const maxOptionLength = Math.max(...col.options.map(opt => opt.length));
-        width = Math.max(width, maxOptionLength + 5);
-      }
-      
-      return { wch: width };
-    });
-    
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
-    
-    // Generate file
-    XLSX.writeFile(workbook, `${fileName}.xlsx`);
-    
-    return true;
-  } catch (error) {
-    console.error('Error generating Excel template:', error);
-    return false;
-  }
-};
-
-// Function to parse Excel file to JSON
-export const parseExcelToJson = (file: File): Promise<any[]> => {
+export const parseExcelData = (
+  file: File,
+  columns: ColumnData[]
+): Promise<Record<string, any>[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = (e) => {
+    reader.onload = (e: any) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        // Get first sheet
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
+        // Remove header row
+        jsonData.shift();
         
-        // Convert to JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+        const parsedData = jsonData.map(row => {
+          const item: Record<string, any> = {};
+          columns.forEach((column, index) => {
+            const cellValue = row[index];
+            item[column.name] = transformCellData(cellValue, column.type);
+          });
+          return item;
+        });
         
-        resolve(jsonData);
+        resolve(parsedData);
       } catch (error) {
         reject(error);
       }
@@ -135,8 +70,75 @@ export const parseExcelToJson = (file: File): Promise<any[]> => {
   });
 };
 
-export default {
-  exportToExcel,
-  generateExcelTemplate,
-  parseExcelToJson
+// Helper function to transform Excel cell data to proper data type
+export const transformCellData = (value: any, columnType: string): any => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  
+  switch (columnType) {
+    case 'number':
+      return Number(value);
+    case 'date':
+      return new Date(value);
+    case 'boolean':
+      return value.toLowerCase() === 'true';
+    default:
+      return String(value);
+  }
+};
+
+export const exportDataToExcel = (
+  data: Record<string, any>[],
+  columns: ColumnData[],
+  fileName: string
+): void => {
+  const wb = XLSX.utils.book_new();
+  const header = createColumnHeaders(columns);
+  const dataRows = data.map(item => columns.map(column => item[column.name]));
+  
+  // Add header row to data rows
+  const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  
+  const wopts: XLSX.WritingOptions = { bookType: 'xlsx', type: 'array' };
+  const wbout = XLSX.write(wb, wopts);
+  const blob = new Blob([new Uint8Array(wbout)], { type: 'application/octet-stream' });
+  saveAs(blob, `${fileName}.xlsx`);
+};
+
+// Helper to create Excel column headers from column data
+export const createColumnHeaders = (columns: ColumnData[]): string[] => {
+  return columns.map(column => column.name);
+};
+
+// Helper to determine Excel column types and validation
+export const getColumnValidation = (column: ColumnData): XLSX.DataValidation | undefined => {
+  if (column.type === 'select' && column.options && column.options.length > 0) {
+    return {
+      type: 'list',
+      formula1: `"${column.options.join(',')}"`,
+      showDropDown: true
+    };
+  }
+  
+  if (column.type === 'date') {
+    return {
+      type: 'date',
+      operator: 'between',
+      formula1: '1900-01-01',
+      formula2: '2100-12-31'
+    };
+  }
+  
+  if (column.type === 'number') {
+    return {
+      type: 'decimal',
+      operator: 'between',
+      formula1: '-1000000',
+      formula2: '1000000'
+    };
+  }
+  
+  return undefined;
 };

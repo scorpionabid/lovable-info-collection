@@ -1,10 +1,11 @@
 
 import { supabase } from '../../supabaseClient';
+import { TableName } from '../../constants';
 
 export const checkUtisCodeExists = async (utisCode: string, userId?: string) => {
   try {
     let query = supabase
-      .from('users')
+      .from(TableName.USERS)
       .select('id')
       .eq('utis_code', utisCode);
       

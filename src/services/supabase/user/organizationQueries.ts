@@ -1,6 +1,7 @@
 
 // Import supabase client
 import { supabase } from '../supabaseClient';
+import { TableName } from '../constants';
 
 /**
  * Get all roles
@@ -8,7 +9,7 @@ import { supabase } from '../supabaseClient';
 export const getRoles = async (currentUserId?: string, currentUserRole?: string) => {
   try {
     const { data, error } = await supabase
-      .from('roles')
+      .from(TableName.ROLES)
       .select('id, name')
       .order('name');
       
@@ -34,7 +35,7 @@ export const getRegions = async (currentUserId?: string, currentUserRole?: strin
     // For others, filter as needed
     
     let query = supabase
-      .from('regions')
+      .from(TableName.REGIONS)
       .select('id, name')
       .order('name');
     
@@ -60,7 +61,7 @@ export const getRegions = async (currentUserId?: string, currentUserRole?: strin
 export const getSectors = async (regionId?: string, currentUserId?: string, currentUserRole?: string) => {
   try {
     let query = supabase
-      .from('sectors')
+      .from(TableName.SECTORS)
       .select('id, name')
       .order('name');
     
@@ -90,7 +91,7 @@ export const getSectors = async (regionId?: string, currentUserId?: string, curr
 export const getSchools = async (sectorId?: string, currentUserId?: string, currentUserRole?: string) => {
   try {
     let query = supabase
-      .from('schools')
+      .from(TableName.SCHOOLS)
       .select('id, name')
       .order('name');
     

@@ -1,7 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@/services/userService";
+import { User } from "@/services/userService-bridge";
 import { UserFormValues } from "../../modals/UserFormSchema";
+import { TableName } from "@/services/supabase/constants";
 
 /**
  * Check if a UTIS code already exists in the database
@@ -26,7 +27,7 @@ const fetchUtisCodeExistence = async (
   userId?: string
 ): Promise<boolean> => {
   const query = supabase
-    .from('users')
+    .from(TableName.USERS)
     .select('id')
     .eq('utis_code', utisCode);
     
@@ -58,7 +59,8 @@ export const prepareUserData = (values: UserFormValues, userId: string): User =>
     region_id: values.region_id || null,
     sector_id: values.sector_id || null,
     school_id: values.school_id || null,
-    phone: values.phone || null
+    phone: values.phone || null,
+    created_at: new Date().toISOString()
   };
 };
 
@@ -102,7 +104,7 @@ const createUser = async (userData: User): Promise<User> => {
   };
     
   const { data, error } = await supabase
-    .from('users')
+    .from(TableName.USERS)
     .upsert(userDataForDb, {
       onConflict: 'id'
     })
@@ -136,7 +138,7 @@ const updateUser = async (userData: User): Promise<User> => {
   };
   
   const { data, error } = await supabase
-    .from('users')
+    .from(TableName.USERS)
     .update(userDataForDb)
     .eq('id', userData.id)
     .select()
@@ -155,7 +157,7 @@ const updateUser = async (userData: User): Promise<User> => {
 export const isSchoolAdminRole = async (roleId: string): Promise<boolean> => {
   try {
     const { data: roles, error } = await supabase
-      .from('roles')
+      .from(TableName.ROLES)
       .select('name')
       .eq('id', roleId)
       .single();
@@ -178,7 +180,7 @@ export const findAdminBySchoolId = async (schoolId: string): Promise<User | null
   try {
     // First get the role ID for 'school-admin'
     const { data: roleData, error: roleError } = await supabase
-      .from('roles')
+      .from(TableName.ROLES)
       .select('id')
       .eq('name', 'school-admin')
       .single();
@@ -190,7 +192,7 @@ export const findAdminBySchoolId = async (schoolId: string): Promise<User | null
     
     // Then find admin assigned to this school
     const { data: adminData, error: adminError } = await supabase
-      .from('users')
+      .from(TableName.USERS)
       .select('*')
       .eq('school_id', schoolId)
       .eq('role_id', roleData.id)

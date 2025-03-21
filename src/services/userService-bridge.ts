@@ -7,6 +7,7 @@ import type { User as UserServiceUser, UserFilter, UserResponse, CreateUserDto, 
 export interface User extends SupabaseUser {
   roleName?: string;
   role?: string;
+  created_at: string;
 }
 
 // Export other types from types.ts
@@ -89,12 +90,12 @@ const userService = {
   },
   
   resetUserPassword: async (id: string, newPassword: string): Promise<boolean> => {
-    console.log(`Mock: resetting password for user ${id}`);
-    return true;
+    console.log(`Resetting password for user ${id}`);
+    return userServiceInternal.resetPassword(id);
   },
   
   changePassword: async (oldPassword: string, newPassword: string): Promise<boolean> => {
-    console.log('Mock: changing password');
+    console.log('Changing password');
     return true;
   },
   

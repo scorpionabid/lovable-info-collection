@@ -1,6 +1,7 @@
 
 import { supabase } from '../../supabaseClient';
 import { User, CreateUserDto, MultiUserCreationResult } from '../types';
+import { TableName } from '../../constants';
 
 export const createUser = async (userData: CreateUserDto) => {
   try {
@@ -22,7 +23,7 @@ export const createUser = async (userData: CreateUserDto) => {
     
     // Use type assertion to avoid TypeScript errors with insert operation
     const { data, error } = await supabase
-      .from('users')
+      .from(TableName.USERS)
       .insert(userDataForInsert as any)
       .select(`
         *,
@@ -39,7 +40,7 @@ export const createUser = async (userData: CreateUserDto) => {
     
     if (userData.school_id && userData.role_id) {
       const { data: roleData } = await supabase
-        .from('roles')
+        .from(TableName.ROLES)
         .select('name')
         .eq('id', userData.role_id)
         .single();

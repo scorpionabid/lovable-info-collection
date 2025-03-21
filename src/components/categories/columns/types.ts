@@ -1,37 +1,24 @@
 
-import { CategoryType } from "../CategoryDetailView";
-
+// Define types for category columns
 export interface CategoryColumn {
   id: string;
   name: string;
   type: string;
   required: boolean;
-  description: string;
-  options?: string[] | any;
-  order: number;
+  description?: string;
+  options?: string[];
+  category_id?: string;
+  order?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface CategoryColumnsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  category: CategoryType;
-}
-
-export interface ColumnFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  selectedColumn: CategoryColumn | null;
-  formMode: 'create' | 'edit';
-  categoryId: string;
-  onSuccess: () => void;
-}
-
-export interface ColumnsTableProps {
-  columns: CategoryColumn[];
-  isLoading: boolean;
-  isError: boolean;
-  onAddColumn: () => void;
-  onEditColumn: (column: CategoryColumn) => void;
-  onDeleteColumn: (columnId: string) => void;
-  onRefetch: () => void;
+// Define common column data interface
+export interface ColumnData {
+  id: string;
+  name: string;
+  type: string;
+  required: boolean;
+  options?: string[];
+  description?: string;
 }
