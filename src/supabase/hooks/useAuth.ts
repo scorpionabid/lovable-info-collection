@@ -1,169 +1,186 @@
 
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../client';
+import * as authService from '../services/auth';
+import { LoginCredentials, User } from '../types';
 
-// Import auth functions directly
-import * as authService from '@/services/supabase/authService';
+// Define user role types
+export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin' | 'user';
 
-// Export the LoginCredentials type for consistency
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>('user');
+  const [loading, setLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
+  const [sessionExists, setSessionExists] = useState(false);
 
-export const useAuth = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  const getSession = useCallback(async () => {
+  // Function to check if the session exists
+  const checkSession = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const { data, error } = await authService.getSession();
+      const { session, error } = await authService.getSession();
       if (error) throw error;
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error getting session'));
-      return null;
+      
+      setSessionExists(!!session);
+      return !!session;
+    } catch (error) {
+      console.error('Session check error:', error);
+      setSessionExists(false);
+      return false;
+    }
+  }, []);
+
+  // Login function
+  const login = useCallback(async (email: string | LoginCredentials, password?: string) => {
+    setLoading(true);
+    try {
+      let credentials: LoginCredentials;
+      
+      if (typeof email === 'string' && password) {
+        credentials = { email, password };
+      } else if (typeof email === 'object') {
+        credentials = email;
+      } else {
+        throw new Error('Invalid login credentials');
+      }
+      
+      const { user, session, error } = await authService.loginUser(credentials);
+      
+      if (error) throw error;
+      
+      setUser(user);
+      setUserRole((user.roles?.name || 'user') as UserRole);
+      setSessionExists(true);
+      
+      return { user, session };
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { data, error } = await authService.login(credentials);
-      
-      if (error) {
-        toast({
-          title: "Xəta",
-          description: "Giriş xətası. E-poçt və ya şifrə səhvdir.",
-          variant: "destructive",
-        });
-        throw error;
-      }
-      
-      toast({
-        title: "Uğurlu giriş",
-        description: "Sistemə daxil oldunuz.",
-      });
-      
-      navigate('/');
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown login error'));
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate, toast]);
-
+  // Logout function
   const logout = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      
-      await authService.logout();
-      
-      toast({
-        title: "Çıxış",
-        description: "Sistemdən çıxış edildi.",
-      });
-      
-      navigate('/login');
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown logout error'));
-      toast({
-        title: "Çıxış xətası",
-        description: "Sistemdən çıxış edərkən bir xəta baş verdi.",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate, toast]);
-
-  const sendPasswordResetEmail = useCallback(async (email: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const { success, error } = await authService.sendResetPasswordEmail(email);
-      
-      if (!success) {
-        throw error;
+      const success = await authService.logoutUser();
+      if (success) {
+        setUser(null);
+        setUserRole('user');
+        setSessionExists(false);
       }
-      
-      toast({
-        title: "Şifrə sıfırlama e-poçtu göndərildi",
-        description: "Zəhmət olmasa e-poçtunuzu yoxlayın.",
-      });
-      
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error sending password reset'));
-      toast({
-        title: "Xəta",
-        description: "Şifrə sıfırlama e-poçtu göndərilərkən xəta baş verdi.",
-        variant: "destructive",
-      });
-      return false;
+      return success;
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
-  const changePassword = useCallback(async (newPassword: string) => {
+  // Password reset function
+  const resetPassword = useCallback(async (email: string) => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const { success, error } = await authService.resetPassword(newPassword);
-      
-      if (!success) {
-        throw error;
-      }
-      
-      toast({
-        title: "Şifrə yeniləndi",
-        description: "Şifrəniz uğurla yeniləndi.",
-      });
-      
-      navigate('/login');
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error changing password'));
-      toast({
-        title: "Xəta",
-        description: "Şifrə dəyişdirilməsi zamanı xəta baş verdi.",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setLoading(false);
+      const success = await authService.resetPassword(email);
+      return success;
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
     }
-  }, [navigate, toast]);
+  }, []);
 
-  const hasRole = useCallback((userRole: string, requiredRole: string) => {
-    return authService.checkRole(userRole, requiredRole);
+  // Update password function
+  const updatePassword = useCallback(async (newPassword: string) => {
+    try {
+      const success = await authService.updatePassword(newPassword);
+      return success;
+    } catch (error) {
+      console.error('Update password error:', error);
+      throw error;
+    }
+  }, []);
+
+  // Check user's role
+  const hasRole = useCallback((requiredRole: UserRole): boolean => {
+    if (!userRole) return false;
+    
+    // Define role hierarchy
+    const roleHierarchy: Record<UserRole, number> = {
+      'super-admin': 4,
+      'region-admin': 3,
+      'sector-admin': 2,
+      'school-admin': 1,
+      'user': 0
+    };
+    
+    // Check if user has sufficient permissions
+    return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+  }, [userRole]);
+
+  // Initialize auth state on component mount
+  useEffect(() => {
+    const initAuth = async () => {
+      setLoading(true);
+      try {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setUser(user);
+          setUserRole((user.roles?.name || 'user') as UserRole);
+          setSessionExists(true);
+        } else {
+          setUser(null);
+          setUserRole('user');
+          setSessionExists(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        setUser(null);
+        setUserRole('user');
+        setSessionExists(false);
+      } finally {
+        setLoading(false);
+        setAuthInitialized(true);
+      }
+    };
+
+    initAuth();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          const user = await authService.getCurrentUser();
+          setUser(user);
+          setUserRole((user?.roles?.name || 'user') as UserRole);
+          setSessionExists(true);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setUserRole('user');
+          setSessionExists(false);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return {
+    user,
+    userRole,
     loading,
-    error,
+    isLoading: loading,
+    isAuthenticated: !!user,
     login,
     logout,
-    getSession,
-    sendPasswordResetEmail,
-    changePassword,
+    resetPassword,
+    updatePassword,
     hasRole,
+    sessionExists,
+    authInitialized
   };
-};
+}
+
+export default useAuth;

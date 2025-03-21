@@ -19,11 +19,13 @@ export const SUPABASE_CONFIG = {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storageKey: 'infoline_auth_token'
   },
   global: {
     headers: {
       'x-application-name': 'infoLine',
+      'x-app-version': import.meta.env.VITE_APP_VERSION || 'development',
       'x-client-info': 'supabase-js/2.x'
     }
   },

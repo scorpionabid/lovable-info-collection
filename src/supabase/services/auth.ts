@@ -1,15 +1,10 @@
 
-import { supabase } from "../client";
-import { User, LoginCredentials } from "../types";
-import { toast } from "sonner";
+import { supabase } from '../client';
+import { LoginCredentials, User } from '../types';
 
-// Function to handle Supabase errors
-const handleSupabaseError = (error: any, context: string = 'Authentication'): Error => {
-  const message = error?.message || error?.error_description || 'Unknown error';
-  console.error(`${context} error:`, error);
-  return new Error(message);
-};
-
+/**
+ * Login user with email and password
+ */
 export const loginUser = async (credentials: LoginCredentials) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -17,7 +12,7 @@ export const loginUser = async (credentials: LoginCredentials) => {
       password: credentials.password,
     });
 
-    if (error) throw handleSupabaseError(error, 'Login');
+    if (error) throw error;
 
     // Get the user profile after successful login
     const { data: userData, error: userError } = await supabase
@@ -32,7 +27,7 @@ export const loginUser = async (credentials: LoginCredentials) => {
       .eq('id', data.user?.id)
       .single();
 
-    if (userError) throw handleSupabaseError(userError, 'User data');
+    if (userError) throw userError;
 
     // Update last login timestamp
     await supabase
@@ -45,24 +40,32 @@ export const loginUser = async (credentials: LoginCredentials) => {
       session: data.session,
     };
   } catch (error) {
-    throw handleSupabaseError(error, 'Login');
+    console.error('Login error:', error);
+    throw error;
   }
 };
 
+/**
+ * Logout current user
+ */
 export const logoutUser = async () => {
   try {
     const { error } = await supabase.auth.signOut();
-    if (error) throw handleSupabaseError(error, 'Logout');
+    if (error) throw error;
     return true;
   } catch (error) {
-    throw handleSupabaseError(error, 'Logout');
+    console.error('Logout error:', error);
+    throw error;
   }
 };
 
+/**
+ * Get current user with profile data
+ */
 export const getCurrentUser = async () => {
   try {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw handleSupabaseError(sessionError, 'Get session');
+    if (sessionError) throw sessionError;
     
     if (!sessionData.session) return null;
 
@@ -78,7 +81,7 @@ export const getCurrentUser = async () => {
       .eq('id', sessionData.session.user.id)
       .single();
 
-    if (userError) throw handleSupabaseError(userError, 'Current user');
+    if (userError) throw userError;
 
     return userData as User;
   } catch (error) {
@@ -87,6 +90,23 @@ export const getCurrentUser = async () => {
   }
 };
 
+/**
+ * Get current session
+ */
+export const getSession = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return { session: data.session, error: null };
+  } catch (error) {
+    console.error('Get session error:', error);
+    return { session: null, error };
+  }
+};
+
+/**
+ * Register new user
+ */
 export const registerUser = async (userData: any) => {
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -101,48 +121,61 @@ export const registerUser = async (userData: any) => {
       }
     });
 
-    if (error) throw handleSupabaseError(error, 'Registration');
+    if (error) throw error;
 
     return data;
   } catch (error) {
-    throw handleSupabaseError(error, 'Registration');
+    console.error('Registration error:', error);
+    throw error;
   }
 };
 
+/**
+ * Send password reset email
+ */
 export const resetPassword = async (email: string) => {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`
     });
 
-    if (error) throw handleSupabaseError(error, 'Password reset');
+    if (error) throw error;
 
     return true;
   } catch (error) {
-    throw handleSupabaseError(error, 'Password reset');
+    console.error('Password reset error:', error);
+    throw error;
   }
 };
 
+/**
+ * Update user password
+ */
 export const updatePassword = async (password: string) => {
   try {
     const { error } = await supabase.auth.updateUser({
       password
     });
 
-    if (error) throw handleSupabaseError(error, 'Update password');
+    if (error) throw error;
 
     return true;
   } catch (error) {
-    throw handleSupabaseError(error, 'Update password');
+    console.error('Update password error:', error);
+    throw error;
   }
 };
 
+/**
+ * Refresh session
+ */
 export const refreshSession = async () => {
   try {
     const { data, error } = await supabase.auth.refreshSession();
-    if (error) throw handleSupabaseError(error, 'Refresh session');
+    if (error) throw error;
     return data;
   } catch (error) {
-    throw handleSupabaseError(error, 'Refresh session');
+    console.error('Refresh session error:', error);
+    throw error;
   }
 };

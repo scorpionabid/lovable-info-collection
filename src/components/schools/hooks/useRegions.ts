@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/services/supabase/supabaseClient';
+import { supabase } from '@/supabase/client';
 
 // Fetch regions for dropdowns and filtering
 export const useRegions = () => {
@@ -8,7 +8,7 @@ export const useRegions = () => {
     try {
       const { data, error } = await supabase
         .from('regions')
-        .select('id, name, code')
+        .select('id, name, code, description')
         .order('name');
       
       if (error) {
@@ -19,7 +19,7 @@ export const useRegions = () => {
         id: region.id,
         name: region.name,
         code: region.code || '',
-        description: '' // Adding description to satisfy type requirements
+        description: region.description || ''
       }));
     } catch (error) {
       console.error('Error fetching regions:', error);

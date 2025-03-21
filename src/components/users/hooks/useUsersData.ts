@@ -1,58 +1,75 @@
+
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import userService from '@/services/userService';
-import { UserFilters } from '@/services/supabase/user/types';
+import { getUsers } from '@/supabase/services/users';
+import { UserFilters } from '@/supabase/types';
 
-interface UseUsersDataProps {
-  page?: number;
-  limit?: number;
-  filters?: UserFilters;
-}
+export const useUsersData = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filters, setFilters] = useState<UserFilters>({
+    role_id: '',
+    region_id: '',
+    sector_id: '',
+    school_id: '',
+    search: '',
+    status: 'active'
+  });
+  const [sortBy, setSortBy] = useState('last_name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-export const useUsersData = ({ 
-  page = 1, 
-  limit = 10,
-  filters = {}
-}: UseUsersDataProps = {}) => {
-  // Get all users with pagination and filters
-  const fetchUsers = async () => {
-    const combinedFilters = {
-      ...filters,
-      page,
-      limit
-    };
-    
-    return await userService.getUsers(combinedFilters);
+  const handleSearchChange = (search: string) => {
+    setFilters(prev => ({ ...prev, search }));
+    setCurrentPage(1); // Reset to first page on search
   };
 
-  const {
-    data: usersData,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['users', page, limit, filters],
-    queryFn: fetchUsers
+  const handleFilterChange = (filterKey: keyof UserFilters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterKey]: value }));
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const { data: usersResult, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['users', currentPage, itemsPerPage, filters, sortBy, sortOrder],
+    queryFn: async () => {
+      const result = await getUsers(filters);
+      return { 
+        data: result, 
+        count: result.length 
+      };
+    }
   });
 
-  // Format the data to meet the expected structure
-  const formattedData = usersData 
-    ? { 
-        data: usersData.data || [], 
-        count: usersData.count || 0 
-      }
-    : { data: [], count: 0 };
-
   return {
-    users: formattedData.data,
-    totalItems: formattedData.count,
-    currentPage: page,
-    setCurrentPage: (newPage: number) => {}, // This will be handled by the parent component
-    itemsPerPage: limit,
-    setItemsPerPage: (newLimit: number) => {}, // This will be handled by the parent component
+    users: usersResult?.data || [],
+    totalItems: usersResult?.count || 0,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
     isLoading,
     isError,
     error,
+    filters,
+    searchTerm: filters.search,
+    setSearchTerm: (search: string) => handleSearchChange(search),
+    sortBy,
+    sortOrder,
+    setSortBy,
+    setSortOrder,
+    handleSearchChange,
+    handleSort,
+    setPage: setCurrentPage,
+    setPerPage: setItemsPerPage,
+    handleFilterChange,
     refetch
   };
 };

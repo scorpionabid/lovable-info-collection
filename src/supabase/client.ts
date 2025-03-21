@@ -1,23 +1,10 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIG } from './config';
+import type { Database } from '@/types/supabase';
 
-// Create the Supabase client with better error handling and session persistence
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    storageKey: 'infoline_auth_token', // Custom storage key for better identification
-  },
-  global: {
-    headers: {
-      'x-app-version': import.meta.env.VITE_APP_VERSION || 'development',
-    },
-  },
-  db: {
-    schema: 'public',
-  },
-});
+// Create the Supabase client
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIG);
 
 // Helper function to handle Supabase errors
 export const handleSupabaseError = (error: any, context: string = 'Supabase operation'): Error => {
@@ -73,24 +60,57 @@ export const withRetry = async <T>(
   throw lastError;
 };
 
-// Check if connection is successful and log info in development
-try {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) {
-    console.warn('Warning: Could not verify Supabase connection', error);
-  } else {
-    console.log('Supabase connection initialized successfully');
-    
-    // Cache frequently used auth values for later use
-    const sessionUser = data?.session?.user;
-    if (sessionUser) {
-      localStorage.setItem('supabase_user_id', sessionUser.id);
-      localStorage.setItem('supabase_user_email', sessionUser.email || '');
+// Function for cached queries
+export const queryWithCache = async <T>(
+  key: string,
+  queryFn: () => Promise<T>,
+  ttlMs = 300000 // 5 minutes default
+): Promise<T> => {
+  const cacheKey = `infoline_${key}`;
+  
+  try {
+    const cachedItem = localStorage.getItem(cacheKey);
+    if (cachedItem) {
+      const { data, expiry } = JSON.parse(cachedItem);
+      if (expiry > Date.now()) {
+        console.log(`Cache hit for ${key}`);
+        return data as T;
+      }
+      localStorage.removeItem(cacheKey); // Clear expired item
     }
+  } catch (e) {
+    console.warn('Error accessing cache:', e);
   }
-} catch (error) {
-  console.error('Supabase initialization warning:', error);
-  // Continue execution - don't block the app
-}
+  
+  // Execute the query
+  const result = await queryFn();
+  
+  // Store in cache
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify({
+      data: result,
+      expiry: Date.now() + ttlMs
+    }));
+  } catch (e) {
+    console.warn('Error storing in cache:', e);
+  }
+  
+  return result;
+};
+
+// Check connection status
+export const checkConnection = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn('Warning: Could not verify Supabase connection', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Supabase connection check error:', error);
+    return false;
+  }
+};
 
 export default supabase;

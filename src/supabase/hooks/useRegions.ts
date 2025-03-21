@@ -1,84 +1,99 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as regionsService from '../services/regions';
-import type { RegionWithStats, Region } from '../types';
+import { FilterParams, RegionWithStats, PaginationParams, SortParams } from '../types';
 
-// Define FilterParams type for use with regions
-export interface FilterParams {
-  search?: string;
-  status?: 'active' | 'archived' | 'all';
-  dateFrom?: string;
-  dateTo?: string;
-  minCompletionRate?: number;
-  maxCompletionRate?: number;
+interface UseRegionsProps {
+  initialFilters?: FilterParams;
+  pagination?: PaginationParams;
+  sort?: SortParams;
 }
 
-export const useRegions = (initialFilters?: FilterParams) => {
+export const useRegions = (props?: UseRegionsProps) => {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState<FilterParams>(initialFilters || {});
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState<FilterParams>(props?.initialFilters || {});
+  const [pagination, setPagination] = useState<PaginationParams>(props?.pagination || { page: 1, pageSize: 10 });
+  const [sort, setSort] = useState<SortParams>(props?.sort || { field: 'name', direction: 'asc' });
 
-  const {
-    data: regions = [],
-    isLoading,
+  // Query for fetching regions
+  const { 
+    data: regionsData,
+    isLoading, 
     isError,
-    refetch
+    error,
+    refetch 
   } = useQuery({
-    queryKey: ['regions', filters, sortField, sortDirection],
-    queryFn: () => regionsService.getRegions(filters, { field: sortField || 'name', direction: sortDirection }),
-    refetchOnWindowFocus: false
+    queryKey: ['regions', filters, pagination, sort],
+    queryFn: async () => {
+      const result = await regionsService.getRegions(filters, sort);
+      return { 
+        data: result, 
+        count: result.length 
+      };
+    }
   });
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
+  // Sort function
+  const handleSort = useCallback((field: string) => {
+    setSort(prevSort => {
+      if (prevSort.field === field) {
+        return { ...prevSort, direction: prevSort.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+  }, []);
 
-  const handleFilterChange = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+  // Filter function
+  const handleFilterChange = useCallback(<K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
+    setFilters(prev => {
+      // Reset to first page when filters change
+      setPagination(prev => ({ ...prev, page: 1 }));
+      return { ...prev, [key]: value };
+    });
+  }, []);
 
-  const resetFilters = () => {
+  // Pagination function
+  const handlePageChange = useCallback((newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+  }, []);
+
+  // Page size function
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    setPagination(prev => ({ ...prev, pageSize: newPageSize, page: 1 }));
+  }, []);
+
+  // Reset filters
+  const resetFilters = useCallback(() => {
     setFilters({});
-    setSortField(null);
-    setSortDirection('asc');
-  };
+    setPagination({ page: 1, pageSize: 10 });
+    setSort({ field: 'name', direction: 'asc' });
+  }, []);
 
+  // Update filters if initialFilters prop changes
   useEffect(() => {
-    if (initialFilters && JSON.stringify(initialFilters) !== JSON.stringify(filters)) {
-      setFilters(initialFilters);
+    if (props?.initialFilters && JSON.stringify(props.initialFilters) !== JSON.stringify(filters)) {
+      setFilters(props.initialFilters);
     }
-  }, [initialFilters]);
-
-  // Process the data to ensure it has the expected structure
-  const processedData = {
-    data: Array.isArray(regions) 
-      ? regions
-      : Array.isArray(regions.data) 
-        ? regions.data 
-        : [],
-    count: typeof regions.count === 'number' ? regions.count : (Array.isArray(regions) ? regions.length : 0)
-  };
+  }, [props?.initialFilters]);
 
   return {
-    regions: processedData,
+    regions: regionsData?.data || [],
+    count: regionsData?.count || 0,
     isLoading,
     isError,
+    error,
     filters,
-    sortField,
-    sortDirection,
+    sort,
+    pagination,
     handleSort,
     handleFilterChange,
+    handlePageChange,
+    handlePageSizeChange,
     resetFilters,
     refetch,
     invalidateCache: () => queryClient.invalidateQueries({ queryKey: ['regions'] })
   };
 };
 
-export const useRegionsData = useRegions;
+export default useRegions;
