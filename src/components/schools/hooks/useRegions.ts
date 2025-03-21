@@ -2,23 +2,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabase/client';
 
-// Fetch regions for dropdowns and filtering
 export const useRegions = () => {
   const fetchRegions = async () => {
     try {
       const { data, error } = await supabase
         .from('regions')
-        .select('id, name, code, description')
+        .select('id, name, description')
         .order('name');
       
       if (error) {
         throw error;
       }
       
+      if (!data) return [];
+      
+      // Map the data and ensure description is included
       return data.map(region => ({
-        id: region.id,
-        name: region.name,
-        code: region.code || '',
+        id: region.id || '',
+        name: region.name || '',
         description: region.description || ''
       }));
     } catch (error) {

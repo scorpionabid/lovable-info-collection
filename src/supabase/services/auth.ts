@@ -154,3 +154,20 @@ export const sendConfirmationEmail = async (email: string) => {
     throw error;
   }
 };
+
+/**
+ * Send password reset email for admin user
+ */
+export const sendPasswordResetEmail = async (email: string) => {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Send password reset email error:', error);
+    throw error;
+  }
+};

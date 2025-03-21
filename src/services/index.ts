@@ -8,7 +8,7 @@ export {
   loginUser as login,
   logoutUser as logout,
   getCurrentUser,
-  resetPassword,
+  resetPassword as supabaseResetPassword,
   updatePassword as changePassword,
   refreshSession,
   getSession
@@ -48,15 +48,14 @@ export {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  resetPassword
 } from '@/supabase/services/users';
 
-// Export Supabase client 
+// Export Supabase client and configuration
 export { supabase } from '@/supabase/client';
-
-// Re-export config values
-export {
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  CACHE_CONFIG
+export { 
+  SUPABASE_URL, 
+  SUPABASE_ANON_KEY, 
+  CACHE_CONFIG 
 } from '@/supabase/config';

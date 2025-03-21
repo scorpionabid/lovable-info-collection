@@ -17,9 +17,12 @@ export const useSectors = (regionId: string) => {
         throw error;
       }
       
+      if (!data) return [];
+      
+      // Map and ensure description is accounted for
       return data.map(sector => ({
-        id: sector.id,
-        name: sector.name,
+        id: sector.id || '',
+        name: sector.name || '',
         description: sector.description || ''
       }));
     } catch (error) {

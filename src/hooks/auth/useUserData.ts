@@ -1,21 +1,35 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/supabase/client';
 
 // Define role type
 export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin' | 'teacher' | 'unknown';
 
 // Helper to determine role from the roles object
 const determineRole = (user: any): UserRole => {
-  if (!user || !user.roles) return 'unknown';
+  if (!user) return 'unknown';
   
-  const roleName = user.roles.name?.toLowerCase() || '';
+  // If the user has a role property directly
+  if (user.role) {
+    const roleName = typeof user.role === 'string' ? user.role.toLowerCase() : '';
+    
+    if (roleName.includes('super')) return 'super-admin';
+    if (roleName.includes('region')) return 'region-admin';
+    if (roleName.includes('sector')) return 'sector-admin';
+    if (roleName.includes('school')) return 'school-admin';
+    if (roleName.includes('teacher')) return 'teacher';
+  }
   
-  if (roleName.includes('super')) return 'super-admin';
-  if (roleName.includes('region')) return 'region-admin';
-  if (roleName.includes('sector')) return 'sector-admin';
-  if (roleName.includes('school')) return 'school-admin';
-  if (roleName.includes('teacher')) return 'teacher';
+  // If the user has a roles object
+  if (user.roles && user.roles.name) {
+    const roleName = user.roles.name.toLowerCase();
+    
+    if (roleName.includes('super')) return 'super-admin';
+    if (roleName.includes('region')) return 'region-admin';
+    if (roleName.includes('sector')) return 'sector-admin';
+    if (roleName.includes('school')) return 'school-admin';
+    if (roleName.includes('teacher')) return 'teacher';
+  }
   
   return 'unknown';
 };
@@ -67,7 +81,8 @@ export const useUserData = () => {
         }
         
         setUser(userData);
-        setUserRole(determineRole(userData));
+        const role = determineRole(userData);
+        setUserRole(role);
       } catch (err) {
         console.error('Error fetching user data:', err);
         setError(err instanceof Error ? err : new Error('Unknown error'));
@@ -99,7 +114,8 @@ export const useUserData = () => {
             if (error) throw error;
             
             setUser(data);
-            setUserRole(determineRole(data));
+            const role = determineRole(data);
+            setUserRole(role);
           } catch (err) {
             console.error('Error fetching user data after sign in:', err);
           }

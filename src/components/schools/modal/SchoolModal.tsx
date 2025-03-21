@@ -5,48 +5,42 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { SchoolForm } from "./SchoolForm";
-import { type School } from '@/supabase/types';
+import { SchoolForm } from './SchoolForm';
+import { School } from '@/supabase/types';
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: "create" | "edit";
-  school?: School;
+  school?: School | null;
+  mode: 'create' | 'edit';
   onSuccess?: () => void;
-  initialData?: any;
   regionId?: string;
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
   isOpen,
   onClose,
-  mode,
   school,
+  mode,
   onSuccess,
-  initialData,
   regionId
 }) => {
-  const title = mode === "create" ? "Yeni Məktəb" : "Məktəb Məlumatlarını Yenilə";
-  const description = mode === "create" 
-    ? "Yeni məktəb əlavə etmək üçün aşağıdakı sahələri doldurun" 
-    : "Məktəb məlumatlarını redaktə etmək üçün sahələri yeniləyin";
+  const title = mode === 'create' ? 'Yeni Məktəb' : 'Məktəbi Redaktə Et';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        
         <SchoolForm 
-          mode={mode} 
-          school={initialData || school} 
-          onClose={onClose} 
-          onSuccess={onSuccess} 
-          regionId={regionId}
+          school={school} 
+          onClose={onClose}
+          onSuccess={onSuccess}
+          regionId={regionId || ''}
+          mode={mode}
         />
       </DialogContent>
     </Dialog>

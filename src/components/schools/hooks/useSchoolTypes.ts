@@ -1,22 +1,36 @@
 
-// İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
-// Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
-import { useSchoolTypes as useSchoolTypesNew } from '@/supabase/hooks/useSchools';
-import { SchoolType } from '@/supabase/types';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/supabase/client';
 
-// Tip definisiyası
-export type { SchoolType };
-
-// Public API
-export const useSchoolTypes = useSchoolTypesNew;
-
-// Default export məktəb tiplərini almaq üçün hook (geriyə uyğunluq üçün)
-export default function useSchoolTypesDefault() {
-  const { schoolTypes, isLoading, error } = useSchoolTypesNew();
-  
-  return {
-    schoolTypes,
-    isLoading,
-    error
-  };
+export interface SchoolType {
+  id: string;
+  name: string;
+  description?: string;
 }
+
+export const useSchoolTypes = () => {
+  const fetchSchoolTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('school_types')
+        .select('id, name, description')
+        .order('name');
+      
+      if (error) {
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching school types:', error);
+      return [];
+    }
+  };
+
+  const { data: schoolTypes = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['school_types'],
+    queryFn: fetchSchoolTypes
+  });
+
+  return { schoolTypes, isLoading, isError, refetch };
+};

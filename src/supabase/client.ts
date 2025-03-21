@@ -113,7 +113,4 @@ export const checkConnection = async (): Promise<boolean> => {
   }
 };
 
-// Re-export for admin operations
-export const supabaseAdmin = supabase;
-
 export default supabase;

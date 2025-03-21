@@ -9,70 +9,54 @@ export interface NewAdminForm {
   password: string;
 }
 
-export const createSchoolAdmin = async (
-  schoolId: string,
-  adminData: NewAdminForm
-) => {
-  if (!schoolId || !adminData.email || !adminData.firstName || !adminData.lastName) {
-    throw new Error('Məcburi sahələr daxil edilməyib');
-  }
-  
+export const createSchoolAdmin = async (schoolId: string, adminData: NewAdminForm) => {
   try {
-    // First, get the school-admin role ID
-    const { data: roleData, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'school-admin')
-      .single();
-      
-    if (roleError) {
-      throw new Error(`School admin rolu tapılmadı: ${roleError.message}`);
-    }
-    
-    // Create auth user first
+    // First, create the user in Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: adminData.email,
       password: adminData.password,
       options: {
         data: {
           first_name: adminData.firstName,
-          last_name: adminData.lastName,
-          role_id: roleData.id
+          last_name: adminData.lastName
         }
       }
     });
     
-    if (authError) {
-      throw new Error(`İstifadəçi yaradılarkən xəta: ${authError.message}`);
+    if (authError) throw authError;
+    
+    if (!authData.user) {
+      throw new Error('Failed to create user account');
     }
     
-    if (!authData?.user?.id) {
-      throw new Error('İstifadəçi yaradıldı, lakin ID alınmadı');
-    }
+    // Get school admin role ID
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'school-admin')
+      .single();
+      
+    if (roleError) throw roleError;
     
-    // Create user record in users table
-    const { data: userData, error: userError } = await supabase
+    // Create profile record in users table
+    const { error: profileError } = await supabase
       .from('users')
       .insert({
         id: authData.user.id,
         first_name: adminData.firstName,
         last_name: adminData.lastName,
         email: adminData.email,
-        phone: adminData.phone,
+        phone: adminData.phone || null,
         role_id: roleData.id,
         school_id: schoolId,
         is_active: true
-      })
-      .select()
-      .single();
+      });
       
-    if (userError) {
-      throw new Error(`İstifadəçi məlumatları əlavə edilərkən xəta: ${userError.message}`);
-    }
+    if (profileError) throw profileError;
     
     return {
-      userId: authData.user.id,
-      user: userData
+      success: true,
+      userId: authData.user.id
     };
   } catch (error) {
     console.error('Error creating school admin:', error);
@@ -80,68 +64,96 @@ export const createSchoolAdmin = async (
   }
 };
 
-export const assignSchoolAdmin = async (
-  schoolId: string,
-  userId: string
-) => {
-  if (!schoolId || !userId) {
-    throw new Error('Məktəb ID və ya istifadəçi ID-si daxil edilməyib');
-  }
-  
+export const assignAdminToSchool = async (schoolId: string, userId: string) => {
   try {
-    // Update user record in users table
-    const { data, error } = await supabase
-      .from('users')
-      .update({
-        school_id: schoolId
-      })
-      .eq('id', userId)
-      .select()
-      .single();
-      
-    if (error) {
-      throw new Error(`Admin təyin edilərkən xəta: ${error.message}`);
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error assigning school admin:', error);
-    throw error;
-  }
-};
-
-export const getCurrentSchoolAdmin = async (schoolId: string) => {
-  if (!schoolId) {
-    return null;
-  }
-  
-  try {
-    // Get the school-admin role ID
+    // Get school admin role ID
     const { data: roleData, error: roleError } = await supabase
       .from('roles')
       .select('id')
       .eq('name', 'school-admin')
       .single();
       
-    if (roleError) {
-      throw new Error(`School admin rolu tapılmadı: ${roleError.message}`);
-    }
+    if (roleError) throw roleError;
     
-    // Get the current admin for the school
-    const { data, error } = await supabase
+    // Update user record
+    const { error: updateError } = await supabase
       .from('users')
-      .select('*')
-      .eq('school_id', schoolId)
-      .eq('role_id', roleData.id)
+      .update({
+        school_id: schoolId,
+        role_id: roleData.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+      
+    if (updateError) throw updateError;
+    
+    return {
+      success: true
+    };
+  } catch (error) {
+    console.error('Error assigning admin to school:', error);
+    throw error;
+  }
+};
+
+export const getAvailableAdmins = async () => {
+  try {
+    // Get school admin role ID
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'school-admin')
       .single();
       
-    if (error && error.code !== 'PGRST116') { // PGRST116 is not found
+    if (roleError) throw roleError;
+    
+    // Get users with school admin role who are not assigned to a school
+    const { data: admins, error: adminsError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, phone')
+      .eq('role_id', roleData.id)
+      .is('school_id', null)
+      .order('last_name');
+      
+    if (adminsError) throw adminsError;
+    
+    return admins || [];
+  } catch (error) {
+    console.error('Error getting available admins:', error);
+    return [];
+  }
+};
+
+export const getSchoolAdmin = async (schoolId: string) => {
+  try {
+    // Get school admin role ID
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'school-admin')
+      .single();
+      
+    if (roleError) throw roleError;
+    
+    // Get admin assigned to this school
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, phone')
+      .eq('role_id', roleData.id)
+      .eq('school_id', schoolId)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned, no admin assigned
+        return null;
+      }
       throw error;
     }
     
     return data;
   } catch (error) {
-    console.error('Error getting current school admin:', error);
+    console.error('Error getting school admin:', error);
     return null;
   }
 };

@@ -1,20 +1,18 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createUser, updateUser } from "@/services";
-import { useUserForm } from "../hooks/useUserForm";
-import { useOrganizationData } from "../hooks/useOrganizationData";
-import { PersonalTab } from "./tabs/PersonalTab";
-import { RoleTab } from "./tabs/RoleTab";
-import { SecurityTab } from "./tabs/SecurityTab";
-import { User } from "@/supabase/types";
 import { toast } from "sonner";
+import { User } from '@/supabase/types';
+import PersonalTab from './tabs/PersonalTab';
+import RoleTab from './tabs/RoleTab';
+import SecurityTab from './tabs/SecurityTab';
+import { UserViewModal } from './UserViewModal';
+import { createUser, updateUser } from '@/services';
 
 export interface UserModalContentProps {
   user?: User;
-  mode: "create" | "edit" | "view";
+  mode: 'create' | 'edit' | 'view';
   onSuccess?: () => void;
   currentUserRole?: string;
   currentUserId?: string;
@@ -27,151 +25,252 @@ export const UserModalContent: React.FC<UserModalContentProps> = ({
   currentUserRole,
   currentUserId
 }) => {
-  const [activeTab, setActiveTab] = useState("personal");
-  const queryClient = useQueryClient();
-  const isEditing = mode === "edit";
-  const isViewing = mode === "view";
+  const isViewMode = mode === 'view';
   
-  const {
-    form,
-    errors,
-    validateForm,
-    handleInputChange,
-    handlePhoneChange,
-    handleRoleChange,
-    resetForm,
-    isFormValid,
-    formData,
-    setFormData
-  } = useUserForm(user);
-  
-  const roleData = useOrganizationData(formData.role_id);
-  
-  const createUserMutation = useMutation({
-    mutationFn: (userData: any) => {
-      return isEditing 
-        ? updateUser(user?.id || '', userData)
-        : createUser(userData);
-    },
-    onSuccess: () => {
-      toast.success(isEditing ? "İstifadəçi yeniləndi" : "İstifadəçi yaradıldı");
-      resetForm();
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      if (onSuccess) onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error.message}`);
-    }
+  // Initialize form state
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    role_id: '',
+    region_id: '',
+    sector_id: '',
+    school_id: '',
+    utis_code: '',
+    password: '',
+    is_active: true
   });
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPassword, setIsGeneratingPassword] = useState(false);
+  
+  // Load user data if editing or viewing
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        role_id: user.role_id || '',
+        region_id: user.region_id || '',
+        sector_id: user.sector_id || '',
+        school_id: user.school_id || '',
+        utis_code: user.utis_code || '',
+        password: '',
+        is_active: user.is_active !== undefined ? user.is_active : true
+      });
+    }
+  }, [user]);
+  
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+  
+  // Handle select changes
+  const handleSelectChange = (name: string, value: any) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+  
+  // Handle boolean changes (checkboxes, switches)
+  const handleBooleanChange = (name: string, value: boolean) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  // Generate random password
+  const generatePassword = async () => {
+    setIsGeneratingPassword(true);
+    try {
+      // Generate a random password with numbers, uppercase, lowercase, and special chars
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+      let password = '';
+      
+      // Ensure minimum requirements
+      password += 'Aa1!'; // Add at least one uppercase, lowercase, number, and special char
+      
+      // Add random characters to reach desired length
+      for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      // Shuffle the password to avoid predictable patterns
+      password = password.split('').sort(() => Math.random() - 0.5).join('');
+      
+      setFormData(prev => ({ ...prev, password }));
+    } catch (error) {
+      console.error('Error generating password:', error);
+      toast.error('Şifrə yaradılarkən xəta baş verdi');
+    } finally {
+      setIsGeneratingPassword(false);
+    }
+  };
+  
+  // Validate form
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    // Required fields validation
+    if (!formData.first_name.trim()) {
+      newErrors.first_name = 'Ad tələb olunur';
+    }
+    
+    if (!formData.last_name.trim()) {
+      newErrors.last_name = 'Soyad tələb olunur';
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-poçt tələb olunur';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Düzgün e-poçt daxil edin';
+    }
+    
+    if (!formData.role_id) {
+      newErrors.role_id = 'Rol tələb olunur';
+    }
+    
+    // Check region_id if role requires it
+    if (formData.role_id && (
+      formData.role_id.includes('region') || 
+      formData.role_id.includes('sector') || 
+      formData.role_id.includes('school')
+    ) && !formData.region_id) {
+      newErrors.region_id = 'Region tələb olunur';
+    }
+    
+    // Check sector_id if role requires it
+    if (formData.role_id && (
+      formData.role_id.includes('sector') || 
+      formData.role_id.includes('school')
+    ) && !formData.sector_id) {
+      newErrors.sector_id = 'Sektor tələb olunur';
+    }
+    
+    // Check school_id if role requires it
+    if (formData.role_id && formData.role_id.includes('school') && !formData.school_id) {
+      newErrors.school_id = 'Məktəb tələb olunur';
+    }
+    
+    // Password validation for new users
+    if (mode === 'create' && !formData.password) {
+      newErrors.password = 'Şifrə tələb olunur';
+    } else if (mode === 'create' && formData.password.length < 8) {
+      newErrors.password = 'Şifrə ən azı 8 simvol olmalıdır';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
-      toast.error("Zəhmət olmasa formu düzgün doldurun");
       return;
     }
     
-    const userData = { ...formData };
-    // If password is empty and we're editing, remove it from the data
-    if (isEditing && !userData.password) {
-      delete userData.password;
-    }
+    setIsSubmitting(true);
     
-    createUserMutation.mutate(userData);
+    try {
+      if (mode === 'create') {
+        await createUser(formData);
+        toast.success('İstifadəçi uğurla yaradıldı');
+      } else if (mode === 'edit' && user) {
+        await updateUser(user.id, formData);
+        toast.success('İstifadəçi uğurla yeniləndi');
+      }
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('Error saving user:', error);
+      toast.error('İstifadəçi yadda saxlanarkən xəta baş verdi');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
-  // Don't render the form in view mode
-  if (isViewing) {
-    return (
-      <div className="p-4">
-        <div className="flex items-center mb-6">
-          <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xl">
-            {user?.first_name?.[0]}{user?.last_name?.[0]}
-          </div>
-          <div className="ml-4">
-            <h2 className="text-xl font-semibold">{user?.first_name} {user?.last_name}</h2>
-            <p className="text-gray-600">{user?.email}</p>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="border rounded p-3">
-            <p className="text-sm text-gray-500">Telefon</p>
-            <p>{user?.phone || '-'}</p>
-          </div>
-          <div className="border rounded p-3">
-            <p className="text-sm text-gray-500">UTİS kodu</p>
-            <p>{user?.utis_code || '-'}</p>
-          </div>
-          <div className="border rounded p-3">
-            <p className="text-sm text-gray-500">Rol</p>
-            <p>{user?.role || '-'}</p>
-          </div>
-          <div className="border rounded p-3">
-            <p className="text-sm text-gray-500">Status</p>
-            <p>{user?.is_active ? 'Aktiv' : 'Deaktiv'}</p>
-          </div>
-        </div>
-      </div>
-    );
+  // If it's view mode, render the view modal instead
+  if (isViewMode && user) {
+    return <UserViewModal user={user} />;
   }
   
+  // Return the edit/create form
   return (
-    <form onSubmit={handleSubmit}>
-      <Tabs defaultValue="personal" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <Tabs defaultValue="personal">
+        <TabsList className="grid grid-cols-3">
           <TabsTrigger value="personal">Şəxsi məlumatlar</TabsTrigger>
-          <TabsTrigger value="role">Rol</TabsTrigger>
+          <TabsTrigger value="role">Rol və təyinat</TabsTrigger>
           <TabsTrigger value="security">Təhlükəsizlik</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="personal" className="py-4">
-          <PersonalTab 
-            user={user} 
-            isEditing={isEditing} 
-          />
-        </TabsContent>
-        
-        <TabsContent value="role" className="py-4">
-          <RoleTab 
-            roles={roleData.roles}
-            regions={roleData.regions}
-            sectors={roleData.sectors}
-            schools={roleData.schools}
-            isEditing={isEditing}
+        <TabsContent value="personal" className="space-y-4 pt-4">
+          <PersonalTab
+            formData={formData}
+            handleInputChange={handleInputChange}
+            errors={errors}
+            isViewMode={isViewMode}
             user={user}
-            currentUserRole={currentUserRole || ''}
-            selectedRole={formData.role_id}
-            selectedRegion={formData.region_id}
-            selectedSector={formData.sector_id}
-            selectedSchool={formData.school_id}
-            onRoleChange={handleRoleChange}
-            onRegionChange={(value) => handleInputChange({ target: { name: 'region_id', value } })}
-            onSectorChange={(value) => handleInputChange({ target: { name: 'sector_id', value } })}
-            onSchoolChange={(value) => handleInputChange({ target: { name: 'school_id', value } })}
           />
         </TabsContent>
         
-        <TabsContent value="security" className="py-4">
-          <SecurityTab isEditing={isEditing} />
+        <TabsContent value="role" className="space-y-4 pt-4">
+          <RoleTab
+            formData={formData}
+            handleSelectChange={handleSelectChange}
+            errors={errors}
+            isViewMode={isViewMode}
+            currentUserRole={currentUserRole}
+          />
+        </TabsContent>
+        
+        <TabsContent value="security" className="space-y-4 pt-4">
+          <SecurityTab
+            formData={formData}
+            handleInputChange={handleInputChange}
+            handleBooleanChange={handleBooleanChange}
+            errors={errors}
+            isViewMode={isViewMode}
+            user={user}
+            generatePassword={generatePassword}
+            isGeneratingPassword={isGeneratingPassword}
+          />
         </TabsContent>
       </Tabs>
       
-      <div className="flex justify-end space-x-2 mt-6">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={resetForm}
-        >
-          Təmizlə
-        </Button>
-        <Button 
-          type="submit" 
-          disabled={createUserMutation.isPending}
-        >
-          {createUserMutation.isPending ? 'Yüklənir...' : isEditing ? 'Yenilə' : 'Əlavə et'}
-        </Button>
+      <div className="flex justify-end space-x-2 pt-4">
+        {!isViewMode && (
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Saxlanılır...' : 'Saxla'}
+          </Button>
+        )}
       </div>
     </form>
   );

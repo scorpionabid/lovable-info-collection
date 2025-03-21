@@ -1,89 +1,92 @@
 
-import React, { useState } from 'react';
-import { 
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  FormDescription
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useFormContext } from 'react-hook-form';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
-import { generateRandomPassword } from '@/utils/passwordUtils';
+import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Loader2, RefreshCcw } from 'lucide-react';
+import { User } from '@/supabase/types';
 
 interface SecurityTabProps {
-  isEditing: boolean;
+  formData: {
+    password: string;
+    is_active: boolean;
+  };
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleBooleanChange: (name: string, value: boolean) => void;
+  errors: Record<string, string>;
+  isViewMode: boolean;
+  user?: User;
+  generatePassword: () => void;
+  isGeneratingPassword: boolean;
 }
 
-export const SecurityTab: React.FC<SecurityTabProps> = ({ isEditing }) => {
-  const form = useFormContext();
-  const [showPassword, setShowPassword] = useState(false);
+export const SecurityTab: React.FC<SecurityTabProps> = ({
+  formData,
+  handleInputChange,
+  handleBooleanChange,
+  errors,
+  isViewMode,
+  user,
+  generatePassword,
+  isGeneratingPassword
+}) => {
+  const isCreateMode = !user?.id;
   
-  const handleGeneratePassword = () => {
-    const newPassword = generateRandomPassword();
-    form.setValue('password', newPassword);
-  };
-
   return (
     <div className="space-y-4">
-      <FormField
-        control={form.control}
-        name="password"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Şifrə {isEditing ? '(Dəyişmək üçün doldurun)' : ''}</FormLabel>
-            <FormControl>
-              <div className="relative">
-                <Input 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder={isEditing ? "Yeni şifrə" : "Şifrə daxil edin"} 
-                  {...field} 
-                />
-                <button 
-                  type="button"
-                  className="absolute right-10 top-2.5 text-infoline-dark-gray hover:text-infoline-blue transition-colors"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-                <button 
-                  type="button"
-                  className="absolute right-2 top-2.5 text-infoline-dark-gray hover:text-infoline-blue transition-colors"
-                  onClick={handleGeneratePassword}
-                  title="Random şifrə yarat"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              </div>
-            </FormControl>
-            <FormDescription>
-              {isEditing 
-                ? "Dəyişdirmək istəmirsinizsə, boş saxlayın" 
-                : "Ən azı 8 simvoldan ibarət güclü şifrə istifadə edin"}
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {isCreateMode && (
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="password">Şifrə</Label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={generatePassword}
+              disabled={isGeneratingPassword}
+            >
+              {isGeneratingPassword ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCcw className="h-4 w-4 mr-2" />
+              )}
+              Şifrə yaratmaq
+            </Button>
+          </div>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            readOnly={isViewMode}
+            className={errors.password ? 'border-red-500' : ''}
+          />
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+          )}
+        </div>
+      )}
       
-      {!isEditing && (
-        <div className="flex justify-end">
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm"
-            onClick={handleGeneratePassword}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Təsadüfi şifrə yarat
+      <div className="flex items-center space-x-2 pt-4">
+        <Switch
+          id="is_active"
+          checked={formData.is_active}
+          onCheckedChange={(checked) => handleBooleanChange('is_active', checked)}
+          disabled={isViewMode}
+        />
+        <Label htmlFor="is_active">Aktiv?</Label>
+      </div>
+      
+      {!isCreateMode && (
+        <div className="pt-4">
+          <Button type="button" variant="outline" className="w-full">
+            Şifrəni sıfırla
           </Button>
+          <p className="text-sm text-gray-500 mt-2">
+            Bu, istifadəçiyə şifrəni sıfırlamaq üçün bir e-poçt göndərəcək.
+          </p>
         </div>
       )}
     </div>
