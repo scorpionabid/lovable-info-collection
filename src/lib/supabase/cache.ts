@@ -1,203 +1,223 @@
 
 /**
- * Keşləmə mexanizmi Supabase sorğuları üçün
+ * Supabase cache implementation for optimizing queries
  */
-import { logger } from '@/utils/logger';
+import { supabase } from './index';
 
 // Cache configuration
 export const CACHE_CONFIG = {
-  DEFAULT_CACHE_TIME: 5 * 60 * 1000, // 5 minutes
-  MAX_CACHE_ITEMS: 100,
-  OFFLINE_STORAGE_KEY: 'supabase_offline_cache',
-  ENABLED: true
+  enabled: true,
+  defaultTTL: 5 * 60 * 1000, // 5 minutes
+  storagePrefix: 'infoline_',
+  longTermTTL: 24 * 60 * 60 * 1000, // 1 day
+  persistToLocalStorage: true
 };
 
-// In-memory cache
-const cache: Record<string, { data: any; timestamp: number; expiry: number }> = {};
-let isOffline = false;
+// Store for in-memory cache
+const memoryCache: Record<string, { data: any; expiry: number }> = {};
 
-// Listen for online/offline events
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    isOffline = false;
-    logger.info('Şəbəkə bağlantısı bərpa edildi, keş rejimi deaktivləşdirildi');
-  });
-  
-  window.addEventListener('offline', () => {
-    isOffline = true;
-    logger.warn('Şəbəkə bağlantısı itirildi, keş rejimi aktivləşdirildi');
-  });
-  
-  // Set initial offline state
-  isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+// Check if running in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
+// Check if offline mode is enabled
+export function isOfflineMode(): boolean {
+  if (!isBrowser) return false;
+  return localStorage.getItem('offline_mode') === 'true';
 }
 
-// Get offline mode status
-export const isOfflineMode = (): boolean => {
-  return isOffline;
-};
+// Enable/disable offline mode
+export function setOfflineMode(enabled: boolean): void {
+  if (!isBrowser) return;
+  localStorage.setItem('offline_mode', enabled ? 'true' : 'false');
+}
 
-// Check if error is a network error
-export const isNetworkError = (error: any): boolean => {
-  if (!error) return false;
-  
-  // Check error message for network-related keywords
-  if (typeof error.message === 'string') {
-    const networkKeywords = ['network', 'internet', 'offline', 'connection', 'timeout', 'failed to fetch'];
-    return networkKeywords.some(keyword => error.message.toLowerCase().includes(keyword));
-  }
-  
-  // Check Supabase error codes
-  if (error.code) {
-    return ['PGRST301', 'ECONNREFUSED', 'ETIMEDOUT'].includes(error.code);
-  }
-  
-  return false;
-};
+// Generate a cache key from query parameters
+export function generateCacheKey(table: string, params?: Record<string, any>): string {
+  const paramsStr = params ? JSON.stringify(params) : '';
+  return `${CACHE_CONFIG.storagePrefix}${table}:${paramsStr}`;
+}
 
 // Store data in cache
-export const cacheData = <T>(key: string, data: T, expiryMs: number = CACHE_CONFIG.DEFAULT_CACHE_TIME): void => {
-  // Trim cache if it gets too large
-  const cacheKeys = Object.keys(cache);
-  if (cacheKeys.length > CACHE_CONFIG.MAX_CACHE_ITEMS) {
-    // Remove oldest item
-    let oldestKey = cacheKeys[0];
-    let oldestTime = cache[oldestKey].timestamp;
-    
-    cacheKeys.forEach(k => {
-      if (cache[k].timestamp < oldestTime) {
-        oldestKey = k;
-        oldestTime = cache[k].timestamp;
-      }
-    });
-    
-    delete cache[oldestKey];
+export function storeInCache(key: string, data: any, ttl = CACHE_CONFIG.defaultTTL): void {
+  if (!CACHE_CONFIG.enabled) return;
+
+  const expiry = Date.now() + ttl;
+  memoryCache[key] = { data, expiry };
+
+  // Optionally persist to localStorage
+  if (CACHE_CONFIG.persistToLocalStorage && isBrowser) {
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          data,
+          expiry
+        })
+      );
+    } catch (error) {
+      console.warn('Failed to store cache in localStorage:', error);
+    }
   }
-  
-  // Store in cache
-  cache[key] = {
-    data,
-    timestamp: Date.now(),
-    expiry: expiryMs
-  };
-  
-  // Also persist to localStorage for offline use
-  try {
-    const storageData = {
-      data,
-      timestamp: Date.now(),
-      expiry: Date.now() + expiryMs
-    };
-    localStorage.setItem(`${CACHE_CONFIG.OFFLINE_STORAGE_KEY}_${key}`, JSON.stringify(storageData));
-  } catch (error) {
-    logger.warn('LocalStorage-də keş saxlanılması zamanı xəta', error);
-  }
-};
+}
 
 // Retrieve data from cache
-export const getCachedData = <T>(key: string): T | null => {
-  // Check memory cache first
-  const cachedItem = cache[key];
-  
-  if (cachedItem) {
-    const isExpired = (Date.now() - cachedItem.timestamp) > cachedItem.expiry;
-    
-    if (!isExpired) {
-      return cachedItem.data as T;
-    } else {
-      // Remove expired item
-      delete cache[key];
+export function getFromCache(key: string): { data: any; fresh: boolean } | null {
+  if (!CACHE_CONFIG.enabled) return null;
+
+  // Try memory cache first
+  const memoryItem = memoryCache[key];
+  if (memoryItem && memoryItem.expiry > Date.now()) {
+    return { data: memoryItem.data, fresh: true };
+  }
+
+  // Try localStorage if memory cache failed
+  if (CACHE_CONFIG.persistToLocalStorage && isBrowser) {
+    try {
+      const item = localStorage.getItem(key);
+      if (item) {
+        const parsed = JSON.parse(item);
+        if (parsed.expiry > Date.now()) {
+          // Refresh memory cache
+          memoryCache[key] = parsed;
+          return { data: parsed.data, fresh: true };
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to retrieve cache from localStorage:', error);
     }
   }
-  
-  // If not in memory or expired, try localStorage
-  try {
-    const storageKey = `${CACHE_CONFIG.OFFLINE_STORAGE_KEY}_${key}`;
-    const storedData = localStorage.getItem(storageKey);
-    
-    if (storedData) {
-      const parsed = JSON.parse(storedData);
-      
-      // Check if expired
-      if (parsed.expiry > Date.now()) {
-        // Load back into memory cache
-        cache[key] = {
-          data: parsed.data,
-          timestamp: parsed.timestamp,
-          expiry: parsed.expiry - parsed.timestamp
-        };
-        return parsed.data as T;
-      } else {
-        // Remove expired item
-        localStorage.removeItem(storageKey);
+
+  // Look for stale data for offline mode
+  if (isOfflineMode()) {
+    // Try memory first
+    if (memoryItem) {
+      return { data: memoryItem.data, fresh: false };
+    }
+
+    // Try localStorage
+    if (CACHE_CONFIG.persistToLocalStorage && isBrowser) {
+      try {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const parsed = JSON.parse(item);
+          return { data: parsed.data, fresh: false };
+        }
+      } catch (error) {
+        console.warn('Failed to retrieve stale cache from localStorage:', error);
       }
     }
-  } catch (error) {
-    logger.warn('LocalStorage-dən keş oxunması zamanı xəta', error);
   }
-  
-  return null;
-};
 
-// Clear all cache
-export const clearCache = (): void => {
+  return null;
+}
+
+// Clear cache items
+export function clearCache(prefix?: string): void {
   // Clear memory cache
-  Object.keys(cache).forEach(key => {
-    delete cache[key];
-  });
-  
-  // Clear localStorage cache
-  try {
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith(CACHE_CONFIG.OFFLINE_STORAGE_KEY)) {
-        localStorage.removeItem(key);
+  if (prefix) {
+    Object.keys(memoryCache).forEach(key => {
+      if (key.startsWith(prefix)) {
+        delete memoryCache[key];
       }
     });
-    
-    logger.info('Keş təmizləndi');
-  } catch (error) {
-    logger.warn('LocalStorage-dən keşin təmizlənməsi zamanı xəta', error);
+  } else {
+    Object.keys(memoryCache).forEach(key => {
+      delete memoryCache[key];
+    });
   }
-};
 
-// Query with cache helper
-export const queryWithCache = async <T>(
-  cacheKey: string,
-  queryFn: () => Promise<T>,
-  cacheTime: number = CACHE_CONFIG.DEFAULT_CACHE_TIME
-): Promise<T> => {
-  // Check if caching is enabled
-  if (!CACHE_CONFIG.ENABLED) {
-    return await queryFn();
+  // Clear localStorage cache
+  if (CACHE_CONFIG.persistToLocalStorage && isBrowser) {
+    try {
+      if (prefix) {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith(prefix)) {
+            localStorage.removeItem(key);
+          }
+        });
+      } else {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith(CACHE_CONFIG.storagePrefix)) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to clear cache from localStorage:', error);
+    }
   }
+}
+
+// Query with cache support
+export async function queryWithCache<T = any>(
+  table: string,
+  queryFn: () => Promise<{ data: T | null; error: any }>,
+  cacheTTL = CACHE_CONFIG.defaultTTL
+): Promise<{ data: T | null; error: any }> {
+  const cacheKey = generateCacheKey(table);
   
   // Try to get from cache first
-  const cachedData = getCachedData<T>(cacheKey);
-  
-  if (cachedData !== null) {
-    logger.debug(`Keşdən məlumat alındı: ${cacheKey}`);
-    return cachedData;
+  const cached = getFromCache(cacheKey);
+  if (cached) {
+    return { data: cached.data, error: null };
   }
   
+  // Run actual query if no cache or cache expired
   try {
-    // Execute query
     const result = await queryFn();
     
-    // Cache the result
-    cacheData(cacheKey, result, cacheTime);
+    // Cache successful results
+    if (!result.error && result.data !== null) {
+      storeInCache(cacheKey, result.data, cacheTTL);
+    }
     
     return result;
   } catch (error) {
-    // If we're offline and the query fails, try to get from cache as fallback
-    if (isOffline || isNetworkError(error)) {
-      const offlineData = getCachedData<T>(cacheKey);
-      
-      if (offlineData !== null) {
-        logger.warn(`Şəbəkə xətası, köhnə keşlənmiş məlumat istifadə edilir: ${cacheKey}`);
-        return offlineData;
-      }
-    }
-    
-    throw error;
+    return { data: null, error };
   }
-};
+}
+
+// Check connection status
+export async function checkConnection(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.from('regions').select('id').limit(1);
+    return !error;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Retry function with exponential backoff
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 2,
+  retryDelay = 1000,
+  offlineQueueable = true
+): Promise<T> {
+  let retries = 0;
+  
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (retries >= maxRetries) {
+        throw error;
+      }
+      
+      // If offline and function is queueable, store for later
+      if (isOfflineMode() && offlineQueueable) {
+        // In a real implementation, this would store the operation in a queue
+        // For now, just throw an error
+        throw new Error("Operation cannot be performed while offline");
+      }
+      
+      retries++;
+      await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, retries - 1)));
+    }
+  }
+}
+
+// Export for use in baseService
+export { CACHE_CONFIG };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +10,10 @@ import { School } from '@/services/supabase/school/types';
 import { SchoolModal } from './SchoolModal';
 import { toast } from 'sonner';
 
+// Define proper type for params
 interface RouteParams {
   schoolId: string;
+  [key: string]: string | undefined;
 }
 
 const SchoolDetailView: React.FC = () => {
@@ -20,22 +23,20 @@ const SchoolDetailView: React.FC = () => {
   const [school, setSchool] = useState<School | null>(null);
   const [admin, setAdmin] = useState<any | null>(null);
 
-  const { data, isLoading, refetch } = useQuery(
-    ['school', schoolId],
-    () => getSchoolWithAdmin(schoolId as string),
-    {
-      enabled: !!schoolId,
-      onSuccess: (result) => {
-        if (result) {
-          setSchool(result.school);
-          setAdmin(result.admin);
-        }
-      },
-      onError: (error) => {
-        toast.error(`Məktəb məlumatları alınarkən xəta baş verdi: ${error}`);
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['school', schoolId],
+    queryFn: () => getSchoolWithAdmin(schoolId as string),
+    enabled: !!schoolId,
+    onSuccess: (result) => {
+      if (result) {
+        setSchool(result.school);
+        setAdmin(result.admin);
       }
+    },
+    onError: (error) => {
+      toast.error(`Məktəb məlumatları alınarkən xəta baş verdi: ${error}`);
     }
-  );
+  });
 
   useEffect(() => {
     if (data) {
@@ -150,7 +151,7 @@ const SchoolDetailView: React.FC = () => {
           isOpen={isEditing}
           onClose={() => setIsEditing(false)}
           mode="edit"
-          schoolId={school.id} // Use schoolId instead of passing full school object
+          schoolId={school.id}
           onSchoolUpdated={handleSchoolUpdated}
         />
       )}

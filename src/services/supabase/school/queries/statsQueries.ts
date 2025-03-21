@@ -35,9 +35,18 @@ export const getSchoolStats = async (schoolId: string): Promise<SchoolStats> => 
       // Continue with current date instead of throwing
     }
 
+    // Handle the case when student_count or teacher_count might not exist in the database yet
+    let studentCount = 0;
+    let teacherCount = 0;
+    
+    if (schoolData) {
+      studentCount = schoolData.student_count || 0;
+      teacherCount = schoolData.teacher_count || 0;
+    }
+
     return {
-      total_students: schoolData?.student_count || 0,
-      total_teachers: schoolData?.teacher_count || 0,
+      total_students: studentCount,
+      total_teachers: teacherCount,
       completion_rate: completionRate,
       lastUpdate: latestData?.updated_at || new Date().toISOString()
     };

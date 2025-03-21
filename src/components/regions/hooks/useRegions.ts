@@ -75,8 +75,8 @@ export const useRegionsData = (options: RegionsQueryOptions) => {
         // Add default empty string for missing properties
         description: region.description || '',
         sectorCount: region.sectors?.length || 0,
-        schoolCount: 0, // Bu məlumatı əlavə sorğu ilə almaq lazım olacaq
-        completionRate: 0, // Bu məlumatı əlavə sorğu ilə almaq lazım olacaq
+        schoolCount: 0, // This data would need to be fetched separately
+        completionRate: 0, // This data would need to be fetched separately
         studentCount: 0,
         teacherCount: 0
       }));

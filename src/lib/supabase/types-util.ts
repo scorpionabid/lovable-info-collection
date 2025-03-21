@@ -24,7 +24,7 @@ export function safeFrom<T extends TableNames>(
   return client.from(table);
 }
 
-// Strongly typed table helper
+// Strongly typed table helper - ensure this is type-safe and includes all tables
 export const TABLES = {
   USERS: 'users' as const,
   REGIONS: 'regions' as const,
@@ -38,9 +38,8 @@ export const TABLES = {
   API_METRICS: 'api_metrics' as const, 
   NOTIFICATIONS: 'notifications' as const,
   ROLES: 'roles' as const,
-  // Add as string and cast to TableNames since it doesn't exist in the original database types yet
-  SCHOOL_TYPES: 'school_types' as any
-} satisfies Record<string, TableNames>;
+  SCHOOL_TYPES: 'school_types' as const
+} as const;
 
 // Type guard for table names
 export function validateTableName(table: string): table is TableNames {

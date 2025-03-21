@@ -3,42 +3,40 @@ import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import SchoolForm from "./SchoolForm";
-import { useSchoolData } from "../hooks/useSchoolData";
+import { School } from "@/services/supabase/school/types";
+import { useQuery } from "@tanstack/react-query";
+import { getSchoolById } from "@/services/supabase/school/queries/schoolQueries";
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
   schoolId?: string;
-  mode?: 'create' | 'edit';
+  mode?: "create" | "edit";
   onSuccess?: () => void;
-  initialData?: any;
-  school?: any;
-  onSchoolUpdated?: () => void;
-  onSchoolCreated?: () => void;
-  onCreated?: () => void;
   regionId?: string;
+  onSchoolUpdated?: () => void;
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
   isOpen,
   onClose,
   schoolId,
-  mode = 'edit',
+  mode = "create",
   onSuccess,
-  initialData,
-  school,
-  onSchoolUpdated,
-  onSchoolCreated,
-  onCreated,
-  regionId
+  regionId,
+  onSchoolUpdated
 }) => {
-  const { school: schoolData, isLoading, handleSuccess } = useSchoolData(schoolId, onClose);
-  
-  // Determine which callback to use
-  const successCallback = onSuccess || onSchoolUpdated || onSchoolCreated || onCreated || handleSuccess;
-  
-  // Use provided initialData or school prop if available, otherwise use data from hook
-  const formData = initialData || school || schoolData;
+  const { data: schoolData, isLoading } = useQuery({
+    queryKey: ["school", schoolId],
+    queryFn: () => getSchoolById(schoolId as string),
+    enabled: !!schoolId
+  });
+
+  const handleSuccess = () => {
+    if (onSuccess) onSuccess();
+    if (onSchoolUpdated) onSchoolUpdated();
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -49,9 +47,9 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
           </div>
         ) : (
           <SchoolForm
-            onSuccess={successCallback}
+            onSuccess={handleSuccess}
             onCancel={onClose}
-            initialData={formData}
+            initialData={schoolData}
             mode={mode}
             regionId={regionId}
           />

@@ -1,46 +1,70 @@
 
-/**
- * Supabase inteqrasiyası üçün mərkəzləşdirilmiş modul
- * Bu modul src/lib/supabase faylından funksiyaları ixrac edir
- */
-import { 
-  supabase,
-  withRetry,
-  checkConnection,
-  handleSupabaseError,
-  getCurrentUser,
-  getCurrentUserId
-} from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { Database } from '@/types/supabase';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabase/config';
 
-import {
-  isOfflineMode,
-  clearCache,
-  isNetworkError,
-  queryWithCache
-} from '@/lib/supabase/cache';
+// Create a single supabase client for application
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Bütün funksiyaları ixrac et
-export {
-  supabase,
-  withRetry,
-  checkConnection,
-  handleSupabaseError,
-  getCurrentUser,
-  getCurrentUserId,
-  isOfflineMode,
-  clearCache,
-  isNetworkError,
-  queryWithCache
-};
+// Re-export withRetry, queryWithCache, and isOfflineMode from lib/supabase
+export { withRetry, queryWithCache, isOfflineMode, checkConnection } from '@/lib/supabase';
 
-// Export query helpers
-export * from '@/lib/supabase/query';
-export * from '@/lib/supabase/retry';
+// Helper functions for building queries
+export function buildPaginatedQuery(query: any, page: number, pageSize: number) {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  return query.range(from, to);
+}
 
-// Əsas məlumatı konsola yaz
-console.log('Supabase inteqrasiyası yükləndi:', {
-  url: process.env.NODE_ENV === 'production' ? 'PRODUCTION_URL' : 'SUPABASE_URL',
-  authEnabled: !!supabase.auth,
-  realtimeEnabled: !!supabase.realtime,
-  storageEnabled: !!supabase.storage
-});
+export function buildSortedQuery(query: any, sortField: string, sortDirection: 'asc' | 'desc') {
+  return query.order(sortField, { ascending: sortDirection === 'asc' });
+}
+
+export function buildFilteredQuery(query: any, filters: Record<string, any>) {
+  let filteredQuery = query;
+  
+  // Apply filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      if (typeof value === 'string' && value.startsWith('%') && value.endsWith('%')) {
+        filteredQuery = filteredQuery.ilike(key, value);
+      } else {
+        filteredQuery = filteredQuery.eq(key, value);
+      }
+    }
+  });
+  
+  return filteredQuery;
+}
+
+// Helper for creating paginated responses
+export async function createPaginatedQuery<T>(
+  query: any,
+  countQuery: any,
+  page: number,
+  pageSize: number
+): Promise<{ data: T[]; count: number; error: any }> {
+  try {
+    // Get count first
+    const { count, error: countError } = await countQuery;
+    
+    if (countError) {
+      return { data: [], count: 0, error: countError };
+    }
+    
+    // Get data with pagination
+    const paginatedQuery = buildPaginatedQuery(query, page, pageSize);
+    const { data, error } = await paginatedQuery;
+    
+    return {
+      data: data || [],
+      count: count || 0,
+      error
+    };
+  } catch (error) {
+    console.error('Error in paginated query:', error);
+    return { data: [], count: 0, error };
+  }
+}
+
+export default supabase;
