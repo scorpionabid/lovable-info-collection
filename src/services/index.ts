@@ -29,7 +29,7 @@ export {
   createSector,
   updateSector,
   deleteSector,
-  getSectorsByRegion as getSectorsByRegionId
+  getSectorsByRegionId
 } from '@/supabase/services/sectors';
 
 export {
@@ -38,8 +38,8 @@ export {
   createSchool,
   updateSchool,
   deleteSchool,
-  getSchoolsByRegion,
-  getSchoolsBySector,
+  getSchoolsByRegionId as getSchoolsByRegion,
+  getSchoolsBySectorId as getSchoolsBySector,
   getSchoolTypes
 } from '@/supabase/services/schools';
 

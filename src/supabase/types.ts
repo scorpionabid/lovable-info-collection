@@ -1,5 +1,5 @@
 
-// Database Tables
+// Core types for consistent usage across the application
 export interface Region {
   id: string;
   name: string;
@@ -7,6 +7,18 @@ export interface Region {
   description?: string;
   created_at: string;
   updated_at?: string;
+}
+
+export interface RegionWithStats extends Region {
+  sectorCount?: number;
+  schoolCount?: number;
+  studentCount?: number;
+  teacherCount?: number;
+  completionRate?: number;
+  // For backward compatibility
+  sectors_count?: number;
+  schools_count?: number;
+  completion_rate?: number;
 }
 
 export interface Sector {
@@ -22,50 +34,25 @@ export interface Sector {
 export interface School {
   id: string;
   name: string;
-  address: string;
+  code?: string;
   region_id: string;
   sector_id: string;
-  type_id: string;
-  code?: string;
-  status: string;
-  director: string;
-  email: string;
-  phone: string;
-  student_count: number;
-  teacher_count: number;
+  type_id?: string;
+  address?: string;
+  director?: string;
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
+  created_at: string;
+  updated_at?: string;
   archived: boolean;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface SchoolType {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  scope: 'global' | 'region' | 'sector' | 'school';
-  scope_id?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface CategoryColumn {
-  id: string;
-  name: string;
-  type: string;
-  required: boolean;
-  description?: string;
-  options?: string[] | null;
-  category_id: string;
-  order?: number;
-  created_at?: string;
-  updated_at?: string;
+  // Virtual/derived fields
+  completionRate?: number;
+  type?: string;
+  region?: string;
+  sector?: string;
 }
 
 export interface User {
@@ -74,114 +61,26 @@ export interface User {
   last_name: string;
   email: string;
   phone?: string;
-  role_id: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  utis_code?: string;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-  last_login?: string;
-  roles?: Role; // Relationship field
-  region?: Region; // Relationship field
-  sector?: Sector; // Relationship field
-  school?: School; // Relationship field
-}
-
-export interface UserWithRole extends User {
-  roles: Role;
-}
-
-export interface Role {
-  id: string;
-  name: string;
-  description: string;
-  permissions: string[];
-}
-
-// DTOs (Data Transfer Objects)
-export interface CreateRegionDto {
-  name: string;
-  code?: string;
-  description?: string;
-}
-
-export interface UpdateRegionDto {
-  name?: string;
-  code?: string;
-  description?: string;
-}
-
-export interface CreateSectorDto {
-  name: string;
-  region_id: string;
-  description?: string;
-}
-
-export interface UpdateSectorDto {
-  name?: string;
-  region_id?: string;
-  description?: string;
-  archived?: boolean;
-}
-
-export interface CreateSchoolDto {
-  name: string;
-  address?: string;
-  region_id: string;
-  sector_id: string;
-  type_id?: string;
-  code?: string;
-  status?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-  student_count?: number;
-  teacher_count?: number;
-}
-
-export interface UpdateSchoolDto {
-  name?: string;
-  address?: string;
-  region_id?: string;
-  sector_id?: string;
-  type_id?: string;
-  code?: string;
-  status?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-  student_count?: number;
-  teacher_count?: number;
-  archived?: boolean;
-}
-
-export interface CreateUserDto {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  role_id: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  utis_code?: string;
-  is_active?: boolean;
-  password?: string;
-}
-
-export interface UpdateUserDto {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  phone?: string;
   role_id?: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
   utis_code?: string;
-  is_active?: boolean;
+  is_active: boolean;
+  avatar_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_login?: string;
+  role?: string;
+  userRole?: string;
+}
+
+export interface UserRoleClaims extends User {
+  app_metadata?: {
+    claims?: {
+      roles?: string[] | string;
+    }
+  }
 }
 
 export interface LoginCredentials {
@@ -189,62 +88,20 @@ export interface LoginCredentials {
   password: string;
 }
 
-// Filter interfaces
 export interface FilterParams {
   search?: string;
   region_id?: string;
   sector_id?: string;
-  status?: 'active' | 'archived' | 'all';
+  status?: 'active' | 'inactive' | 'all' | 'archived';
   dateFrom?: string;
   dateTo?: string;
-  completionRate?: string;
   min_completion_rate?: number;
   max_completion_rate?: number;
   searchQuery?: string;
   archived?: boolean;
-}
-
-export interface RegionFilters {
-  search?: string;
-  status?: 'active' | 'archived' | 'all';
-}
-
-export interface SectorFilters {
-  region_id?: string;
-  search?: string;
-  status?: 'active' | 'archived' | 'all';
-}
-
-export interface SchoolFilter {
-  region_id?: string;
-  sector_id?: string;
-  type_id?: string;
-  search?: string;
-  status?: 'active' | 'archived' | 'all';
-  // For compatibility with older code
+  // For backward compatibility
   regionId?: string;
   sectorId?: string;
-  sort_field?: string;
-  sort_direction?: 'asc' | 'desc';
-  sort?: {
-    field: string;
-    direction: 'asc' | 'desc';
-  };
-}
-
-export interface UserFilters {
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  search?: string;
-  status?: 'active' | 'inactive' | 'blocked' | 'all';
-}
-
-// Pagination and sorting interfaces
-export interface PaginationParams {
-  page: number;
-  pageSize: number;
 }
 
 export interface SortParams {
@@ -253,58 +110,12 @@ export interface SortParams {
   direction?: 'asc' | 'desc';
 }
 
-export interface SchoolSortParams {
-  sortField?: string;
-  sortDirection?: 'asc' | 'desc';
+export interface PaginationParams {
+  page: number;
+  pageSize: number;
 }
 
-// Enhanced types with stats
-export interface RegionWithStats extends Region {
-  sectors_count?: number;
-  schools_count?: number;
-  completion_rate?: number;
-  // Consistency with new naming
-  sectorCount?: number;
-  schoolCount?: number;
-  completionRate?: number;
-}
-
-export interface SectorWithStats extends Sector {
-  schools_count?: number;
-  completion_rate?: number;
-  region?: { id: string; name: string };
-  // Consistency with new naming
-  schoolCount?: number;
-  completionRate?: number;
-  regionName?: string;
-}
-
-export interface SchoolWithStats extends School {
-  completionRate: number;
-  region?: { id: string; name: string };
-  sector?: { id: string; name: string };
-  type?: { id: string; name: string };
-  adminName?: string;
-}
-
-// Results interfaces
 export interface PaginatedResult<T> {
   data: T[];
   count: number;
 }
-
-// Error interfaces
-export interface ServiceError {
-  message: string;
-  code?: string;
-  details?: any;
-}
-
-export interface ValidationError extends ServiceError {
-  validationErrors: Record<string, string>;
-}
-
-// Utility types
-export type QueryResult<T> = Promise<{ data: T; error: ServiceError | null }>;
-export type ListQueryResult<T> = Promise<{ data: T[]; error: ServiceError | null }>;
-export type PaginatedQueryResult<T> = Promise<{ data: T[]; count: number; error: ServiceError | null }>;

@@ -1,127 +1,119 @@
-
-import React from 'react';
-import { SchoolInfo } from './details/SchoolInfo';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Edit, ArrowLeft } from "lucide-react";
 import { SchoolStats } from './details/SchoolStats';
 import { AdminInfo } from './details/AdminInfo';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Trash, Users, FileText, Activity } from "lucide-react";
-import { Link } from "react-router-dom";
+import { SchoolModal } from './modal/SchoolModal';
+import { getSchoolWithAdmin } from '@/services/supabase/school/queries/schoolQueries';
 
-// Define props interface
-interface SchoolDetailViewProps {
-  school: any;
-  admin?: any;
-  isLoading?: boolean;
-  onEdit?: () => void;
-  onDelete?: () => void;
-}
+export const SchoolDetailView = ({ schoolId }: { schoolId: string }) => {
+  const [schoolData, setSchoolData] = useState(null);
+  const [admin, setAdmin] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
-const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({
-  school,
-  admin,
-  isLoading = false,
-  onEdit,
-  onDelete
-}) => {
+  useEffect(() => {
+    const fetchSchoolDetails = async () => {
+      setIsLoading(true);
+      setIsError(false);
+      
+      try {
+        const schoolWithAdmin = await getSchoolWithAdmin(schoolId);
+        
+        if (schoolWithAdmin) {
+          setSchoolData(schoolWithAdmin.school);
+          setAdmin(schoolWithAdmin.admin);
+        } else {
+          setIsError(true);
+        }
+      } catch (error) {
+        console.error("Error fetching school details:", error);
+        setIsError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSchoolDetails();
+  }, [schoolId]);
+
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/schools">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-64 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-64 bg-gray-200 animate-pulse rounded"></div>
-        </div>
-      </div>
-    );
+    return <div>Yüklənir...</div>;
   }
 
-  if (!school) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/schools">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Məktəb tapılmadı</h1>
-        </div>
-        <p>Bu ID ilə məktəb mövcud deyil və ya silinib.</p>
-      </div>
-    );
+  if (isError || !schoolData) {
+    return <div>Məktəb tapılmadı və ya xəta baş verdi.</div>;
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild className="h-8 w-8">
-            <Link to="/schools">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-infoline-dark-blue">{school.name}</h1>
-            <p className="text-sm text-infoline-dark-gray">
-              {school.region?.name} | {school.sector?.name}
-            </p>
-          </div>
+    <div className="container mx-auto py-6">
+      <div className="mb-4">
+        <Link to="/schools" className="flex items-center gap-2 text-blue-500 hover:text-blue-700">
+          <ArrowLeft className="h-4 w-4" />
+          Məktəblərə qayıt
+        </Link>
+      </div>
+
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{schoolData.name}</h1>
+          <p className="text-gray-500">Məktəb haqqında məlumat</p>
         </div>
-        
-        <div className="flex items-center gap-2 mt-4 sm:mt-0">
-          {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit} className="h-9">
-              <Edit className="h-4 w-4 mr-2" />
-              Redaktə et
-            </Button>
-          )}
-          {onDelete && (
-            <Button variant="destructive" size="sm" onClick={onDelete} className="h-9">
-              <Trash className="h-4 w-4 mr-2" />
-              Sil
-            </Button>
-          )}
+        <Button asChild>
+          <Link to={`/schools/edit/${schoolId}`} className="flex items-center">
+            <Edit className="h-4 w-4 mr-2" />
+            Redaktə et
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="md:col-span-2">
+          <SchoolStats school={schoolData} />
+        </div>
+        <div className="md:col-span-1">
+          <AdminInfo 
+            admin={admin} 
+            onAssignAdmin={() => setIsAdminModalOpen(true)} 
+          />
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="general" className="flex items-center">
-            <FileText className="h-4 w-4 mr-2" />
-            <span>Ümumi məlumat</span>
-          </TabsTrigger>
-          <TabsTrigger value="statistics" className="flex items-center">
-            <Activity className="h-4 w-4 mr-2" />
-            <span>Statistika</span>
-          </TabsTrigger>
-          <TabsTrigger value="admin" className="flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            <span>Administrator</span>
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="general" className="mt-0">
-          <SchoolInfo school={school} />
-        </TabsContent>
-        
-        <TabsContent value="statistics" className="mt-0">
-          <SchoolStats schoolData={school} />
-        </TabsContent>
-        
-        <TabsContent value="admin" className="mt-0">
-          <AdminInfo admin={admin} school={school} />
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardHeader>
+          <CardTitle>Ətraflı məlumat</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <p><strong>Ad:</strong> {schoolData.name}</p>
+            <p><strong>Ünvan:</strong> {schoolData.address}</p>
+            <p><strong>Sektor:</strong> {schoolData.sector}</p>
+            {/* Daha çox məlumat əlavə edilə bilər */}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {isAdminModalOpen && (
+        <SchoolModal
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+          mode="edit"
+          initialData={schoolData}
+          onSuccess={() => {
+            // Refetch school details after admin assignment
+            getSchoolWithAdmin(schoolId).then(updatedSchoolWithAdmin => {
+              if (updatedSchoolWithAdmin) {
+                setSchoolData(updatedSchoolWithAdmin.school);
+                setAdmin(updatedSchoolWithAdmin.admin);
+              }
+            });
+            setIsAdminModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };

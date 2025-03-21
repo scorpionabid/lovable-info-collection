@@ -1,18 +1,17 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/services/supabase/supabaseClient';
+import { supabase } from '@/supabase/client';
 
-// Fetch sectors based on selected region
-export const useSectors = (regionId?: string) => {
+export const useSectors = (regionId: string) => {
   const fetchSectors = async () => {
+    if (!regionId) return [];
+    
     try {
-      let query = supabase.from('sectors').select('id, name, region_id, code');
-      
-      if (regionId) {
-        query = query.eq('region_id', regionId);
-      }
-      
-      const { data, error } = await query.order('name');
+      const { data, error } = await supabase
+        .from('sectors')
+        .select('id, name, description')
+        .eq('region_id', regionId)
+        .order('name');
       
       if (error) {
         throw error;
@@ -21,9 +20,7 @@ export const useSectors = (regionId?: string) => {
       return data.map(sector => ({
         id: sector.id,
         name: sector.name,
-        region_id: sector.region_id,
-        description: '', // Adding description to satisfy type requirements
-        archived: false  // Adding archived to satisfy type requirements
+        description: sector.description || ''
       }));
     } catch (error) {
       console.error('Error fetching sectors:', error);
@@ -34,7 +31,7 @@ export const useSectors = (regionId?: string) => {
   const { data: sectors = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['sectors_dropdown', regionId],
     queryFn: fetchSectors,
-    enabled: !!regionId
+    enabled: !!regionId,
   });
 
   return { sectors, isLoading, isError, refetch };

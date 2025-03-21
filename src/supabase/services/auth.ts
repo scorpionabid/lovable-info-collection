@@ -1,44 +1,22 @@
 
 import { supabase } from '../client';
-import { LoginCredentials, User } from '../types';
+import type { LoginCredentials } from '@/hooks/types/authTypes';
+import { UserRoleClaims, User } from '../types';
+
+export type { LoginCredentials };
 
 /**
- * Login user with email and password
+ * Logs in a user with email and password
  */
-export const loginUser = async (credentials: LoginCredentials) => {
+export const loginUser = async (email: string, password: string) => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: credentials.email,
-      password: credentials.password,
+      email,
+      password,
     });
-
+    
     if (error) throw error;
-
-    // Get the user profile after successful login
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        *,
-        roles:role_id (id, name, permissions),
-        region:region_id (id, name),
-        sector:sector_id (id, name),
-        school:school_id (id, name)
-      `)
-      .eq('id', data.user?.id)
-      .single();
-
-    if (userError) throw userError;
-
-    // Update last login timestamp
-    await supabase
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', data.user?.id);
-
-    return {
-      user: userData as User,
-      session: data.session,
-    };
+    return data;
   } catch (error) {
     console.error('Login error:', error);
     throw error;
@@ -46,7 +24,7 @@ export const loginUser = async (credentials: LoginCredentials) => {
 };
 
 /**
- * Logout current user
+ * Logs out the current user
  */
 export const logoutUser = async () => {
   try {
@@ -60,105 +38,61 @@ export const logoutUser = async () => {
 };
 
 /**
- * Get current user with profile data
- */
-export const getCurrentUser = async () => {
-  try {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    
-    if (!sessionData.session) return null;
-
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        *,
-        roles:role_id (id, name, permissions),
-        region:region_id (id, name),
-        sector:sector_id (id, name),
-        school:school_id (id, name)
-      `)
-      .eq('id', sessionData.session.user.id)
-      .single();
-
-    if (userError) throw userError;
-
-    return userData as User;
-  } catch (error) {
-    console.error('Error getting current user:', error);
-    return null;
-  }
-};
-
-/**
- * Get current session
+ * Gets the current user session
  */
 export const getSession = async () => {
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
-    return { session: data.session, error: null };
+    return data.session;
   } catch (error) {
     console.error('Get session error:', error);
-    return { session: null, error };
+    return null;
   }
 };
 
 /**
- * Register new user
+ * Gets the current authenticated user
  */
-export const registerUser = async (userData: any) => {
+export const getCurrentUser = async () => {
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: {
-        data: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role_id: userData.role_id
-        }
-      }
-    });
-
+    const { data, error } = await supabase.auth.getUser();
     if (error) throw error;
-
-    return data;
+    
+    return data.user;
   } catch (error) {
-    console.error('Registration error:', error);
-    throw error;
+    console.error('Get user error:', error);
+    return null;
   }
 };
 
 /**
- * Send password reset email
+ * Sends a password reset email
  */
 export const resetPassword = async (email: string) => {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
+      redirectTo: `${window.location.origin}/reset-password`,
     });
-
+    
     if (error) throw error;
-
     return true;
   } catch (error) {
-    console.error('Password reset error:', error);
+    console.error('Reset password error:', error);
     throw error;
   }
 };
 
 /**
- * Update user password
+ * Updates the user's password
  */
-export const updatePassword = async (password: string) => {
+export const updatePassword = async (newPassword: string) => {
   try {
     const { error } = await supabase.auth.updateUser({
-      password
+      password: newPassword,
     });
-
+    
     if (error) throw error;
-
     return true;
   } catch (error) {
     console.error('Update password error:', error);
@@ -167,15 +101,56 @@ export const updatePassword = async (password: string) => {
 };
 
 /**
- * Refresh session
+ * Refreshes the session
  */
 export const refreshSession = async () => {
   try {
     const { data, error } = await supabase.auth.refreshSession();
     if (error) throw error;
-    return data;
+    return data.session;
   } catch (error) {
     console.error('Refresh session error:', error);
+    return null;
+  }
+};
+
+/**
+ * Checks if a user has a specific role
+ */
+export const hasRole = (user: User, role: string): boolean => {
+  if (!user) return false;
+  
+  // Check user object for role information
+  const userRole = user.role || user.userRole;
+  if (userRole && typeof userRole === 'string') {
+    return userRole === role;
+  }
+  
+  // If user has custom claims
+  const customClaims = (user as UserRoleClaims).app_metadata?.claims;
+  if (customClaims?.roles) {
+    return Array.isArray(customClaims.roles)
+      ? customClaims.roles.includes(role)
+      : customClaims.roles === role;
+  }
+  
+  return false;
+};
+
+/**
+ * Sends a confirmation email
+ */
+export const sendConfirmationEmail = async (email: string) => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Send confirmation email error:', error);
     throw error;
   }
 };

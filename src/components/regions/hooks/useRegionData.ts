@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FilterParams } from "@/supabase/types";
+import { FilterParams, SortParams, PaginationParams, RegionWithStats, PaginatedResult } from "@/supabase/types";
 import { getRegions } from "@/supabase/services/regions";
 
 interface UseRegionDataProps {
@@ -21,21 +21,28 @@ export const useRegionData = ({
 }: UseRegionDataProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   
+  const sortParams: SortParams = {
+    field: sortColumn,
+    direction: sortDirection
+  };
+  
+  const paginationParams: PaginationParams = {
+    page: currentPage,
+    pageSize
+  };
+  
   const { 
-    data: regionsData, 
+    data: regionsResponse, 
     isLoading, 
     isError, 
     refetch 
-  } = useQuery({
+  } = useQuery<PaginatedResult<RegionWithStats>>({
     queryKey: ['regions', currentPage, pageSize, sortColumn, sortDirection, filters],
-    queryFn: () => getRegions(
-      filters, 
-      { field: sortColumn, direction: sortDirection }
-    ),
+    queryFn: () => getRegions(filters, sortParams, paginationParams),
   });
 
   return {
-    regionsData: { data: regionsData || [], count: regionsData?.length || 0 },
+    regionsData: regionsResponse || { data: [], count: 0 },
     isLoading,
     isError,
     refetch,

@@ -1,115 +1,157 @@
 
-import { useState } from 'react';
-import { useToast } from "@/hooks/use-toast";
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
 import { useRegionData } from './hooks/useRegionData';
-import { useRegionFilters } from './hooks/useRegionFilters';
-import { useRegionSort } from './hooks/useRegionSort';
-import { useRegionActions } from './hooks/useRegionActions';
-import { RegionTable } from './table/RegionTable';
-import { RegionToolbar } from './toolbar/RegionToolbar';
 import { RegionFilterPanel } from './RegionFilterPanel';
+import { RegionTable } from './table/RegionTable';
 import { RegionModal } from './RegionModal';
-import { RegionWithStats } from '@/services/supabase/region/types';
+import { Plus, Filter } from 'lucide-react';
+import { Skeleton } from "@/components/ui/skeleton";
+import { FilterBar } from "@/components/shared/FilterBar";
+import { RegionExportModal } from './RegionExportModal';
+import { type RegionWithStats } from '@/supabase/types';
 
-export const RegionsOverview = () => {
+const RegionsOverview = () => {
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState<RegionWithStats | null>(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'active' as const
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
-  // Hooks to manage state
-  const { sortColumn, sortDirection, handleSortChange } = useRegionSort();
-  const { 
-    showFilters, searchQuery, currentPage, filters, 
-    setCurrentPage, handleSearchChange, handleApplyFilters, 
-    toggleFilters 
-  } = useRegionFilters();
+  const [sortColumn, setSortColumn] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Data fetching
   const { 
     regionsData, 
     isLoading, 
     isError, 
-    refetch,
-    searchTerm,
-    setSearchTerm
-  } = useRegionData({ 
-    currentPage, 
-    pageSize, 
-    sortColumn, 
-    sortDirection, 
-    filters 
+    refetch 
+  } = useRegionData({
+    currentPage,
+    pageSize,
+    sortColumn,
+    sortDirection,
+    filters
   });
 
-  // Actions
-  const { 
-    isCreateModalOpen, 
-    setIsCreateModalOpen, 
-    handleRefresh,
-    handleExport,
-    handleImport,
-    handleCreateSuccess
-  } = useRegionActions(refetch);
+  const regions = regionsData.data;
+  const totalCount = regionsData.count;
 
-  // Prepare data structure for the RegionTable component
-  const processedRegionsData = {
-    data: regionsData?.data?.map(region => {
-      return {
-        ...region,
-        description: region.description || '',
-        sectorCount: region.sectorCount || region.sectors_count || 0,
-        schoolCount: region.schoolCount || region.schools_count || 0,
-        studentCount: region.studentCount || 0,
-        teacherCount: region.teacherCount || 0,
-        completionRate: region.completionRate || region.completion_rate || 0,
-        sectors_count: region.sectors_count || region.sectorCount || 0,
-        schools_count: region.schools_count || region.schoolCount || 0,
-        completion_rate: region.completion_rate || region.completionRate || 0
-      } as RegionWithStats;
-    }) || [],
-    count: regionsData?.count || 0
+  const toggleFilter = () => {
+    setIsFilterVisible(prev => !prev);
   };
 
+  const renderLoading = () => (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-32 w-full" />
+      <Skeleton className="h-32 w-full" />
+      <Skeleton className="h-32 w-full" />
+    </div>
+  );
+
+  const renderError = () => (
+    <div className="p-4 text-red-600 bg-red-50 rounded-md">
+      Regionları yükləmək mümkün olmadı. Zəhmət olmasa, yenidən cəhd edin.
+    </div>
+  );
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <RegionToolbar 
-        searchQuery={searchTerm || searchQuery}
-        onSearchChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          setSearchTerm(e.target.value);
-          handleSearchChange(e);
-        }}
-        onRefresh={handleRefresh}
-        onExport={() => handleExport(processedRegionsData)}
-        onImport={handleImport}
-        onCreateRegion={() => setIsCreateModalOpen(true)}
-        onToggleFilters={toggleFilters}
+    <div>
+      {/* Header with actions */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Regionlar</h1>
+          <p className="text-infoline-dark-gray">Bu bölmədə regionları idarə edə bilərsiniz</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={toggleFilter}>
+            <Filter className="h-4 w-4 mr-2" />
+            Filtrlər
+          </Button>
+          <Button onClick={() => setIsExportModalOpen(true)} variant="outline">
+            İxrac et
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Region əlavə et
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter bar and filters */}
+      <FilterBar
+        searchValue={filters.search}
+        onSearchChange={(value) => setFilters(prev => ({ ...prev, search: value }))}
+        onSearch={() => refetch()}
+        filterCount={Object.keys(filters).filter(k => filters[k as keyof typeof filters] !== '').length}
+        onClearAll={() => setFilters({ search: '', status: 'active' })}
       />
-      
-      {showFilters && (
+
+      {isFilterVisible && (
         <RegionFilterPanel 
-          filters={filters}
-          onApplyFilters={handleApplyFilters}
-          onClose={toggleFilters}
+          filters={filters} 
+          onFiltersChange={setFilters} 
+          onFilterApply={() => refetch()}
         />
       )}
-      
-      <RegionTable 
-        regions={processedRegionsData.data}
-        totalCount={processedRegionsData.count}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        setCurrentPage={setCurrentPage}
-        sortColumn={sortColumn}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
-        isLoading={isLoading}
-        isError={isError}
-        onRefresh={handleRefresh}
-      />
-      
+
+      {/* Region data */}
+      {isLoading ? (
+        renderLoading()
+      ) : isError ? (
+        renderError()
+      ) : (
+        <RegionTable 
+          regions={regions}
+          onEdit={(region) => {
+            setSelectedRegion(region);
+            setIsModalOpen(true);
+          }}
+          onDelete={(region) => {
+            // Handle delete logic
+          }}
+          onSort={(column, direction) => {
+            setSortColumn(column);
+            setSortDirection(direction);
+          }}
+          currentSort={{ field: sortColumn, direction: sortDirection }}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalCount}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
+
+      {/* Create/Edit Region Modal */}
       <RegionModal 
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        mode="create"
-        onSuccess={handleCreateSuccess}
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedRegion(null);
+        }}
+        region={selectedRegion}
+        onSuccess={() => {
+          refetch();
+          setIsModalOpen(false);
+          setSelectedRegion(null);
+        }}
+      />
+
+      {/* Export Modal */}
+      <RegionExportModal 
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        filters={filters}
       />
     </div>
   );
 };
+
+export default RegionsOverview;
