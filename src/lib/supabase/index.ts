@@ -10,7 +10,13 @@ export * from './client';
 export * from './config';
 
 // Cache - keşləmə sistemi
-export * from './cache';
+export {
+  isOfflineMode,
+  isNetworkError,
+  clearCache,
+  queryWithCache,
+  CACHE_CONFIG
+} from './cache';
 
 // Query - sorğu konstruktoru funksiyaları
 export * from './query';

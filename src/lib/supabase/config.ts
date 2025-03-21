@@ -1,51 +1,78 @@
 
 /**
- * Mərkəzləşdirilmiş Supabase konfiqurasiyası
+ * Supabase konfiqurasiyası
  */
 
-// Supabase məlumatları
+// Supabase parametrlərini mühitdən oxu
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wxkaasjwpavlwrpvsuia.supabase.co";
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4a2Fhc2p3cGF2bHdycHZzdWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODA3NzAsImV4cCI6MjA1NTk1Njc3MH0.Sy0ktssGHAMNtU4kCrEKuFNf8Yf5R280uqwpsMcZpuM";
+export const SUPABASE_SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 
-// İstehsal və ya development mühitini təyin etmək
-export const isDevelopment = () => {
-  return import.meta.env.DEV || import.meta.env.MODE === 'development';
-};
+// API baza URL-i
+export const API_URL = import.meta.env.VITE_API_URL || "https://api.infoline.az";
 
-// Offline rejim parametrləri
-export const OFFLINE_CONFIG = {
-  maxQueueSize: 100,
-  maxRetryCount: 3,
-  requestTimeoutMs: 15000, // 15 saniyə
-};
-
-// Keşləmə parametrləri
-export const CACHE_CONFIG = {
-  ttl: 5 * 60 * 1000, // 5 dəqiqə
-  maxSize: 100 // maksimum keş elementi
-};
-
-// Bütün konfiqurasiyaları bir obyektdə ixrac et
-export const supabaseConfig = {
-  url: SUPABASE_URL,
-  anonKey: SUPABASE_ANON_KEY,
-  isDev: isDevelopment(),
-  offline: OFFLINE_CONFIG,
-  cache: CACHE_CONFIG
-};
-
-// URL-in doğru format olub-olmadığını yoxlamaq üçün funksiya
-export const isValidSupabaseUrl = (url: string): boolean => {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
-  } catch (error) {
-    console.error('Invalid Supabase URL format:', error);
-    return false;
+// Supabase konfiqurasiyası 
+export const SUPABASE_CONFIG = {
+  // Auth konfiqurasiyası
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  
+  // Real-time konfiqurasiyası
+  realtime: {
+    enabled: true,
+    multiplexing: true,
+    presenceTimeout: 60 // saniyə
+  },
+  
+  // Global headers
+  global: {
+    headers: {
+      'x-application-name': 'infoline-web-app',
+      'x-client-info': 'supabase-js/2.x'
+    }
+  },
+  
+  // Storage konfiqurasiyası
+  storage: {
+    retryAttempts: 3,
+    multipartConcurrency: 5,
+    multipartThreshold: 5 * 1024 * 1024 // 5 MB
   }
 };
 
-// Konfiqurasiyanın doğruluğunu yoxla və xəbərdarlıq et
-if (!isValidSupabaseUrl(SUPABASE_URL)) {
-  console.warn(`Supabase URL format is invalid: ${SUPABASE_URL}. Check your environment variables.`);
-}
+// Supabase cədvəl adları
+export const TABLE_NAMES = {
+  USERS: 'users',
+  PROFILES: 'profiles',
+  REGIONS: 'regions',
+  SECTORS: 'sectors',
+  SCHOOLS: 'schools',
+  CATEGORIES: 'categories',
+  COLUMNS: 'columns',
+  DATA: 'data',
+  DATA_HISTORY: 'data_history',
+  AUDIT_LOGS: 'audit_logs',
+  API_METRICS: 'api_metrics',
+  NOTIFICATIONS: 'notifications',
+  ROLES: 'roles',
+  SCHOOL_TYPES: 'school_types'
+};
+
+// Default sorğu parametrləri
+export const DEFAULT_QUERY_PARAMS = {
+  pageSize: 10,
+  cacheDuration: 5 * 60 * 1000, // 5 dəqiqə
+  retries: 2
+};
+
+// Keş konfiqurasiyası
+export const CACHE_CONFIG = {
+  enabled: true,
+  defaultTTL: 5 * 60 * 1000, // 5 dəqiqə
+  storagePrefix: 'infoline_',
+  longTermTTL: 24 * 60 * 60 * 1000, // 1 gün
+  persistToLocalStorage: true
+};

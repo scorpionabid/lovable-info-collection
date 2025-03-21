@@ -6,7 +6,7 @@ export interface CategoryColumn {
   type: string;
   required: boolean;
   description?: string;
-  options?: string[];
+  options?: string[] | any;
   category_id?: string;
   order?: number;
   created_at?: string;
@@ -19,7 +19,7 @@ export interface ColumnData {
   name: string;
   type: string;
   required: boolean;
-  options?: string[];
+  options?: string[] | any;
   description?: string;
 }
 
@@ -34,15 +34,12 @@ export interface CategoryColumnsModalProps {
 }
 
 export interface ColumnFormProps {
-  column?: CategoryColumn;
-  categoryId: string;
-  onSuccess?: () => void;
-  onCancel?: () => void;
-  isEditing?: boolean;
   isOpen: boolean;
   onClose: () => void;
   selectedColumn: CategoryColumn | null;
   formMode: 'create' | 'edit';
+  categoryId: string;
+  onSuccess?: () => void;
 }
 
 export interface ColumnsTableProps {
