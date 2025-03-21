@@ -1,153 +1,173 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { supabase } from '@/lib/supabase';
+import { getSchoolTypes } from '@/services/supabase/school/helperFunctions';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+
+// Create schema with proper validation
+const schoolFormSchema = z.object({
+  name: z.string().min(3, { message: 'Məktəb adı ən azı 3 simvol olmalıdır' }),
+  region_id: z.string().min(1, { message: 'Region seçilməlidir' }),
+  sector_id: z.string().min(1, { message: 'Sektor seçilməlidir' }),
+  type_id: z.string().optional(),
+  code: z.string().optional(),
+  address: z.string().optional(),
+  email: z.string().email({ message: 'Düzgün email formatı daxil edin' }).optional().or(z.literal('')),
+  phone: z.string().optional(),
+  director: z.string().optional(),
+  student_count: z.coerce.number().min(0).optional(),
+  teacher_count: z.coerce.number().min(0).optional(),
+  status: z.string().optional(),
+});
+
+type SchoolFormValues = z.infer<typeof schoolFormSchema>;
 
 export interface SchoolFormProps {
   initialData?: any;
   mode: 'create' | 'edit';
   onSuccess: () => void;
   onCancel: () => void;
+  regionId?: string;
 }
 
-const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, onCancel }) => {
-  const [formData, setFormData] = React.useState({
+const SchoolForm: React.FC<SchoolFormProps> = ({ 
+  initialData, 
+  mode, 
+  onSuccess, 
+  onCancel,
+  regionId
+}) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
+  const [sectors, setSectors] = useState<{ id: string; name: string }[]>([]);
+  const [schoolTypes, setSchoolTypes] = useState<{ id: string; name: string }[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Initialize form with default values
+  const defaultValues: SchoolFormValues = {
     name: initialData?.name || '',
-    code: initialData?.code || '',
-    region_id: initialData?.region_id || '',
+    region_id: initialData?.region_id || regionId || '',
     sector_id: initialData?.sector_id || '',
     type_id: initialData?.type_id || '',
+    code: initialData?.code || '',
     address: initialData?.address || '',
+    email: initialData?.email || initialData?.contactEmail || '',
+    phone: initialData?.phone || initialData?.contactPhone || '',
     director: initialData?.director || '',
-    email: initialData?.email || '',
-    phone: initialData?.phone || '',
+    student_count: initialData?.student_count || initialData?.studentCount || 0,
+    teacher_count: initialData?.teacher_count || initialData?.teacherCount || 0,
     status: initialData?.status || 'Aktiv',
-    student_count: initialData?.student_count || 0,
-    teacher_count: initialData?.teacher_count || 0
+  };
+  
+  const { register, handleSubmit, watch, setValue, formState } = useForm<SchoolFormValues>({
+    resolver: zodResolver(schoolFormSchema),
+    defaultValues
   });
   
-  const [errors, setErrors] = React.useState({});
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [regions, setRegions] = React.useState([]);
-  const [sectors, setSectors] = React.useState([]);
-  const [schoolTypes, setSchoolTypes] = React.useState([]);
+  const selectedRegionId = watch('region_id');
   
-  // Fetch regions, sectors, and school types on component mount
-  React.useEffect(() => {
-    const fetchData = async () => {
+  // Load regions, sectors, and school types
+  useEffect(() => {
+    const loadData = async () => {
       try {
+        // Fetch school types using RPC
+        const types = await getSchoolTypes();
+        setSchoolTypes(types);
+
         // Fetch regions
-        const regionsResponse = await fetch('/api/regions');
-        const regionsData = await regionsResponse.json();
-        setRegions(regionsData);
-        
-        // Fetch sectors
-        const sectorsResponse = await fetch('/api/sectors');
-        const sectorsData = await sectorsResponse.json();
-        setSectors(sectorsData);
-        
-        // Fetch school types
-        const typesResponse = await fetch('/api/school-types');
-        const typesData = await typesResponse.json();
-        setSchoolTypes(typesData);
+        const { data: regionsData } = await supabase.from('regions').select('id, name').order('name');
+        if (regionsData) setRegions(regionsData);
       } catch (error) {
-        console.error('Error fetching form data:', error);
+        console.error('Error loading form data:', error);
+        toast.error('Məlumatlar yüklənərkən xəta baş verdi');
       }
     };
     
-    fetchData();
+    loadData();
   }, []);
-  
-  // Filter sectors based on selected region
-  const filteredSectors = React.useMemo(() => {
-    if (!formData.region_id) return sectors;
-    return sectors.filter(sector => sector.region_id === formData.region_id);
-  }, [sectors, formData.region_id]);
-  
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear errors when field is changed
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: null
-      }));
-    }
-  };
-  
-  const handleNumberChange = (e) => {
-    const { name, value } = e.target;
-    const numValue = parseInt(value, 10) || 0;
-    setFormData(prev => ({
-      ...prev,
-      [name]: numValue
-    }));
-  };
-  
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Məktəb adı tələb olunur';
-    }
-    
-    if (!formData.region_id) {
-      newErrors.region_id = 'Region seçilməlidir';
-    }
-    
-    if (!formData.sector_id) {
-      newErrors.sector_id = 'Sektor seçilməlidir';
-    }
-    
-    if (!formData.type_id) {
-      newErrors.type_id = 'Məktəb tipi seçilməlidir';
-    }
-    
-    if (formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) {
-      newErrors.email = 'Düzgün email formatı daxil edin';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      const url = mode === 'create' 
-        ? '/api/schools' 
-        : `/api/schools/${initialData.id}`;
-      
-      const method = mode === 'create' ? 'POST' : 'PUT';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Server error');
+
+  // When region changes, load sectors for that region
+  useEffect(() => {
+    const loadSectors = async () => {
+      if (!selectedRegionId) {
+        setSectors([]);
+        return;
       }
+
+      try {
+        const { data } = await supabase
+          .from('sectors')
+          .select('id, name')
+          .eq('region_id', selectedRegionId)
+          .order('name');
+        
+        if (data) {
+          setSectors(data);
+          // If there's only one sector, auto-select it
+          if (data.length === 1 && !watch('sector_id')) {
+            setValue('sector_id', data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading sectors:', error);
+        toast.error('Sektorlar yüklənərkən xəta baş verdi');
+      }
+    };
+
+    loadSectors();
+  }, [selectedRegionId, setValue, watch]);
+
+  const onSubmit = async (values: SchoolFormValues) => {
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      const schoolData = {
+        name: values.name,
+        sector_id: values.sector_id,
+        region_id: values.region_id,
+        type_id: values.type_id || null,
+        code: values.code || null,
+        address: values.address || null,
+        email: values.email || null,
+        phone: values.phone || null,
+        director: values.director || null,
+        student_count: values.student_count || 0,
+        teacher_count: values.teacher_count || 0,
+        status: values.status || 'Aktiv',
+      };
+
+      let result;
       
+      if (mode === "edit" && initialData?.id) {
+        // Update existing school
+        result = await supabase
+          .from('schools')
+          .update(schoolData)
+          .eq('id', initialData.id);
+      } else {
+        // Create new school
+        result = await supabase
+          .from('schools')
+          .insert(schoolData);
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      toast.success(mode === "edit" ? 'Məktəb yeniləndi' : 'Məktəb yaradıldı');
       onSuccess();
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      setErrors(prev => ({
-        ...prev,
-        submit: 'Məlumatları yadda saxlayarkən xəta baş verdi'
-      }));
+    } catch (error: any) {
+      console.error('Error saving school:', error);
+      setErrors({
+        submit: error.message || 'Məktəb saxlama zamanı xəta baş verdi'
+      });
+      toast.error(`Xəta: ${error.message || 'Məktəb saxlama zamanı xəta baş verdi'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -159,7 +179,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
         {mode === 'create' ? 'Yeni Məktəb Əlavə Et' : 'Məktəb Məlumatlarını Redaktə Et'}
       </h2>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Məktəb adı */}
           <div className="space-y-2">
@@ -168,13 +188,10 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="name"
-              name="name"
-              type="text"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded-md ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+              {...register('name')}
+              className={`w-full p-2 border rounded-md ${formState.errors.name ? 'border-red-500' : 'border-gray-300'}`}
             />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+            {formState.errors.name && <p className="text-red-500 text-sm">{formState.errors.name.message}</p>}
           </div>
           
           {/* Məktəb kodu */}
@@ -184,10 +201,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="code"
-              name="code"
-              type="text"
-              value={formData.code}
-              onChange={handleChange}
+              {...register('code')}
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -199,10 +213,8 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <select
               id="region_id"
-              name="region_id"
-              value={formData.region_id}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded-md ${errors.region_id ? 'border-red-500' : 'border-gray-300'}`}
+              {...register('region_id')}
+              className={`w-full p-2 border rounded-md ${formState.errors.region_id ? 'border-red-500' : 'border-gray-300'}`}
             >
               <option value="">Seçin</option>
               {regions.map(region => (
@@ -211,7 +223,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
                 </option>
               ))}
             </select>
-            {errors.region_id && <p className="text-red-500 text-sm">{errors.region_id}</p>}
+            {formState.errors.region_id && <p className="text-red-500 text-sm">{formState.errors.region_id.message}</p>}
           </div>
           
           {/* Sektor */}
@@ -221,33 +233,29 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <select
               id="sector_id"
-              name="sector_id"
-              value={formData.sector_id}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded-md ${errors.sector_id ? 'border-red-500' : 'border-gray-300'}`}
-              disabled={!formData.region_id}
+              {...register('sector_id')}
+              className={`w-full p-2 border rounded-md ${formState.errors.sector_id ? 'border-red-500' : 'border-gray-300'}`}
+              disabled={!selectedRegionId}
             >
               <option value="">Seçin</option>
-              {filteredSectors.map(sector => (
+              {sectors.map(sector => (
                 <option key={sector.id} value={sector.id}>
                   {sector.name}
                 </option>
               ))}
             </select>
-            {errors.sector_id && <p className="text-red-500 text-sm">{errors.sector_id}</p>}
+            {formState.errors.sector_id && <p className="text-red-500 text-sm">{formState.errors.sector_id.message}</p>}
           </div>
           
           {/* Məktəb tipi */}
           <div className="space-y-2">
             <label htmlFor="type_id" className="block text-sm font-medium">
-              Məktəb tipi *
+              Məktəb tipi
             </label>
             <select
               id="type_id"
-              name="type_id"
-              value={formData.type_id}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded-md ${errors.type_id ? 'border-red-500' : 'border-gray-300'}`}
+              {...register('type_id')}
+              className="w-full p-2 border border-gray-300 rounded-md"
             >
               <option value="">Seçin</option>
               {schoolTypes.map(type => (
@@ -256,7 +264,6 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
                 </option>
               ))}
             </select>
-            {errors.type_id && <p className="text-red-500 text-sm">{errors.type_id}</p>}
           </div>
           
           {/* Ünvan */}
@@ -266,10 +273,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="address"
-              name="address"
-              type="text"
-              value={formData.address}
-              onChange={handleChange}
+              {...register('address')}
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -281,10 +285,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="director"
-              name="director"
-              type="text"
-              value={formData.director}
-              onChange={handleChange}
+              {...register('director')}
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -296,13 +297,11 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="email"
-              name="email"
               type="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full p-2 border rounded-md ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
+              {...register('email')}
+              className={`w-full p-2 border rounded-md ${formState.errors.email ? 'border-red-500' : 'border-gray-300'}`}
             />
-            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+            {formState.errors.email && <p className="text-red-500 text-sm">{formState.errors.email.message}</p>}
           </div>
           
           {/* Telefon */}
@@ -312,10 +311,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="phone"
-              name="phone"
-              type="text"
-              value={formData.phone}
-              onChange={handleChange}
+              {...register('phone')}
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -327,11 +323,9 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="student_count"
-              name="student_count"
               type="number"
               min="0"
-              value={formData.student_count}
-              onChange={handleNumberChange}
+              {...register('student_count')}
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -343,11 +337,9 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <input
               id="teacher_count"
-              name="teacher_count"
               type="number"
               min="0"
-              value={formData.teacher_count}
-              onChange={handleNumberChange}
+              {...register('teacher_count')}
               className="w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
@@ -359,9 +351,7 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
             </label>
             <select
               id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
+              {...register('status')}
               className="w-full p-2 border border-gray-300 rounded-md"
             >
               <option value="Aktiv">Aktiv</option>
@@ -378,21 +368,20 @@ const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, mode, onSuccess, o
         )}
         
         <div className="flex justify-end space-x-4">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
             disabled={isSubmitting}
           >
             Ləğv et
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Yüklənir...' : mode === 'create' ? 'Əlavə et' : 'Yadda saxla'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

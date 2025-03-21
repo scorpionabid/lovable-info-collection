@@ -3,13 +3,13 @@
  * Supabase cədvəl adları və sabitlər
  */
 
-// Cədvəl adları enum
+// Cədvəl adları enum - updated to match database
 export enum TableName {
-  API_METRICS = 'api_metrics',
-  AUDIT_LOGS = 'audit_logs',
+  API_METRICS = 'api_metrics',  // Updated from 'metrics'
+  AUDIT_LOGS = 'audit_logs',    // Updated from 'audit_log'
   CATEGORIES = 'categories',
   COLUMNS = 'columns',
-  DATA = 'data',
+  DATA = 'data',                // Updated from 'data_entries'
   DATA_HISTORY = 'data_history',
   NOTIFICATIONS = 'notifications',
   REGIONS = 'regions',

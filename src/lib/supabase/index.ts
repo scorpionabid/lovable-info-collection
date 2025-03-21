@@ -22,4 +22,5 @@ export {
 export * from './query';
 
 // Retry - təkrar cəhd mexanizmi
-export * from './retry';
+export { withRetry } from './retry'; // Export with specific name to avoid duplicate export
+

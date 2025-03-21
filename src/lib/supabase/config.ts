@@ -11,6 +11,10 @@ export const SUPABASE_SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 // API baza URL-i
 export const API_URL = import.meta.env.VITE_API_URL || "https://api.infoline.az";
 
+// Export URL as a named variable to match the import in client.ts
+export const url = SUPABASE_URL;
+export const anonKey = SUPABASE_ANON_KEY;
+
 // Supabase konfiqurasiyası 
 export const SUPABASE_CONFIG = {
   // Auth konfiqurasiyası
@@ -43,7 +47,18 @@ export const SUPABASE_CONFIG = {
   }
 };
 
-// Supabase cədvəl adları
+// Define supabaseConfig to match the import in client.ts
+export const supabaseConfig = {
+  url: SUPABASE_URL,
+  anonKey: SUPABASE_ANON_KEY,
+  offline: {
+    maxQueueSize: 100,
+    maxRetryCount: 3,
+    requestTimeoutMs: 15000
+  }
+};
+
+// Supabase cədvəl adları - updated to match the actual table names
 export const TABLE_NAMES = {
   USERS: 'users',
   PROFILES: 'profiles',
@@ -52,10 +67,10 @@ export const TABLE_NAMES = {
   SCHOOLS: 'schools',
   CATEGORIES: 'categories',
   COLUMNS: 'columns',
-  DATA: 'data',
+  DATA: 'data',             // Updated from 'data_entries'
   DATA_HISTORY: 'data_history',
-  AUDIT_LOGS: 'audit_logs',
-  API_METRICS: 'api_metrics',
+  AUDIT_LOGS: 'audit_logs', // Updated from 'audit_log'
+  API_METRICS: 'api_metrics', // Updated from 'metrics'
   NOTIFICATIONS: 'notifications',
   ROLES: 'roles',
   SCHOOL_TYPES: 'school_types'

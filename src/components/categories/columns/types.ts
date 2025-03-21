@@ -27,7 +27,8 @@ export interface ColumnData {
 export interface CategoryColumnsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  categoryId: string;
+  categoryId?: string;
+  category?: any; // Add this to support current usage in components
   categoryName?: string;
   onColumnAdded?: () => void;
   onColumnDeleted?: () => void;

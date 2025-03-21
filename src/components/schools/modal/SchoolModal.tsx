@@ -12,6 +12,11 @@ export interface SchoolModalProps {
   mode?: 'create' | 'edit';
   onSuccess?: () => void;
   initialData?: any;
+  school?: any;
+  onSchoolUpdated?: () => void;
+  onSchoolCreated?: () => void;
+  onCreated?: () => void;
+  regionId?: string;
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
@@ -20,13 +25,20 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   schoolId,
   mode = 'edit',
   onSuccess,
-  initialData
+  initialData,
+  school,
+  onSchoolUpdated,
+  onSchoolCreated,
+  onCreated,
+  regionId
 }) => {
-  const { school, isLoading, handleSuccess } = useSchoolData(schoolId, onClose);
+  const { school: schoolData, isLoading, handleSuccess } = useSchoolData(schoolId, onClose);
   
-  // Use provided initialData if available, otherwise use data from hook
-  const formData = initialData || school;
-  const successHandler = onSuccess || handleSuccess;
+  // Determine which callback to use
+  const successCallback = onSuccess || onSchoolUpdated || onSchoolCreated || onCreated || handleSuccess;
+  
+  // Use provided initialData or school prop if available, otherwise use data from hook
+  const formData = initialData || school || schoolData;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -37,10 +49,11 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
           </div>
         ) : (
           <SchoolForm
-            onSuccess={successHandler}
+            onSuccess={successCallback}
             onCancel={onClose}
             initialData={formData}
             mode={mode}
+            regionId={regionId}
           />
         )}
       </DialogContent>

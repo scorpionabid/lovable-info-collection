@@ -1,120 +1,61 @@
 
-import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { supabase, withRetry } from '@/integrations/supabase/client';
-import { handleSupabaseError } from '@/lib/supabase';
-import { logger } from '@/utils/logger';
+// Import React properly
+import React from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { castType } from '@/utils/typeUtils';
+
+// Add typings for the query options
+export interface SupabaseQueryOptions {
+  queryKey: any[];
+  enabled?: boolean;
+  select?: string;
+  pagination?: { page: number; pageSize: number };
+  sort?: { column: string; direction: 'asc' | 'desc' };
+  filters?: Record<string, any>;
+  refetchOnWindowFocus?: boolean;
+  staleTime?: number;
+  cacheTime?: number;
+}
 
 /**
- * Supabase ilə React Query inteqrasiyası
- * @param key - sorğu keş açarı
- * @param queryFn - sorğu funksiyası
- * @param options - React Query seçimləri
+ * Hook for querying Supabase data with React Query
+ * @param tableName Supabase table name
+ * @param queryFn Function that performs the Supabase query
+ * @param options Query options
+ * @returns Query result object
  */
-export function useSupabaseQuery<TData = unknown, TError = any>(
-  key: string | string[],
-  queryFn: () => Promise<{ data: TData | null; error: any }>,
-  options?: Omit<UseQueryOptions<TData, TError, TData, string[]>, 'queryKey' | 'queryFn'>
+export function useSupabaseQuery<T>(
+  tableName: string,
+  queryFn: (client: typeof supabase, options: any) => Promise<{ data: T, error: any }>,
+  options: SupabaseQueryOptions
 ) {
-  const queryClient = useQueryClient();
-  const queryKey = Array.isArray(key) ? key : [key];
-  
-  return useQuery<TData, TError, TData, string[]>({
-    queryKey,
+  return useQuery({
+    queryKey: options.queryKey,
     queryFn: async () => {
       try {
-        const start = performance.now();
-        const { data, error } = await withRetry(queryFn);
-        const duration = performance.now() - start;
+        // Pass the options to the query function
+        const result = await queryFn(supabase, {
+          select: options.select,
+          pagination: options.pagination,
+          sort: options.sort,
+          filters: options.filters
+        });
         
-        // Performance metrikini yaz
-        logger.debug(`Query executed: ${queryKey.join('/')}`, { duration });
-        
-        if (error) {
-          throw handleSupabaseError(error, `Query ${queryKey.join('/')} failed`);
+        if (result.error) {
+          throw result.error;
         }
         
-        return data as TData;
+        return castType<T>(result.data);
       } catch (error) {
-        logger.error(`Query error for ${queryKey.join('/')}:`, error);
+        console.error(`Error querying ${tableName}:`, error);
         throw error;
       }
     },
-    // Cache və refetch davranışlarını müəyyən etmək
-    ...options
+    enabled: options.enabled,
+    refetchOnWindowFocus: options.refetchOnWindowFocus,
+    staleTime: options.staleTime,
+    gcTime: options.cacheTime
   });
-}
-
-// Supabase tərəfindən idarə olunan müəyyən cədvəlləri dinləmək üçün hook
-export function useRealtimeSubscription(
-  table: string,
-  filter?: { column: string; value: string },
-  callback?: (payload: any) => void
-) {
-  const queryClient = useQueryClient();
-  
-  React.useEffect(() => {
-    let subscription: ReturnType<typeof supabase.channel> | null = null;
-    
-    try {
-      // Realtime subscription yaratmaq
-      const channel = supabase.channel(`table-changes-${table}`);
-      
-      let event = channel
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table
-        }, (payload) => {
-          logger.debug(`Realtime event for ${table}:`, payload);
-          
-          // Callback funksiyasını çağırmaq
-          if (callback) {
-            callback(payload);
-          }
-          
-          // Dəyişikliklərə əsasən keşi invalidasiya etmək
-          queryClient.invalidateQueries({ queryKey: [table] });
-        });
-      
-      // Filter varsa, əlavə etmək
-      if (filter) {
-        event = channel.on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table,
-          filter: `${filter.column}=eq.${filter.value}`
-        }, (payload) => {
-          logger.debug(`Realtime event for ${table}:${filter.column}=${filter.value}`, payload);
-          
-          // Callback funksiyasını çağırmaq
-          if (callback) {
-            callback(payload);
-          }
-          
-          // Dəyişikliklərə əsasən keşi invalidasiya etmək
-          queryClient.invalidateQueries({ queryKey: [table, filter.value] });
-        });
-      }
-      
-      // Subscribe etmək
-      subscription = event.subscribe((status) => {
-        logger.debug(`Realtime subscription status for ${table}:`, status);
-      });
-      
-    } catch (error) {
-      logger.error(`Error setting up realtime subscription for ${table}:`, error);
-    }
-    
-    // Cleanup
-    return () => {
-      if (subscription) {
-        try {
-          subscription.unsubscribe();
-          logger.debug(`Unsubscribed from ${table}`);
-        } catch (error) {
-          logger.error(`Error unsubscribing from ${table}:`, error);
-        }
-      }
-    };
-  }, [table, filter, callback, queryClient]);
 }

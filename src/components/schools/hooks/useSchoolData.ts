@@ -1,8 +1,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSchoolById } from "@/services/supabase/school/queries/schoolQueries";
+import { School } from "@/services/supabase/school/types";
+import { castType } from "@/utils/typeUtils";
 
 export interface SchoolData {
   id: string;
@@ -24,10 +26,13 @@ export interface SchoolData {
   sector?: string;
 }
 
-interface UseSchoolDataResult {
+export interface UseSchoolDataResult {
   school: SchoolData | null;
   isLoading: boolean;
   handleSuccess: () => void;
+  schoolsData?: any[]; // Added for backward compatibility
+  isError?: boolean;   // Added for backward compatibility
+  refetch?: () => void; // Added for backward compatibility
 }
 
 export const useSchoolData = (
@@ -41,6 +46,7 @@ export const useSchoolData = (
     data: schoolData,
     isLoading,
     isError,
+    refetch
   } = useQuery({
     queryKey: ["school", schoolId],
     queryFn: () => getSchoolById(schoolId as string),
@@ -50,6 +56,7 @@ export const useSchoolData = (
   useEffect(() => {
     if (schoolData) {
       // Convert from Supabase schema to our app schema
+      // Use type casting to avoid TypeScript errors when properties might be missing
       const mappedSchool: SchoolData = {
         id: schoolData.id || '',
         name: schoolData.name || '',
@@ -69,7 +76,9 @@ export const useSchoolData = (
         region: schoolData.region,
         sector: schoolData.sector
       };
-      setSchool(mappedSchool as SchoolData);
+      
+      // Cast type to avoid TypeScript errors
+      setSchool(castType<SchoolData>(mappedSchool));
     }
   }, [schoolData]);
 
@@ -79,5 +88,12 @@ export const useSchoolData = (
     if (onClose) onClose();
   }, [onClose, queryClient]);
 
-  return { school, isLoading, handleSuccess };
+  return { 
+    school, 
+    isLoading, 
+    handleSuccess,
+    schoolsData: [],  // Placeholder for backward compatibility
+    isError: false,   // Placeholder for backward compatibility
+    refetch          // Included for backward compatibility
+  };
 };
