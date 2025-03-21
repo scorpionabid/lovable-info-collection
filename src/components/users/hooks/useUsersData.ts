@@ -1,85 +1,118 @@
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { User, UserFilter } from '@/services/userService/types';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import userService from '@/services/userService';
+import type { User } from '@/supabase/types';
 
-export const useUsersData = (initialFilters: UserFilter = {}) => {
-  const [filters, setFilters] = useState<UserFilter>(initialFilters);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
-  const [search, setSearch] = useState('');
-  const [sortColumn, setSortColumn] = useState<string>('created_at');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const {
-    data: userData,
-    isLoading,
-    isError,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['users', filters, page, perPage, search, sortColumn, sortOrder],
+export const useUsersData = () => {
+  const queryClient = useQueryClient();
+  const [searchText, setSearchText] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
+  const [schoolFilter, setSchoolFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'blocked' | 'all'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  
+  // Filters object for API
+  const filters = {
+    search: searchText,
+    role_id: roleFilter,
+    region_id: regionFilter,
+    sector_id: sectorFilter,
+    school_id: schoolFilter,
+    status: statusFilter,
+    page: currentPage,
+    limit: itemsPerPage
+  };
+  
+  // Fetch users
+  const { data: users = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['users', filters],
     queryFn: async () => {
-      // Create proper filter object for the API
-      const apiFilters: UserFilter = {
-        ...filters,
-        page,
-        pageSize: perPage,
-        search,
-        sortField: sortColumn || 'created_at',
-        sortOrder: sortOrder || 'desc'
-      };
+      // Fetch data
+      const data = await userService.getUsers(filters);
       
-      return userService.getUsers(apiFilters);
+      // Update total count - assuming we get count from a header or metadata
+      // Gerçek kullanımda doğru API modelini kullanmanız gerekir
+      setTotalItems(Array.isArray(data) ? data.length : 0);
+      
+      return data;
     }
   });
-
-  // Clear selected rows when data changes
-  useEffect(() => {
-    setSelectedRows([]);
-  }, [userData]);
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1); // Reset to first page when searching
-  };
-
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      // Toggle sort direction
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new sort column and default to ascending
-      setSortColumn(column);
-      setSortOrder('asc');
+  
+  // Handlers for bulk operations
+  const resetFilters = useCallback(() => {
+    setSearchText('');
+    setRoleFilter('');
+    setRegionFilter('');
+    setSectorFilter('');
+    setSchoolFilter('');
+    setStatusFilter('all');
+    setCurrentPage(1);
+  }, []);
+  
+  const blockUserMutation = useMutation({
+    mutationFn: userService.blockUser,
+    onSuccess: () => {
+      toast.success('İstifadəçi bloklandı');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
     }
-    setPage(1); // Reset to first page when sorting
-  };
-
-  const users = userData?.data || [];
-  const totalCount = userData?.count || 0;
+  });
+  
+  const activateUserMutation = useMutation({
+    mutationFn: userService.activateUser,
+    onSuccess: () => {
+      toast.success('İstifadəçi aktivləşdirildi');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
+  
+  const deleteUserMutation = useMutation({
+    mutationFn: userService.deleteUser,
+    onSuccess: () => {
+      toast.success('İstifadəçi silindi');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      toast.error(`Xəta: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+    }
+  });
   
   return {
     users,
-    totalCount,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
     isLoading,
     isError,
-    error,
-    filters,
-    setFilters,
-    selectedRows,
-    setSelectedRows,
-    refetch,
-    page,
-    perPage,
-    search,
-    sortColumn,
-    sortOrder,
-    handleSearchChange,
-    handleSort,
-    setPage,
-    setPerPage,
+    searchText,
+    setSearchText,
+    roleFilter,
+    setRoleFilter,
+    regionFilter,
+    setRegionFilter,
+    sectorFilter,
+    setSectorFilter,
+    schoolFilter,
+    setSchoolFilter,
+    statusFilter,
+    setStatusFilter,
+    resetFilters,
+    blockUser: blockUserMutation.mutate,
+    activateUser: activateUserMutation.mutate,
+    deleteUser: deleteUserMutation.mutate,
+    refetch
   };
 };

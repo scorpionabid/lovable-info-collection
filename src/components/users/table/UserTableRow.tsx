@@ -1,6 +1,6 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { User } from "@/services/userService";
+import { User } from "@/supabase/types";
 import { UserIdentity } from "./components/UserIdentity";
 import { UserRoleBadge } from "./components/UserRoleBadge";
 import { UserStatusBadge } from "./components/UserStatusBadge";

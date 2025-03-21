@@ -1,66 +1,64 @@
 
-import { useCallback, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getRegions, RegionWithStats, FilterParams } from '@/services/supabase/region/getRegions';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getRegions } from '@/supabase/services/regions';
+import type { RegionWithStats, FilterParams } from '@/supabase/types';
 
-export const useRegions = (initialFilters: FilterParams = {}) => {
-  const [filters, setFilters] = useState<FilterParams>(initialFilters);
-  const [sortField, setSortField] = useState<string>('name');
+export const useRegions = (initialFilters?: FilterParams) => {
+  const queryClient = useQueryClient();
+  const [filters, setFilters] = useState<FilterParams>(initialFilters || {});
+  const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
 
-  const { data: regions, isLoading, isError, refetch } = useQuery({
-    queryKey: ['regions', filters, sortField, sortDirection, page, pageSize],
-    queryFn: () => getRegions(
-      filters,
-      { column: sortField, direction: sortDirection },
-      page,
-      pageSize
-    ),
-    keepPreviousData: true,
+  const {
+    data: regions = [],
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
+    queryKey: ['regions', filters, sortField, sortDirection],
+    queryFn: () => getRegions(filters, { field: sortField || 'name', direction: sortDirection }),
+    refetchOnWindowFocus: false
   });
 
-  // Ensure every region has a description property (fix for TS error)
-  const regionsWithDescription = (regions || []).map(region => ({
-    ...region,
-    description: region.description || '',
-    studentCount: region.studentCount || 0,
-    teacherCount: region.teacherCount || 0
-  }));
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
-  const handleFilterChange = useCallback((newFilters: FilterParams) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-    setPage(1); // Reset to first page on filter change
-  }, []);
+  const handleFilterChange = <K extends keyof FilterParams>(key: K, value: FilterParams[K]) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
-  const handleSortChange = useCallback((field: string) => {
-    setSortDirection(prev => (field === sortField && prev === 'asc' ? 'desc' : 'asc'));
-    setSortField(field);
-  }, [sortField]);
+  const resetFilters = () => {
+    setFilters({});
+    setSortField(null);
+    setSortDirection('asc');
+  };
 
-  const handlePageChange = useCallback((newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const handlePageSizeChange = useCallback((newSize: number) => {
-    setPageSize(newSize);
-    setPage(1); // Reset to first page when changing page size
-  }, []);
+  useEffect(() => {
+    if (initialFilters && JSON.stringify(initialFilters) !== JSON.stringify(filters)) {
+      setFilters(initialFilters);
+    }
+  }, [initialFilters]);
 
   return {
-    regions: regionsWithDescription,
+    regions,
     isLoading,
     isError,
     filters,
     sortField,
     sortDirection,
-    page,
-    pageSize,
+    handleSort,
     handleFilterChange,
-    handleSortChange,
-    handlePageChange,
-    handlePageSizeChange,
+    resetFilters,
     refetch,
+    invalidateCache: () => queryClient.invalidateQueries({ queryKey: ['regions'] })
   };
 };
+
+export const useRegionsData = useRegions;

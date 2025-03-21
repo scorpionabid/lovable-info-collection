@@ -4,8 +4,14 @@
 import { useSchoolTypes as useSchoolTypesNew } from '@/supabase/hooks/useSchools';
 import { SchoolType } from '@/supabase/types';
 
-// Default export məktəb tiplərini almaq üçün hook
-export default function useSchoolTypes() {
+// Tip definisiyası
+export type { SchoolType };
+
+// Public API
+export const useSchoolTypes = useSchoolTypesNew;
+
+// Default export məktəb tiplərini almaq üçün hook (geriyə uyğunluq üçün)
+export default function useSchoolTypesDefault() {
   const { schoolTypes, isLoading, error } = useSchoolTypesNew();
   
   return {
@@ -14,7 +20,3 @@ export default function useSchoolTypes() {
     error
   };
 }
-
-// Tip definisiyası
-export type { SchoolType };
-export const useSchoolTypes = useSchoolTypesNew;

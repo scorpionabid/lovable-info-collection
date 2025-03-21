@@ -1,229 +1,130 @@
 
-/**
- * Mərkəzləşdirilmiş Supabase müştərisi
- * İnfoLine tətbiqi üçün əsas Supabase inteqrasiyası
- */
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIG, TABLES } from './config';
-import { Database } from './types';
-import { logger } from '@/utils/logger';
+import { Database } from '@/integrations/supabase/types';
 
-// Mərkəzi Supabase müştərisi
-export const supabase = createClient<Database>(
-  SUPABASE_URL, 
-  SUPABASE_ANON_KEY, 
-  SUPABASE_CONFIG
-);
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Auth hadisələrini izləmək 
-supabase.auth.onAuthStateChange((event, session) => {
-  logger.info('Auth hadisəsi baş verdi:', { event, sessionMövcuddur: !!session });
+// Keş konfiqurasiyası
+export const CACHE_CONFIG = {
+  CACHE_EXPIRY_MS: 5 * 60 * 1000, // 5 dəqiqə
+  CACHE_ENABLED: true
+};
+
+// Offline mode kontrolu
+const LOCAL_STORAGE_KEYS = {
+  OFFLINE_MODE: 'supabase_offline_mode'
+};
+
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  }
 });
 
-// Supabase xətalarını handle etmək
-export const handleSupabaseError = (error: any, context: string = 'Supabase əməliyyatı'): Error => {
-  const formattedError = new Error(
-    error?.message || error?.error_description || 'Bilinməyən Supabase xətası'
-  );
-  
-  console.error(`${context} xətası:`, error);
-  return formattedError;
-};
+export default supabase;
 
-// Cari istifadəçi ilə əlaqəli funksiyalar
-export const getCurrentUser = async () => {
-  try {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    return data.user;
-  } catch (error) {
-    logger.error('İstifadəçi məlumatları alınarkən xəta:', error);
-    return null;
-  }
-};
-
-export const getCurrentUserId = async (): Promise<string | null> => {
-  const user = await getCurrentUser();
-  return user?.id || null;
-};
-
-// Bağlantını yoxlamaq
-export const checkConnection = async (): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('regions')
-      .select('id')
-      .limit(1);
-    
-    return !error;
-  } catch (err) {
-    logger.error('Supabase bağlantı xətası:', err);
-    return false;
-  }
-};
-
-// Təkrar cəhd mexanizmi
+// Repeated operations with retry logic
 export const withRetry = async <T>(
-  queryFn: () => Promise<T>, 
-  maxRetries = 2
+  operation: () => Promise<T>,
+  retries = 3,
+  delay = 1000,
+  backoff = 2
 ): Promise<T> => {
-  let retries = 0;
-  let lastError: unknown;
-  
-  while (retries <= maxRetries) {
-    try {
-      return await queryFn();
-    } catch (error) {
-      lastError = error;
-      
-      if (retries === maxRetries) {
-        break;
-      }
-      
-      retries++;
-      const delay = 1000 * Math.pow(1.5, retries - 1);
-      await new Promise(resolve => setTimeout(resolve, delay));
+  try {
+    return await operation();
+  } catch (error) {
+    if (retries <= 0) {
+      console.error('Retry limit exceeded', error);
+      throw error;
     }
+
+    console.warn(`Operation failed, retrying in ${delay}ms... (${retries} retries left)`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    return withRetry(operation, retries - 1, delay * backoff, backoff);
   }
-  
-  throw lastError;
 };
 
-// Offline rejim yoxlaması
+// Check if we are in offline mode
 export const isOfflineMode = (): boolean => {
-  return typeof navigator !== 'undefined' && !navigator.onLine;
+  if (typeof window === 'undefined') return false;
+  
+  const storedValue = localStorage.getItem(LOCAL_STORAGE_KEYS.OFFLINE_MODE);
+  return storedValue === 'true';
 };
 
-// Keş funksiyaları
-export function getCachedResult<T>(key: string): T | null {
+// Set offline mode
+export const setOfflineMode = (isOffline: boolean): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(LOCAL_STORAGE_KEYS.OFFLINE_MODE, isOffline ? 'true' : 'false');
+};
+
+// Cache implementation
+type CacheItem<T> = {
+  data: T;
+  timestamp: number;
+};
+
+const cache = new Map<string, CacheItem<any>>();
+
+export const queryWithCache = async <T>(
+  key: string,
+  queryFn: () => Promise<T>,
+  options: {
+    enabled?: boolean;
+    staleTime?: number;
+    forceRefresh?: boolean;
+  } = {}
+): Promise<T> => {
+  const {
+    enabled = CACHE_CONFIG.CACHE_ENABLED,
+    staleTime = CACHE_CONFIG.CACHE_EXPIRY_MS,
+    forceRefresh = false
+  } = options;
+
+  // Skip cache in certain conditions
+  if (!enabled || forceRefresh) {
+    const data = await queryFn();
+    if (enabled) {
+      cache.set(key, { data, timestamp: Date.now() });
+    }
+    return data;
+  }
+
+  // Check if we have cached data
+  const cachedItem = cache.get(key);
+  const now = Date.now();
+
+  if (cachedItem && (now - cachedItem.timestamp < staleTime)) {
+    console.log(`[Cache] Using cached data for ${key}`);
+    return cachedItem.data;
+  }
+
+  // Get fresh data
   try {
-    const cacheKey = `infoline_${key}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    
-    if (!cachedData) return null;
-    
-    const { value, expiry } = JSON.parse(cachedData);
-    
-    if (expiry && expiry < Date.now()) {
-      // Keş vaxtı bitib, sil və null qaytar
-      localStorage.removeItem(cacheKey);
-      return null;
-    }
-    
-    return value as T;
+    const data = await queryFn();
+    cache.set(key, { data, timestamp: now });
+    return data;
   } catch (error) {
-    logger.error('Keşdən oxuma xətası:', error);
-    return null;
-  }
-}
-
-// Nəticəni keşə saxlamaq
-export function setCachedResult<T>(key: string, value: T, ttl: number): void {
-  try {
-    const cacheKey = `infoline_${key}`;
-    const data = {
-      value,
-      expiry: Date.now() + ttl
-    };
-    
-    localStorage.setItem(cacheKey, JSON.stringify(data));
-  } catch (error) {
-    logger.error('Keşə yazmada xəta:', error);
-  }
-}
-
-// Keşlə sorğu
-export async function queryWithCache<T>(
-  cacheKey: string,
-  queryFn: () => Promise<{ data: T, error: any }>,
-  ttl: number = 5 * 60 * 1000 // 5 dəqiqə default
-): Promise<T> {
-  // Keş aktiv deyilsə, birbaşa sorğu et
-  if (!CACHE_CONFIG.enabled) {
-    const { data, error } = await queryFn();
-    if (error) throw error;
-    return data as T;
-  }
-
-  // Offline rejim yoxlaması
-  if (isOfflineMode()) {
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult) {
-      logger.info(`Offline rejim: ${cacheKey} üçün keşdən istifadə edilir`);
-      return cachedResult;
+    // If we have stale data, return it on error
+    if (cachedItem) {
+      console.warn(`[Cache] Error fetching fresh data, using stale cache for ${key}`, error);
+      return cachedItem.data;
     }
-    throw new Error('Offline rejim: Keşdə məlumat tapılmadı');
-  }
-
-  try {
-    // Keşdən oxuma cəhdi
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult) {
-      logger.debug(`Keş tapıldı: ${cacheKey}`);
-      return cachedResult;
-    }
-
-    // Keşdə yoxdursa, sorğu yerinə yetirilir
-    logger.debug(`Keş tapılmadı: ${cacheKey}, sorğu edilir...`);
-    const { data, error } = await queryFn();
-    if (error) throw error;
-
-    // Nəticəni keşə saxla
-    setCachedResult(cacheKey, data, ttl);
-    return data as T;
-  } catch (error) {
-    logger.error(`${cacheKey} üçün məlumatlar alınarkən xəta:`, error);
-    
-    // Xəta halında belə keşdən oxuma cəhdi
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult) {
-      logger.info(`Xəta sonrası ${cacheKey} üçün köhnə keşdən istifadə edilir`);
-      return cachedResult;
-    }
-    
     throw error;
   }
-}
+};
 
-// Keşi təmizləmək
-export const clearCache = (): void => {
-  if (typeof window !== 'undefined') {
-    const keys = Object.keys(localStorage).filter(key => 
-      key.startsWith(CACHE_CONFIG.storagePrefix)
-    );
-    
-    keys.forEach(key => localStorage.removeItem(key));
-    logger.info('Keş təmizləndi');
+// Clear all or specific cache items
+export const clearCache = (key?: string): void => {
+  if (key) {
+    cache.delete(key);
+    console.log(`[Cache] Cleared cache for ${key}`);
+  } else {
+    cache.clear();
+    console.log('[Cache] Cleared all cache');
   }
 };
-
-// Filterləmə, səhifələmə və sıralama üçün köməkçi funksiyalar
-export const buildPaginatedQuery = (query: any, page: number, pageSize: number) => {
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  return query.range(from, to);
-};
-
-export const buildSortedQuery = (query: any, field: string, ascending: boolean = true) => {
-  return query.order(field, { ascending });
-};
-
-export const buildFilteredQuery = (query: any, filters: Record<string, any>) => {
-  let result = query;
-  
-  for (const [key, value] of Object.entries(filters)) {
-    if (value === undefined || value === null || value === '') {
-      continue;
-    }
-    
-    if (typeof value === 'string' && value.startsWith('%') && value.endsWith('%')) {
-      result = result.ilike(key, value);
-    } else {
-      result = result.eq(key, value);
-    }
-  }
-  
-  return result;
-};
-
-export default supabase;

@@ -1,122 +1,84 @@
 
-import { UserRole } from '@/hooks/types/authTypes';
-import { User } from '@/services/userService';
+import { User } from "@/supabase/types";
+import { UserRole } from "@/hooks/types/authTypes";
 
-/**
- * Normalizes a role string to a valid UserRole type
- */
+// Tip çevirmə funksiyası
 export const getNormalizedRole = (role?: string): UserRole => {
-  if (!role || typeof role !== 'string') {
-    console.log('No role provided, defaulting to super-admin');
-    return "super-admin";
-  }
+  if (!role) return "school-admin"; // Default
+
+  const normalizedRole = role.toLowerCase().replace("_", "-");
   
-  const normalizedRole = role.toLowerCase().trim();
-  
-  switch(normalizedRole) {
-    case 'super-admin':
-    case 'superadmin':
-    case 'super_admin':
-      return 'super-admin';
-    case 'region-admin':
-    case 'regionadmin':
-    case 'region_admin':
-      return 'region-admin';
-    case 'sector-admin':
-    case 'sectoradmin':
-    case 'sector_admin':
-      return 'sector-admin';
-    case 'school-admin':
-    case 'schooladmin':
-    case 'school_admin':
-      return 'school-admin';
+  switch (normalizedRole) {
+    case "super-admin":
+    case "superadmin":
+      return "super-admin";
+    case "region-admin":
+    case "regionadmin":
+      return "region-admin";
+    case "sector-admin":
+    case "sectoradmin":
+      return "sector-admin";
+    case "school-admin":
+    case "schooladmin":
+      return "school-admin";
     default:
-      console.warn(`Unknown role format: "${role}", defaulting to super-admin`);
-      return 'super-admin'; // Default to super-admin as fallback
+      return "school-admin";
   }
 };
 
-/**
- * Gets the display name for a user's role
- */
-export const getRoleName = (user: User): string => {
-  // First check if user has roles object with name property
-  if (user.roles && typeof user.roles === 'object' && 'name' in user.roles) {
-    return user.roles.name;
-  }
-  
-  // Check for roleName property (our new property)
-  if ('roleName' in user && user.roleName) {
-    return user.roleName as string;
-  }
-  
-  // Backward compatibility
-  if ('role' in user && user.role) {
-    return user.role as string;
-  }
-  
-  return 'Rol təyin edilməyib';
-};
-
-/**
- * Gets the entity name (region, sector, or school) based on user's role
- */
+// İstifadəçinin aid olduğu təşkilatın adını qaytarır
 export const getEntityName = (user: User): string => {
-  const role = getRoleName(user).toLowerCase();
+  if (!user) return "N/A";
   
-  if (role.includes("super")) {
-    return 'Sistem';
-  } else if (role.includes("region") && user.region_id) {
-    return `Region: ${user.region_id}`;
-  } else if (role.includes("sector") && user.sector_id) {
-    return `Sektor: ${user.sector_id}`;
-  } else if (role.includes("school") && user.school_id) {
-    return `Məktəb: ${user.school_id}`;
+  const roleName = user.roles?.name || "";
+  const normalizedRole = getNormalizedRole(roleName);
+  
+  switch (normalizedRole) {
+    case "super-admin":
+      return "Sistem";
+    case "region-admin":
+      return user.regions?.name || "Təyin edilməyib";
+    case "sector-admin":
+      return user.sectors?.name || "Təyin edilməyib";
+    case "school-admin":
+      return user.schools?.name || "Təyin edilməyib";
+    default:
+      return "Təyin edilməyib";
   }
-  
-  return 'N/A';
 };
 
-/**
- * Sorts users by different criteria
- */
-export const sortUsers = (users: User[], column: string | null, direction: 'asc' | 'desc'): User[] => {
-  if (!column) return users;
+// İstifadəçiləri sıralama
+export const sortUsers = (users: User[], sortField: string | null, sortDirection: 'asc' | 'desc' = 'asc'): User[] => {
+  if (!sortField) return [...users];
   
   return [...users].sort((a, b) => {
-    let valueA, valueB;
+    let valueA: any;
+    let valueB: any;
     
-    switch (column) {
-      case 'name':
-        valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
-        valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
-        break;
-      case 'email':
-        valueA = a.email.toLowerCase();
-        valueB = b.email.toLowerCase();
-        break;
-      case 'role':
-        valueA = getRoleName(a).toLowerCase();
-        valueB = getRoleName(b).toLowerCase();
-        break;
-      case 'entity':
-        valueA = getEntityName(a).toLowerCase();
-        valueB = getEntityName(b).toLowerCase();
-        break;
-      case 'lastActive':
-        valueA = a.last_login || '';
-        valueB = b.last_login || '';
-        break;
-      case 'status':
-        valueA = a.is_active ? 'active' : 'inactive';
-        valueB = b.is_active ? 'active' : 'inactive';
-        break;
-      default:
-        return 0;
+    // Handle specific nested fields
+    if (sortField === 'role') {
+      valueA = a.roles?.name || '';
+      valueB = b.roles?.name || '';
+    } else if (sortField === 'entity') {
+      valueA = getEntityName(a);
+      valueB = getEntityName(b);
+    } else {
+      // Handle regular fields with safe access
+      valueA = a[sortField as keyof User] || '';
+      valueB = b[sortField as keyof User] || '';
     }
     
-    if (valueA < valueB) return direction === 'asc' ? -1 : 1;
-    if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+    // Ensure string comparison for strings
+    if (typeof valueA === 'string') {
+      valueA = valueA.toLowerCase();
+    }
+    if (typeof valueB === 'string') {
+      valueB = valueB.toLowerCase();
+    }
+    
+    // Sort based on direction
+    if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+    if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
 };

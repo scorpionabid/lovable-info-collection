@@ -3,14 +3,17 @@
 // Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
 import { useRegionsDropdown } from '@/supabase/hooks/useRegions';
 
-// Default export regionları almaq üçün hook
-export default function useRegions() {
+// Public API
+export const useRegions = useRegionsDropdown;
+
+// Default export regionları almaq üçün hook (geriyə uyğunluq üçün)
+export default function useRegionsDefault() {
   const { regions, isLoading, error } = useRegionsDropdown();
   
   // Köhnə struktura uyğun data qaytarırıq
   const formattedRegions = regions.map(region => ({
     ...region,
-    description: '' // Əskik sahələri əlavə edirik
+    description: region.description || '' // Əskik sahələri əlavə edirik
   }));
   
   return {
@@ -19,5 +22,3 @@ export default function useRegions() {
     error
   };
 }
-
-export const useRegions = useRegionsDropdown;

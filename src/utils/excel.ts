@@ -1,41 +1,49 @@
 import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { ColumnData } from '@/components/categories/columns/types';
 
-export const generateExcelTemplate = (
-  categoryName: string,
-  columns: ColumnData[]
-): Blob => {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([createColumnHeaders(columns)]);
-  
-  // Apply column validation
-  columns.forEach((column, index) => {
-    const validation = getColumnValidation(column);
-    if (validation) {
-      const cellAddress = XLSX.utils.encode_col(index) + '2:' + XLSX.utils.encode_col(index) + '1000';
-      ws['!dataValidation'] = ws['!dataValidation'] || [];
-      ws['!dataValidation'].push({
-        sqref: cellAddress,
-        ...validation
-      });
-    }
-  });
-  
-  XLSX.utils.book_append_sheet(wb, ws, categoryName);
-  const wopts: XLSX.WritingOptions = { bookType: 'xlsx', type: 'array' };
-  const wbout = XLSX.write(wb, wopts);
-  const blob = new Blob([new Uint8Array(wbout)], { type: 'application/octet-stream' });
-  return blob;
+// XLSX tipləri ilə bağlı xətanı düzəltmək üçün DataValidation tipini əlavə edək
+import { utils, SSF, WorkBook, WorkSheet, writeFile, read } from 'xlsx';
+
+interface DataValidation {
+  type: string;
+  operator?: string;
+  formula1: string;
+  formula2?: string;
+  allowBlank?: boolean;
+  showErrorMessage?: boolean;
+  showInputMessage?: boolean;
+  errorTitle?: string;
+  error?: string;
+  promptTitle?: string;
+  prompt?: string;
+  sqref: string;
+}
+
+// Excel faylını yaratmaq
+export const createExcelFile = (data: any[], sheetName: string, columns: any[]): XLSX.WorkBook => {
+  const wb: XLSX.WorkBook = XLSX.utils.book_new();
+  const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data, { header: columns.map(col => col.key) });
+
+  // Sütun adlarını əlavə et
+  XLSX.utils.sheet_add_aoa(ws, [columns.map(col => col.label)], { origin: "A1" });
+
+  // Sütunların enini təyin et
+  const wscols = columns.map(col => ({ wch: col.width || 20 }));
+  ws['!cols'] = wscols;
+
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  return wb;
 };
 
-export const parseExcelData = (
-  file: File,
-  columns: ColumnData[]
-): Promise<Record<string, any>[]> => {
+// Excel faylını yükləmək
+export const downloadExcelFile = (workbook: XLSX.WorkBook, fileName: string): void => {
+  XLSX.writeFile(workbook, `${fileName}.xlsx`);
+};
+
+// Excel faylını oxumaq
+export const readExcelFile = async (file: File): Promise<any[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e: any) => {
       try {
         const data = new Uint8Array(e.target.result);
@@ -43,102 +51,50 @@ export const parseExcelData = (
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        // Remove header row
-        jsonData.shift();
-        
-        const parsedData = jsonData.map(row => {
-          const item: Record<string, any> = {};
-          columns.forEach((column, index) => {
-            const cellValue = row[index];
-            item[column.name] = transformCellData(cellValue, column.type);
+
+        // Birinci sətir sütun adlarıdır, onları çıxarırıq
+        const headers = jsonData.shift() as string[];
+
+        // Qalan sətirləri obyektlərə çeviririk
+        const result = jsonData.map(row => {
+          const obj: any = {};
+          headers.forEach((header, index) => {
+            obj[header] = row[index];
           });
-          return item;
+          return obj;
         });
-        
-        resolve(parsedData);
+
+        resolve(result);
       } catch (error) {
         reject(error);
       }
     };
-    
+
     reader.onerror = (error) => {
       reject(error);
     };
-    
+
     reader.readAsArrayBuffer(file);
   });
 };
 
-// Helper function to transform Excel cell data to proper data type
-export const transformCellData = (value: any, columnType: string): any => {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  
-  switch (columnType) {
-    case 'number':
-      return Number(value);
-    case 'date':
-      return new Date(value);
-    case 'boolean':
-      return value.toLowerCase() === 'true';
-    default:
-      return String(value);
-  }
-};
+// Excel faylından string dəyərlərini almaq
+export const getStringValuesFromExcelFile = async (file: File, columnKey: string): Promise<string[]> => {
+  try {
+    const data = await readExcelFile(file);
+    
+    // Məlumatı yoxla
+    if (!Array.isArray(data)) {
+      console.error("Excel faylından məlumat alınmadı:", data);
+      return [];
+    }
 
-export const exportDataToExcel = (
-  data: Record<string, any>[],
-  columns: ColumnData[],
-  fileName: string
-): void => {
-  const wb = XLSX.utils.book_new();
-  const header = createColumnHeaders(columns);
-  const dataRows = data.map(item => columns.map(column => item[column.name]));
-  
-  // Add header row to data rows
-  const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
-  XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  
-  const wopts: XLSX.WritingOptions = { bookType: 'xlsx', type: 'array' };
-  const wbout = XLSX.write(wb, wopts);
-  const blob = new Blob([new Uint8Array(wbout)], { type: 'application/octet-stream' });
-  saveAs(blob, `${fileName}.xlsx`);
-};
+    // Sütun dəyərlərini çıxar
+    const columnValues = data.map(item => item[columnKey]).filter(Boolean);
 
-// Helper to create Excel column headers from column data
-export const createColumnHeaders = (columns: ColumnData[]): string[] => {
-  return columns.map(column => column.name);
-};
-
-// Helper to determine Excel column types and validation
-export const getColumnValidation = (column: ColumnData): XLSX.DataValidation | undefined => {
-  if (column.type === 'select' && column.options && column.options.length > 0) {
-    return {
-      type: 'list',
-      formula1: `"${column.options.join(',')}"`,
-      showDropDown: true
-    };
+    return columnValues as string[];
+  } catch (error) {
+    console.error("Excel faylından string dəyərlərini almaq xətası:", error);
+    return [];
   }
-  
-  if (column.type === 'date') {
-    return {
-      type: 'date',
-      operator: 'between',
-      formula1: '1900-01-01',
-      formula2: '2100-12-31'
-    };
-  }
-  
-  if (column.type === 'number') {
-    return {
-      type: 'decimal',
-      operator: 'between',
-      formula1: '-1000000',
-      formula2: '1000000'
-    };
-  }
-  
-  return undefined;
 };

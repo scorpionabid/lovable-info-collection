@@ -1,11 +1,14 @@
 
 // İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
 // Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
-import { useSectorsByRegion } from '@/supabase/hooks/useSectors';
+import { useSectorsDropdown } from '@/supabase/hooks/useSectors';
 
-// Default export sektorları region id ilə almaq üçün hook
-export default function useSectors(regionId: string) {
-  const { sectors, isLoading, error } = useSectorsByRegion(regionId);
+// Public API
+export const useSectors = useSectorsDropdown;
+
+// Default export sektorları almaq üçün hook (geriyə uyğunluq üçün)
+export default function useSectorsDefault() {
+  const { sectors, isLoading, error } = useSectorsDropdown();
   
   // Köhnə struktura uyğun data qaytarırıq
   const formattedSectors = sectors.map(sector => ({
@@ -19,5 +22,3 @@ export default function useSectors(regionId: string) {
     error
   };
 }
-
-export const useSectors = useSectorsByRegion;

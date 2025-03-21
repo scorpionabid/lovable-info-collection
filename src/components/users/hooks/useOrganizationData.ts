@@ -1,49 +1,70 @@
 
-import { useQuery } from "@tanstack/react-query";
-import userService from "@/services/userService";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import * as regionService from '@/services/regionService';
+import * as sectorService from '@/services/sectorService';
+import * as schoolService from '@/services/schoolService';
+import * as userService from '@/services/userService';
 
-export const useOrganizationData = (
-  currentUserId?: string,
-  currentUserRole?: string,
-  selectedRegion: string = "",
-  selectedSector: string = ""
-) => {
-  // Fetch data for dropdowns
-  const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
+export const useOrganizationData = (activeStep = 0) => {
+  const [regionId, setRegionId] = useState<string>('');
+  const [sectorId, setSectorId] = useState<string>('');
+  const [schoolId, setSchoolId] = useState<string>('');
+  
+  // Get roles
+  const rolesQuery = useQuery({
     queryKey: ['roles'],
-    queryFn: () => userService.getRoles(),
-  });
-
-  const { data: regions = [], isLoading: isLoadingRegions } = useQuery({
-    queryKey: ['regions', currentUserId, currentUserRole],
-    queryFn: () => userService.getRegions(currentUserId, currentUserRole),
+    queryFn: userService.getRoles,
+    enabled: activeStep === 0
   });
   
-  const { data: sectors = [], isLoading: isLoadingSectors } = useQuery({
-    queryKey: ['sectors', selectedRegion, currentUserId, currentUserRole],
-    queryFn: () => userService.getSectors(selectedRegion, currentUserId, currentUserRole),
-    enabled: !!selectedRegion || !!currentUserId,
+  // Get regions
+  const regionsQuery = useQuery({
+    queryKey: ['regions'],
+    queryFn: regionService.getRegionsForDropdown,
+    enabled: activeStep === 1
   });
-
-  const { data: schools = [], isLoading: isLoadingSchools } = useQuery({
-    queryKey: ['schools', selectedSector, currentUserId, currentUserRole],
-    queryFn: () => userService.getSchools(selectedSector, currentUserId, currentUserRole),
-    enabled: !!selectedSector || !!currentUserId,
+  
+  // Get sectors based on selected region
+  const sectorsQuery = useQuery({
+    queryKey: ['sectors', regionId],
+    queryFn: () => regionId ? sectorService.getSectorsByRegionId(regionId) : [],
+    enabled: Boolean(regionId) && activeStep === 1
   });
-
-  const isLoading = isLoadingRoles || isLoadingRegions || isLoadingSectors || isLoadingSchools;
-
-  // Find role details
-  const getRoleById = (roleId: string) => {
-    return roles.find(role => role.id === roleId);
-  };
-
+  
+  // Get schools based on selected sector
+  const schoolsQuery = useQuery({
+    queryKey: ['schools', sectorId],
+    queryFn: () => sectorId ? schoolService.getSchoolsBySectorId(sectorId) : [],
+    enabled: Boolean(sectorId) && activeStep === 1
+  });
+  
+  // Reset sector when region changes
+  useEffect(() => {
+    if (regionId) {
+      setSectorId('');
+      setSchoolId('');
+    }
+  }, [regionId]);
+  
+  // Reset school when sector changes
+  useEffect(() => {
+    if (sectorId) {
+      setSchoolId('');
+    }
+  }, [sectorId]);
+  
   return {
-    roles,
-    regions,
-    sectors,
-    schools,
-    isLoading,
-    getRoleById
+    roles: rolesQuery.data || [],
+    regions: regionsQuery.data || [],
+    sectors: sectorsQuery.data || [],
+    schools: schoolsQuery.data || [],
+    isLoading: rolesQuery.isLoading || regionsQuery.isLoading || sectorsQuery.isLoading || schoolsQuery.isLoading,
+    regionId,
+    setRegionId,
+    sectorId,
+    setSectorId,
+    schoolId,
+    setSchoolId
   };
 };
