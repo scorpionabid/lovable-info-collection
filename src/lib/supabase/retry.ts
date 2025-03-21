@@ -1,113 +1,141 @@
 
 /**
- * Təkrar cəhd mexanizmi
- * Şəbəkə xətaları və keçici problemlər üçün təkrar cəhd etməyi təmin edir
+ * Təkrar sorğu mexanizmi
  */
-import { isNetworkError } from './cache';
 import { logger } from '@/utils/logger';
 
 interface RetryOptions {
-  maxRetries: number;
-  initialDelay: number;
-  maxDelay: number;
-  factor: number;
+  maxRetries?: number;
+  retryDelay?: number;
+  retryBackoff?: boolean;
+  shouldRetry?: (error: any) => boolean;
 }
-
-interface RetryFunction {
-  <T>(
-    fn: () => Promise<T>, 
-    options?: Partial<RetryOptions>,
-    retryCondition?: (error: any) => boolean
-  ): Promise<T>;
-}
-
-const DEFAULT_OPTIONS: RetryOptions = {
-  maxRetries: 3,
-  initialDelay: 300,
-  maxDelay: 5000,
-  factor: 2
-};
 
 /**
- * Xətalara görə təkrar cəhd etmək üçün əsas funksiya
+ * Sorğunu müəyyən sayda təkrar etmək üçün universal funksiya
+ * @param fn Yerinə yetirilən funksiya
+ * @param options Təkrar sorğu parametrləri
  */
-export const withRetry: RetryFunction = async (
-  fn,
-  options = {},
-  retryCondition = isNetworkError
-) => {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  const { maxRetries, initialDelay, maxDelay, factor } = opts;
-  
-  let attempt = 0;
-  let delay = initialDelay;
-  
-  while (true) {
+export const retry = async <T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> => {
+  const {
+    maxRetries = 3,
+    retryDelay = 1000,
+    retryBackoff = true,
+    shouldRetry = () => true
+  } = options;
+
+  let attempts = 0;
+  let lastError: any;
+
+  while (attempts <= maxRetries) {
     try {
       return await fn();
     } catch (error) {
-      attempt++;
-      
-      // Maksimum cəhd sayını yoxlayın
-      if (attempt >= maxRetries) {
-        logger.warn(`Maksimum cəhd sayına (${maxRetries}) çatılıb. Xəta: ${error}`);
-        throw error;
+      lastError = error;
+      attempts++;
+
+      // Maximum attempts reached, break the loop
+      if (attempts > maxRetries) {
+        break;
       }
-      
-      // Təkrar cəhd etmək üçün şərti yoxlayın
-      if (!retryCondition(error)) {
-        logger.warn(`Təkrar cəhd şərti qarşılanmadı. Xəta: ${error}`);
-        throw error;
+
+      // Check if the error should trigger a retry
+      if (!shouldRetry(error)) {
+        logger.warn(`Retry aborted due to shouldRetry condition for error: ${error}`);
+        break;
       }
-      
-      // Növbəti cəhd üçün gözləmə müddətini hesablayın
-      delay = Math.min(delay * factor, maxDelay);
-      
-      // Gündəliyə qeyd edin
-      logger.info(`Təkrar cəhd edilir (${attempt}/${maxRetries}) ${delay}ms sonra. Xəta: ${error}`);
-      
-      // Növbəti cəhd üçün gözləyin
+
+      // Calculate delay for next attempt
+      const delay = retryBackoff
+        ? retryDelay * Math.pow(1.5, attempts - 1) // Exponential backoff
+        : retryDelay;
+
+      logger.info(`Retry ${attempts}/${maxRetries} will be executed in ${delay}ms`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
+
+  throw lastError;
 };
 
 /**
- * Şəbəkə və keçici server xətaları üçün təkrar cəhd
+ * Network errors için retry
  */
-export const withNetworkRetry = <T>(fn: () => Promise<T>, options = {}): Promise<T> => {
-  return withRetry(fn, {
-    maxRetries: 3,
-    initialDelay: 500,
-    ...options,
-    retryCondition: isNetworkError
-  });
-};
-
-/**
- * Bütün xətalar üçün təkrar cəhd (diqqətlə istifadə edin!)
- */
-export const withFullRetry = <T>(fn: () => Promise<T>, options = {}): Promise<T> => {
-  return withRetry(fn, {
-    maxRetries: 2,
-    initialDelay: 300,
-    ...options,
-    retryCondition: () => true
-  });
-};
-
-/**
- * Xüsusi təkrar cəhd şərti ilə təkrar cəhd
- */
-export const withCustomRetry = <T>(
-  fn: () => Promise<T>, 
-  retryCondition: (error: any) => boolean,
-  options = {}
+export const retryNetworkErrors = async <T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
 ): Promise<T> => {
-  return withRetry(fn, {
+  const shouldRetryNetworkError = (error: any) => {
+    if (!error) return false;
+
+    // Network error matchers
+    const isNetworkError = 
+      (error.message && typeof error.message === 'string' && (
+        error.message.includes('network') ||
+        error.message.includes('fetch') ||
+        error.message.includes('timeout') ||
+        error.message.includes('connection')
+      )) ||
+      (error.code && [
+        'PGRST301',
+        'ECONNREFUSED',
+        'ETIMEDOUT',
+        'ERR_NETWORK'
+      ].includes(error.code));
+
+    return isNetworkError;
+  };
+
+  return retry(fn, {
     maxRetries: 3,
-    initialDelay: 400,
-    ...options,
-    retryCondition
+    retryDelay: 1000,
+    retryBackoff: true,
+    shouldRetry: shouldRetryNetworkError,
+    ...options
+  });
+};
+
+/**
+ * 5XX errors için retry
+ */
+export const retry5xxErrors = async <T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> => {
+  const shouldRetry5xx = (error: any) => {
+    if (!error) return false;
+
+    // HTTP 5XX errors
+    const is5xxError = 
+      (error.status && error.status >= 500 && error.status < 600) ||
+      (error.statusCode && error.statusCode >= 500 && error.statusCode < 600);
+
+    return is5xxError;
+  };
+
+  return retry(fn, {
+    maxRetries: 3,
+    retryDelay: 2000,
+    retryBackoff: true,
+    shouldRetry: shouldRetry5xx,
+    ...options
+  });
+};
+
+/**
+ * Generic retry wrapper function compatible with existing code
+ */
+export const withRetry = async <T>(
+  queryFn: () => Promise<T>, 
+  maxRetries = 2,
+  retryDelay = 1000,
+): Promise<T> => {
+  return retry(queryFn, {
+    maxRetries,
+    retryDelay,
+    retryBackoff: true
   });
 };

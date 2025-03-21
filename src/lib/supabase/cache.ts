@@ -1,260 +1,172 @@
 
 /**
- * Supabase sorğularını keşləmək üçün təchizat
+ * Supabase keşləmə funksionallığı üçün köməkçi funksiyalar
  */
-import { CACHE_CONFIG as config } from './config';
+import { logger } from '@/utils/logger';
+import { CACHE_CONFIG } from './config';
 
-// Keş sadə obyekt
-type CacheEntry<T> = {
-  data: T;
+// Keş strukturu
+interface CacheEntry<T> {
   timestamp: number;
+  data: T;
   expiresAt: number;
-};
-
-const cache: Record<string, CacheEntry<any>> = {};
-
-// Offline rejim məntiqi
-let isOffline = false;
-
-// Şəbəkə vəziyyətini izləmək
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    isOffline = false;
-    console.log('Şəbəkə bağlantısı bərpa edildi');
-  });
-  
-  window.addEventListener('offline', () => {
-    isOffline = true;
-    console.log('Şəbəkə bağlantısı itirildi, offline rejimə keçildi');
-  });
-  
-  // İlkin şəbəkə vəziyyətini yoxla
-  isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 }
 
-/**
- * Offline rejim vəziyyətini əldə etmək
- */
+// Keş xəritəsi - memory cache
+const cache = new Map<string, CacheEntry<any>>();
+
+// Offline rejimi yoxlama
 export const isOfflineMode = (): boolean => {
-  return isOffline;
+  return typeof navigator !== 'undefined' && !navigator.onLine;
 };
 
-/**
- * Şəbəkə xətası olub-olmadığını yoxla
- */
+// Şəbəkə xətası olub-olmadığını yoxla
 export const isNetworkError = (error: any): boolean => {
   if (!error) return false;
   
-  // TypeError və DOMException xətaları adətən şəbəkə xətalarıdır
-  if (error instanceof TypeError || error instanceof DOMException) {
-    return true;
+  // Xəta mesajında şəbəkə ilə əlaqəli açar sözlər
+  const networkErrorKeywords = [
+    'network', 'fetch', 'timeout', 'abort', 'connection', 
+    'offline', 'internet', 'ECONNREFUSED', 'ETIMEDOUT'
+  ];
+  
+  // Xəta mesajında şəbəkə açar sözlərini axtar
+  if (error.message && typeof error.message === 'string') {
+    return networkErrorKeywords.some(keyword => 
+      error.message.toLowerCase().includes(keyword.toLowerCase())
+    );
   }
   
-  // Xəta mesajına görə şəbəkə xətasını təyin etmək
-  if (error.message) {
-    const netErrorPhrases = ['network', 'internet', 'fetch', 'connection', 'offline', 'timeout'];
-    return netErrorPhrases.some(phrase => error.message.toLowerCase().includes(phrase));
-  }
-  
-  // Error koduna görə şəbəkə xətasını təyin etmək
+  // Xəta kodunda şəbəkə ilə əlaqəli kodları yoxla
   if (error.code) {
-    const netErrorCodes = ['NETWORK_ERROR', 'ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET'];
-    return netErrorCodes.includes(error.code);
-  }
-  
-  // HTTP status 5xx server xətalarıdır
-  // HTTP status 4xx (özellikle 408, 429) şəbəkə ilə əlaqəli ola bilər
-  if (error.status) {
-    return error.status >= 500 || error.status === 408 || error.status === 429;
+    return ['PGRST301', 'ECONNREFUSED', 'ETIMEDOUT'].includes(error.code);
   }
   
   return false;
 };
 
 /**
- * Keşi təmizləmək
+ * Keşi təmizləmək üçün funksiya
  */
 export const clearCache = (): void => {
-  Object.keys(cache).forEach(key => {
-    delete cache[key];
-  });
+  cache.clear();
+  logger.info(`Keş təmizləndi, ${cache.size} element silinmişdir`);
   
-  // Saxlama mühitindən keşi təmizləmək
-  if (config.persistToLocalStorage && typeof localStorage !== 'undefined') {
-    // Yalnız infoline_ prefiksli elementləri silmək
-    Object.keys(localStorage)
-      .filter(key => key.startsWith(config.storagePrefix))
-      .forEach(key => localStorage.removeItem(key));
-  }
-  
-  console.log('Keş təmizləndi');
-};
-
-/**
- * Keş açarı yaratmaq
- */
-const createCacheKey = (key: string): string => {
-  return `${config.storagePrefix}${key}`;
-};
-
-/**
- * Keşdən dəyər əldə etmək
- */
-const getFromCache = <T>(key: string): T | null => {
-  const cacheKey = createCacheKey(key);
-  const entry = cache[cacheKey];
-  
-  // Keşdə yoxdursa
-  if (!entry) {
-    // Local Storage'dan almağa cəhd et
-    if (config.persistToLocalStorage && typeof localStorage !== 'undefined') {
-      try {
-        const storedItem = localStorage.getItem(cacheKey);
-        
-        if (storedItem) {
-          const parsed = JSON.parse(storedItem) as CacheEntry<T>;
-          
-          // Əgər keşin vaxtı bitməyibsə
-          if (parsed.expiresAt > Date.now()) {
-            // Yaddaşdakı keşə qaytar
-            cache[cacheKey] = parsed;
-            return parsed.data;
-          } else {
-            // Vaxtı bitmiş keşi sil
-            localStorage.removeItem(cacheKey);
-          }
-        }
-      } catch (error) {
-        console.error('Keş oxuma xətası:', error);
+  // Local storage keşini təmizlə
+  if (CACHE_CONFIG.persistToLocalStorage && typeof window !== 'undefined') {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(CACHE_CONFIG.storagePrefix)) {
+        localStorage.removeItem(key);
       }
-    }
-    
-    return null;
+    });
+    logger.info('LocalStorage keşi təmizləndi');
   }
-  
-  // Vaxtı bitmiş keşi yoxla
-  if (entry.expiresAt < Date.now()) {
-    delete cache[cacheKey];
-    return null;
-  }
-  
-  return entry.data;
 };
 
 /**
- * Keşə dəyər əlavə etmək
+ * Keşdən element əldə etmək üçün funksiya
  */
-const saveToCache = <T>(key: string, data: T, ttl: number = config.defaultTTL): void => {
-  if (!config.enabled) return;
+export const getCacheEntry = <T>(key: string): CacheEntry<T> | undefined => {
+  // İlk olaraq memory keşdən yoxla
+  const entry = cache.get(key) as CacheEntry<T> | undefined;
   
-  const cacheKey = createCacheKey(key);
-  const timestamp = Date.now();
-  const expiresAt = timestamp + ttl;
+  // Keş tapılmadıqda və LocalStorage saxlanması aktiv olduqda
+  if (!entry && CACHE_CONFIG.persistToLocalStorage && typeof window !== 'undefined') {
+    try {
+      const localStorageKey = `${CACHE_CONFIG.storagePrefix}${key}`;
+      const storedValue = localStorage.getItem(localStorageKey);
+      
+      if (storedValue) {
+        const parsed = JSON.parse(storedValue) as CacheEntry<T>;
+        
+        // Vaxtı keçmədiyi halda keşə əlavə et və qaytar
+        if (parsed.expiresAt > Date.now()) {
+          cache.set(key, parsed);
+          return parsed;
+        } else {
+          // Vaxtı keçmiş elementi sil
+          localStorage.removeItem(localStorageKey);
+        }
+      }
+    } catch (error) {
+      logger.error(`LocalStorage keş xətası: ${error}`);
+    }
+  }
   
-  // Yaddaşdakı keşə qaydet
-  cache[cacheKey] = {
+  return entry;
+};
+
+/**
+ * Keşə element əlavə etmək üçün funksiya
+ */
+export const setCacheEntry = <T>(key: string, data: T, ttl: number = CACHE_CONFIG.defaultTTL): void => {
+  const now = Date.now();
+  const entry: CacheEntry<T> = {
+    timestamp: now,
     data,
-    timestamp,
-    expiresAt
+    expiresAt: now + ttl
   };
   
-  // Local Storage'a qaydet
-  if (config.persistToLocalStorage && typeof localStorage !== 'undefined') {
+  // Memory keşə əlavə et
+  cache.set(key, entry);
+  
+  // LocalStorage-ə əlavə et
+  if (CACHE_CONFIG.persistToLocalStorage && typeof window !== 'undefined') {
     try {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        data,
-        timestamp,
-        expiresAt
-      }));
+      const localStorageKey = `${CACHE_CONFIG.storagePrefix}${key}`;
+      localStorage.setItem(localStorageKey, JSON.stringify(entry));
     } catch (error) {
-      console.error('Keş yazma xətası:', error);
-      // Əgər yerli saxlama dolubsa, ən köhnə keş elementlərini təmizləməyə çalış
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        clearOldCacheItems();
-      }
+      logger.error(`LocalStorage keş yazma xətası: ${error}`);
     }
   }
 };
 
 /**
- * Köhnə keş elementlərini təmizləmək (localStorage dolduqda)
+ * Keşdə elementin etibarlı olub-olmadığını yoxlamaq
  */
-const clearOldCacheItems = (): void => {
-  if (typeof localStorage === 'undefined') return;
-  
-  try {
-    // Bütün keş açarlarını tapın
-    const cacheKeys = Object.keys(localStorage)
-      .filter(key => key.startsWith(config.storagePrefix));
-    
-    // Keş elementlərini tarix sırasına düzün
-    const sortedCacheItems = cacheKeys
-      .map(key => {
-        try {
-          const item = JSON.parse(localStorage.getItem(key) || '{}');
-          return { key, timestamp: item.timestamp || 0 };
-        } catch (e) {
-          return { key, timestamp: 0 };
-        }
-      })
-      .sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Ən köhnə 20% elementləri sil
-    const itemsToRemove = Math.max(1, Math.floor(sortedCacheItems.length * 0.2));
-    
-    sortedCacheItems.slice(0, itemsToRemove).forEach(({ key }) => {
-      localStorage.removeItem(key);
-    });
-    
-    console.log(`${itemsToRemove} köhnə keş elementi təmizləndi`);
-  } catch (error) {
-    console.error('Köhnə keş təmizləmə xətası:', error);
-  }
+export const isCacheValid = <T>(entry: CacheEntry<T>): boolean => {
+  return entry.expiresAt > Date.now();
 };
 
 /**
- * Sorğunu keşləmək
- * @param key Keş açarı
- * @param queryFn Əsas sorğu funksiyası
- * @param ttl Keş müddəti (millisaniyə)
+ * Sorğu nəticəsini keşləmək üçün əsas funksiya
  */
 export const queryWithCache = async <T>(
   key: string,
   queryFn: () => Promise<T>,
-  ttl: number = config.defaultTTL
+  ttl: number = CACHE_CONFIG.defaultTTL
 ): Promise<T> => {
-  // Keş aktiv deyilsə
-  if (!config.enabled) {
-    return queryFn();
+  // Keş aktiv olmadığı halda birbaşa sorğu yerinə yetir
+  if (!CACHE_CONFIG.enabled) {
+    return await queryFn();
   }
   
   // Keşdən yoxla
-  const cachedData = getFromCache<T>(key);
-  if (cachedData !== null) {
-    return cachedData;
+  const cachedEntry = getCacheEntry<T>(key);
+  
+  // Etibarlı keş tapıldıqda qaytar
+  if (cachedEntry && isCacheValid(cachedEntry)) {
+    logger.debug(`Keşdən məlumat alındı: ${key}`);
+    return cachedEntry.data;
   }
   
-  // Keşdə yoxdursa - sorğunu icra et
+  // Keş tapılmadıqda və ya vaxtı keçdikdə sorğu yerinə yetir
   try {
-    const data = await queryFn();
+    const result = await queryFn();
     
-    // Keşə qaydet
-    saveToCache<T>(key, data, ttl);
+    // Keşə əlavə et
+    setCacheEntry<T>(key, result, ttl);
+    logger.debug(`Keşə əlavə edildi: ${key}`);
     
-    return data;
+    return result;
   } catch (error) {
-    // Şəbəkə xətası baş verərsə və keşlənmiş data varsa
-    if (isNetworkError(error)) {
-      const staleData = getFromCache<T>(`stale_${key}`);
-      if (staleData !== null) {
-        console.warn('Şəbəkə xətası səbəbindən köhnə keşlənmiş data istifadə edilir');
-        return staleData;
-      }
+    // Xəta halında offline rejimdə keşdən köhnə məlumatı qaytar
+    if (isOfflineMode() && cachedEntry) {
+      logger.warn(`Offline rejim, köhnə keş məlumatı istifadə edilir: ${key}`);
+      return cachedEntry.data;
     }
     
+    // Əks halda xətanı qaytarmaq
     throw error;
   }
 };
-
-// Konfiqurasiyanı ixrac et
-export { config as CACHE_CONFIG };

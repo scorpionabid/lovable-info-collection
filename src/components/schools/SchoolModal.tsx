@@ -1,21 +1,44 @@
+
 import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-// Import properly
 import SchoolForm from "./modal/SchoolForm";
+import { School } from "@/services/supabase/school/types";
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
   schoolId?: string;
+  mode?: "create" | "edit";
+  initialData?: School | null;
+  onSuccess?: () => void;
+  regionId?: string;
+  school?: School;
+  onSchoolUpdated?: () => void;
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
   isOpen,
   onClose,
   schoolId,
+  mode = "create",
+  initialData = null,
+  onSuccess,
+  regionId,
+  school,
+  onSchoolUpdated
 }) => {
-  const { school, isLoading, handleSuccess } = useSchoolData(schoolId, onClose);
+  const { schoolData, isLoading, handleSuccess } = useSchoolData(schoolId, onClose);
+
+  // Handle different callback patterns
+  const handleFormSuccess = () => {
+    if (onSuccess) onSuccess();
+    if (onSchoolUpdated) onSchoolUpdated();
+    handleSuccess();
+  };
+
+  // Determine which school data to use
+  const schoolToUse = initialData || school || schoolData;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -26,10 +49,11 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
           </div>
         ) : (
           <SchoolForm
-            onSuccess={handleSuccess}
+            onSuccess={handleFormSuccess}
             onCancel={onClose}
-            initialData={school}
-            mode={schoolId ? "edit" : "create"}
+            initialData={schoolToUse}
+            mode={mode}
+            regionId={regionId}
           />
         )}
       </DialogContent>
@@ -39,26 +63,29 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSchoolById } from "@/services/supabase/school/queries/schoolQueries";
 
-interface SchoolData {
-  id: string;
+export interface SchoolData {
+  id?: string;
   name: string;
-  address: string;
-  email: string;
-  phone: string;
+  code?: string;
   region_id: string;
   sector_id: string;
-  student_count: number;
-  teacher_count: number;
-  status: string;
-  director: string;
-  created_at: string;
+  type_id: string;
+  address?: string;
+  director?: string;
+  email: string;
+  phone?: string;
+  status?: string;
+  student_count?: number;
+  teacher_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface UseSchoolDataResult {
-  school: SchoolData | null;
+  schoolData: School | null;
   isLoading: boolean;
   handleSuccess: () => void;
 }
@@ -68,10 +95,10 @@ export const useSchoolData = (
   onClose: () => void
 ): UseSchoolDataResult => {
   const queryClient = useQueryClient();
-  const [school, setSchool] = useState<SchoolData | null>(null);
+  const [schoolData, setSchoolData] = useState<School | null>(null);
 
   const {
-    data: schoolData,
+    data: fetchedSchool,
     isLoading,
     isError,
   } = useQuery({
@@ -81,10 +108,10 @@ export const useSchoolData = (
   });
 
   useEffect(() => {
-    if (schoolData) {
-      setSchool(schoolData);
+    if (fetchedSchool) {
+      setSchoolData(fetchedSchool);
     }
-  }, [schoolData]);
+  }, [fetchedSchool]);
 
   const handleSuccess = useCallback(() => {
     toast.success("Məktəb məlumatları uğurla yeniləndi!");
@@ -92,5 +119,5 @@ export const useSchoolData = (
     onClose();
   }, [onClose, queryClient]);
 
-  return { school, isLoading, handleSuccess };
+  return { schoolData, isLoading, handleSuccess };
 };

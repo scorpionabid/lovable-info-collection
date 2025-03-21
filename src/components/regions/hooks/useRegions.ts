@@ -1,21 +1,22 @@
 
 /**
  * Regionlar üçün universal hook
- * Yeni Supabase hook-larını istifadə edərək regionları idarə edir
+ * Supabase ilə regionları idarə edir
  */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Region } from '@/types/supabase';
 import { supabase } from '@/lib/supabase';
+import { Region } from '@/types/supabase';
+import { TABLES } from '@/lib/supabase/types-util';
 
 // RegionWithStats tipini əlavə edirik
 export interface RegionWithStats extends Region {
   sectorCount: number;
   schoolCount: number;
   completionRate: number;
-  studentCount?: number;
-  teacherCount?: number;
-  description?: string;
+  studentCount: number;
+  teacherCount: number;
+  description: string;
 }
 
 export interface RegionsQueryOptions {
@@ -44,48 +45,61 @@ export const useRegionsData = (options: RegionsQueryOptions) => {
     ...(searchTerm ? { name: `%${searchTerm}%` } : {})
   };
   
-  // Supabase sorğusu yaradırıq
-  const regionQuery = useQuery({
-    queryKey: ['regions', page, pageSize, sortColumn, sortDirection, allFilters],
-    queryFn: async () => {
-      // Get total count
-      const countQuery = await supabase
-        .from('regions')
+  const fetchRegions = useCallback(async () => {
+    try {
+      // Ümumi sayı əldə et
+      const { count, error: countError } = await supabase
+        .from(TABLES.REGIONS)
         .select('*', { count: 'exact', head: true });
+        
+      if (countError) throw countError;
       
-      // Get paginated data with stats
-      const { data, error } = await supabase
-        .from('regions')
-        .select('*, sectors(count)')
+      // Səhifələnmiş məlumatları əldə et
+      const { data: regionsData, error: dataError } = await supabase
+        .from(TABLES.REGIONS)
+        .select(`
+          *,
+          sectors:sectors(count)
+        `)
         .order(sortColumn || 'created_at', { ascending: sortDirection === 'asc' })
         .range(
-          (page || 0) * (pageSize || 10),
-          ((page || 0) + 1) * (pageSize || 10) - 1
+          (page - 1) * pageSize,
+          page * pageSize - 1
         );
         
-      if (error) throw error;
-        
-      // Məlumatları RegionWithStats tipinə çevirmək
-      const regionsWithStats = data?.map(region => ({
+      if (dataError) throw dataError;
+      
+      // Regionları formatla və lazımi məlumatları əlavə et
+      const regionsWithStats: RegionWithStats[] = regionsData.map(region => ({
         ...region,
-        sectorCount: region.sectors?.count || 0,
+        description: region.description || '',
+        sectorCount: region.sectors?.length || 0,
         schoolCount: 0, // Bu məlumatı əlavə sorğu ilə almaq lazım olacaq
         completionRate: 0, // Bu məlumatı əlavə sorğu ilə almaq lazım olacaq
-        description: region.description || ''
-      })) || [];
+        studentCount: 0,
+        teacherCount: 0
+      }));
       
-      // Bu formada qaytarmaq lazımdır ki, RegionsData tipinə uyğun olsun
-      return { 
+      return {
         data: regionsWithStats,
-        count: countQuery.count || 0
+        count: count || 0
       };
-    },
+    } catch (error) {
+      console.error("Regionları gətirərkən xəta baş verdi:", error);
+      throw error;
+    }
+  }, [page, pageSize, sortColumn, sortDirection, allFilters]);
+  
+  // Supabase sorğusu yaradırıq
+  const regionsQuery = useQuery({
+    queryKey: ['regions', page, pageSize, sortColumn, sortDirection, allFilters],
+    queryFn: fetchRegions,
     refetchOnWindowFocus: true,
     staleTime: 3 * 60 * 1000 // 3 dəqiqə
   });
   
   return {
-    ...regionQuery,
+    ...regionsQuery,
     searchTerm,
     setSearchTerm,
   };

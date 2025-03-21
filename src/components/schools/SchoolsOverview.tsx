@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { SchoolTable } from "./SchoolTable";
 import { SchoolToolbar } from "./SchoolToolbar";
 import { SchoolFilterPanel } from "./SchoolFilterPanel";
-import { SchoolModal } from './modal/SchoolModal';
+import { SchoolModal } from './SchoolModal';
 import { useSchoolData } from './hooks/useSchoolData';
 import { useSchoolFilters } from './hooks/useSchoolFilters';
 import { useSchoolSort } from './hooks/useSchoolSort';
@@ -19,7 +19,12 @@ export const SchoolsOverview = () => {
   const { currentPage, searchQuery, filters, setCurrentPage, handleSearchChange, handleApplyFilters } = useSchoolFilters();
 
   // Hook for fetching data
-  const { schoolsData, isLoading, isError, refetch } = useSchoolData({
+  const { 
+    data: schoolsData,
+    isLoading, 
+    isError, 
+    refetch 
+  } = useSchoolData({
     currentPage,
     pageSize,
     sortColumn,
@@ -51,7 +56,7 @@ export const SchoolsOverview = () => {
     setShowFilters(false);
   };
 
-  // Make sure we properly handle the data structure returned by useSchoolData
+  // Make sure we properly handle data structure
   const schools = schoolsData?.data || [];
   const totalCount = schoolsData?.count || 0;
 

@@ -6,6 +6,7 @@ import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 import { supabase } from './client';
 import { queryWithCache } from './cache';
 import { logger } from '@/utils/logger';
+import { TABLES, validateTableName, TableNames } from './types-util';
 
 // Sorğu parametrləri tipi
 export interface QueryOptions {
@@ -28,7 +29,7 @@ export interface QueryOptions {
  * Sadə sorğu yaratmaq üçün funksiya
  */
 export const createQuery = <T>(
-  tableName: string,
+  tableName: TableNames,
   options: QueryOptions = {}
 ) => {
   const {
@@ -37,6 +38,11 @@ export const createQuery = <T>(
     cacheTime,
     cacheKey
   } = options;
+
+  // Validate table name to ensure type safety
+  if (!validateTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
   let query = supabase.from(tableName).select(select);
   
@@ -169,7 +175,7 @@ export const applyPagination = <T>(
  * Səhifələnmiş sorğu yaratmaq üçün funksiya
  */
 export const createPaginatedQuery = async <T>(
-  tableName: string,
+  tableName: TableNames,
   options: QueryOptions = {}
 ) => {
   const {
@@ -178,6 +184,11 @@ export const createPaginatedQuery = async <T>(
     cacheTime,
     cacheKey
   } = options;
+
+  // Validate table name to ensure type safety
+  if (!validateTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
   // Ümumi sayı əldə etmək üçün sorğu
   const countQuery = supabase
@@ -230,7 +241,7 @@ export const createPaginatedQuery = async <T>(
     return {
       data: dataResult.data as T[],
       error: dataResult.error,
-      count: countResult.count as number
+      count: countResult.count || 0
     };
   }
 
@@ -243,7 +254,7 @@ export const createPaginatedQuery = async <T>(
   return {
     data: dataResult.data as T[],
     error: dataResult.error,
-    count: countResult.count as number
+    count: countResult.count || 0
   };
 };
 
@@ -251,7 +262,7 @@ export const createPaginatedQuery = async <T>(
  * ID ilə bir element əldə etmək üçün funksiya
  */
 export const getById = async <T>(
-  tableName: string,
+  tableName: TableNames,
   id: string,
   options: {
     select?: string;
@@ -260,6 +271,11 @@ export const getById = async <T>(
   } = {}
 ) => {
   const { select = '*', useCache = true, cacheTime } = options;
+
+  // Validate table name to ensure type safety
+  if (!validateTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
   const query = supabase
     .from(tableName)
@@ -284,13 +300,18 @@ export const getById = async <T>(
  * Yeni element yaratmaq üçün funksiya
  */
 export const create = async <T>(
-  tableName: string,
+  tableName: TableNames,
   data: any,
   options: {
     select?: string;
   } = {}
 ) => {
   const { select = '*' } = options;
+
+  // Validate table name to ensure type safety
+  if (!validateTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
   return supabase
     .from(tableName)
@@ -303,7 +324,7 @@ export const create = async <T>(
  * Elementi yeniləmək üçün funksiya
  */
 export const update = async <T>(
-  tableName: string,
+  tableName: TableNames,
   id: string,
   data: any,
   options: {
@@ -311,6 +332,11 @@ export const update = async <T>(
   } = {}
 ) => {
   const { select = '*' } = options;
+
+  // Validate table name to ensure type safety
+  if (!validateTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
   return supabase
     .from(tableName)
@@ -324,13 +350,18 @@ export const update = async <T>(
  * Elementi silmək üçün funksiya
  */
 export const remove = async <T>(
-  tableName: string,
+  tableName: TableNames,
   id: string,
   options: {
     select?: string;
   } = {}
 ) => {
   const { select = '*' } = options;
+
+  // Validate table name to ensure type safety
+  if (!validateTableName(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
   return supabase
     .from(tableName)

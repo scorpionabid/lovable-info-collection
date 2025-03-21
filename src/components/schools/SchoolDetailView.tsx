@@ -1,196 +1,164 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from "@/hooks/use-toast";
+import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { getSchoolById } from '@/services/supabase/school/queries/schoolQueries';
 import { SchoolModal } from './SchoolModal';
-import { deleteSchool } from '@/services/supabase/schoolService';
-import { supabase } from '@/integrations/supabase/client';
-import { type User } from '@/services/userService/types';
-import {
-  SchoolHeader,
-  GeneralInfoCard,
-  StatisticsCard,
-  ActivitiesCard
-} from './detail';
+import { School } from '@/services/supabase/school/types';
 
-export const SchoolDetailView = ({ school, stats, activities }: any) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
+export const SchoolDetailView = () => {
+  const { id } = useParams<{ id: string }>();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [schoolAdmin, setSchoolAdmin] = useState<User | null>(null);
-  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
   
-  // Fetch school admin when school data changes
-  useEffect(() => {
-    const fetchSchoolAdmin = async () => {
-      if (!school?.id) return;
-      
-      setIsLoadingAdmin(true);
-      try {
-        // Get role ID for school-admin
-        const { data: roleData } = await supabase
-          .from('roles')
-          .select('id')
-          .eq('name', 'school-admin')
-          .single();
-          
-        if (!roleData) {
-          console.error('School admin role not found');
-          return;
-        }
-        
-        // Get admin for this school
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('school_id', school.id)
-          .eq('role_id', roleData.id)
-          .maybeSingle();
-          
-        if (error) {
-          console.error('Error fetching school admin:', error);
-          return;
-        }
-        
-        setSchoolAdmin(data as User | null);
-      } catch (error) {
-        console.error('Error loading school admin:', error);
-      } finally {
-        setIsLoadingAdmin(false);
-      }
-    };
-    
-    fetchSchoolAdmin();
-  }, [school?.id]);
+  const {
+    data: school,
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
+    queryKey: ['school', id],
+    queryFn: () => getSchoolById(id!),
+    enabled: !!id
+  });
+  
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-slate-200 rounded w-1/2 mb-2"></div>
+          <div className="h-4 bg-slate-200 rounded w-1/4 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-40 bg-slate-200 rounded"></div>
+            <div className="h-40 bg-slate-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError || !school) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-800">
+          <h3 className="text-lg font-medium">Xəta baş verdi</h3>
+          <p>Məktəb məlumatlarını yükləmək mümkün olmadı. Zəhmət olmasa yenidən cəhd edin.</p>
+          <Button 
+            variant="outline" 
+            className="mt-2" 
+            onClick={() => refetch()}
+          >
+            Yenidən cəhd et
+          </Button>
+        </div>
+      </div>
+    );
+  }
   
   const handleSchoolUpdated = () => {
-    toast({
-      title: "Məktəb yeniləndi",
-      description: "Məktəb məlumatları uğurla yeniləndi."
-    });
+    refetch();
     setIsEditModalOpen(false);
   };
   
-  const handleExport = async () => {
-    toast({
-      title: "Eksport edilir",
-      description: "Məktəb məlumatları eksport edilir..."
-    });
-  };
-  
-  const handleDelete = async () => {
-    try {
-      await deleteSchool(school.id);
-      toast({
-        title: "Məktəb silindi",
-        description: "Məktəb uğurla silindi."
-      });
-      navigate('/schools');
-    } catch (error) {
-      console.error('Error deleting school:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Məktəb silinmədi",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleAssignAdmin = async (userId: string) => {
-    if (!userId || !school?.id) {
-      toast({
-        title: "Xəta",
-        description: "İstifadəçi və ya məktəb ID-si yoxdur",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      setIsAssigning(true);
-      
-      const { error } = await supabase
-        .from('users')
-        .update({ school_id: school.id })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      // Refresh school admin data
-      const { data: updatedAdmin } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      setSchoolAdmin(updatedAdmin as User);
-      
-      toast({
-        title: "Admin təyin edildi",
-        description: "Məktəb admini uğurla təyin edildi."
-      });
-    } catch (error) {
-      console.error('Error assigning school admin:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Admin təyin edilmədi",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  if (!school) {
-    return <div>Məlumat yüklənir...</div>;
-  }
-
-  const categoryData = stats?.categories.map((cat: any) => ({
-    name: cat.name,
-    value: cat.value
-  })) || [];
-  
-  const completionData = stats?.completionHistory.map((hist: any) => ({
-    name: hist.name,
-    value: hist.value
-  })) || [];
-
-  const chartColors = ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA'];
-
   return (
-    <div className="space-y-6">
-      <SchoolHeader 
-        school={school}
-        onEdit={() => setIsEditModalOpen(true)}
-        onExport={handleExport}
-        onDelete={handleDelete}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GeneralInfoCard 
-          school={school}
-          isAssigning={isAssigning}
-          onAssignAdmin={handleAssignAdmin}
-          admin={schoolAdmin}
-          isLoadingAdmin={isLoadingAdmin}
-        />
-        
-        <StatisticsCard 
-          categoryData={categoryData}
-          completionData={completionData}
-          chartColors={chartColors}
-        />
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-infoline-dark-blue">{school.name}</h1>
+        <Button 
+          onClick={() => setIsEditModalOpen(true)}
+          className="bg-infoline-blue hover:bg-infoline-dark-blue"
+        >
+          Redaktə et
+        </Button>
       </div>
       
-      <ActivitiesCard activities={activities} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg border p-4 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4 text-infoline-dark-blue">Ümumi məlumatlar</h2>
+          <dl className="grid grid-cols-1 gap-y-2">
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Şəhər/Rayon:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.region || 'N/A'}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Sektor:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.sector || 'N/A'}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Məktəb növü:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.type || 'N/A'}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Direktor:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.director || 'N/A'}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Status:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  school.status === 'Aktiv' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {school.status || 'N/A'}
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </div>
+        
+        <div className="bg-white rounded-lg border p-4 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4 text-infoline-dark-blue">Əlaqə məlumatları</h2>
+          <dl className="grid grid-cols-1 gap-y-2">
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Ünvan:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.address || 'N/A'}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Email:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.email || 'N/A'}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Telefon:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.phone || 'N/A'}</dd>
+            </div>
+          </dl>
+        </div>
+        
+        <div className="bg-white rounded-lg border p-4 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4 text-infoline-dark-blue">Statistika</h2>
+          <dl className="grid grid-cols-1 gap-y-2">
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Müəllim sayı:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.teacher_count || 0}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Şagird sayı:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">{school.student_count || 0}</dd>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <dt className="text-sm font-medium text-gray-500">Doluluk dərəcəsi:</dt>
+              <dd className="text-sm text-gray-900 col-span-2">
+                <div className="flex items-center">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-infoline-blue h-2.5 rounded-full" 
+                      style={{ width: `${school.completionRate || 0}%` }}
+                    ></div>
+                  </div>
+                  <span className="ml-2">{school.completionRate || 0}%</span>
+                </div>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
       
       {isEditModalOpen && (
         <SchoolModal
-          isOpen={isEditModalOpen}
+          isOpen={true}
           onClose={() => setIsEditModalOpen(false)}
           mode="edit"
-          school={school}
+          school={school as School}
           onSchoolUpdated={handleSchoolUpdated}
         />
       )}
