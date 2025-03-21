@@ -1,8 +1,7 @@
-
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase } from '@/supabase/client'; // Fixed import path
+import { supabase } from '@/supabase/client'; // Updated import
 
 interface UseAuthListenerOptions {
   redirectTo?: string;

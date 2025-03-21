@@ -2,6 +2,7 @@
 import userServiceInternal from './supabase/user';
 import { User as SupabaseUser, UserFilters } from './supabase/user/types';
 import type { User as UserServiceUser, UserFilter, UserResponse, CreateUserDto, UpdateUserDto } from './userService/types';
+import { supabase } from '@/supabase/client'; // Updated import
 
 // Export the User interface from userService
 export interface User extends SupabaseUser {
