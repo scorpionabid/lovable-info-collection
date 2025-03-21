@@ -4,6 +4,7 @@ export * from './region';
 export * from './sector';
 export * from './school';
 export * from './user';
+export * from './database';
 
 // Common interfaces used across multiple entity types
 export interface FilterParams {

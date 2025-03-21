@@ -1,5 +1,21 @@
 
-// Core types for consistent usage across the application
+/**
+ * Əsas tiplər və interfeyslər
+ */
+
+// Database tipi - Supabase-dən gələn tip
+export type { Database } from '../integrations/supabase/types';
+
+// JSON tipi
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+// Region interfeysi
 export interface Region {
   id: string;
   name: string;
@@ -9,13 +25,14 @@ export interface Region {
   updated_at?: string;
 }
 
+// Statistika ilə genişləndirilmiş Region interfeysi
 export interface RegionWithStats extends Region {
   sectorCount?: number;
   schoolCount?: number;
   studentCount?: number;
   teacherCount?: number;
   completionRate?: number;
-  // For backward compatibility
+  // Geriyə uyğunluq üçün
   sectors_count?: number;
   schools_count?: number;
   completion_rate?: number;
