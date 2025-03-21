@@ -7,7 +7,7 @@ export const useRegions = () => {
     try {
       const { data, error } = await supabase
         .from('regions')
-        .select('id, name, description')
+        .select('id, name, code, description')
         .order('name');
       
       if (error) {
@@ -20,6 +20,7 @@ export const useRegions = () => {
       return data.map(region => ({
         id: region.id || '',
         name: region.name || '',
+        code: region.code || '',
         description: region.description || ''
       }));
     } catch (error) {

@@ -1,200 +1,117 @@
 
-/**
- * Məktəblər üçün hook
- */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import * as schoolsService from "../services/schools";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { 
-  School, 
+  getSchools, 
+  getSchoolById, 
+  createSchool, 
+  updateSchool, 
+  deleteSchool,
+  getSchoolsByRegionId,
+  getSchoolsBySectorId,
+  School,
   SchoolFilter,
-  SchoolSortParams, 
+  SchoolSortParams,
   SchoolType,
   CreateSchoolDto,
   UpdateSchoolDto
-} from "../types";
+} from '../services/schools';
 
-// Bütün məktəbləri almaq üçün hook
 export const useSchools = (filters?: SchoolFilter) => {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['schools', filters],
-    queryFn: () => schoolsService.getSchools(filters),
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
-  });
-
-  return {
-    schools: data || [],
-    isLoading,
-    error,
-    refetch
-  };
-};
-
-// Məktəb detaylarını almaq üçün hook
-export const useSchool = (id: string) => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['school', id],
-    queryFn: () => schoolsService.getSchoolById(id),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
-  });
-
-  return {
-    school: data,
-    isLoading,
-    error
-  };
-};
-
-// Məktəb və adminini birlikdə almaq üçün hook
-export const useSchoolWithAdmin = (id: string) => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['schoolWithAdmin', id],
-    queryFn: () => schoolsService.getSchoolWithAdmin(id),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
-  });
-
-  return {
-    schoolWithAdmin: data,
-    school: data?.school,
-    admin: data?.admin,
-    isLoading,
-    error
-  };
-};
-
-// Region üzrə məktəbləri almaq
-export const useSchoolsByRegion = (regionId: string) => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['schoolsByRegion', regionId],
-    queryFn: () => schoolsService.getSchoolsByRegionId(regionId),
-    enabled: !!regionId,
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
-  });
-
-  return {
-    schools: data || [],
-    isLoading,
-    error
-  };
-};
-
-// Sektor üzrə məktəbləri almaq
-export const useSchoolsBySector = (sectorId: string) => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['schoolsBySector', sectorId],
-    queryFn: () => schoolsService.getSchoolsBySectorId(sectorId),
-    enabled: !!sectorId,
-    staleTime: 1000 * 60 * 5 // 5 dəqiqə
-  });
-
-  return {
-    schools: data || [],
-    isLoading,
-    error
-  };
-};
-
-// Dropdown üçün məktəbləri almaq
-export const useSchoolsDropdown = (regionId?: string, sectorId?: string) => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['schoolsDropdown', regionId, sectorId],
-    queryFn: () => schoolsService.getSchoolsForDropdown(regionId, sectorId),
-    enabled: regionId !== undefined || sectorId !== undefined,
-    staleTime: 1000 * 60 * 10 // 10 dəqiqə
-  });
-
-  return {
-    schools: data || [],
-    isLoading,
-    error
-  };
-};
-
-// Məktəb növlərini almaq
-export const useSchoolTypes = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['schoolTypes'],
-    queryFn: () => schoolsService.getSchoolTypes(),
-    staleTime: 1000 * 60 * 30 // 30 dəqiqə
-  });
-
-  return {
-    schoolTypes: data || [],
-    isLoading,
-    error
-  };
-};
-
-// Məktəb yaratmaq üçün hook
-export const useCreateSchool = () => {
   const queryClient = useQueryClient();
 
-  const mutation = useMutation({
-    mutationFn: (schoolData: CreateSchoolDto) => 
-      schoolsService.createSchool(schoolData),
-    onSuccess: (_, variables) => {
+  // Fetch all schools
+  const {
+    data: schools = [],
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
+    queryKey: ['schools', filters],
+    queryFn: () => getSchools(filters)
+  });
+
+  // Fetch school by ID
+  const useSchoolById = (id: string) => {
+    return useQuery({
+      queryKey: ['school', id],
+      queryFn: () => getSchoolById(id),
+      enabled: !!id
+    });
+  };
+
+  // Fetch schools by region
+  const useSchoolsByRegion = (regionId: string) => {
+    return useQuery({
+      queryKey: ['schools', 'region', regionId],
+      queryFn: () => getSchoolsByRegionId(regionId),
+      enabled: !!regionId
+    });
+  };
+
+  // Fetch schools by sector
+  const useSchoolsBySector = (sectorId: string) => {
+    return useQuery({
+      queryKey: ['schools', 'sector', sectorId],
+      queryFn: () => getSchoolsBySectorId(sectorId),
+      enabled: !!sectorId
+    });
+  };
+
+  // Create school mutation
+  const createSchoolMutation = useMutation({
+    mutationFn: (data: CreateSchoolDto) => createSchool(data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
-      queryClient.invalidateQueries({ queryKey: ['schoolsDropdown'] });
-      queryClient.invalidateQueries({ queryKey: ['schoolsByRegion', variables.region_id] });
-      queryClient.invalidateQueries({ queryKey: ['schoolsBySector', variables.sector_id] });
       toast.success('Məktəb uğurla yaradıldı');
     },
     onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Məktəb yaradılarkən problem baş verdi'}`);
+      toast.error(`Məktəb yaradılarkən xəta: ${error.message}`);
     }
   });
 
-  return mutation;
-};
-
-// Məktəb yeniləmək üçün hook
-export const useUpdateSchool = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: ({ id, schoolData }: { id: string; schoolData: UpdateSchoolDto }) => 
-      schoolsService.updateSchool(id, schoolData),
-    onSuccess: (data, variables) => {
+  // Update school mutation
+  const updateSchoolMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateSchoolDto }) => updateSchool(id, data),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
-      queryClient.invalidateQueries({ queryKey: ['school', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['schoolWithAdmin', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['schoolsDropdown'] });
-      
-      if (variables.schoolData.region_id) {
-        queryClient.invalidateQueries({ queryKey: ['schoolsByRegion', variables.schoolData.region_id] });
-      }
-      
-      if (variables.schoolData.sector_id) {
-        queryClient.invalidateQueries({ queryKey: ['schoolsBySector', variables.schoolData.sector_id] });
-      }
-      
       toast.success('Məktəb uğurla yeniləndi');
     },
     onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Məktəb yenilənərkən problem baş verdi'}`);
+      toast.error(`Məktəb yenilənərkən xəta: ${error.message}`);
     }
   });
 
-  return mutation;
-};
-
-// Məktəb silmək üçün hook
-export const useDeleteSchool = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: (id: string) => schoolsService.deleteSchool(id),
+  // Delete school mutation
+  const deleteSchoolMutation = useMutation({
+    mutationFn: (id: string) => deleteSchool(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schools'] });
-      queryClient.invalidateQueries({ queryKey: ['schoolsDropdown'] });
       toast.success('Məktəb uğurla silindi');
     },
     onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Məktəb silinərkən problem baş verdi'}`);
+      toast.error(`Məktəb silinərkən xəta: ${error.message}`);
     }
   });
 
-  return mutation;
+  return {
+    // Queries
+    schools,
+    isLoading,
+    isError,
+    refetch,
+    useSchoolById,
+    useSchoolsByRegion,
+    useSchoolsBySector,
+    
+    // Mutations
+    createSchool: createSchoolMutation.mutate,
+    updateSchool: updateSchoolMutation.mutate,
+    deleteSchool: deleteSchoolMutation.mutate,
+    
+    // Loading states
+    isCreatingSchool: createSchoolMutation.isPending,
+    isUpdatingSchool: updateSchoolMutation.isPending,
+    isDeletingSchool: deleteSchoolMutation.isPending
+  };
 };

@@ -1,6 +1,7 @@
 
+import React from 'react';
 import { Layout } from "@/components/layout/Layout";
-import { RegionsOverview } from "@/components/regions/RegionsOverview";
+import RegionsOverview from "@/components/regions/RegionsOverview";
 
 const Regions = () => {
   return (
