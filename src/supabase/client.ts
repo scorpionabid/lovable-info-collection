@@ -1,130 +1,67 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/integrations/supabase/types';
+import { supabaseUrl, supabaseKey } from './config';
 
-export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Keş konfiqurasiyası
-export const CACHE_CONFIG = {
-  CACHE_EXPIRY_MS: 5 * 60 * 1000, // 5 dəqiqə
-  CACHE_ENABLED: true
-};
-
-// Offline mode kontrolu
-const LOCAL_STORAGE_KEYS = {
-  OFFLINE_MODE: 'supabase_offline_mode'
-};
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// Create the Supabase client with better error handling and session persistence
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
-  }
+    storageKey: 'infoline_auth_token', // Custom storage key for better identification
+  },
+  global: {
+    headers: {
+      'x-app-version': import.meta.env.VITE_APP_VERSION || 'development',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
 });
 
-export default supabase;
-
-// Repeated operations with retry logic
-export const withRetry = async <T>(
-  operation: () => Promise<T>,
-  retries = 3,
-  delay = 1000,
-  backoff = 2
-): Promise<T> => {
-  try {
-    return await operation();
-  } catch (error) {
-    if (retries <= 0) {
-      console.error('Retry limit exceeded', error);
-      throw error;
-    }
-
-    console.warn(`Operation failed, retrying in ${delay}ms... (${retries} retries left)`);
-    await new Promise(resolve => setTimeout(resolve, delay));
-    
-    return withRetry(operation, retries - 1, delay * backoff, backoff);
-  }
-};
-
-// Check if we are in offline mode
-export const isOfflineMode = (): boolean => {
-  if (typeof window === 'undefined') return false;
+// Helper function to handle Supabase errors
+export const handleSupabaseError = (error: any, context: string = 'Supabase operation'): Error => {
+  const formattedError = new Error(
+    error?.message || error?.error_description || 'Unknown Supabase error'
+  );
   
-  const storedValue = localStorage.getItem(LOCAL_STORAGE_KEYS.OFFLINE_MODE);
-  return storedValue === 'true';
+  console.error(`${context} error:`, error);
+  return formattedError;
 };
 
-// Set offline mode
-export const setOfflineMode = (isOffline: boolean): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(LOCAL_STORAGE_KEYS.OFFLINE_MODE, isOffline ? 'true' : 'false');
-};
-
-// Cache implementation
-type CacheItem<T> = {
-  data: T;
-  timestamp: number;
-};
-
-const cache = new Map<string, CacheItem<any>>();
-
-export const queryWithCache = async <T>(
-  key: string,
-  queryFn: () => Promise<T>,
-  options: {
-    enabled?: boolean;
-    staleTime?: number;
-    forceRefresh?: boolean;
-  } = {}
-): Promise<T> => {
-  const {
-    enabled = CACHE_CONFIG.CACHE_ENABLED,
-    staleTime = CACHE_CONFIG.CACHE_EXPIRY_MS,
-    forceRefresh = false
-  } = options;
-
-  // Skip cache in certain conditions
-  if (!enabled || forceRefresh) {
-    const data = await queryFn();
-    if (enabled) {
-      cache.set(key, { data, timestamp: Date.now() });
-    }
-    return data;
-  }
-
-  // Check if we have cached data
-  const cachedItem = cache.get(key);
-  const now = Date.now();
-
-  if (cachedItem && (now - cachedItem.timestamp < staleTime)) {
-    console.log(`[Cache] Using cached data for ${key}`);
-    return cachedItem.data;
-  }
-
-  // Get fresh data
+// Function to refresh the token
+export const refreshToken = async () => {
   try {
-    const data = await queryFn();
-    cache.set(key, { data, timestamp: now });
-    return data;
-  } catch (error) {
-    // If we have stale data, return it on error
-    if (cachedItem) {
-      console.warn(`[Cache] Error fetching fresh data, using stale cache for ${key}`, error);
-      return cachedItem.data;
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) {
+      console.error('Error refreshing token:', error);
+      return false;
     }
-    throw error;
+    return !!data.session;
+  } catch (error) {
+    console.error('Exception during token refresh:', error);
+    return false;
   }
 };
 
-// Clear all or specific cache items
-export const clearCache = (key?: string): void => {
-  if (key) {
-    cache.delete(key);
-    console.log(`[Cache] Cleared cache for ${key}`);
+// Check if connection is successful and log info in development
+try {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    console.warn('Warning: Could not verify Supabase connection', error);
   } else {
-    cache.clear();
-    console.log('[Cache] Cleared all cache');
+    console.log('Supabase connection initialized successfully');
+    
+    // Cache frequently used auth values for later use
+    const sessionUser = data?.session?.user;
+    if (sessionUser) {
+      localStorage.setItem('supabase_user_id', sessionUser.id);
+      localStorage.setItem('supabase_user_email', sessionUser.email || '');
+    }
   }
-};
+} catch (error) {
+  console.error('Supabase initialization warning:', error);
+  // Continue execution - don't block the app
+}
+
+export default supabase;

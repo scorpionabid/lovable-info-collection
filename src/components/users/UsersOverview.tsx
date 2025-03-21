@@ -22,20 +22,18 @@ export const UsersOverview = () => {
   // Use our custom hook for user data and state management
   const {
     users,
-    totalCount,
-    isLoading,
-    isError,
-    error,
-    page,
-    perPage,
-    search,
-    sortColumn,
-    sortOrder,
+    totalItems,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    searchTerm,
+    setSearchTerm,
+    sortBy,
+    sortOrder: currentSortOrder,
+    setSortBy,
+    setSortOrder,
     refetch,
-    handleSearchChange,
-    handleSort,
-    setPage,
-    setPerPage,
   } = useUsersData();
 
   // Use our custom hook for form handling
@@ -92,7 +90,17 @@ export const UsersOverview = () => {
 
   // Adapter function to convert string to event handler
   const handleSearchInputChange = (value: string) => {
-    handleSearchChange(value);
+    setSearchTerm(value);
+  };
+
+  // Handle sort changes
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(currentSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
   };
 
   return (
@@ -110,7 +118,7 @@ export const UsersOverview = () => {
       </div>
 
       <UserTableToolbar 
-        search={search}
+        search={searchTerm}
         onSearchChange={handleSearchInputChange}
         onExport={handleExport}
         onAddUser={handleAddUser}
@@ -126,10 +134,9 @@ export const UsersOverview = () => {
 
       <UsersList
         users={users}
-        isLoading={isLoading}
-        error={error}
-        sortColumn={sortColumn}
-        sortOrder={sortOrder}
+        isLoading={false}
+        sortColumn={sortBy}
+        sortOrder={currentSortOrder}
         onEditUser={handleEdit}
         onDeleteUser={handleDelete}
         onSort={handleSort}
@@ -140,11 +147,11 @@ export const UsersOverview = () => {
       />
 
       <UserTablePagination
-        page={page}
-        perPage={perPage}
-        totalItems={totalCount}
-        setPage={setPage}
-        setPerPage={setPerPage}
+        page={currentPage}
+        perPage={itemsPerPage}
+        totalItems={totalItems}
+        setPage={setCurrentPage}
+        setPerPage={setItemsPerPage}
       />
 
       <UserForm

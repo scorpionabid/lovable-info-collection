@@ -17,6 +17,7 @@ export default function useSectorsDefault() {
   // Köhnə struktura uyğun data qaytarırıq
   const formattedSectors = sectors.map(sector => ({
     ...sector,
+    // Make sure we don't access a property that doesn't exist
     description: sector.description || '' // Əskik sahələri əlavə edirik
   }));
   

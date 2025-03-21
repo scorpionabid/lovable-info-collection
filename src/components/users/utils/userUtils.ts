@@ -57,3 +57,55 @@ export const getRoleColorClass = (user: User): string => {
       return 'bg-gray-500 text-white';
   }
 };
+
+// Get normalized role for compatibility
+export const getNormalizedRole = (user: User): string => {
+  if (!user || !user.roles) {
+    return 'unknown';
+  }
+  
+  const roleName = user.roles.name || '';
+  return roleName.toLowerCase().replace(/-/g, '').replace(/\s+/g, '');
+};
+
+// Sort users based on different criteria
+export const sortUsers = (users: User[], column: string | null, direction: 'asc' | 'desc'): User[] => {
+  if (!column) return users;
+  
+  return [...users].sort((a, b) => {
+    let valueA, valueB;
+    
+    switch (column) {
+      case 'name':
+        valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        break;
+      case 'email':
+        valueA = a.email.toLowerCase();
+        valueB = b.email.toLowerCase();
+        break;
+      case 'role':
+        valueA = getRoleDisplayName(a).toLowerCase();
+        valueB = getRoleDisplayName(b).toLowerCase();
+        break;
+      case 'entity':
+        valueA = getEntityName(a).toLowerCase();
+        valueB = getEntityName(b).toLowerCase();
+        break;
+      case 'lastActive':
+        valueA = a.last_login || '';
+        valueB = b.last_login || '';
+        break;
+      case 'status':
+        valueA = a.is_active ? 'active' : 'inactive';
+        valueB = b.is_active ? 'active' : 'inactive';
+        break;
+      default:
+        return 0;
+    }
+    
+    if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+    if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+};

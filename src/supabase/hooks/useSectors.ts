@@ -10,7 +10,8 @@ import {
   SectorWithStats, 
   PaginationParams, 
   SortParams, 
-  SectorFilters 
+  SectorFilters,
+  CreateSectorDto
 } from "../types";
 
 // Bütün sektorları almaq üçün hook
@@ -86,7 +87,7 @@ export const useCreateSector = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (sectorData: Partial<Sector>) => 
+    mutationFn: (sectorData: CreateSectorDto) => 
       sectorsService.createSector(sectorData),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sectors'] });

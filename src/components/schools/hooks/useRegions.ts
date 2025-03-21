@@ -17,6 +17,7 @@ export default function useRegionsDefault() {
   // Köhnə struktura uyğun data qaytarırıq
   const formattedRegions = regions.map(region => ({
     ...region,
+    // Make sure we don't access a property that doesn't exist
     description: region.description || '' // Əskik sahələri əlavə edirik
   }));
   

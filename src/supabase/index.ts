@@ -4,8 +4,8 @@
  * Bütün servislər, hook-lar və müştəri buradan ixrac olunur
  */
 
-// Supabase müştərisi və konfiqurasiyonu
-export { supabase, withRetry, isOfflineMode, queryWithCache, clearCache } from './client';
+// Supabase müştərisi və konfiqurasiyası
+export { supabase } from './client';
 export { default as supabaseClient } from './client';
 export * from './config';
 export * from './types';
@@ -23,3 +23,6 @@ export * from './hooks/useRegions';
 export * from './hooks/useSectors';
 export * from './hooks/useSchools';
 export * from './hooks/useUsers';
+
+// Fix ambiguity by re-exporting LoginCredentials from types
+export { LoginCredentials } from './types';

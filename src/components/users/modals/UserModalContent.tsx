@@ -1,157 +1,161 @@
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
-import { User } from "@/services/userService";
-import { UserProfileTab } from "./UserProfileTab";
-import { RoleTab } from "./role/RoleTab";
-import { userFormSchema, UserFormValues } from "./UserFormSchema";
-import { useUserFormSubmit } from "../hooks/useUserFormSubmit";
-import { useUtisCodeValidation } from "../hooks/useUtisCodeValidation";
-import { useOrganizationData } from "../hooks/useOrganizationData";
-import { LoadingState } from "./LoadingState";
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { userFormSchema, type UserFormValues } from './UserFormSchema';
+import { User } from '@/supabase/types';
+import { PersonalTab } from './tabs/PersonalTab';
+import { RoleTab } from './role/RoleTab';
+import { SecurityTab } from './tabs/SecurityTab';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useOrganizationData } from '../hooks/useOrganizationData';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface UserModalContentProps {
   user?: User;
-  onClose: () => void;
-  onSuccess?: () => void;
-  currentUserId?: string;
-  currentUserRole?: string;
+  onSubmit: (values: UserFormValues) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
 }
 
-export const UserModalContent = ({ 
-  user, 
-  onClose, 
-  onSuccess,
-  currentUserId,
-  currentUserRole
-}: UserModalContentProps) => {
-  const [selectedRole, setSelectedRole] = useState(user?.role_id || "");
-  const [selectedRegion, setSelectedRegion] = useState(user?.region_id || "");
-  const [selectedSector, setSelectedSector] = useState(user?.sector_id || "");
-  const isEditing = !!user;
+export const UserModalContent: React.FC<UserModalContentProps> = ({
+  user,
+  onSubmit,
+  onCancel,
+  isSubmitting
+}) => {
+  const [activeTab, setActiveTab] = useState('personal');
+  const { 
+    roles, 
+    regions, 
+    sectors, 
+    schools, 
+    isLoading, 
+    regionId, 
+    setRegionId, 
+    sectorId, 
+    setSectorId, 
+    schoolId, 
+    setSchoolId 
+  } = useOrganizationData();
 
-  // Set up form with validation
+  // Get current user role from auth
+  const [currentUserRole, setCurrentUserRole] = useState('unknown');
+  
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        // This would normally be fetched from your auth system
+        // For now, let's assume the current user is a super admin
+        setCurrentUserRole('superadmin');
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        toast.error('Cari istifadəçi rolu alınarkən xəta baş verdi');
+      }
+    };
+    
+    fetchUserRole();
+  }, []);
+
+  // Initialize the form with user data if provided
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      email: user?.email || "",
-      first_name: user?.first_name || "",
-      last_name: user?.last_name || "",
-      phone: user?.phone || "",
-      utis_code: user?.utis_code || "",
-      role_id: user?.role_id || "",
-      region_id: user?.region_id || "",
-      sector_id: user?.sector_id || "",
-      school_id: user?.school_id || "",
-      is_active: user?.is_active !== undefined ? user.is_active : true,
-      password: "",
-    },
+    defaultValues: user ? {
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone: user.phone || '',
+      utis_code: user.utis_code || '',
+      role_id: user.role_id,
+      region_id: user.region_id || '',
+      sector_id: user.sector_id || '',
+      school_id: user.school_id || '',
+      is_active: user.is_active,
+      password: '' // Don't prefill password
+    } : {
+      email: '',
+      first_name: '',
+      last_name: '',
+      phone: '',
+      utis_code: '',
+      role_id: '',
+      region_id: '',
+      sector_id: '',
+      school_id: '',
+      is_active: true,
+      password: ''
+    }
   });
 
-  // Use hooks for functionality
-  const { createUserMutation, isCreatingAuth } = useUserFormSubmit(user, onClose, onSuccess);
-  const { isCheckingUtisCode } = useUtisCodeValidation();
-  const { roles, regions, sectors, schools, isLoading, getRoleById } = useOrganizationData(
-    currentUserId,
-    currentUserRole,
-    selectedRegion,
-    selectedSector
-  );
-
-  const onSubmit = (values: UserFormValues) => {
-    createUserMutation.mutate(values);
+  // Find role by ID for display purposes
+  const getRoleById = (roleId: string) => {
+    return roles.find(role => role.id === roleId);
   };
 
-  if (isLoading) {
-    return <LoadingState message="Loading organization data..." />;
-  }
+  // When form is submitted
+  const handleSubmit = (values: UserFormValues) => {
+    onSubmit(values);
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <Tabs defaultValue="profile">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profil Məlumatları</TabsTrigger>
-            <TabsTrigger value="role">Rol və Təşkilat</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile" className="mt-4">
-            <UserProfileTab 
-              isEditing={isEditing} 
-              user={user}
-              isCheckingUtisCode={isCheckingUtisCode}
-              email={form.watch("email")}
-              firstName={form.watch("first_name")}
-              lastName={form.watch("last_name")}
-              phone={form.watch("phone") || ""}
-              utisCode={form.watch("utis_code") || ""}
-              password={form.watch("password") || ""}
-              onEmailChange={(value) => form.setValue("email", value)}
-              onFirstNameChange={(value) => form.setValue("first_name", value)}
-              onLastNameChange={(value) => form.setValue("last_name", value)}
-              onPhoneChange={(value) => form.setValue("phone", value)}
-              onUtisCodeChange={(value) => form.setValue("utis_code", value)}
-              onPasswordChange={(value) => form.setValue("password", value)}
-            />
-          </TabsContent>
-          
-          <TabsContent value="role" className="mt-4">
-            <RoleTab 
-              roles={roles}
-              regions={regions}
-              sectors={sectors}
-              schools={schools}
-              isEditing={isEditing}
-              user={user}
-              currentUserRole={currentUserRole || ""}
-              selectedRole={form.watch("role_id")}
-              selectedRegion={form.watch("region_id") || ""}
-              selectedSector={form.watch("sector_id") || ""}
-              selectedSchool={form.watch("school_id") || ""}
-              onRoleChange={(value) => form.setValue("role_id", value)}
-              onRegionChange={(value) => form.setValue("region_id", value)}
-              onSectorChange={(value) => form.setValue("sector_id", value)}
-              onSchoolChange={(value) => form.setValue("school_id", value)}
-            />
-          </TabsContent>
-        </Tabs>
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="personal">Şəxsi məlumatlar</TabsTrigger>
+          <TabsTrigger value="role">Rol və İcazələr</TabsTrigger>
+          <TabsTrigger value="security">Təhlükəsizlik</TabsTrigger>
+        </TabsList>
         
-        <DialogFooter className="mt-6">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onClose}
-            disabled={createUserMutation.isPending || isCreatingAuth}
-          >
-            Ləğv et
-          </Button>
-          <Button 
-            type="submit" 
-            className="bg-infoline-blue hover:bg-infoline-dark-blue"
-            disabled={createUserMutation.isPending || isCreatingAuth || isCheckingUtisCode}
-          >
-            {(createUserMutation.isPending || isCreatingAuth) ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isEditing ? "Yenilənir..." : "Yaradılır..."}
-              </>
-            ) : (
-              isEditing ? "Yadda saxla" : "Yarat"
-            )}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
+        <TabsContent value="personal" className="space-y-4 mt-6">
+          <PersonalTab form={form} />
+        </TabsContent>
+        
+        <TabsContent value="role" className="space-y-4 mt-6">
+          <RoleTab 
+            roles={roles}
+            regions={regions}
+            sectors={sectors}
+            schools={schools}
+            isEditing={!!user}
+            user={user}
+            currentUserRole={currentUserRole}
+            selectedRole={form.watch('role_id')}
+            selectedRegion={form.watch('region_id')}
+            selectedSector={form.watch('sector_id')}
+            selectedSchool={form.watch('school_id')}
+            onRoleChange={(value) => form.setValue('role_id', value)}
+            onRegionChange={(value) => {
+              form.setValue('region_id', value);
+              form.setValue('sector_id', '');
+              form.setValue('school_id', '');
+              setRegionId(value);
+            }}
+            onSectorChange={(value) => {
+              form.setValue('sector_id', value);
+              form.setValue('school_id', '');
+              setSectorId(value);
+            }}
+            onSchoolChange={(value) => {
+              form.setValue('school_id', value);
+              setSchoolId(value);
+            }}
+          />
+        </TabsContent>
+        
+        <TabsContent value="security" className="space-y-4 mt-6">
+          <SecurityTab form={form} isEditing={!!user} />
+        </TabsContent>
+      </Tabs>
+      
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Ləğv et
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Gözləyin...' : user ? 'Yenilə' : 'Əlavə et'}
+        </Button>
+      </div>
+    </form>
   );
 };

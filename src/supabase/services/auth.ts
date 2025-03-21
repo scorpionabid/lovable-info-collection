@@ -1,146 +1,148 @@
 
-/**
- * Auth servisi
- * Autentifikasiya ilə bağlı bütün əməliyyatlar
- */
-import { supabase, handleSupabaseError } from '../client';
-import { logger } from '@/utils/logger';
+import { supabase } from "../client";
+import { User, LoginCredentials } from "../types";
+import { toast } from "sonner";
 
-// Login üçün məlumatlar
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
+// Function to handle Supabase errors
+const handleSupabaseError = (error: any, context: string = 'Authentication'): Error => {
+  const message = error?.message || error?.error_description || 'Unknown error';
+  console.error(`${context} error:`, error);
+  return new Error(message);
+};
 
-export interface UserSession {
-  user: any;
-  session: any;
-}
-
-// Login olmaq
-export const login = async (credentials: LoginCredentials): Promise<UserSession> => {
+export const loginUser = async (credentials: LoginCredentials) => {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword(credentials);
-    
-    if (error) throw error;
-    
-    logger.info('İstifadəçi uğurla daxil oldu:', { email: credentials.email });
-    
-    return data;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+
+    if (error) throw handleSupabaseError(error, 'Login');
+
+    // Get the user profile after successful login
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select(`
+        *,
+        roles:role_id (id, name, permissions),
+        region:region_id (id, name),
+        sector:sector_id (id, name),
+        school:school_id (id, name)
+      `)
+      .eq('id', data.user?.id)
+      .single();
+
+    if (userError) throw handleSupabaseError(userError, 'User data');
+
+    // Update last login timestamp
+    await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', data.user?.id);
+
+    return {
+      user: userData as User,
+      session: data.session,
+    };
   } catch (error) {
-    logger.error('Login xətası:', error);
     throw handleSupabaseError(error, 'Login');
   }
 };
 
-// Çıxış etmək
-export const logout = async (): Promise<void> => {
+export const logoutUser = async () => {
   try {
     const { error } = await supabase.auth.signOut();
-    
-    if (error) throw error;
-    
-    logger.info('İstifadəçi çıxış etdi');
+    if (error) throw handleSupabaseError(error, 'Logout');
+    return true;
   } catch (error) {
-    logger.error('Çıxış xətası:', error);
-    throw handleSupabaseError(error, 'Çıxış');
+    throw handleSupabaseError(error, 'Logout');
   }
 };
 
-// Cari sessiya məlumatlarını almaq
-export const getSession = async (): Promise<any> => {
+export const getCurrentUser = async () => {
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw handleSupabaseError(sessionError, 'Get session');
     
-    if (error) throw error;
-    
-    return data.session;
+    if (!sessionData.session) return null;
+
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select(`
+        *,
+        roles:role_id (id, name, permissions),
+        region:region_id (id, name),
+        sector:sector_id (id, name),
+        school:school_id (id, name)
+      `)
+      .eq('id', sessionData.session.user.id)
+      .single();
+
+    if (userError) throw handleSupabaseError(userError, 'Current user');
+
+    return userData as User;
   } catch (error) {
-    logger.error('Sessiya alma xətası:', error);
-    throw handleSupabaseError(error, 'Sessiya alma');
+    console.error('Error getting current user:', error);
+    return null;
   }
 };
 
-// Cari istifadəçini almaq
-export const getCurrentUser = async (): Promise<any> => {
+export const registerUser = async (userData: any) => {
   try {
-    const { data, error } = await supabase.auth.getUser();
-    
-    if (error) throw error;
-    
-    return data.user;
+    const { data, error } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        data: {
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role_id: userData.role_id
+        }
+      }
+    });
+
+    if (error) throw handleSupabaseError(error, 'Registration');
+
+    return data;
   } catch (error) {
-    logger.error('Cari istifadəçi alma xətası:', error);
-    throw handleSupabaseError(error, 'Cari istifadəçi alma');
+    throw handleSupabaseError(error, 'Registration');
   }
 };
 
-// Şifrə sıfırlama linki göndərmək
-export const sendPasswordResetEmail = async (email: string): Promise<void> => {
+export const resetPassword = async (email: string) => {
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    
-    if (error) throw error;
-    
-    logger.info('Şifrə sıfırlama linki göndərildi:', { email });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+
+    if (error) throw handleSupabaseError(error, 'Password reset');
+
+    return true;
   } catch (error) {
-    logger.error('Şifrə sıfırlama linki göndərmə xətası:', error);
-    throw handleSupabaseError(error, 'Şifrə sıfırlama linki göndərmə');
+    throw handleSupabaseError(error, 'Password reset');
   }
 };
 
-// Şifrəni dəyişmək
-export const changePassword = async (newPassword: string): Promise<void> => {
+export const updatePassword = async (password: string) => {
   try {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword
+      password
     });
-    
-    if (error) throw error;
-    
-    logger.info('Şifrə uğurla dəyişdirildi');
+
+    if (error) throw handleSupabaseError(error, 'Update password');
+
+    return true;
   } catch (error) {
-    logger.error('Şifrə dəyişmə xətası:', error);
-    throw handleSupabaseError(error, 'Şifrə dəyişmə');
+    throw handleSupabaseError(error, 'Update password');
   }
 };
 
-// Token yeniləmək
-export const refreshToken = async (): Promise<void> => {
+export const refreshSession = async () => {
   try {
-    const { error } = await supabase.auth.refreshSession();
-    
-    if (error) throw error;
-    
-    logger.debug('Token uğurla yeniləndi');
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) throw handleSupabaseError(error, 'Refresh session');
+    return data;
   } catch (error) {
-    logger.error('Token yeniləmə xətası:', error);
-    throw handleSupabaseError(error, 'Token yeniləmə');
-  }
-};
-
-// Auth hadisələrinə qulaq asmaq
-export const subscribeToAuthChanges = (callback: (event: string, session: any) => void): { unsubscribe: () => void } => {
-  const { data } = supabase.auth.onAuthStateChange((event, session) => {
-    callback(event, session);
-  });
-  
-  return data.subscription;
-};
-
-// İstifadəçinin rolunu yoxlamaq
-export const hasRole = async (role: string): Promise<boolean> => {
-  try {
-    const { data } = await supabase.auth.getUser();
-    
-    if (!data.user) return false;
-    
-    // Role məlumatı user_metadata içində olmalıdır
-    const userRole = data.user.user_metadata?.role || '';
-    
-    return userRole === role;
-  } catch (error) {
-    logger.error('Rol yoxlama xətası:', error);
-    return false;
+    throw handleSupabaseError(error, 'Refresh session');
   }
 };

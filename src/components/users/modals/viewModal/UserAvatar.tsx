@@ -1,29 +1,48 @@
 
-import React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { User } from "@/services/userService";
-import { getInitials, getRoleColor, getRoleName } from "./userViewUtils";
+import React from 'react';
+import { User } from '@/supabase/types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface UserAvatarProps {
   user: User;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const UserAvatar = ({ user }: UserAvatarProps) => {
-  return (
-    <div className="flex flex-col items-center">
-      <Avatar className="h-24 w-24">
-        <AvatarImage src="" />
-        <AvatarFallback className="bg-infoline-light-blue text-white text-xl">
-          {getInitials(user.first_name, user.last_name)}
-        </AvatarFallback>
-      </Avatar>
+export const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md' }) => {
+  // Get initials from user's name
+  const getInitials = () => {
+    if (!user) return '??';
+    return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
+  };
 
-      <div className="mt-4 text-center">
-        <Badge className={`${getRoleColor(user.roles?.name || user.role)} font-normal`}>
-          {getRoleName(user)}
-        </Badge>
-      </div>
-    </div>
+  // Get background color based on user role
+  const getBackgroundColor = () => {
+    const roleName = user.roles?.name?.toLowerCase() || '';
+    
+    if (roleName.includes('super')) return 'bg-purple-500';
+    if (roleName.includes('region')) return 'bg-blue-500';
+    if (roleName.includes('sector')) return 'bg-green-500';
+    if (roleName.includes('school')) return 'bg-yellow-500';
+    return 'bg-gray-500';
+  };
+
+  // Determine size class
+  const getSizeClass = () => {
+    switch (size) {
+      case 'sm': return 'h-8 w-8 text-xs';
+      case 'lg': return 'h-16 w-16 text-xl';
+      case 'xl': return 'h-24 w-24 text-3xl';
+      case 'md':
+      default: return 'h-12 w-12 text-base';
+    }
+  };
+
+  return (
+    <Avatar className={`${getSizeClass()}`}>
+      <AvatarImage src={user.avatar_url} alt={`${user.first_name} ${user.last_name}`} />
+      <AvatarFallback className={`${getBackgroundColor()} text-white font-medium`}>
+        {getInitials()}
+      </AvatarFallback>
+    </Avatar>
   );
 };

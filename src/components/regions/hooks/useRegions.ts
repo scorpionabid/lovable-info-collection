@@ -4,6 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRegions } from '@/supabase/services/regions';
 import type { RegionWithStats, FilterParams } from '@/supabase/types';
 
+// Export RegionWithStats type so it can be used by other modules
+export type { RegionWithStats, FilterParams };
+
 export const useRegions = (initialFilters?: FilterParams) => {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<FilterParams>(initialFilters || {});

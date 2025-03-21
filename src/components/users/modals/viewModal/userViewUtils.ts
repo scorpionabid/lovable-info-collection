@@ -1,56 +1,71 @@
 
-import { format, parseISO } from "date-fns";
-import { az } from "date-fns/locale";
-import { Shield, UserCheck, Map, Building, School } from "lucide-react";
-import { User } from "@/services/userService";
+import { User } from '@/supabase/types';
 
-export const getInitials = (name: string, surname: string) => {
-  return `${name?.charAt(0) || ""}${surname?.charAt(0) || ""}`;
+// Get readable user status
+export const getUserStatusLabel = (user: User): string => {
+  if (!user) return 'Unknown';
+  return user.is_active ? 'Active' : 'Inactive';
 };
 
-export const formatDate = (dateString: string | null | undefined) => {
-  if (!dateString) return "Heç vaxt";
+// Get color class for user status
+export const getUserStatusColorClass = (user: User): string => {
+  if (!user) return 'bg-gray-400';
+  return user.is_active ? 'bg-green-500' : 'bg-red-500';
+};
+
+// Format date for display
+export const formatDate = (dateString?: string): string => {
+  if (!dateString) return 'Never';
   try {
-    return format(parseISO(dateString), "dd MMMM yyyy, HH:mm", { locale: az });
-  } catch (error) {
-    return "Tarix xətası";
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (e) {
+    return 'Invalid date';
   }
 };
 
-export const getRoleIcon = (role: string | undefined) => {
-  if (!role) return UserCheck;
-  
-  if (role.includes("super")) return Shield;
-  if (role.includes("region")) return Map;
-  if (role.includes("sector")) return Building;
-  return School;
-};
-
-export const getRoleName = (user: User) => {
-  // Try to get role from roles relationship first
-  const roleName = user.roles?.name || user.role;
-  if (!roleName) return 'Rol təyin edilməyib';
-  
-  switch (roleName) {
-    case 'super-admin':
-    case 'superadmin':
-      return 'SuperAdmin';
-    case 'region-admin':
-      return 'Region Admin';
-    case 'sector-admin':
-      return 'Sektor Admin';
-    case 'school-admin':
-      return 'Məktəb Admin';
-    default:
-      return roleName;
+// Get user permissions based on role
+export const getUserPermissions = (user: User): string[] => {
+  if (!user || !user.roles || !user.roles.permissions) {
+    return [];
   }
+  
+  return user.roles.permissions || [];
 };
 
-export const getRoleColor = (role: string | undefined) => {
-  if (!role) return 'bg-gray-100 text-gray-800';
+// Check if user has a specific permission
+export const hasPermission = (user: User, permission: string): boolean => {
+  const permissions = getUserPermissions(user);
+  return permissions.includes(permission);
+};
+
+// Get user's organization details
+export const getUserOrganization = (user: User): { type: string; name: string } => {
+  if (!user) {
+    return { type: 'Unknown', name: 'Unknown' };
+  }
   
-  if (role.includes("super")) return 'bg-red-100 text-red-800';
-  if (role.includes("region")) return 'bg-blue-100 text-blue-800';
-  if (role.includes("sector")) return 'bg-green-100 text-green-800';
-  return 'bg-purple-100 text-purple-800';
+  if (user.roles?.name?.includes('Super')) {
+    return { type: 'Global', name: 'System' };
+  }
+  
+  if (user.region && user.roles?.name?.includes('Region')) {
+    return { type: 'Region', name: user.region.name };
+  }
+  
+  if (user.sector && user.roles?.name?.includes('Sector')) {
+    return { type: 'Sector', name: user.sector.name };
+  }
+  
+  if (user.school && user.roles?.name?.includes('School')) {
+    return { type: 'School', name: user.school.name };
+  }
+  
+  return { type: 'Unknown', name: 'Unknown' };
 };

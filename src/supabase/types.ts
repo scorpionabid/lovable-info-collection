@@ -89,6 +89,10 @@ export interface User {
   school?: School; // Relationship field
 }
 
+export interface UserWithRole extends User {
+  roles: Role;
+}
+
 export interface Role {
   id: string;
   name: string;
@@ -186,6 +190,20 @@ export interface LoginCredentials {
 }
 
 // Filter interfaces
+export interface FilterParams {
+  search?: string;
+  region_id?: string;
+  sector_id?: string;
+  status?: 'active' | 'archived' | 'all';
+  dateFrom?: string;
+  dateTo?: string;
+  completionRate?: string;
+  min_completion_rate?: number;
+  max_completion_rate?: number;
+  searchQuery?: string;
+  archived?: boolean;
+}
+
 export interface RegionFilters {
   search?: string;
   status?: 'active' | 'archived' | 'all';
@@ -203,6 +221,15 @@ export interface SchoolFilter {
   type_id?: string;
   search?: string;
   status?: 'active' | 'archived' | 'all';
+  // For compatibility with older code
+  regionId?: string;
+  sectorId?: string;
+  sort_field?: string;
+  sort_direction?: 'asc' | 'desc';
+  sort?: {
+    field: string;
+    direction: 'asc' | 'desc';
+  };
 }
 
 export interface UserFilters {
@@ -211,13 +238,19 @@ export interface UserFilters {
   sector_id?: string;
   school_id?: string;
   search?: string;
-  status?: 'active' | 'inactive' | 'all';
+  status?: 'active' | 'inactive' | 'blocked' | 'all';
 }
 
 // Pagination and sorting interfaces
 export interface PaginationParams {
   page: number;
   pageSize: number;
+}
+
+export interface SortParams {
+  field?: string;
+  column?: string;
+  direction?: 'asc' | 'desc';
 }
 
 export interface SchoolSortParams {
@@ -227,15 +260,23 @@ export interface SchoolSortParams {
 
 // Enhanced types with stats
 export interface RegionWithStats extends Region {
-  sectors_count: number;
-  schools_count: number;
-  completion_rate: number;
+  sectors_count?: number;
+  schools_count?: number;
+  completion_rate?: number;
+  // Consistency with new naming
+  sectorCount?: number;
+  schoolCount?: number;
+  completionRate?: number;
 }
 
 export interface SectorWithStats extends Sector {
-  schools_count: number;
-  completion_rate: number;
+  schools_count?: number;
+  completion_rate?: number;
   region?: { id: string; name: string };
+  // Consistency with new naming
+  schoolCount?: number;
+  completionRate?: number;
+  regionName?: string;
 }
 
 export interface SchoolWithStats extends School {

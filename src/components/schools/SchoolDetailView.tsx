@@ -5,9 +5,9 @@ import { PencilIcon, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSchoolWithAdmin } from '@/supabase/services/schools';
 import { toast } from 'sonner';
-import SchoolInfo from './details/SchoolInfo';
+import { SchoolInfo } from './details/SchoolInfo';
 import AdminInfo from './details/AdminInfo';
-import SchoolStats from './details/SchoolStats';
+import { SchoolStats } from './details/SchoolStats';
 import { SchoolModal } from './modal/SchoolModal';
 
 interface SchoolDetailViewProps {

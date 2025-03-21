@@ -1,198 +1,218 @@
 
-import { supabase } from '@/lib/supabase/client';
-import type { User } from '@/services/userService/types';
-import { toast } from "sonner";
+import { toast } from 'sonner';
+import { supabase } from '@/supabase/client';  // Updated import path
 
-// Define the interface here but don't export it directly
-interface NewAdminForm {
+// Interface for admin creation
+interface AdminCreationParams {
+  email: string;
+  password: string;
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
-  password: string;
+  schoolId: string;
+  phone?: string;
 }
 
-/**
- * Fetches available admins (users with admin role who aren't assigned to a school yet)
- * @param schoolId The ID of the school
- * @returns Array of available admins
- */
-export const fetchAvailableAdmins = async (schoolId?: string): Promise<User[]> => {
-  if (!schoolId) return [];
-  
+// Create a new admin user
+export const createSchoolAdmin = async (params: AdminCreationParams) => {
   try {
-    // First, get the role ID for school-admin
-    const { data: roleData, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'school-admin')
-      .single();
-    
-    if (roleError || !roleData) {
-      console.error('Error fetching school-admin role:', roleError);
-      toast.error('Admin rolu tapılmadı');
-      return [];
-    }
-    
-    const roleId = roleData.id;
-    
-    // Then get users with that role who aren't assigned to any school yet
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('role_id', roleId)
-      .is('school_id', null);
-    
-    if (error) {
-      console.error('Error fetching available admins:', error);
-      toast.error('Mövcud adminlər yüklənərkən xəta baş verdi');
-      return [];
-    }
-    
-    return data || [];
-  } catch (error) {
-    console.error('Error in fetchAvailableAdmins:', error);
-    return [];
-  }
-};
-
-/**
- * Assigns an existing admin to a school
- * @param schoolId The ID of the school
- * @param adminId The ID of the admin user
- * @returns Success status
- */
-export const assignAdminToSchool = async (schoolId: string, adminId: string): Promise<boolean> => {
-  try {
-    // Update user record to associate with school
-    const { error } = await supabase
-      .from('users')
-      .update({ school_id: schoolId })
-      .eq('id', adminId);
-      
-    if (error) {
-      console.error('Error assigning admin to school:', error);
-      toast.error('Admin təyin edilərkən xəta baş verdi');
-      return false;
-    }
-    
-    toast.success('Admin məktəbə uğurla təyin edildi');
-    return true;
-  } catch (error) {
-    console.error('Error in assignAdminToSchool:', error);
-    toast.error('Admin təyin edilərkən xəta baş verdi');
-    return false;
-  }
-};
-
-/**
- * Creates a new admin user and assigns them to a school
- * @param schoolId The ID of the school
- * @param adminData The new admin's information
- * @returns Success status
- */
-export const createNewAdmin = async (schoolId: string, adminData: NewAdminForm): Promise<boolean> => {
-  try {
-    // Input validation
-    if (!schoolId || !adminData.email || !adminData.firstName || !adminData.lastName) {
-      toast.error('Bütün məcburi sahələri doldurun');
-      return false;
-    }
-    
-    // Get school-admin role ID
-    const { data: roleData, error: roleError } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', 'school-admin')
-      .single();
-      
-    if (roleError || !roleData) {
-      console.error('School admin role not found:', roleError);
-      toast.error('Admin rolu tapılmadı');
-      return false;
-    }
-    
-    // First create auth user
+    // 1. Create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: adminData.email,
-      password: adminData.password,
+      email: params.email,
+      password: params.password,
       options: {
         data: {
-          first_name: adminData.firstName,
-          last_name: adminData.lastName
+          first_name: params.firstName,
+          last_name: params.lastName
         }
       }
     });
-    
-    let userId: string;
-    
-    // Handle different auth scenarios
+
     if (authError) {
-      if (authError.message.includes('already registered')) {
-        // User already exists in auth, try to find their ID
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', adminData.email)
-          .maybeSingle();
-          
-        if (userData?.id) {
-          userId = userData.id;
-        } else {
-          // Try to get auth user ID by alternative means
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: adminData.email,
-            password: adminData.password
-          }).catch(() => ({ data: null, error: new Error("Sign in failed") }));
-          
-          if (signInData?.user?.id) {
-            userId = signInData.user.id;
-          } else {
-            toast.error('İstifadəçi mövcuddur, lakin bazada tapılmadı');
-            return false;
-          }
-        }
-      } else {
-        console.error('Error creating auth user:', authError);
-        toast.error(`Autentifikasiya xətası: ${authError.message}`);
-        return false;
-      }
-    } else if (authData?.user?.id) {
-      userId = authData.user.id;
-    } else {
-      toast.error('İstifadəçi yaradıla bilmədi');
-      return false;
+      console.error('Auth creation error:', authError);
+      throw new Error(`Auth error: ${authError.message}`);
     }
-    
-    // Create or update user record with UPSERT to handle race conditions
+
+    if (!authData.user) {
+      throw new Error('Failed to create user authentication');
+    }
+
+    // Get the admin role id
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'SchoolAdmin')
+      .single();
+
+    if (roleError || !roleData) {
+      console.error('Role fetch error:', roleError);
+      throw new Error('Could not find SchoolAdmin role');
+    }
+
+    // 2. Create user record in the database
     const { error: userError } = await supabase
       .from('users')
-      .upsert({
-        id: userId,
-        email: adminData.email,
-        first_name: adminData.firstName,
-        last_name: adminData.lastName,
-        phone: adminData.phone || null,
+      .insert({
+        id: authData.user.id,
+        email: params.email,
+        first_name: params.firstName,
+        last_name: params.lastName,
+        phone: params.phone || null,
         role_id: roleData.id,
-        school_id: schoolId,
+        school_id: params.schoolId,
         is_active: true
-      }, {
-        onConflict: 'id'
       });
-      
+
     if (userError) {
-      console.error('Error creating user record:', userError);
-      toast.error(`Verilənlər bazası xətası: ${userError.message}`);
-      return false;
+      console.error('User creation error:', userError);
+      throw new Error(`User record error: ${userError.message}`);
     }
-    
-    return true;
+
+    // Send a welcome message to the user's notification inbox
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: authData.user.id,
+        title: 'Welcome to InfoLine',
+        message: `Your admin account for the school has been created. You can now login and start managing your school's data.`,
+        type: 'info'
+      });
+
+    return { success: true, userId: authData.user.id };
   } catch (error) {
-    console.error('Error in createNewAdmin:', error);
-    toast.error(`Admin yaradılarkən xəta baş verdi: ${(error as Error).message}`);
-    return false;
+    console.error('Admin creation failed:', error);
+    toast.error(`Admin yaradılarkən xəta: ${(error as Error).message}`);
+    return { success: false, error: (error as Error).message };
   }
 };
 
-// Export the type separately to avoid conflict
-export type { NewAdminForm };
+// Assign existing user as school admin
+export const assignUserAsSchoolAdmin = async (userId: string, schoolId: string) => {
+  try {
+    // Get the SchoolAdmin role ID
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'SchoolAdmin')
+      .single();
+
+    if (roleError || !roleData) {
+      throw new Error('Could not find SchoolAdmin role');
+    }
+
+    // Update the user's role and school
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        role_id: roleData.id,
+        school_id: schoolId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw new Error(`User update error: ${updateError.message}`);
+    }
+
+    // Notify the user about their new role
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title: 'Role Assignment',
+        message: 'You have been assigned as a school administrator.',
+        type: 'info'
+      });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Admin assignment failed:', error);
+    toast.error(`Admin təyin edilərkən xəta: ${(error as Error).message}`);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+// Get admin for school
+export const getSchoolAdmin = async (schoolId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        id, first_name, last_name, email, phone, is_active, created_at, last_login,
+        roles:role_id (id, name)
+      `)
+      .eq('school_id', schoolId)
+      .eq('roles.name', 'SchoolAdmin')
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows found
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Fetching school admin failed:', error);
+    return null;
+  }
+};
+
+// Revoke school admin role
+export const revokeSchoolAdmin = async (userId: string) => {
+  try {
+    // Get the default user role ID
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'User')
+      .single();
+
+    if (roleError || !roleData) {
+      // Fallback to find any non-admin role
+      const { data: fallbackRole, error: fallbackError } = await supabase
+        .from('roles')
+        .select('id')
+        .not('name', 'eq', 'SchoolAdmin')
+        .limit(1)
+        .single();
+
+      if (fallbackError || !fallbackRole) {
+        throw new Error('Could not find appropriate role to downgrade to');
+      }
+
+      roleData.id = fallbackRole.id;
+    }
+
+    // Update the user's role and remove school assignment
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        role_id: roleData.id,
+        school_id: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      throw new Error(`User update error: ${updateError.message}`);
+    }
+
+    // Notify the user about their role change
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title: 'Role Change',
+        message: 'Your school administrator role has been revoked.',
+        type: 'info'
+      });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Admin revocation failed:', error);
+    toast.error(`Admin rolu ləğv edilərkən xəta: ${(error as Error).message}`);
+    return { success: false, error: (error as Error).message };
+  }
+};

@@ -1,381 +1,131 @@
 
-import { useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useSchoolTypes } from '../hooks/useSchoolTypes';
-import { useRegions } from '../hooks/useRegions';
-import { useSectors } from '../hooks/useSectors';
-import { createSchool, updateSchool } from '@/services/supabase/school/crudOperations';
-import { toast } from '@/hooks/use-toast';
-import { School } from '@/services/supabase/school/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
-// Define the form schema with Zod
-const schoolFormSchema = z.object({
-  name: z.string().min(2, { message: 'Məktəbin adı ən azı 2 simvol olmalıdır' }),
-  region_id: z.string().optional(),
-  sector_id: z.string(),
+import { School } from '@/supabase/types';
+import { useRegions } from '@/components/schools/hooks/useRegions';
+import { useSectors } from '@/components/schools/hooks/useSectors';
+
+// Schema for form validation
+const schoolSchema = z.object({
+  name: z.string().min(2, { message: 'Məktəb adı ən az 2 simvol olmalıdır' }),
   code: z.string().optional(),
-  address: z.string().optional(),
+  address: z.string().min(5, { message: 'Ünvan ən az 5 simvol olmalıdır' }),
+  region_id: z.string().uuid({ message: 'Region seçilməlidir' }),
+  sector_id: z.string().uuid({ message: 'Sektor seçilməlidir' }),
   type_id: z.string().optional(),
-  email: z.string().email({ message: 'Düzgün e-mail ünvanı daxil edin' }).optional().or(z.literal('')),
-  phone: z.string().optional(),
   director: z.string().optional(),
-  student_count: z.coerce.number().int().nonnegative().optional(),
-  teacher_count: z.coerce.number().int().nonnegative().optional(),
+  email: z.string().email({ message: 'Düzgün email formatı daxil edin' }).optional(),
+  phone: z.string().optional(),
+  student_count: z.coerce.number().optional(),
+  teacher_count: z.coerce.number().optional(),
+  status: z.string().optional(),
 });
 
-// Define the props for the SchoolForm component
+type SchoolFormValues = z.infer<typeof schoolSchema>;
+
 interface SchoolFormProps {
-  initialData?: School | null;
-  mode?: 'create' | 'edit';
-  onSuccess?: () => void;
-  onCancel?: () => void;
-  regionId?: string;
-  sectorId?: string;
+  initialData?: Partial<School>;
+  onSubmit: (data: SchoolFormValues) => void;
+  onCancel: () => void;
 }
 
-export default function SchoolForm({
-  initialData,
-  mode = 'create',
-  onSuccess,
-  onCancel,
-  regionId,
-  sectorId,
-}: SchoolFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { schoolTypes, isLoading: isLoadingSchoolTypes } = useSchoolTypes();
-  const { regions, isLoading: isLoadingRegions } = useRegions();
+export const SchoolForm: React.FC<SchoolFormProps> = ({ initialData, onSubmit, onCancel }) => {
+  const [activeTab, setActiveTab] = useState('general');
+  const { regions, isLoading: regionsLoading } = useRegions();
+  const [selectedRegion, setSelectedRegion] = useState(initialData?.region_id || '');
+  const { sectors, isLoading: sectorsLoading } = useSectors();
   
-  // Get sectors, pre-filtered by region if provided
-  const { sectors, isLoading: isLoadingSectors } = useSectors(
-    mode === 'create' ? regionId : initialData?.region_id
+  // Filter sectors based on selected region
+  const filteredSectors = sectors.filter(sector => 
+    !selectedRegion || sector.region_id === selectedRegion
   );
 
-  // Initialize form with default values or existing data
-  const form = useForm<z.infer<typeof schoolFormSchema>>({
-    resolver: zodResolver(schoolFormSchema),
+  const form = useForm<SchoolFormValues>({
+    resolver: zodResolver(schoolSchema),
     defaultValues: {
       name: initialData?.name || '',
-      region_id: initialData?.region_id || regionId || '',
-      sector_id: initialData?.sector_id || sectorId || '',
       code: initialData?.code || '',
       address: initialData?.address || '',
+      region_id: initialData?.region_id || '',
+      sector_id: initialData?.sector_id || '',
       type_id: initialData?.type_id || '',
+      director: initialData?.director || '',
       email: initialData?.email || '',
       phone: initialData?.phone || '',
-      director: initialData?.director || '',
       student_count: initialData?.student_count || 0,
       teacher_count: initialData?.teacher_count || 0,
-    },
+      status: initialData?.status || 'Aktiv',
+    }
   });
 
-  // Function to handle form submission
-  const onSubmit = async (values: z.infer<typeof schoolFormSchema>) => {
-    setIsSubmitting(true);
-    try {
-      if (mode === 'create') {
-        // Ensure required fields are present
-        if (!values.name || !values.sector_id) {
-          setIsSubmitting(false);
-          return toast({
-            title: "Xəta",
-            description: "Məcburi xanaları doldurun",
-            variant: "destructive",
-          });
-        }
-        
-        await createSchool({
-          name: values.name,
-          region_id: values.region_id,
-          sector_id: values.sector_id,
-          code: values.code,
-          address: values.address,
-          type_id: values.type_id,
-          email: values.email || undefined,
-          phone: values.phone || undefined,
-          director: values.director || undefined,
-          student_count: values.student_count || 0,
-          teacher_count: values.teacher_count || 0,
-        });
-        
-        toast({
-          title: "Uğurlu əməliyyat",
-          description: "Məktəb uğurla yaradıldı",
-        });
-      } else if (initialData) {
-        await updateSchool(initialData.id, {
-          name: values.name,
-          region_id: values.region_id,
-          sector_id: values.sector_id,
-          code: values.code,
-          address: values.address,
-          type_id: values.type_id,
-          email: values.email || undefined,
-          phone: values.phone || undefined,
-          director: values.director || undefined,
-          student_count: values.student_count || 0,
-          teacher_count: values.teacher_count || 0,
-        });
-        
-        toast({
-          title: "Uğurlu əməliyyat",
-          description: "Məktəb məlumatları yeniləndi",
-        });
+  // Update sector options when region changes
+  useEffect(() => {
+    const regionId = form.getValues('region_id');
+    if (regionId !== selectedRegion) {
+      setSelectedRegion(regionId);
+      // Reset sector selection if region changes
+      if (selectedRegion) {
+        form.setValue('sector_id', '');
       }
-      
-      if (onSuccess) onSuccess();
+    }
+  }, [form.watch('region_id')]);
+
+  const handleSubmit = (data: SchoolFormValues) => {
+    try {
+      onSubmit(data);
     } catch (error) {
-      console.error('Məktəb əməliyyatı xətası:', error);
-      toast({
-        title: "Xəta",
-        description: `Məktəb ${mode === 'create' ? 'yaradılarkən' : 'yenilənərkən'} xəta baş verdi`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      console.error('Form submission error:', error);
+      toast.error('Məlumatlar yadda saxlanarkən xəta baş verdi');
     }
   };
 
-  // Watch region_id to reset sector_id when region changes
-  const watchedRegionId = form.watch('region_id');
-  const handleRegionChange = (value: string) => {
-    form.setValue('region_id', value);
-    form.setValue('sector_id', ''); // Reset sector when region changes
-  };
-
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* School Name */}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Məktəbin adı *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Məktəbin adını daxil edin" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* School Code */}
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Məktəb kodu</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Məktəb kodu" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Region Selection */}
-              <FormField
-                control={form.control}
-                name="region_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Region</FormLabel>
-                    <Select
-                      disabled={isLoadingRegions}
-                      value={field.value}
-                      onValueChange={handleRegionChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Region seçin" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {regions?.map((region) => (
-                          <SelectItem key={region.id} value={region.id}>
-                            {region.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Sector Selection */}
-              <FormField
-                control={form.control}
-                name="sector_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sektor *</FormLabel>
-                    <Select
-                      disabled={isLoadingSectors || !watchedRegionId}
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sektor seçin" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {sectors?.map((sector) => (
-                          <SelectItem key={sector.id} value={sector.id}>
-                            {sector.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* School Type */}
-              <FormField
-                control={form.control}
-                name="type_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Məktəb növü</FormLabel>
-                    <Select
-                      disabled={isLoadingSchoolTypes}
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Məktəb növü seçin" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {schoolTypes?.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Director */}
-              <FormField
-                control={form.control}
-                name="director"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Direktor</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Direktor" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Email */}
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>E-mail</FormLabel>
-                    <FormControl>
-                      <Input placeholder="E-mail" type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Phone */}
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefon</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Telefon" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Student Count */}
-              <FormField
-                control={form.control}
-                name="student_count"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Şagird sayı</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="Şagird sayı"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Teacher Count */}
-              <FormField
-                control={form.control}
-                name="teacher_count"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Müəllim sayı</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="Müəllim sayı"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Address */}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="general">Əsas məlumatlar</TabsTrigger>
+            <TabsTrigger value="additional">Əlavə məlumatlar</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="general" className="space-y-4 mt-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Məktəb adı</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Məktəb adını daxil edin" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Məktəb kodu</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Məktəb kodunu daxil edin" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="address"
@@ -383,34 +133,172 @@ export default function SchoolForm({
                 <FormItem>
                   <FormLabel>Ünvan</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Məktəbin ünvanı"
-                      className="resize-none"
-                      {...field}
-                    />
+                    <Textarea placeholder="Məktəbin ünvanını daxil edin" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            {/* Form Buttons */}
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isSubmitting}
-              >
-                Ləğv et
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Gözləyin...' : mode === 'create' ? 'Yarat' : 'Yenilə'}
-              </Button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="region_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Region</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        disabled={regionsLoading}
+                        {...field}
+                      >
+                        <option value="">Seçin</option>
+                        {regions.map(region => (
+                          <option key={region.id} value={region.id}>
+                            {region.name}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="sector_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sektor</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        disabled={sectorsLoading || !selectedRegion}
+                        {...field}
+                      >
+                        <option value="">Seçin</option>
+                        {filteredSectors.map(sector => (
+                          <option key={sector.id} value={sector.id}>
+                            {sector.name}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          </TabsContent>
+          
+          <TabsContent value="additional" className="space-y-4 mt-4">
+            <FormField
+              control={form.control}
+              name="director"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Direktor</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Direktorun adı" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefon</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Telefon nömrəsi" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="student_count"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Şagird sayı</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Şagird sayı" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="teacher_count"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Müəllim sayı</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Müəllim sayı" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <FormControl>
+                    <select
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      {...field}
+                    >
+                      <option value="Aktiv">Aktiv</option>
+                      <option value="Qeyri-aktiv">Qeyri-aktiv</option>
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+        </Tabs>
+        
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Ləğv et
+          </Button>
+          <Button type="submit">
+            {initialData ? 'Yenilə' : 'Əlavə et'}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
-}
+};

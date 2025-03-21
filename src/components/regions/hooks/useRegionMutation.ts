@@ -1,8 +1,9 @@
+
 /**
  * Region mutasiyası üçün universal hook
  */
 import { useSupabaseMutation } from '@/hooks/supabase';
-import { RegionWithStats } from './useRegions';
+import { RegionWithStats } from '@/supabase/types';
 import { Region } from '@/types/supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
 

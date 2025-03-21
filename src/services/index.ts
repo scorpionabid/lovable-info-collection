@@ -1,36 +1,28 @@
 
 /**
- * Servislər üçün index faylı
- * Köhnə API-dan yeni API-ya keçid üçün adapter
+ * Re-export all services for easier imports
  */
 
-// Supabase ilə bağlı bütün servislər
-export * from '@/supabase/services/regions';
-export * from '@/supabase/services/sectors';
-export * from '@/supabase/services/schools';
-export * from '@/supabase/services/users';
-export * from '@/supabase/services/auth';
+// Base services
+export * from './userService';
+export * from './regionService';
+export * from './sectorService';
+export * from './schoolService';
+export * from './authService';
+export * from './notificationService';
+export * from './exportService';
+export * from './metricService';
 
-// Hook və müştəri exportları
-export * from '@/supabase/client';
-export * from '@/supabase/config';
+// Supabase client from new location - avoid ambiguity by using specific imports
+export { 
+  supabase, 
+  // No more re-exporting these to avoid conflicts
+  // SUPABASE_URL, 
+  // SUPABASE_ANON_KEY, 
+  // CACHE_CONFIG
+} from '@/supabase/client';
 
-// Region servisi
-import regionService from './regionService';
-export { regionService };
-
-// Sector servisi
-import sectorService from './sectorService';
-export { sectorService };
-
-// School servisi
-import schoolService from './schoolService';
-export { schoolService };
-
-// User servisi
-import userService from './userService';
-export { userService };
-
-// Auth servisi
-import authService from './authService';
-export { authService };
+// If we still need these constants, re-export with different names
+export { SUPABASE_URL as SUPABASE_BASE_URL } from '@/supabase/client';
+export { SUPABASE_ANON_KEY as SUPABASE_API_KEY } from '@/supabase/client';
+export { CACHE_CONFIG as CACHE_SETTINGS } from '@/supabase/client';

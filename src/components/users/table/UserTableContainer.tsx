@@ -4,8 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { User } from "@/services/userService";
 import { UserTableHeader } from "./UserTableHeader";
 import { UserTableRow } from "./UserTableRow";
-import { sortUsers } from "../utils/userUtils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import userService from "@/services/userService";
 
 interface UserTableContainerProps {
@@ -23,73 +22,48 @@ export const UserTableContainer = ({
 }: UserTableContainerProps) => {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const { toast } = useToast();
 
   // Table actions
   const deleteUserMutation = useMutation({
     mutationFn: (userId: string) => userService.deleteUser(userId),
     onSuccess: () => {
-      toast({
-        title: "İstifadəçi silindi",
-        description: "İstifadəçi uğurla silindi",
-      });
+      toast.success("İstifadəçi uğurla silindi");
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Xəta baş verdi",
-        description: `Silinmə xətası: ${(error as Error).message}`
-      });
+      toast.error(`Silinmə xətası: ${(error as Error).message}`);
     }
   });
 
   const blockUserMutation = useMutation({
     mutationFn: (userId: string) => userService.blockUser(userId),
     onSuccess: () => {
-      toast({
-        title: "İstifadəçi bloklandı",
-        description: "İstifadəçi uğurla bloklandı",
-      });
+      toast.success("İstifadəçi uğurla bloklandı");
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Xəta baş verdi",
-        description: `Bloklama xətası: ${(error as Error).message}`
-      });
+      toast.error(`Bloklama xətası: ${(error as Error).message}`);
     }
   });
 
   const activateUserMutation = useMutation({
     mutationFn: (userId: string) => userService.activateUser(userId),
     onSuccess: () => {
-      toast({
-        title: "İstifadəçi aktivləşdirildi",
-        description: "İstifadəçi uğurla aktivləşdirildi",
-      });
+      toast.success("İstifadəçi uğurla aktivləşdirildi");
       onRefetch();
     },
     onError: (error) => {
-      toast({
-        title: "Xəta baş verdi",
-        description: `Aktivləşdirmə xətası: ${(error as Error).message}`
-      });
+      toast.error(`Aktivləşdirmə xətası: ${(error as Error).message}`);
     }
   });
 
   const resetPasswordMutation = useMutation({
     mutationFn: (userId: string) => userService.resetPassword(userId),
     onSuccess: () => {
-      toast({
-        title: "Şifrə sıfırlandı",
-        description: "Şifrə sıfırlama linki göndərildi",
-      });
+      toast.success("Şifrə sıfırlama linki göndərildi");
     },
     onError: (error) => {
-      toast({
-        title: "Xəta baş verdi",
-        description: `Şifrə sıfırlama xətası: ${(error as Error).message}`
-      });
+      toast.error(`Şifrə sıfırlama xətası: ${(error as Error).message}`);
     }
   });
 
@@ -101,6 +75,44 @@ export const UserTableContainer = ({
       setSortField(field);
       setSortDirection('asc');
     }
+  };
+
+  // Manual sorting implementation
+  const sortUsers = (users: User[], field: string | null, direction: 'asc' | 'desc') => {
+    if (!field) return users;
+    
+    return [...users].sort((a, b) => {
+      let valueA, valueB;
+      
+      switch (field) {
+        case 'name':
+          valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
+          valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
+          break;
+        case 'email':
+          valueA = a.email.toLowerCase();
+          valueB = b.email.toLowerCase();
+          break;
+        case 'role':
+          valueA = a.roles?.name || '';
+          valueB = b.roles?.name || '';
+          break;
+        case 'lastLogin':
+          valueA = a.last_login || '';
+          valueB = b.last_login || '';
+          break;
+        case 'status':
+          valueA = a.is_active ? 'active' : 'inactive';
+          valueB = b.is_active ? 'active' : 'inactive';
+          break;
+        default:
+          return 0;
+      }
+      
+      if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+      if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
   };
 
   const sortedUsers = sortUsers(users, sortField, sortDirection);
