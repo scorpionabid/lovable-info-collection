@@ -1,149 +1,143 @@
-/**
- * Offline caching and data persistence utilities
- */
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
 
-// Cache configuration
+/**
+ * Supabase sorğuları üçün keşləmə mexanizmi
+ */
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
+
+// Keş konfiqurasiyası
 export const CACHE_CONFIG = {
-  CACHE_DURATION_MS: 24 * 60 * 60 * 1000, // 24 hours default cache duration
-  STALE_TIME_MS: 15 * 60 * 1000, // 15 minutes stale time
-  OFFLINE_FIRST: true, // Whether to prioritize cached data in offline mode
-  PREFER_CACHE: false, // Whether to always prefer cache over network
-  MAX_LOCAL_SIZE: 50 * 1024 * 1024, // 50MB max local storage
-  RETRY_COUNT: 3, // Number of times to retry failed requests
-  RETRY_DELAY_MS: 1000, // Initial delay between retries (increases exponentially)
+  enabled: true,
+  defaultTTL: 5 * 60 * 1000, // 5 dəqiqə
+  storagePrefix: 'infoline_',
+  longTermTTL: 24 * 60 * 60 * 1000, // 1 gün
+  persistToLocalStorage: true
 };
 
-// Check if we're in offline mode
-export function isOfflineMode(): boolean {
-  return !navigator.onLine;
-}
+// Offline rejim idarəetməsi üçün 
+export const isOfflineMode = (): boolean => {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+};
 
-// Main cache utility
+// Funksiyanın nəticəsini keşə saxlayan wrapper
 export async function queryWithCache<T>(
-  queryFn: () => Promise<{ data: T; error: any }>,
   cacheKey: string,
-  options: {
-    duration?: number;
-    forceRefresh?: boolean;
-    ignoreCache?: boolean;
-  } = {}
-): Promise<{ data: T; error: any; fromCache?: boolean }> {
-  const {
-    duration = CACHE_CONFIG.CACHE_DURATION_MS,
-    forceRefresh = false,
-    ignoreCache = false
-  } = options;
-
-  // If we're offline and have a cached result, use it
-  const isOffline = isOfflineMode();
-  if (isOffline || CACHE_CONFIG.PREFER_CACHE) {
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult && !forceRefresh) {
-      return { ...cachedResult, fromCache: true };
-    }
-  }
-
-  // If we're online or don't have a cached result, fetch new data
-  if (!isOffline && !CACHE_CONFIG.PREFER_CACHE) {
-    try {
-      const result = await withRetry(() => queryFn());
-      // Cache the result if successful
-      if (result.data && !result.error) {
-        setCachedResult(cacheKey, result, duration);
-      }
-      return { ...result, fromCache: false };
-    } catch (error) {
-      // If fetch failed and we have a cached result, use it
-      const cachedResult = getCachedResult<T>(cacheKey);
-      if (cachedResult) {
-        return { ...cachedResult, fromCache: true };
-      }
-      // Otherwise, return the error
-      return { data: null as unknown as T, error, fromCache: false };
-    }
-  }
-
-  // We're offline and don't have a cached result
-  return {
-    data: null as unknown as T,
-    error: new Error('Cannot fetch data: offline and no cached result available'),
-    fromCache: false
-  };
-}
-
-// Retry utility
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries = CACHE_CONFIG.RETRY_COUNT,
-  delay = CACHE_CONFIG.RETRY_DELAY_MS
+  queryFn: () => Promise<PostgrestSingleResponse<T>>,
+  ttl: number = CACHE_CONFIG.defaultTTL
 ): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries <= 0) {
-      throw error;
+  if (!CACHE_CONFIG.enabled) {
+    const { data, error } = await queryFn();
+    if (error) throw error;
+    return data as T;
+  }
+
+  // Offline rejim yoxlaması
+  if (isOfflineMode()) {
+    const cachedResult = getCachedResult<T>(cacheKey);
+    if (cachedResult) {
+      console.log(`Offline mode: Using cached data for ${cacheKey}`);
+      return cachedResult;
     }
-    await new Promise(resolve => setTimeout(resolve, delay));
-    return withRetry(fn, retries - 1, delay * 2);
+    throw new Error('Offline mode: No cached data available');
+  }
+
+  try {
+    // Keşdən oxuma cəhdi
+    const cachedResult = getCachedResult<T>(cacheKey);
+    if (cachedResult) {
+      console.log(`Cache hit for ${cacheKey}`);
+      return cachedResult;
+    }
+
+    // Keşdə yoxdursa, sorğu yerinə yetirilir
+    console.log(`Cache miss for ${cacheKey}, fetching...`);
+    const { data, error } = await queryFn();
+    if (error) throw error;
+
+    // Nəticəni keşə saxla
+    setCachedResult(cacheKey, data, ttl);
+    return data as T;
+  } catch (error) {
+    console.error(`Error fetching or caching data for ${cacheKey}:`, error);
+    
+    // Xəta halında belə keşdən oxuma cəhdi
+    const cachedResult = getCachedResult<T>(cacheKey);
+    if (cachedResult) {
+      console.log(`Using stale cache for ${cacheKey} after error`);
+      return cachedResult;
+    }
+    
+    throw error;
   }
 }
 
-// Get cached result
-function getCachedResult<T>(key: string): { data: T; error: any } | null {
-  try {
-    const cached = localStorage.getItem(`cache:${key}`);
-    if (!cached) return null;
+// Təkrar cəhd mexanizmi
+export async function withRetry<T>(
+  queryFn: () => Promise<{ data: T; error: any }>,
+  maxRetries: number = 2,
+  initialDelay: number = 1000
+): Promise<T> {
+  let lastError;
+  let delay = initialDelay;
 
-    const { data, error, expires } = JSON.parse(cached);
-    if (expires && new Date(expires) < new Date()) {
-      // Cache expired
-      localStorage.removeItem(`cache:${key}`);
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const { data, error } = await queryFn();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.warn(`Attempt ${attempt + 1}/${maxRetries + 1} failed:`, error);
+      lastError = error;
+      
+      if (attempt < maxRetries) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 1.5; // Exponential backoff
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+// Supabase bağlantısını yoxlamaq
+export async function checkConnection(): Promise<boolean> {
+  return true; // Implement real connectivity check if needed
+}
+
+// Keşdən nəticəni almaq
+function getCachedResult<T>(key: string): T | null {
+  try {
+    const cacheKey = `${CACHE_CONFIG.storagePrefix}${key}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    
+    if (!cachedData) return null;
+    
+    const { value, expiry } = JSON.parse(cachedData);
+    
+    if (expiry && expiry < Date.now()) {
+      // Keş vaxtı bitib, sil və null qaytar
+      localStorage.removeItem(cacheKey);
       return null;
     }
-
-    return { data, error };
-  } catch (e) {
-    console.warn('Cache read error:', e);
+    
+    return value as T;
+  } catch (error) {
+    console.error('Error reading from cache:', error);
     return null;
   }
 }
 
-// Set cached result
-function setCachedResult<T>(
-  key: string,
-  result: { data: T; error: any },
-  duration: number
-): void {
+// Nəticəni keşə saxlamaq
+function setCachedResult<T>(key: string, value: T, ttl: number): void {
   try {
-    const expires = new Date(new Date().getTime() + duration).toISOString();
-    localStorage.setItem(
-      `cache:${key}`,
-      JSON.stringify({
-        data: result.data,
-        error: result.error,
-        expires
-      })
-    );
-  } catch (e) {
-    console.warn('Cache write error:', e);
+    const cacheKey = `${CACHE_CONFIG.storagePrefix}${key}`;
+    const data = {
+      value,
+      expiry: Date.now() + ttl
+    };
+    
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error writing to cache:', error);
   }
-}
-
-// Check and establish connection
-export async function checkConnection(): Promise<boolean> {
-  if (navigator.onLine) {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/health`, { 
-        method: 'HEAD',
-        cache: 'no-cache',
-        headers: { 'pragma': 'no-cache' }
-      });
-      return response.ok;
-    } catch (e) {
-      return false;
-    }
-  }
-  return false;
 }

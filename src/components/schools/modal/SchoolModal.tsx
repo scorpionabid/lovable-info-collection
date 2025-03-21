@@ -17,6 +17,7 @@ export interface SchoolModalProps {
   sectorId?: string;
   onSchoolUpdated?: () => void;
   onCreated?: () => void;
+  initialData?: School; // Added initialData prop
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
@@ -28,12 +29,13 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   regionId,
   sectorId,
   onSchoolUpdated,
-  onCreated
+  onCreated,
+  initialData
 }) => {
   const { data: schoolData, isLoading } = useQuery({
     queryKey: ["school", schoolId],
     queryFn: () => getSchoolById(schoolId as string),
-    enabled: !!schoolId && mode === "edit"
+    enabled: !!schoolId && mode === "edit" && !initialData
   });
 
   const handleSuccess = () => {
@@ -43,10 +45,13 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
     onClose();
   };
 
+  // Use initialData if provided, otherwise use data from query
+  const formData = initialData || schoolData;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        {isLoading ? (
+        {isLoading && !initialData ? (
           <div className="flex justify-center items-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-infoline-blue" />
           </div>
@@ -54,7 +59,7 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
           <SchoolForm
             onSuccess={handleSuccess}
             onCancel={onClose}
-            initialData={schoolData}
+            initialData={formData}
             mode={mode}
             regionId={regionId}
             sectorId={sectorId}

@@ -41,8 +41,9 @@ const sectorService = {
           schoolCount: Math.floor(Math.random() * 20) + 1,
           completionRate: Math.floor(Math.random() * 100),
           schools_count: Math.floor(Math.random() * 20) + 1,
-          completion_rate: Math.floor(Math.random() * 100)
-        } as SectorWithStats;
+          completion_rate: Math.floor(Math.random() * 100),
+          code: sector.code || null
+        };
       });
       
       return sectorsWithStats;
@@ -103,7 +104,7 @@ const sectorService = {
           schools_count: Math.floor(Math.random() * 20) + 1,
           completion_rate: Math.floor(Math.random() * 100),
           code: sector.code || null
-        } as SectorWithStats;
+        };
       });
       
       return sectorsWithStats;
@@ -146,7 +147,7 @@ const sectorService = {
         schools_count: Math.floor(Math.random() * 20) + 1,
         completion_rate: Math.floor(Math.random() * 100),
         code: data.code || null
-      } as SectorWithStats;
+      };
     } catch (error) {
       logger.error('Sektor əldə etmə xətası:', error);
       return null;
@@ -187,7 +188,7 @@ const sectorService = {
         schools_count: 0,
         completion_rate: 0,
         code: data.code || null
-      } as SectorWithStats;
+      };
     } catch (error) {
       logger.error('Sektor yaratma xətası:', error);
       return null;
@@ -229,7 +230,7 @@ const sectorService = {
         schools_count: Math.floor(Math.random() * 20) + 1,
         completion_rate: Math.floor(Math.random() * 100),
         code: data.code || null
-      } as SectorWithStats;
+      };
     } catch (error) {
       logger.error('Sektor yeniləmə xətası:', error);
       return null;
@@ -291,7 +292,7 @@ const sectorService = {
           schools_count: Math.floor(Math.random() * 20) + 1,
           completion_rate: Math.floor(Math.random() * 100),
           code: sector.code || null
-        } as SectorWithStats;
+        };
       });
       
       return sectorsWithStats;

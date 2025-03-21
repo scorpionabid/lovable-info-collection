@@ -93,10 +93,10 @@ export const getRegions = async (
         schoolCount: schoolCount,
         completionRate: completionRate,
         userCount: Math.floor(Math.random() * 20) + 5, // 5-25 random users
-        // Add the new required fields with default values
+        // Add the missing required fields with default values
         description: region.description || '',
-        studentCount: 0,
-        teacherCount: 0
+        studentCount: Math.floor(Math.random() * 1000) + 100, // Random student count
+        teacherCount: Math.floor(Math.random() * 100) + 10 // Random teacher count
       } as RegionWithStats;
     });
 

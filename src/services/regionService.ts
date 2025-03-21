@@ -16,7 +16,7 @@ export const getRegions = async () => {
     // Transform data to ensure description is present
     return data?.map(region => ({
       ...region,
-      description: region.description || ''
+      description: region.description || '' // Add default empty string for description
     })) || [];
   } catch (error) {
     console.error('Error fetching regions:', error);
@@ -39,7 +39,7 @@ export const getRegionById = async (id: string) => {
     // Transform data to ensure description is present
     return {
       ...data,
-      description: data.description || ''
+      description: data.description || '' // Add default empty string for description
     };
   } catch (error) {
     console.error(`Error fetching region with ID ${id}:`, error);
@@ -122,7 +122,7 @@ export const getSectorsByRegionId = async (regionId: string) => {
     // Transform data to ensure description is present
     return data?.map(sector => ({
       ...sector,
-      description: sector.description || ''
+      description: sector.description || '' // Add default empty string for description
     })) || [];
   } catch (error) {
     console.error(`Error fetching sectors for region ID ${regionId}:`, error);

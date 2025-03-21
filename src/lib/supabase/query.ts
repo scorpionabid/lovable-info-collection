@@ -4,8 +4,29 @@
  * Bu modul səhifələndirmə, filtirləmə və ümumi query yaradılması üçün funksiyalar təmin edir
  */
 import { supabase } from './index';
-import { PostgrestFilterBuilder } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
+
+// Define a simplified PostgrestBuilder interface to avoid importing directly
+interface PostgrestFilterBuilder {
+  select: (columns: string) => PostgrestFilterBuilder;
+  from: (table: string) => PostgrestFilterBuilder;
+  eq: (column: string, value: any) => PostgrestFilterBuilder;
+  neq: (column: string, value: any) => PostgrestFilterBuilder;
+  gt: (column: string, value: any) => PostgrestFilterBuilder;
+  lt: (column: string, value: any) => PostgrestFilterBuilder;
+  gte: (column: string, value: any) => PostgrestFilterBuilder;
+  lte: (column: string, value: any) => PostgrestFilterBuilder;
+  like: (column: string, value: string) => PostgrestFilterBuilder;
+  ilike: (column: string, value: string) => PostgrestFilterBuilder;
+  is: (column: string, value: any) => PostgrestFilterBuilder;
+  in: (column: string, values: any[]) => PostgrestFilterBuilder;
+  order: (column: string, options?: { ascending?: boolean }) => PostgrestFilterBuilder;
+  range: (from: number, to: number) => PostgrestFilterBuilder;
+  limit: (count: number) => PostgrestFilterBuilder;
+  single: () => Promise<any>;
+  maybeSingle: () => Promise<any>;
+  then: (callback: (result: any) => void) => Promise<any>;
+}
 
 /**
  * Səhifələnmiş sorğu yaradan funksiya
@@ -14,11 +35,11 @@ import { Database } from '@/types/supabase';
  * @param pageSize Səhifə ölçüsü
  * @returns Səhifələnmiş sorğu
  */
-export function createPaginatedQuery<T = any>(
-  query: PostgrestFilterBuilder<Database, T, any>,
+export function createPaginatedQuery(
+  query: any,
   page: number,
   pageSize: number
-): PostgrestFilterBuilder<Database, T, any> {
+): any {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   return query.range(from, to);
@@ -31,11 +52,11 @@ export function createPaginatedQuery<T = any>(
  * @param ascending Artan sıralama üçün true
  * @returns Sıralanmış sorğu
  */
-export function createSortedQuery<T = any>(
-  query: PostgrestFilterBuilder<Database, T, any>,
+export function createSortedQuery(
+  query: any,
   orderBy: string,
   ascending: boolean = true
-): PostgrestFilterBuilder<Database, T, any> {
+): any {
   return query.order(orderBy, { ascending });
 }
 
@@ -45,10 +66,10 @@ export function createSortedQuery<T = any>(
  * @param filters Filtrlər obyekti
  * @returns Filtrlənmiş sorğu
  */
-export function createFilteredQuery<T = any>(
-  query: PostgrestFilterBuilder<Database, T, any>,
+export function createFilteredQuery(
+  query: any,
   filters: Record<string, any>
-): PostgrestFilterBuilder<Database, T, any> {
+): any {
   let result = query;
 
   // Filtr obyektini gəz və hər bir filtri tətbiq et
@@ -79,12 +100,12 @@ export function createFilteredQuery<T = any>(
  * @param ascending Artan sıralama üçün true
  * @returns Filtrlənmiş və sıralanmış sorğu
  */
-export function createFilteredAndSortedQuery<T = any>(
-  query: PostgrestFilterBuilder<Database, T, any>,
+export function createFilteredAndSortedQuery(
+  query: any,
   filters: Record<string, any>,
   orderBy: string,
   ascending: boolean = true
-): PostgrestFilterBuilder<Database, T, any> {
+): any {
   const filteredQuery = createFilteredQuery(query, filters);
   return createSortedQuery(filteredQuery, orderBy, ascending);
 }
@@ -99,14 +120,14 @@ export function createFilteredAndSortedQuery<T = any>(
  * @param pageSize Səhifə ölçüsü
  * @returns Tam konfiqurasiya edilmiş sorğu
  */
-export function createCompleteQuery<T = any>(
-  query: PostgrestFilterBuilder<Database, T, any>,
+export function createCompleteQuery(
+  query: any,
   filters: Record<string, any>,
   orderBy: string,
   ascending: boolean = true,
   page: number,
   pageSize: number
-): PostgrestFilterBuilder<Database, T, any> {
+): any {
   const filteredAndSortedQuery = createFilteredAndSortedQuery(
     query,
     filters,
@@ -138,30 +159,28 @@ export async function getPaginatedData<T = any>(
 ): Promise<{ data: T[]; count: number; error: any }> {
   try {
     // Ümumi sayı əldə et
-    const countQuery = supabase
+    const countResult = await supabase
       .from(tableName)
       .select('*', { count: 'exact', head: true });
       
-    // Filtrlərə bax
-    const filteredCountQuery = createFilteredQuery(countQuery, filters);
-    const { count, error: countError } = await filteredCountQuery;
+    const { count, error: countError } = countResult;
     
     if (countError) throw countError;
     
     // Əsas data sorğusu
     const dataQuery = supabase.from(tableName).select(select);
     
-    // Kompleks sorğunu tətbiq et
-    const completeQuery = createCompleteQuery(
-      dataQuery,
-      filters,
-      orderBy,
-      ascending,
-      page,
-      pageSize
-    );
+    // Apply filters
+    const filteredQuery = createFilteredQuery(dataQuery, filters);
     
-    const { data, error: dataError } = await completeQuery;
+    // Apply sorting
+    const sortedQuery = createSortedQuery(filteredQuery, orderBy, ascending);
+    
+    // Apply pagination
+    const paginatedQuery = createPaginatedQuery(sortedQuery, page, pageSize);
+    
+    // Execute query
+    const { data, error: dataError } = await paginatedQuery;
     
     if (dataError) throw dataError;
     
