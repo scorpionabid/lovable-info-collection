@@ -1,13 +1,15 @@
 
-import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
+import { supabase } from '@/supabase/client';
+import { PostgrestError } from '@supabase/supabase-js';
 
-export function useSupabaseQuery<TData = unknown, TError = Error>(
-  queryKey: string[],
-  queryFn: () => Promise<TData>,
-  options?: Omit<UseQueryOptions<TData, TError, TData, string[]>, 'queryKey' | 'queryFn'>
-) {
-  return useQuery({
-    queryKey,
+export function useSupabaseQuery<T>(
+  key: string[],
+  queryFn: () => Promise<T>,
+  options?: Omit<UseQueryOptions<T, PostgrestError, T, string[]>, 'queryKey' | 'queryFn'>
+): UseQueryResult<T, PostgrestError> {
+  return useQuery<T, PostgrestError, T, string[]>({
+    queryKey: key,
     queryFn,
     ...options,
   });

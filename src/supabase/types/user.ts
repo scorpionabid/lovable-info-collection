@@ -1,5 +1,5 @@
 
-import { Tables } from '@/integrations/supabase/types';
+import { Tables } from '@/types/supabase';
 
 // Base User type from database
 export interface User {
@@ -8,7 +8,7 @@ export interface User {
   last_name: string;
   email: string;
   phone?: string;
-  role_id?: string;
+  role_id: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;

@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabase/client';
-import { SchoolType } from '@/supabase/types';
+import { SchoolType } from '@/supabase/types/school';
 
 export interface UseSchoolTypeOptions {
   typeId?: string;
@@ -15,14 +15,15 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
     if (!typeId) return null;
 
     try {
-      // Call the stored function for getting school types
+      // Fetch from school_types table directly
       const { data, error } = await supabase
-        .rpc('get_school_types')
-        .filter('id', 'eq', typeId)
+        .from('school_types')
+        .select('id, name, description')
+        .eq('id', typeId)
         .maybeSingle();
 
       if (error) throw error;
-      return data || null;
+      return data as SchoolType;
     } catch (error) {
       console.error('Error fetching school type:', error);
       return null;

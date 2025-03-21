@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { FilterParams } from '@/supabase/types'; // Updated import
+import { FilterParams } from '@/supabase/types';
 
 export const useRegionFilters = () => {
   const [filters, setFilters] = useState<FilterParams>({

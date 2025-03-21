@@ -7,7 +7,7 @@ export const useRegions = () => {
     try {
       const { data, error } = await supabase
         .from('regions')
-        .select('id, name, code, description')
+        .select('id, name, code')
         .order('name');
       
       if (error) {
@@ -16,12 +16,12 @@ export const useRegions = () => {
       
       if (!data) return [];
       
-      // Map the data and ensure description is included
+      // Map the data with safe defaults
       return data.map(region => ({
         id: region.id || '',
         name: region.name || '',
         code: region.code || '',
-        description: region.description || ''
+        description: '' // Default empty description
       }));
     } catch (error) {
       console.error('Error fetching regions:', error);

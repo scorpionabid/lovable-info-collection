@@ -1,15 +1,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabase/client';
-
-export interface SchoolType {
-  id: string;
-  name: string;
-  description?: string;
-}
+import { SchoolType } from '@/supabase/types/school';
 
 export const useSchoolTypes = () => {
-  const fetchSchoolTypes = async () => {
+  const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
       const { data, error } = await supabase
         .from('school_types')
@@ -20,7 +15,7 @@ export const useSchoolTypes = () => {
         throw error;
       }
       
-      return data || [];
+      return (data || []) as SchoolType[];
     } catch (error) {
       console.error('Error fetching school types:', error);
       return [];

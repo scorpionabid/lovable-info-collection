@@ -1,14 +1,29 @@
 
-import { Tables } from '@/integrations/supabase/types';
+import { Tables } from '@/types/supabase';
 
-// School type interface
-export type School = Tables<'schools'>;
+// School type interface with archived as optional to match the service usages
+export type School = Omit<Tables<'schools'>, 'archived'> & {
+  archived?: boolean;
+  completionRate?: number;
+  adminName?: string;
+  adminId?: string;
+  region?: string;
+  sector?: string;
+  type?: string;
+};
 
 // School with Statistics
 export interface SchoolWithStats extends School {
   completionRate?: number;
   adminName?: string;
   adminId?: string;
+}
+
+// School type definition
+export interface SchoolType {
+  id: string;
+  name: string;
+  description?: string;
 }
 
 // School filter interface
@@ -26,12 +41,6 @@ export interface SchoolFilter {
 export interface SchoolSortParams {
   field: string;
   direction: 'asc' | 'desc';
-}
-
-// School type interface
-export interface SchoolType {
-  id: string;
-  name: string;
 }
 
 // Create DTO

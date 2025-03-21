@@ -1,8 +1,11 @@
 
-import { Tables } from '@/integrations/supabase/types';
+import { Tables } from '@/types/supabase';
 
 // Base Region type from the database
-export type Region = Tables<'regions'>;
+export type Region = Tables<'regions'> & {
+  code?: string;
+  description?: string;
+};
 
 // Filter parameters for region queries
 export interface RegionFilters {
@@ -18,11 +21,11 @@ export interface RegionFilters {
 export interface RegionWithStats extends Region {
   sectorCount: number;
   schoolCount: number;
-  studentCount: number; // Added this property
-  teacherCount: number; // Added this property
-  userCount?: number;   // Added this property
+  studentCount?: number; 
+  teacherCount?: number; 
+  userCount?: number;   
   completionRate: number;
-  status?: string;      // Added this property
+  status?: string;      
   // Support older property names for backward compatibility
   sectors_count?: number;
   schools_count?: number;

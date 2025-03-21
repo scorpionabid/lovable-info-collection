@@ -9,7 +9,7 @@ export const useSectors = (regionId: string) => {
     try {
       const { data, error } = await supabase
         .from('sectors')
-        .select('id, name, description')
+        .select('id, name')
         .eq('region_id', regionId)
         .order('name');
       
@@ -20,7 +20,7 @@ export const useSectors = (regionId: string) => {
       return data?.map(sector => ({
         id: sector.id,
         name: sector.name,
-        description: sector.description || ''
+        description: '' // Default empty description
       })) || [];
     } catch (error) {
       console.error('Error fetching sectors:', error);

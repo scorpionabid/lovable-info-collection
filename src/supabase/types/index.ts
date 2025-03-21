@@ -5,7 +5,7 @@ export * from './sector';
 export * from './school';
 export * from './user';
 
-// Define FilterParams which is used in multiple places
+// Common interfaces used across multiple entity types
 export interface FilterParams {
   search?: string;
   region_id?: string;
@@ -37,3 +37,9 @@ export interface PaginatedResult<T> {
   data: T[];
   count: number;
 }
+
+// Type aliases for RegionFilters and other filter types
+export type RegionFilters = FilterParams;
+export type SectorFilters = FilterParams;
+export type SchoolFilters = FilterParams;
+export type UserFilters = FilterParams;
