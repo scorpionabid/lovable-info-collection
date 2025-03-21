@@ -1,191 +1,93 @@
 
-import { useState, useEffect } from 'react';
+import React from 'react';
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { X } from "lucide-react";
-import { FilterParams } from "@/services/supabase/region";
-import { useToast } from "@/hooks/use-toast";
+import { RegionFilters } from '@/supabase/types';
 
-interface RegionFilterPanelProps {
-  filters: FilterParams;
-  onApplyFilters: (filters: FilterParams) => void;
-  onClose: () => void;
+export interface RegionFilterPanelProps {
+  filters: {
+    search: string;
+    status: 'active' | 'inactive' | 'all';
+  };
+  onFilterChange: (key: string, value: any) => void;
+  onFiltersChange: React.Dispatch<React.SetStateAction<{
+    search: string;
+    status: 'active' | 'inactive' | 'all';
+  }>>;
+  onFilterApply: () => void;
 }
 
-export const RegionFilterPanel = ({ onClose, onApplyFilters, filters: initialFilters }: RegionFilterPanelProps) => {
-  const { toast } = useToast();
-  const [filters, setFilters] = useState<FilterParams>(initialFilters);
-  const [isValidDate, setIsValidDate] = useState({
-    from: true,
-    to: true
-  });
+export const RegionFilterPanel: React.FC<RegionFilterPanelProps> = ({ 
+  filters, 
+  onFilterChange, 
+  onFiltersChange,
+  onFilterApply 
+}) => {
+  // Use a local copy of filters to avoid immediate re-renders
+  const [localFilters, setLocalFilters] = React.useState(filters);
 
-  // Initialize filter values from props
-  useEffect(() => {
-    setFilters(initialFilters);
-  }, [initialFilters]);
+  React.useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-    
-    // Validate dates
-    if (name === 'dateFrom' || name === 'dateTo') {
-      validateDates(name, value);
-    }
+  const handleStatusChange = (value: string) => {
+    setLocalFilters(prev => ({ ...prev, status: value as 'active' | 'inactive' | 'all' }));
   };
 
-  // Validate date ranges
-  const validateDates = (fieldName: string, value: string) => {
-    if (!value) {
-      setIsValidDate(prev => ({ ...prev, [fieldName === 'dateFrom' ? 'from' : 'to']: true }));
-      return;
-    }
-    
-    const dateFrom = fieldName === 'dateFrom' ? value : filters.dateFrom;
-    const dateTo = fieldName === 'dateTo' ? value : filters.dateTo;
-    
-    if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
-      setIsValidDate({
-        from: fieldName === 'dateTo',
-        to: fieldName === 'dateFrom'
-      });
-      return;
-    }
-    
-    setIsValidDate(prev => ({ 
-      ...prev, 
-      [fieldName === 'dateFrom' ? 'from' : 'to']: true 
-    }));
-  };
-
-  // Handle select changes
-  const handleSelectChange = (name: string, value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Reset filters
-  const handleReset = () => {
-    setFilters({
-      searchQuery: '',
-      dateFrom: '',
-      dateTo: '',
-      completionRate: 'all'
-    });
-    setIsValidDate({ from: true, to: true });
-  };
-
-  // Apply filters
   const handleApply = () => {
-    // Check date validity
-    if (!isValidDate.from || !isValidDate.to) {
-      toast({
-        title: "Tarix xətası",
-        description: "Başlanğıc tarixi son tarixdən böyük ola bilməz",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    onApplyFilters(filters);
+    onFiltersChange(localFilters);
+    onFilterApply();
+  };
+
+  const handleReset = () => {
+    const resetFilters = {
+      search: '',
+      status: 'active' as const
+    };
+    setLocalFilters(resetFilters);
+    onFiltersChange(resetFilters);
+    onFilterApply();
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm animate-scale-in">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium text-infoline-dark-blue">Ətraflı Filtrlər</h3>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="space-y-2">
-          <label htmlFor="searchQuery" className="text-sm font-medium text-infoline-dark-gray">
-            Region adı
-          </label>
-          <Input 
-            id="searchQuery" 
-            name="searchQuery"
-            value={filters.searchQuery || ''}
-            onChange={handleInputChange}
-            placeholder="Region adı axtar..." 
-          />
+    <div className="bg-white p-4 rounded-md border border-infoline-light-gray mb-4">
+      <div className="space-y-4">
+        <div>
+          <Label className="text-infoline-dark-blue font-medium">Status</Label>
+          <RadioGroup value={localFilters.status} onValueChange={handleStatusChange} className="mt-2">
+            <div className="flex space-x-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="active" id="active" />
+                <Label htmlFor="active" className="cursor-pointer">Aktiv</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="inactive" id="inactive" />
+                <Label htmlFor="inactive" className="cursor-pointer">Deaktiv</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="all" />
+                <Label htmlFor="all" className="cursor-pointer">Hamısı</Label>
+              </div>
+            </div>
+          </RadioGroup>
         </div>
         
-        <div className="space-y-2">
-          <label htmlFor="dateFrom" className="text-sm font-medium text-infoline-dark-gray">
-            Tarixdən
-          </label>
-          <Input 
-            id="dateFrom" 
-            name="dateFrom"
-            value={filters.dateFrom || ''}
-            onChange={handleInputChange}
-            type="date"
-            className={!isValidDate.from ? "border-red-500" : ""}
-          />
-          {!isValidDate.from && (
-            <p className="text-xs text-red-500">Başlanğıc tarixi son tarixdən böyük ola bilməz</p>
-          )}
-        </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="dateTo" className="text-sm font-medium text-infoline-dark-gray">
-            Tarixə qədər
-          </label>
-          <Input 
-            id="dateTo" 
-            name="dateTo"
-            value={filters.dateTo || ''}
-            onChange={handleInputChange}
-            type="date"
-            className={!isValidDate.to ? "border-red-500" : ""}
-          />
-          {!isValidDate.to && (
-            <p className="text-xs text-red-500">Son tarix başlanğıc tarixindən kiçik ola bilməz</p>
-          )}
-        </div>
-        
-        <div className="space-y-2">
-          <label htmlFor="completionRate" className="text-sm font-medium text-infoline-dark-gray">
-            Doldurma faizi
-          </label>
-          <Select 
-            value={filters.completionRate || 'all'} 
-            onValueChange={(value) => handleSelectChange('completionRate', value)}
+        <div className="flex justify-end space-x-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
           >
-            <SelectTrigger id="completionRate">
-              <SelectValue placeholder="Bütün faizlər" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Bütün faizlər</SelectItem>
-              <SelectItem value="high">Yüksək (&gt;80%)</SelectItem>
-              <SelectItem value="medium">Orta (50-80%)</SelectItem>
-              <SelectItem value="low">Aşağı (&lt;50%)</SelectItem>
-            </SelectContent>
-          </Select>
+            Sıfırla
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleApply}
+          >
+            Tətbiq et
+          </Button>
         </div>
-      </div>
-      
-      <div className="flex justify-end gap-2 mt-4">
-        <Button variant="outline" onClick={handleReset}>Sıfırla</Button>
-        <Button variant="outline" onClick={onClose}>Ləğv et</Button>
-        <Button 
-          className="bg-infoline-blue hover:bg-infoline-dark-blue" 
-          onClick={handleApply}
-          disabled={!isValidDate.from || !isValidDate.to}
-        >
-          Tətbiq et
-        </Button>
       </div>
     </div>
   );

@@ -1,60 +1,57 @@
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FilterParams, SortParams, PaginationParams, RegionWithStats } from "@/supabase/types";
-import { getRegions } from "@/supabase/services/regions";
+import regionService from '@/services/supabase/region';
+import { RegionWithStats } from '@/supabase/types';
 
-interface UseRegionDataProps {
+interface UseRegionDataParams {
   currentPage: number;
   pageSize: number;
   sortColumn: string;
   sortDirection: 'asc' | 'desc';
-  filters: FilterParams;
+  filters: {
+    search: string;
+    status: 'active' | 'inactive' | 'all';
+  };
 }
 
-export const useRegionData = ({ 
-  currentPage, 
-  pageSize, 
-  sortColumn, 
-  sortDirection, 
-  filters 
-}: UseRegionDataProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const sortParams: SortParams = {
-    field: sortColumn,
-    direction: sortDirection
-  };
-  
-  const paginationParams: PaginationParams = {
-    page: currentPage,
-    pageSize
-  };
-  
-  const fetchRegionsData = async () => {
-    const result = await getRegions(filters, sortParams, paginationParams);
-    return {
-      data: result || [],
-      count: result.length || 0
+export const useRegionData = ({
+  currentPage,
+  pageSize,
+  sortColumn,
+  sortDirection,
+  filters
+}: UseRegionDataParams) => {
+  const fetchRegions = async () => {
+    // Map UI filters to API filters
+    const apiFilters = {
+      search: filters.search,
+      status: filters.status,
+      page: currentPage,
+      page_size: pageSize
     };
+
+    try {
+      return await regionService.getRegions(apiFilters);
+    } catch (error) {
+      console.error('Error fetching regions data:', error);
+      throw error;
+    }
   };
-  
+
   const { 
-    data: regionsResponse, 
+    data = { data: [] as RegionWithStats[], count: 0 }, 
     isLoading, 
     isError, 
     refetch 
   } = useQuery({
     queryKey: ['regions', currentPage, pageSize, sortColumn, sortDirection, filters],
-    queryFn: fetchRegionsData
+    queryFn: fetchRegions
   });
 
-  return {
-    regionsData: regionsResponse || { data: [], count: 0 },
-    isLoading,
-    isError,
-    refetch,
-    searchTerm,
-    setSearchTerm
+  return { 
+    regionsData: data, 
+    isLoading, 
+    isError, 
+    refetch 
   };
 };

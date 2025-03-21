@@ -1,145 +1,70 @@
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
-import { LoginCredentials } from "../types/authTypes";
+import { useCallback } from 'react';
+import { toast } from 'sonner';
+import { LoginCredentials } from '../types/authTypes';
+import * as authService from '@/supabase/services/auth';
 
 export const useAuthActions = (
-  handleUserLoggedIn: (userData: any) => Promise<void>,
+  handleUserLoggedIn: (userData: any) => void,
   handleUserLoggedOut: () => void
 ) => {
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const login = async (emailOrCredentials: string | LoginCredentials, password?: string) => {
-    setLoading(true);
-    try {
-      let email: string;
-      let pwd: string;
-      
-      if (typeof emailOrCredentials === 'string') {
-        // Handle email-only login (OTP)
-        email = emailOrCredentials;
-        pwd = password || '';
-        
-        if (!pwd) {
-          console.log("Attempting OTP login");
-          const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-              shouldCreateUser: false,
-              emailRedirectTo: `${window.location.origin}/dashboard`,
-            },
-          });
-          
-          if (error) {
-            console.error("OTP login error:", error);
-            toast({
-              title: "Giriş xətası",
-              description: error.message || "Giriş linki göndərilə bilmədi",
-              variant: "destructive",
-            });
-            throw error;
-          }
-          
-          toast({
-            title: "Giriş linki göndərildi",
-            description: "E-poçt ünvanınızı yoxlayın və giriş linkini tıklayın",
-          });
-          
-          return;
-        }
-      } else {
-        // Handle credentials login
-        email = emailOrCredentials.email;
-        pwd = emailOrCredentials.password;
-      }
-      
-      console.log("Attempting password login for:", email);
+  const login = useCallback(
+    async (emailOrCredentials: string | LoginCredentials, password?: string) => {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password: pwd,
-        });
-        
-        if (error) {
-          console.error('Login error:', error);
-          let errorMessage = "Giriş zamanı xəta baş verdi";
-          
-          if (error.message.includes('Invalid login credentials')) {
-            errorMessage = "E-poçt və ya şifrə yanlışdır";
-          } else if (error.message.includes('Email not confirmed')) {
-            errorMessage = "E-poçt təsdiqlənməyib. Zəhmət olmasa e-poçtunuzu yoxlayın";
-          }
-          
-          toast({
-            title: "Giriş xətası",
-            description: errorMessage,
-            variant: "destructive",
-          });
-          
-          throw error;
-        }
-        
-        if (data.user) {
-          console.log("Login successful for:", data.user.email);
-          toast({
-            title: "Uğurlu giriş",
-            description: "Sistemə uğurla daxil oldunuz",
-          });
-          
-          // Redirect to dashboard after successful login
-          navigate("/dashboard");
-        }
-      } catch (authError) {
-        console.error('Supabase auth error:', authError);
-        toast({
-          title: "Şəbəkə xətası",
-          description: "Şəbəkə xətası, offline rejimə keçildi",
-          variant: "destructive",
-        });
-        throw authError;
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      throw error;
-    } finally {
-      // Ensure loading state is always reset
-      setLoading(false);
-    }
-  };
+        let email: string;
+        let pwd: string;
 
-  const logout = async () => {
-    try {
-      setLoading(true);
-      console.log("Logging out user");
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
+        if (typeof emailOrCredentials === 'string') {
+          if (!password) {
+            throw new Error('Password is required when email is provided as a string');
+          }
+          email = emailOrCredentials;
+          pwd = password;
+        } else {
+          email = emailOrCredentials.email;
+          pwd = emailOrCredentials.password;
+        }
+
+        const data = await authService.loginUser(email, pwd);
+
+        if (!data.session || !data.user) {
+          throw new Error('Invalid login response from server');
+        }
+
+        // Attempt to get user profile data
+        const currentUser = data.user;
+        
+        // Adapt this user object to your UserProfile structure
+        const userProfile = {
+          id: currentUser.id,
+          email: currentUser.email || '',
+          role: currentUser.role || 'school-admin',
+          isActive: true,
+          createdAt: currentUser.created_at || new Date().toISOString(),
+          // Map other properties as needed
+        };
+
+        handleUserLoggedIn(userProfile);
+        toast.success('Uğurla daxil oldunuz');
+      } catch (error: any) {
+        console.error('Login error:', error);
+        handleUserLoggedOut();
         throw error;
       }
+    },
+    [handleUserLoggedIn, handleUserLoggedOut]
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await authService.logoutUser();
       handleUserLoggedOut();
-      navigate("/login");
-      toast({
-        title: "Çıxış edildi",
-        description: "Sistemdən uğurla çıxış edildi",
-      });
+      toast.success('Uğurla çıxış etdiniz');
     } catch (error: any) {
       console.error('Logout error:', error);
-      toast({
-        title: "Çıxış xətası",
-        description: error.message || "Çıxış zamanı xəta baş verdi",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      toast.error('Çıxış zamanı xəta baş verdi');
     }
-  };
+  }, [handleUserLoggedOut]);
 
-  return {
-    login,
-    logout,
-    loading
-  };
+  return { login, logout };
 };

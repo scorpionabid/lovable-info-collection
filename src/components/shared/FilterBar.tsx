@@ -1,98 +1,68 @@
 
-import React, { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Search, Filter, X } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import React from 'react';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
 
-interface FilterBarProps {
-  onSearch: (query: string) => void;
-  searchPlaceholder?: string;
-  filterContent?: React.ReactNode;
-  showFilterButton?: boolean;
-  additionalButtons?: React.ReactNode;
+export interface FilterBarProps {
+  searchValue: string;
+  onSearchChange: (value: any) => void;
+  onSearch: () => void;
+  filterCount: number;
+  onClearAll: () => void;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
+  searchValue,
+  onSearchChange,
   onSearch,
-  searchPlaceholder = 'Axtar...',
-  filterContent,
-  showFilterButton = true,
-  additionalButtons
+  filterCount,
+  onClearAll
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchQuery);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onSearchChange(e.target.value);
   };
-  
-  const handleClear = () => {
-    setSearchQuery('');
-    onSearch('');
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      onSearch();
+    }
   };
-  
+
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-2 mb-4">
-      <form onSubmit={handleSearch} className="flex-1 w-full">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            type="search"
-            placeholder={searchPlaceholder}
-            className="pl-9 pr-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-2.5 top-2.5 text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </form>
-
-      {showFilterButton && filterContent && (
-        <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filtrlər
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            <div className="space-y-4">
-              {filterContent}
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsFilterOpen(false)}
-                >
-                  Ləğv
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setIsFilterOpen(false)}
-                >
-                  Tətbiq et
-                </Button>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+      <div className="relative w-full sm:w-auto sm:min-w-[300px]">
+        <Input
+          placeholder="Axtar..."
+          value={searchValue}
+          onChange={handleSearchChange}
+          onKeyDown={handleKeyDown}
+          className="pl-8"
+        />
+        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-infoline-dark-gray" />
+        {searchValue && (
+          <button
+            className="absolute right-2 top-1/2 transform -translate-y-1/2"
+            onClick={() => {
+              onSearchChange('');
+              onSearch();
+            }}
+          >
+            <X className="h-4 w-4 text-infoline-dark-gray" />
+          </button>
+        )}
+      </div>
+      
+      {filterCount > 0 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClearAll}
+          className="text-infoline-blue hover:text-infoline-dark-blue"
+        >
+          Bütün filtrləri təmizlə ({filterCount})
+        </Button>
       )}
-
-      {additionalButtons}
     </div>
   );
 };

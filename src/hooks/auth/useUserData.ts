@@ -1,136 +1,68 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/supabase/client';
+import { useState, useCallback } from 'react';
+import { UserRole } from '../types/authTypes';
 
-// Define role type
-export type UserRole = 'super-admin' | 'region-admin' | 'sector-admin' | 'school-admin' | 'teacher' | 'unknown';
-
-// Helper to determine role from the roles object
-const determineRole = (user: any): UserRole => {
-  if (!user) return 'unknown';
-  
-  // If the user has a role property directly
-  if (user.role) {
-    const roleName = typeof user.role === 'string' ? user.role.toLowerCase() : '';
-    
-    if (roleName.includes('super')) return 'super-admin';
-    if (roleName.includes('region')) return 'region-admin';
-    if (roleName.includes('sector')) return 'sector-admin';
-    if (roleName.includes('school')) return 'school-admin';
-    if (roleName.includes('teacher')) return 'teacher';
-  }
-  
-  // If the user has a roles object
-  if (user.roles && user.roles.name) {
-    const roleName = user.roles.name.toLowerCase();
-    
-    if (roleName.includes('super')) return 'super-admin';
-    if (roleName.includes('region')) return 'region-admin';
-    if (roleName.includes('sector')) return 'sector-admin';
-    if (roleName.includes('school')) return 'school-admin';
-    if (roleName.includes('teacher')) return 'teacher';
-  }
-  
-  return 'unknown';
-};
+export type { UserRole };
 
 export const useUserData = () => {
   const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<UserRole>('unknown');
-  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+  const [authInitialized, setAuthInitialized] = useState<boolean>(false);
+  const [sessionExists, setSessionExists] = useState<boolean>(false);
 
-  useEffect(() => {
-    // Get the initial session when the component mounts
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        
-        // Get the current session
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          throw new Error(sessionError.message);
-        }
-        
-        if (!sessionData?.session) {
-          setUser(null);
-          setUserRole('unknown');
-          setLoading(false);
-          return;
-        }
-        
-        const userId = sessionData.session.user.id;
-        
-        // Fetch the user profile with role information
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select(`
-            *,
-            roles:role_id (
-              id, 
-              name,
-              permissions
-            )
-          `)
-          .eq('id', userId)
-          .single();
-        
-        if (userError) {
-          throw new Error(userError.message);
-        }
-        
-        setUser(userData);
-        const role = determineRole(userData);
-        setUserRole(role);
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-        setError(err instanceof Error ? err : new Error('Unknown error'));
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleUserLoggedIn = useCallback((userData: any) => {
+    const role = mapUserRoleFromAPI(userData.role || userData.userRole);
     
-    fetchUser();
-    
-    // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          try {
-            const { data, error } = await supabase
-              .from('users')
-              .select(`
-                *,
-                roles:role_id (
-                  id, 
-                  name,
-                  permissions
-                )
-              `)
-              .eq('id', session.user.id)
-              .single();
-              
-            if (error) throw error;
-            
-            setUser(data);
-            const role = determineRole(data);
-            setUserRole(role);
-          } catch (err) {
-            console.error('Error fetching user data after sign in:', err);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setUserRole('unknown');
-        }
-      }
-    );
-    
-    // Clean up the subscription
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    setUser(userData);
+    setUserRole(role);
+    setLoading(false);
+    setError(null);
+    setSessionExists(true);
   }, []);
 
-  return { user, userRole, loading, error };
+  const handleUserLoggedOut = useCallback(() => {
+    setUser(null);
+    setUserRole(null);
+    setLoading(false);
+    setSessionExists(false);
+    console.log('User logged out');
+  }, []);
+
+  // Helper to map from API role string to UserRole type
+  const mapUserRoleFromAPI = (role: string): UserRole => {
+    switch (role) {
+      case 'super-admin':
+      case 'superadmin':
+        return 'super-admin';
+      case 'region-admin':
+      case 'regionadmin':
+        return 'region-admin';
+      case 'sector-admin':
+      case 'sectoradmin':
+        return 'sector-admin';
+      case 'school-admin':
+      case 'schooladmin':
+        return 'school-admin';
+      case 'teacher':
+        return 'teacher';
+      default:
+        console.warn(`Unknown role type: ${role}, defaulting to school-admin`);
+        return 'school-admin';
+    }
+  };
+
+  return {
+    user,
+    userRole,
+    loading,
+    error,
+    setLoading,
+    authInitialized,
+    setAuthInitialized,
+    handleUserLoggedIn,
+    handleUserLoggedOut,
+    sessionExists
+  };
 };

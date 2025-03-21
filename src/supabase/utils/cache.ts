@@ -1,114 +1,131 @@
 
+// Simple in-memory cache for API responses
+
+const cacheConfig = {
+  defaultTTL: 5 * 60 * 1000, // 5 minutes in milliseconds
+  regions: 10 * 60 * 1000,   // 10 minutes for regions
+  sectors: 10 * 60 * 1000,   // 10 minutes for sectors
+  schools: 5 * 60 * 1000,    // 5 minutes for schools
+  users: 2 * 60 * 1000,      // 2 minutes for users
+  roles: 30 * 60 * 1000,     // 30 minutes for roles
+  enabled: true,             // Enable/disable cache globally
+  storagePrefix: 'supabase_cache_'
+};
+
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
+}
+
+// In-memory cache store
+const memoryCache: Record<string, CacheEntry<any>> = {};
+
 /**
- * Supabase sorğuları üçün keşləmə mexanizmi
+ * Gets data from cache if it exists and is not expired
  */
-import { PostgrestSingleResponse } from '@supabase/supabase-js';
-import { CACHE_CONFIG } from '../config';
-import { logger } from '@/utils/logger';
-
-// Offline rejim idarəetməsi üçün 
-export const isOfflineMode = (): boolean => {
-  return typeof navigator !== 'undefined' && !navigator.onLine;
+export const getFromCache = <T>(key: string): T | null => {
+  if (!cacheConfig.enabled) return null;
+  
+  try {
+    // Try memory cache first
+    const cached = memoryCache[key];
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+    
+    // Try local storage as fallback
+    const storageKey = `${cacheConfig.storagePrefix}${key}`;
+    const storedValue = localStorage.getItem(storageKey);
+    if (storedValue) {
+      const { data, expiry } = JSON.parse(storedValue);
+      if (expiry > Date.now()) {
+        // Add to memory cache for faster access next time
+        memoryCache[key] = { data, expiry };
+        return data;
+      } else {
+        // Clean up expired storage
+        localStorage.removeItem(storageKey);
+      }
+    }
+  } catch (error) {
+    console.warn('Cache retrieval error:', error);
+  }
+  
+  return null;
 };
 
-// Funksiyanın nəticəsini keşə saxlayan wrapper
-export async function queryWithCache<T>(
-  cacheKey: string,
-  queryFn: () => Promise<PostgrestSingleResponse<T>>,
-  ttl: number = CACHE_CONFIG.defaultTTL
-): Promise<T> {
-  if (!CACHE_CONFIG.enabled) {
-    const { data, error } = await queryFn();
-    if (error) throw error;
-    return data as T;
-  }
-
-  // Offline rejim yoxlaması
-  if (isOfflineMode()) {
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult) {
-      logger.info(`Offline mode: Using cached data for ${cacheKey}`);
-      return cachedResult;
-    }
-    throw new Error('Offline mode: No cached data available');
-  }
-
+/**
+ * Stores data in cache with appropriate TTL
+ */
+export const setInCache = <T>(key: string, data: T, type?: keyof typeof cacheConfig): void => {
+  if (!cacheConfig.enabled) return;
+  
   try {
-    // Keşdən oxuma cəhdi
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult) {
-      logger.debug(`Cache hit for ${cacheKey}`);
-      return cachedResult;
-    }
-
-    // Keşdə yoxdursa, sorğu yerinə yetirilir
-    logger.debug(`Cache miss for ${cacheKey}, fetching...`);
-    const { data, error } = await queryFn();
-    if (error) throw error;
-
-    // Nəticəni keşə saxla
-    setCachedResult(cacheKey, data, ttl);
-    return data as T;
+    // Determine TTL based on data type
+    const ttl = type && cacheConfig[type] ? cacheConfig[type] : cacheConfig.defaultTTL;
+    const expiry = Date.now() + ttl;
+    
+    // Store in memory cache
+    memoryCache[key] = { data, expiry };
+    
+    // Store in local storage for persistence
+    const storageKey = `${cacheConfig.storagePrefix}${key}`;
+    localStorage.setItem(storageKey, JSON.stringify({ data, expiry }));
   } catch (error) {
-    logger.error(`Error fetching or caching data for ${cacheKey}:`, error);
-    
-    // Xəta halında belə keşdən oxuma cəhdi
-    const cachedResult = getCachedResult<T>(cacheKey);
-    if (cachedResult) {
-      logger.info(`Using stale cache for ${cacheKey} after error`);
-      return cachedResult;
-    }
-    
-    throw error;
-  }
-}
-
-// Keşi təmizləmək
-export const clearCache = (): void => {
-  if (typeof window !== 'undefined') {
-    const keys = Object.keys(localStorage).filter(key => 
-      key.startsWith(CACHE_CONFIG.storagePrefix)
-    );
-    
-    keys.forEach(key => localStorage.removeItem(key));
-    logger.info('Cache cleared');
+    console.warn('Cache set error:', error);
   }
 };
 
-// Keşdən nəticəni almaq
-function getCachedResult<T>(key: string): T | null {
+/**
+ * Invalidates specific cache entry
+ */
+export const invalidateCache = (key: string): void => {
   try {
-    const cacheKey = `${CACHE_CONFIG.storagePrefix}${key}`;
-    const cachedData = localStorage.getItem(cacheKey);
+    // Remove from memory cache
+    delete memoryCache[key];
     
-    if (!cachedData) return null;
-    
-    const { value, expiry } = JSON.parse(cachedData);
-    
-    if (expiry && expiry < Date.now()) {
-      // Keş vaxtı bitib, sil və null qaytar
-      localStorage.removeItem(cacheKey);
-      return null;
+    // Remove from local storage
+    const storageKey = `${cacheConfig.storagePrefix}${key}`;
+    localStorage.removeItem(storageKey);
+  } catch (error) {
+    console.warn('Cache invalidation error:', error);
+  }
+};
+
+/**
+ * Invalidates all cache entries or a specific type
+ */
+export const clearAllCache = (type?: string): void => {
+  try {
+    // Clear memory cache
+    if (type) {
+      Object.keys(memoryCache).forEach(key => {
+        if (key.startsWith(type)) {
+          delete memoryCache[key];
+        }
+      });
+    } else {
+      Object.keys(memoryCache).forEach(key => {
+        delete memoryCache[key];
+      });
     }
     
-    return value as T;
+    // Clear localStorage cache
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(cacheConfig.storagePrefix)) {
+        if (!type || key.includes(type)) {
+          localStorage.removeItem(key);
+        }
+      }
+    });
   } catch (error) {
-    logger.error('Error reading from cache:', error);
-    return null;
+    console.warn('Cache clear error:', error);
   }
-}
+};
 
-// Nəticəni keşə saxlamaq
-function setCachedResult<T>(key: string, value: T, ttl: number): void {
-  try {
-    const cacheKey = `${CACHE_CONFIG.storagePrefix}${key}`;
-    const data = {
-      value,
-      expiry: Date.now() + ttl
-    };
-    
-    localStorage.setItem(cacheKey, JSON.stringify(data));
-  } catch (error) {
-    logger.error('Error writing to cache:', error);
-  }
-}
+export default {
+  getFromCache,
+  setInCache,
+  invalidateCache,
+  clearAllCache
+};

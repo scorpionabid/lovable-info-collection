@@ -1,36 +1,37 @@
 
 import { Tables } from '@/integrations/supabase/types';
 
-// Base User type
+// Base User type from database
 export type User = Tables<'users'> & {
   role?: string;
-  roles?: {
-    id: string;
-    name: string;
-    permissions: string[];
-  };
-  region?: string;
-  sector?: string;
-  school?: string;
+  roleName?: string;
 };
 
+// User with role information
 export interface UserWithRole extends User {
+  role: string;
   roleName: string;
-  permissions: string[];
 }
 
-// Filter for users
+// User filter interface
 export interface UserFilters {
   search?: string;
   role_id?: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  status?: 'active' | 'inactive' | 'blocked' | 'all';
+  status?: 'active' | 'inactive' | 'all';
   page?: number;
   page_size?: number;
-  sort_field?: string;
-  sort_direction?: 'asc' | 'desc';
+}
+
+// Special type for auth.users with role claims
+export interface UserRoleClaims extends User {
+  app_metadata?: {
+    claims?: {
+      roles?: string | string[];
+    };
+  };
 }
 
 // Create DTO
@@ -38,25 +39,25 @@ export interface CreateUserDto {
   email: string;
   first_name: string;
   last_name: string;
-  password?: string;
+  phone?: string;
   role_id: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  phone?: string;
   utis_code?: string;
   is_active?: boolean;
+  password?: string;
 }
 
 // Update DTO
 export interface UpdateUserDto {
   first_name?: string;
   last_name?: string;
+  phone?: string;
   role_id?: string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
-  phone?: string;
   utis_code?: string;
   is_active?: boolean;
 }

@@ -59,6 +59,32 @@ export const getCurrentUser = async () => {
     const { data, error } = await supabase.auth.getUser();
     if (error) throw error;
     
+    if (data.user) {
+      // Fetch additional user data from the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select(`
+          *,
+          roles:role_id(id, name)
+        `)
+        .eq('id', data.user.id)
+        .single();
+      
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+        return data.user;
+      }
+      
+      if (userData) {
+        return {
+          ...data.user,
+          ...userData,
+          role: userData.roles?.name || 'unknown',
+          roleName: userData.roles?.name || 'Unknown'
+        };
+      }
+    }
+    
     return data.user;
   } catch (error) {
     console.error('Get user error:', error);

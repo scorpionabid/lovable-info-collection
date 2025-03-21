@@ -1,6 +1,8 @@
 
-import { Input } from "@/components/ui/input";
+import React from 'react';
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface BasicInfoTabProps {
   formData: {
@@ -11,11 +13,11 @@ interface BasicInfoTabProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
-export const BasicInfoTab = ({ formData, handleChange }: BasicInfoTabProps) => {
+export const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ formData, handleChange }) => {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Region adı *</Label>
+        <Label htmlFor="name">Region adı</Label>
         <Input
           id="name"
           name="name"
@@ -33,18 +35,22 @@ export const BasicInfoTab = ({ formData, handleChange }: BasicInfoTabProps) => {
           name="code"
           value={formData.code}
           onChange={handleChange}
-          placeholder="Region kodunu daxil edin"
+          placeholder="Region kodunu daxil edin (istəyə bağlı)"
         />
+        <p className="text-xs text-infoline-dark-gray">
+          Region kodunu daxil edin. Bu kod sistemdə regionu identifikasiya etmək üçün istifadə oluna bilər.
+        </p>
       </div>
       
       <div className="space-y-2">
         <Label htmlFor="description">Təsvir</Label>
-        <Input
+        <Textarea
           id="description"
           name="description"
           value={formData.description}
           onChange={handleChange}
-          placeholder="Region haqqında qısa məlumat"
+          placeholder="Region haqqında qısa məlumat (istəyə bağlı)"
+          rows={4}
         />
       </div>
     </div>

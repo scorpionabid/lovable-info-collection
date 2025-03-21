@@ -46,6 +46,10 @@ const RegionsOverview = () => {
     setIsFilterVisible(prev => !prev);
   };
 
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
   const renderLoading = () => (
     <div className="space-y-4">
       <Skeleton className="h-10 w-full" />
@@ -87,7 +91,7 @@ const RegionsOverview = () => {
       {/* Filter bar and filters */}
       <FilterBar
         searchValue={filters.search}
-        onSearchChange={(value) => setFilters(prev => ({ ...prev, search: value }))}
+        onSearchChange={(value) => handleFilterChange('search', value)}
         onSearch={() => refetch()}
         filterCount={Object.keys(filters).filter(k => filters[k as keyof typeof filters] !== '').length}
         onClearAll={() => setFilters({ search: '', status: 'active' })}
@@ -96,6 +100,7 @@ const RegionsOverview = () => {
       {isFilterVisible && (
         <RegionFilterPanel 
           filters={filters} 
+          onFilterChange={handleFilterChange}
           onFiltersChange={setFilters} 
           onFilterApply={() => refetch()}
         />
@@ -115,6 +120,7 @@ const RegionsOverview = () => {
           }}
           onDelete={(region) => {
             // Handle delete logic
+            console.log('Delete region:', region);
           }}
           onSort={(column, direction) => {
             setSortColumn(column);
@@ -136,7 +142,8 @@ const RegionsOverview = () => {
           setIsModalOpen(false);
           setSelectedRegion(null);
         }}
-        region={selectedRegion}
+        mode={selectedRegion ? 'edit' : 'create'}
+        region={selectedRegion || undefined}
         onSuccess={() => {
           refetch();
           setIsModalOpen(false);

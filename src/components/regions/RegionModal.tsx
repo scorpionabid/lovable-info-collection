@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RegionWithStats } from "@/services/supabase/region";
+import { RegionWithStats } from "@/supabase/types";
 import regionService from "@/services/supabase/region";
 import { useToast } from "@/hooks/use-toast";
 import { BasicInfoTab } from './modals/BasicInfoTab';
@@ -10,7 +10,7 @@ import { ConfigTab } from './modals/ConfigTab';
 import { ModalHeader } from './modals/ModalHeader';
 import { ModalFooter } from './modals/ModalFooter';
 
-interface RegionModalProps {
+export interface RegionModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';

@@ -1,13 +1,7 @@
 
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AdminTabProps {
   formData: {
@@ -16,53 +10,57 @@ interface AdminTabProps {
   handleSelectChange: (name: string, value: string) => void;
 }
 
-export const AdminTab = ({ formData, handleSelectChange }: AdminTabProps) => {
+export const AdminTab: React.FC<AdminTabProps> = ({ formData, handleSelectChange }) => {
+  const [admins, setAdmins] = useState<{ id: string; name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load available admins
+  useEffect(() => {
+    const loadAdmins = async () => {
+      setIsLoading(true);
+      try {
+        // Mocked data for now
+        // In a real implementation, this would fetch from the API
+        const mockAdmins = [
+          { id: '1', name: 'Admin 1' },
+          { id: '2', name: 'Admin 2' },
+          { id: '3', name: 'Admin 3' },
+        ];
+        
+        setAdmins(mockAdmins);
+      } catch (error) {
+        console.error('Error loading admins:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadAdmins();
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="adminSelect">Region Admini</Label>
-        <Select
+        <Label htmlFor="adminId">Region admini</Label>
+        <Select 
+          value={formData.adminId} 
           onValueChange={(value) => handleSelectChange('adminId', value)}
-          value={formData.adminId}
         >
-          <SelectTrigger id="adminSelect">
-            <SelectValue placeholder="Region Admini seçin" />
+          <SelectTrigger id="adminId">
+            <SelectValue placeholder={isLoading ? "Yüklənir..." : "Region adminini seçin"} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="new">Yeni admin yarat</SelectItem>
-            <SelectItem value="user1">Elşən Məmmədov</SelectItem>
-            <SelectItem value="user2">Aynur Əliyeva</SelectItem>
-            <SelectItem value="user3">Kamran Hüseynov</SelectItem>
+            {admins.map((admin) => (
+              <SelectItem key={admin.id} value={admin.id}>
+                {admin.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-infoline-dark-gray">
+          Bu regionun administratorunu seçin. Region administratoru regiondakı sektorları və məktəbləri idarə edə bilər.
+        </p>
       </div>
-      
-      {formData.adminId === 'new' && (
-        <div className="space-y-4 border p-4 rounded-md border-infoline-light-gray mt-4">
-          <h3 className="font-medium text-infoline-dark-blue">Yeni Admin Yarat</h3>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="adminName">Ad</Label>
-              <Input id="adminName" placeholder="Adı daxil edin" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="adminSurname">Soyad</Label>
-              <Input id="adminSurname" placeholder="Soyadı daxil edin" />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="adminEmail">Email</Label>
-            <Input id="adminEmail" type="email" placeholder="Email ünvanını daxil edin" />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="adminPhone">Telefon</Label>
-            <Input id="adminPhone" placeholder="Telefon nömrəsini daxil edin" />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

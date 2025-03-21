@@ -1,34 +1,45 @@
 
-import { Input } from "@/components/ui/input";
+import React from 'react';
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
-export const ConfigTab = () => {
+export const ConfigTab: React.FC = () => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="notificationLevel">Bildiriş səviyyəsi</Label>
-        <Select>
-          <SelectTrigger id="notificationLevel">
-            <SelectValue placeholder="Bildiriş səviyyəsini seçin" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="high">Yüksək</SelectItem>
-            <SelectItem value="medium">Orta</SelectItem>
-            <SelectItem value="low">Aşağı</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="approvals">Təsdiq tələb edilsin</Label>
+            <p className="text-xs text-infoline-dark-gray">
+              Məktəb və sektordan gələn məlumatların təsdiqi tələb edilsin
+            </p>
+          </div>
+          <Switch id="approvals" defaultChecked />
+        </div>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="deadline">Son tarix</Label>
-        <Input id="deadline" type="date" />
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="notifications">Bildirişlər</Label>
+            <p className="text-xs text-infoline-dark-gray">
+              Yeni məlumatlar barədə bildirişlər göndərilsin
+            </p>
+          </div>
+          <Switch id="notifications" defaultChecked />
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="reports">Avtomatik hesabatlar</Label>
+            <p className="text-xs text-infoline-dark-gray">
+              Həftəlik və aylıq hesabatlar avtomatik hazırlansın
+            </p>
+          </div>
+          <Switch id="reports" />
+        </div>
       </div>
     </div>
   );

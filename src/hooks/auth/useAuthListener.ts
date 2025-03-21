@@ -1,140 +1,86 @@
-import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+
+import { useEffect } from 'react';
+import { getCurrentUser, getSession } from '@/supabase/services/auth';
 
 export const useAuthListener = (
-  handleUserLoggedIn: (userData: any) => Promise<void>,
+  handleUserLoggedIn: (userData: any) => void,
   handleUserLoggedOut: () => void,
   setLoading: (loading: boolean) => void,
   setAuthInitialized: (initialized: boolean) => void,
-  user: any | null
+  currentUser: any
 ) => {
-  // Initialize auth state and set up listeners
   useEffect(() => {
-    console.log("Initializing auth state");
-    let isComponentMounted = true;
-    
-    const loadUser = async () => {
+    const checkAuth = async () => {
       try {
-        setLoading(true);
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          handleUserLoggedOut();
-          if (isComponentMounted) setAuthInitialized(true);
-          return;
-        }
+        // First check if there's an active session
+        const session = await getSession();
         
         if (session) {
-          // Əgər sessiya mövcuddursa, user da mövcud sayılmalıdır
-          // Məlumatları gözləmədən əvvəlcədən authInitialized=true təyin edək
-          if (isComponentMounted) {
-            setAuthInitialized(true);
-          }
+          // Get the current user
+          const user = await getCurrentUser();
           
-          console.log("Found existing session, fetching user");
-          const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
-          
-          if (userError) {
-            console.error('User fetch error:', userError);
-            handleUserLoggedOut();
-            if (isComponentMounted) {
-              setAuthInitialized(true);
-              setLoading(false);
-            }
-            return;
-          }
-          
-          if (supabaseUser) {
-            console.log("User found in session, processing login");
-            await handleUserLoggedIn(supabaseUser);
-            if (isComponentMounted) {
-              setAuthInitialized(true);
-              setLoading(false);
-            }
+          if (user) {
+            // We have a valid session and user
+            handleUserLoggedIn(user);
           } else {
-            console.log("No user in session, logging out");
+            // Session exists but no user (unusual)
             handleUserLoggedOut();
-            if (isComponentMounted) {
-              setAuthInitialized(true);
-              setLoading(false);
-            }
           }
         } else {
-          console.log("No session found, user is logged out");
+          // No session, definitely logged out
           handleUserLoggedOut();
-          if (isComponentMounted) {
-            setAuthInitialized(true);
-            setLoading(false);
-          }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('Error checking authentication status:', error);
         handleUserLoggedOut();
-        if (isComponentMounted) {
-          setAuthInitialized(true);
-          setLoading(false);
-        }
+      } finally {
+        setLoading(false);
+        setAuthInitialized(true);
       }
     };
 
-    loadUser();
+    // Only run auth check if we haven't loaded a user yet
+    if (!currentUser) {
+      checkAuth();
+    } else {
+      // If we already have a user, just mark as initialized
+      setAuthInitialized(true);
+    }
 
-    // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      
-      if (event === "SIGNED_IN" && session && isComponentMounted) {
-        console.log("User signed in, updating state");
-        setLoading(true); 
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event);
         
-        // İlk öncə authInitialized-i true olaraq təyin et
-        if (isComponentMounted) setAuthInitialized(true);
-        
-        try {
-          await handleUserLoggedIn(session.user);
-        } catch (error) {
-          console.error('Error handling user sign in:', error);
-          handleUserLoggedOut();
-        } finally {
-          if (isComponentMounted) setLoading(false);
-        }
-      } 
-      else if (event === "TOKEN_REFRESHED" && session && isComponentMounted) {
-        console.log("Token refreshed, handling auth update");
-        
-        // Əvvəlcə sessiyaya görə autentifikasiyanı təyin edək
-        if (isComponentMounted) setAuthInitialized(true);
-        
-        // Əgər sessiyadakı istifadəçi təyin olunmayıbsa
-        if (!user && session.user) {
-          setLoading(true);
-          try {
-            await handleUserLoggedIn(session.user);
-          } catch (error) {
-            console.error("Error handling token refresh:", error);
-          } finally {
-            if (isComponentMounted) setLoading(false);
+        if (event === 'SIGNED_IN' && session) {
+          // Get fresh user data
+          const user = await getCurrentUser();
+          if (user) {
+            handleUserLoggedIn(user);
           }
-        } else {
-          // User artıq mövcuddursa, sadəcə yükləməni dayandır
-          if (isComponentMounted) setLoading(false);
-        }
-      } 
-      else if (event === "SIGNED_OUT" && isComponentMounted) {
-        console.log("User signed out, updating state");
-        handleUserLoggedOut();
-        if (isComponentMounted) {
-          setAuthInitialized(true);
-          setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
+          handleUserLoggedOut();
+        } else if (event === 'USER_UPDATED' && session) {
+          // Get updated user data
+          const user = await getCurrentUser();
+          if (user) {
+            handleUserLoggedIn(user);
+          }
         }
       }
-    });
+    );
 
+    // Clean up the listener
     return () => {
-      console.log("Cleaning up auth listener");
-      isComponentMounted = false;
-      authListener.subscription.unsubscribe();
+      if (authListener) {
+        authListener.subscription.unsubscribe();
+      }
     };
-  }, [handleUserLoggedIn, handleUserLoggedOut, setLoading, setAuthInitialized, user]);
+  }, [
+    handleUserLoggedIn,
+    handleUserLoggedOut,
+    setLoading,
+    setAuthInitialized,
+    currentUser
+  ]);
 };

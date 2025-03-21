@@ -1,7 +1,7 @@
 
 import { Tables } from '@/integrations/supabase/types';
 
-// Base Region type
+// Base Region type from the database
 export type Region = Tables<'regions'>;
 
 // Region with statistics for dashboard display

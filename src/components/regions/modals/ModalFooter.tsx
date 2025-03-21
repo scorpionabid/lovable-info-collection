@@ -1,5 +1,7 @@
 
+import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface ModalFooterProps {
   onClose: () => void;
@@ -7,18 +9,33 @@ interface ModalFooterProps {
   mode: 'create' | 'edit';
 }
 
-export const ModalFooter = ({ onClose, isSubmitting, mode }: ModalFooterProps) => {
+export const ModalFooter: React.FC<ModalFooterProps> = ({ 
+  onClose, 
+  isSubmitting,
+  mode
+}) => {
   return (
-    <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-infoline-light-gray">
-      <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+    <div className="flex justify-end gap-2 pt-6">
+      <Button 
+        type="button" 
+        variant="outline" 
+        onClick={onClose} 
+        disabled={isSubmitting}
+      >
         Ləğv et
       </Button>
       <Button 
         type="submit" 
-        className="bg-infoline-blue hover:bg-infoline-dark-blue"
         disabled={isSubmitting}
       >
-        {isSubmitting ? 'Yüklənir...' : mode === 'create' ? 'Yarat' : 'Yadda saxla'}
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            {mode === 'create' ? 'Yaradılır...' : 'Yenilənir...'}
+          </>
+        ) : (
+          mode === 'create' ? 'Yarat' : 'Yenilə'
+        )}
       </Button>
     </div>
   );
