@@ -20,7 +20,7 @@ export const SchoolsOverview = () => {
 
   // Hook for fetching data
   const { 
-    data: schoolsData,
+    data: schoolsData, 
     isLoading, 
     isError, 
     refetch 

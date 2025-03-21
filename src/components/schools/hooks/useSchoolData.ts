@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getSchools } from '@/services/supabase/school/queries/schoolQueries';
-import { SchoolFilter } from '@/services/supabase/school/types';
+import { SchoolFilter, SchoolSortParams } from '@/services/supabase/school/types';
 
 interface UseSchoolDataParams {
   currentPage: number;
@@ -19,14 +19,12 @@ export const useSchoolData = ({
   filters
 }: UseSchoolDataParams) => {
   // Create a transformable filter for the sort properties
-  const transformedFilters = {
+  const transformedFilters: SchoolFilter = {
     ...filters,
     page: currentPage,
     pageSize,
-    sort: {
-      sort_field: sortColumn,
-      sort_direction: sortDirection
-    }
+    sort_field: sortColumn,
+    sort_direction: sortDirection
   };
 
   return useQuery({

@@ -22,5 +22,4 @@ export {
 export * from './query';
 
 // Retry - təkrar cəhd mexanizmi
-export { withRetry } from './retry'; // Export with specific name to avoid duplicate export
-
+export { withRetry, retry, retry5xxErrors, retryNetworkErrors } from './retry'; // Export with specific name to avoid duplicate export

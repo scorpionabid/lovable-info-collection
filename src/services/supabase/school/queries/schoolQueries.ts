@@ -1,3 +1,4 @@
+
 import { supabase } from '../../supabaseClient';
 import { School, SchoolFilter } from '../types';
 import { calculateCompletionRate } from '../utils/queryUtils';
@@ -7,7 +8,7 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
     let query = supabase.from('schools').select(`
       id, name, address, email, phone, 
       region_id, sector_id, student_count, teacher_count, 
-      status, director, created_at, code, type_id,
+      status, director, created_at, code, type_id, updated_at,
       regions(id, name),
       sectors(id, name),
       school_types:type_id(id, name)
@@ -30,22 +31,26 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
       if (filters.type_id) {
         query = query.eq('type_id', filters.type_id);
       } else if (filters.type) {
-        query = query.eq('school_types.name', filters.type);
+        query = query.eq('type_id', filters.type);
       }
       if (filters.status) {
         query = query.eq('status', filters.status);
       }
     }
 
-    const { data: schoolsData, error: schoolsError } = await query.order('name');
+    // Handle sort
+    if (filters?.sort_field) {
+      query = query.order(filters.sort_field, { ascending: filters.sort_direction === 'asc' });
+    } else if (filters?.sort?.field) {
+      query = query.order(filters.sort.field, { ascending: filters.sort.direction === 'asc' });
+    } else {
+      query = query.order('name');
+    }
+
+    const { data: schoolsData, error: schoolsError } = await query;
     if (schoolsError) throw schoolsError;
 
     const schools = schoolsData.map(school => {
-      if ('error' in school) {
-        console.error("Error in school data:", school.error);
-        return null;
-      }
-      
       const schoolType = school.school_types?.name || 'N/A';
       const regionName = school.regions?.name || 'N/A';
       const sectorName = school.sectors?.name || 'N/A';

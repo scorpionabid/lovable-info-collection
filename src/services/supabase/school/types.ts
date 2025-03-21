@@ -63,9 +63,12 @@ export interface SchoolFilter {
   status?: string;
   page?: number;
   pageSize?: number;
+  // Modified to make both formats compatible
   sort?: SchoolSortParams;
   sort_field?: string;
   sort_direction?: 'asc' | 'desc';
+  field?: string;
+  direction?: 'asc' | 'desc';
   min_student_count?: string | number;
   max_student_count?: string | number;
 }

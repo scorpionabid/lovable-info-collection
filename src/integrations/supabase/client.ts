@@ -16,8 +16,7 @@ import {
   isOfflineMode,
   clearCache,
   isNetworkError,
-  queryWithCache,
-  CACHE_CONFIG
+  queryWithCache
 } from '@/lib/supabase/cache';
 
 // Bütün funksiyaları ixrac et
@@ -31,8 +30,7 @@ export {
   isOfflineMode,
   clearCache,
   isNetworkError,
-  queryWithCache,
-  CACHE_CONFIG
+  queryWithCache
 };
 
 // Export query helpers

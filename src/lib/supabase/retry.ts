@@ -131,11 +131,10 @@ export const retry5xxErrors = async <T>(
 export const withRetry = async <T>(
   queryFn: () => Promise<T>, 
   maxRetries = 2,
-  retryDelay = 1000,
 ): Promise<T> => {
   return retry(queryFn, {
     maxRetries,
-    retryDelay,
+    retryDelay: 1000,
     retryBackoff: true
   });
 };
