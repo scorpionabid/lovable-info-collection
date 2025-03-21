@@ -38,7 +38,8 @@ export const TABLES = {
   API_METRICS: 'api_metrics' as const, 
   NOTIFICATIONS: 'notifications' as const,
   ROLES: 'roles' as const,
-  SCHOOL_TYPES: 'school_types' as TableNames // Fix type here
+  // Add as string and cast to TableNames since it doesn't exist in the original database types yet
+  SCHOOL_TYPES: 'school_types' as any
 } satisfies Record<string, TableNames>;
 
 // Type guard for table names

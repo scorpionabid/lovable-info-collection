@@ -8,7 +8,7 @@ interface UseSchoolDataParams {
   pageSize: number;
   sortColumn: string;
   sortDirection: 'asc' | 'desc';
-  filters: SchoolFilter;
+  filters: Omit<SchoolFilter, 'page' | 'pageSize' | 'sort_field' | 'sort_direction'>;
 }
 
 export const useSchoolData = ({
@@ -18,13 +18,17 @@ export const useSchoolData = ({
   sortDirection,
   filters
 }: UseSchoolDataParams) => {
-  // Create a transformable filter for the sort properties
+  // Create a properly typed filter object
   const transformedFilters: SchoolFilter = {
     ...filters,
     page: currentPage,
     pageSize,
     sort_field: sortColumn,
-    sort_direction: sortDirection
+    sort_direction: sortDirection,
+    sort: {
+      field: sortColumn,
+      direction: sortDirection
+    }
   };
 
   return useQuery({

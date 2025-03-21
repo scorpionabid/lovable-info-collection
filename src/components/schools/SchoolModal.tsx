@@ -16,6 +16,7 @@ export interface SchoolModalProps {
   onSuccess?: () => void;
   regionId?: string;
   onSchoolUpdated?: () => void;
+  school?: School; // Add school prop to match current usage
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
@@ -26,16 +27,14 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
   initialData = null,
   onSuccess,
   regionId,
-  onSchoolUpdated
+  onSchoolUpdated,
+  school // Include the school prop
 }) => {
-  const queryClient = useQuery({
+  const { data: schoolData, isLoading } = useQuery({
     queryKey: ["school", schoolId],
     queryFn: () => getSchoolById(schoolId as string),
-    enabled: !!schoolId,
+    enabled: !!schoolId && !school, // Only fetch if schoolId is provided and no school prop
   });
-
-  const isLoading = queryClient.isLoading;
-  const schoolData = queryClient.data;
 
   const handleSuccess = () => {
     if (onSuccess) onSuccess();
@@ -43,8 +42,8 @@ export const SchoolModal: React.FC<SchoolModalProps> = ({
     onClose();
   };
 
-  // Determine which school data to use
-  const schoolToUse = initialData || schoolData || null;
+  // Determine which school data to use (prefer directly passed school prop)
+  const schoolToUse = school || initialData || schoolData || null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

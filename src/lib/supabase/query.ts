@@ -1,4 +1,3 @@
-
 /**
  * Supabase sorğu köməkçiləri
  */
@@ -190,72 +189,82 @@ export const createPaginatedQuery = async <T>(
     throw new Error(`Invalid table name: ${tableName}`);
   }
 
-  // Ümumi sayı əldə etmək üçün sorğu
-  const countQuery = supabase
-    .from(tableName)
-    .select('*', { count: 'exact', head: true });
+  try {
+    // Ümumi sayı əldə etmək üçün sorğu
+    const countQuery = supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
 
-  // Əsas sorğu
-  let dataQuery = supabase.from(tableName).select(select);
+    // Əsas sorğu
+    let dataQuery = supabase.from(tableName).select(select);
 
-  // Filter və sort əlavə et
-  dataQuery = applyFilters(dataQuery, options.filters);
-  dataQuery = applySort(dataQuery, options.sort);
+    // Filter və sort əlavə et
+    dataQuery = applyFilters(dataQuery, options.filters);
+    dataQuery = applySort(dataQuery, options.sort);
 
-  // Səhifələmə əlavə et
-  if (options.pagination) {
-    dataQuery = applyPagination(dataQuery, options.pagination);
-  }
+    // Səhifələmə əlavə et
+    if (options.pagination) {
+      dataQuery = applyPagination(dataQuery, options.pagination);
+    }
 
-  // Keşləmə istifadə ediləcəksə
-  if (useCache) {
-    // Keş açarını yaratmaq
-    const dataKey = cacheKey
-      ? `${cacheKey}_data`
-      : `${tableName}_data_${JSON.stringify({
-          select,
-          filters: options.filters,
-          sort: options.sort,
-          pagination: options.pagination
-        })}`;
+    // Keşləmə istifadə ediləcəksə
+    if (useCache) {
+      // Keş açarını yaratmaq
+      const dataKey = cacheKey
+        ? `${cacheKey}_data`
+        : `${tableName}_data_${JSON.stringify({
+            select,
+            filters: options.filters,
+            sort: options.sort,
+            pagination: options.pagination
+          })}`;
 
-    const countKey = cacheKey
-      ? `${cacheKey}_count`
-      : `${tableName}_count_${JSON.stringify({
-          filters: options.filters
-        })}`;
+      const countKey = cacheKey
+        ? `${cacheKey}_count`
+        : `${tableName}_count_${JSON.stringify({
+            filters: options.filters
+          })}`;
 
+      const [dataResult, countResult] = await Promise.all([
+        queryWithCache(
+          dataKey,
+          async () => await dataQuery,
+          cacheTime
+        ),
+        queryWithCache(
+          countKey,
+          async () => await countQuery,
+          cacheTime
+        )
+      ]);
+
+      // Make sure to handle the count correctly
+      return {
+        data: dataResult.data as T[],
+        error: dataResult.error,
+        count: countResult.count !== undefined ? countResult.count : 0
+      };
+    }
+
+    // Keşsiz sorğu
     const [dataResult, countResult] = await Promise.all([
-      queryWithCache(
-        dataKey,
-        async () => await dataQuery,
-        cacheTime
-      ),
-      queryWithCache(
-        countKey,
-        async () => await countQuery,
-        cacheTime
-      )
+      dataQuery,
+      countQuery
     ]);
 
     return {
       data: dataResult.data as T[],
       error: dataResult.error,
-      count: countResult.count || 0
+      count: countResult.count !== undefined ? countResult.count : 0
+    };
+  } catch (error) {
+    console.error(`Error in createPaginatedQuery for ${tableName}:`, error);
+    return {
+      data: [] as T[],
+      error,
+      count: 0
     };
   }
-
-  // Keşsiz sorğu
-  const [dataResult, countResult] = await Promise.all([
-    dataQuery,
-    countQuery
-  ]);
-
-  return {
-    data: dataResult.data as T[],
-    error: dataResult.error,
-    count: countResult.count || 0
-  };
 };
 
 /**

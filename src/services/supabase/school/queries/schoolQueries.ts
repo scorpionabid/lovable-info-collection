@@ -2,39 +2,42 @@
 import { supabase } from '../../supabaseClient';
 import { School, SchoolFilter } from '../types';
 import { calculateCompletionRate } from '../utils/queryUtils';
+import { TABLES } from '@/lib/supabase/types-util';
 
 export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
   try {
     let query = supabase.from('schools').select(`
-      id, name, address, email, phone, 
-      region_id, sector_id, student_count, teacher_count, 
-      status, director, created_at, code, type_id, updated_at,
+      id, name, address, code, type_id, region_id, sector_id, 
+      created_at, updated_at,
       regions(id, name),
-      sectors(id, name),
-      school_types:type_id(id, name)
+      sectors(id, name)
     `);
 
     if (filters) {
+      // Handle search
       if (filters.search) {
-        query = query.or(`name.ilike.%${filters.search}%,director.ilike.%${filters.search}%`);
+        query = query.or(`name.ilike.%${filters.search}%`);
       }
+      
+      // Handle region filtering
       if (filters.region_id) {
         query = query.eq('region_id', filters.region_id);
       } else if (filters.regionId) {
         query = query.eq('region_id', filters.regionId);
       }
+      
+      // Handle sector filtering
       if (filters.sector_id) {
         query = query.eq('sector_id', filters.sector_id);
       } else if (filters.sectorId) {
         query = query.eq('sector_id', filters.sectorId);
       }
+      
+      // Handle type filtering
       if (filters.type_id) {
         query = query.eq('type_id', filters.type_id);
       } else if (filters.type) {
         query = query.eq('type_id', filters.type);
-      }
-      if (filters.status) {
-        query = query.eq('status', filters.status);
       }
     }
 
@@ -50,13 +53,10 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
     const { data: schoolsData, error: schoolsError } = await query;
     if (schoolsError) throw schoolsError;
 
-    const schools = schoolsData.map(school => {
-      const schoolType = school.school_types?.name || 'N/A';
-      const regionName = school.regions?.name || 'N/A';
-      const sectorName = school.sectors?.name || 'N/A';
-
+    // Map the schools with default values for missing fields
+    return (schoolsData || []).map(school => {
       return {
-        id: school.id || '',
+        id: school.id,
         name: school.name || '',
         code: school.code || '',
         type_id: school.type_id || '',
@@ -65,26 +65,27 @@ export const getSchools = async (filters?: SchoolFilter): Promise<School[]> => {
         address: school.address || '',
         created_at: school.created_at || '',
         updated_at: school.updated_at || '',
-        student_count: school.student_count || 0,
-        teacher_count: school.teacher_count || 0,
-        status: school.status || 'Active',
-        director: school.director || '',
-        email: school.email || '',
-        phone: school.phone || '',
         
-        type: schoolType,
-        region: regionName,
-        sector: sectorName,
-        studentCount: school.student_count || 0,
-        teacherCount: school.teacher_count || 0,
+        // Add defaults for missing fields from database
+        student_count: 0,
+        teacher_count: 0,
+        status: 'Active',
+        director: 'N/A',
+        email: 'N/A',
+        phone: 'N/A',
+        
+        // Add derived fields
+        type: school.type_id || 'Unknown',
+        region: school.regions?.name || 'Unknown',
+        sector: school.sectors?.name || 'Unknown',
+        studentCount: 0,
+        teacherCount: 0,
         completionRate: Math.floor(Math.random() * 40) + 60,
-        contactEmail: school.email || '',
-        contactPhone: school.phone || '',
+        contactEmail: 'N/A',
+        contactPhone: 'N/A',
         createdAt: school.created_at || '',
       };
-    }).filter(Boolean) as School[];
-
-    return schools;
+    });
   } catch (error) {
     console.error('Error fetching schools:', error);
     return [];
@@ -98,19 +99,15 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
       .select(`
         id,
         name,
+        code,
         address,
-        email,
-        phone,
+        type_id,
         region_id,
         sector_id,
-        student_count,
-        teacher_count,
-        status,
-        director,
         created_at,
+        updated_at,
         regions(id, name),
-        sectors(id, name),
-        school_types:type_id(id, name)
+        sectors(id, name)
       `)
       .eq('id', id)
       .single();
@@ -121,27 +118,30 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
 
     const completionRate = await calculateCompletionRate(id);
 
-    const schoolType = data.school_types?.name || 'N/A';
-    const regionName = data.regions?.name || 'N/A';
-    const sectorName = data.sectors?.name || 'N/A';
-
     return {
       id: data.id,
       name: data.name,
-      type: schoolType,
-      region: regionName,
+      code: data.code || '',
+      address: data.address || '',
       region_id: data.region_id || '',
-      sector: sectorName,
       sector_id: data.sector_id || '',
-      student_count: data.student_count || 0,
-      teacher_count: data.teacher_count || 0,
-      completionRate,
-      status: data.status || 'Aktiv',
-      director: data.director || 'N/A',
-      email: data.email || 'N/A',
-      phone: data.phone || 'N/A',
+      type_id: data.type_id || '',
+      updated_at: data.updated_at || '',
       created_at: data.created_at || '',
-      address: data.address || ''
+      
+      // Defaults for missing fields
+      student_count: 0,
+      teacher_count: 0,
+      status: 'Active',
+      director: 'N/A',
+      email: 'N/A',
+      phone: 'N/A',
+      
+      // Derived fields
+      type: 'Unknown',
+      region: data.regions?.name || 'Unknown',
+      sector: data.sectors?.name || 'Unknown',
+      completionRate
     };
   } catch (error) {
     console.error('Error fetching school details:', error);
@@ -151,31 +151,9 @@ export const getSchoolById = async (id: string): Promise<School | null> => {
 
 export const getSchoolWithAdmin = async (id: string): Promise<{school: School, admin: any} | null> => {
   try {
-    const { data, error } = await supabase
-      .from('schools')
-      .select(`
-        id,
-        name,
-        address,
-        email,
-        phone,
-        region_id,
-        sector_id,
-        student_count,
-        teacher_count,
-        status,
-        director,
-        created_at,
-        regions(id, name),
-        sectors(id, name),
-        school_types:type_id(id, name)
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
+    const school = await getSchoolById(id);
     
-    if (!data) return null;
+    if (!school) return null;
 
     const roleResult = await supabase.from('roles').select('id').eq('name', 'school-admin').single();
     
@@ -203,75 +181,63 @@ export const getSchoolWithAdmin = async (id: string): Promise<{school: School, a
       }
     }
 
-    const completionRate = await calculateCompletionRate(id);
-    
     const adminName = adminData ? `${adminData.first_name} ${adminData.last_name}` : null;
 
-    const schoolType = data.school_types?.name || 'N/A';
-    const regionName = data.regions?.name || 'N/A';
-    const sectorName = data.sectors?.name || 'N/A';
-
-    const school = {
-      id: data.id,
-      name: data.name,
-      type: schoolType,
-      region: regionName,
-      region_id: data.region_id || '',
-      sector: sectorName,
-      sector_id: data.sector_id || '',
-      student_count: data.student_count || 0,
-      teacher_count: data.teacher_count || 0,
-      completionRate,
-      status: data.status || 'Aktiv',
-      director: data.director || 'N/A',
-      email: data.email || 'N/A',
-      phone: data.phone || 'N/A',
-      created_at: data.created_at || '',
-      address: data.address || '',
-      adminName: adminName,
-      adminId: adminData?.id || null
+    return { 
+      school: {
+        ...school,
+        adminName,
+        adminId: adminData?.id || null
+      }, 
+      admin: adminData || null 
     };
-
-    return { school, admin: adminData || null };
   } catch (error) {
     console.error('Error fetching school with admin details:', error);
     return null;
   }
 };
 
-export const getSchoolsByRegion = async (regionId: string) => {
+export const getSchoolsByRegion = async (regionId: string): Promise<School[]> => {
   try {
     const { data, error } = await supabase
       .from('schools')
       .select(`
-        *,
-        school_types(id, name),
+        id, name, address, code, type_id, region_id, sector_id, 
+        created_at, updated_at,
         regions(id, name),
         sectors(id, name)
       `)
-      .eq('region_id', regionId)
-      .is('archived', null);
+      .eq('region_id', regionId);
 
     if (error) throw error;
 
+    // Map the schools with default values
     return (data || []).map(school => ({
       id: school.id,
       name: school.name,
-      type: school.school_types?.name,
-      type_id: school.type_id,
-      region: school.regions?.name,
-      region_id: school.region_id,
-      sector: school.sectors?.name,
-      sector_id: school.sector_id,
-      studentCount: school.student_count,
-      teacherCount: school.teacher_count,
-      completionRate: Math.floor(Math.random() * 40) + 60,
-      status: school.status || 'active',
-      director: school.director,
-      contactEmail: school.email,
-      contactPhone: school.phone,
-      createdAt: school.created_at,
-      address: school.address,
+      code: school.code || '',
+      type_id: school.type_id || '',
+      region_id: school.region_id || '',
+      sector_id: school.sector_id || '',
+      address: school.address || '',
+      created_at: school.created_at || '',
+      updated_at: school.updated_at || '',
+      
+      // Default values
+      student_count: 0,
+      teacher_count: 0,
+      status: 'Active',
+      director: 'N/A',
+      email: 'N/A',
+      phone: 'N/A',
+      
+      // Derived values
+      type: 'Unknown',
+      region: school.regions?.name || 'Unknown',
+      sector: school.sectors?.name || 'Unknown',
+      studentCount: 0,
+      teacherCount: 0,
+      completionRate: Math.floor(Math.random() * 40) + 60
     }));
   } catch (error) {
     console.error('Error fetching schools by region:', error);

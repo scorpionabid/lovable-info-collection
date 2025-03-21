@@ -1,167 +1,161 @@
-
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Pencil, ArrowLeft, Loader2 } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { getSchoolById } from '@/services/supabase/school/queries/schoolQueries';
-import { SchoolModal } from './SchoolModal';
+import { getSchoolWithAdmin } from '@/services/supabase/school/queries/schoolQueries';
 import { School } from '@/services/supabase/school/types';
+import { SchoolModal } from './SchoolModal';
+import { toast } from 'sonner';
 
-export const SchoolDetailView = () => {
-  const { id } = useParams<{ id: string }>();
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
-  const {
-    data: school,
-    isLoading,
-    isError,
-    refetch
-  } = useQuery({
-    queryKey: ['school', id],
-    queryFn: () => getSchoolById(id!),
-    enabled: !!id
-  });
-  
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-slate-200 rounded w-1/2 mb-2"></div>
-          <div className="h-4 bg-slate-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="h-40 bg-slate-200 rounded"></div>
-            <div className="h-40 bg-slate-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError || !school) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-800">
-          <h3 className="text-lg font-medium">Xəta baş verdi</h3>
-          <p>Məktəb məlumatlarını yükləmək mümkün olmadı. Zəhmət olmasa yenidən cəhd edin.</p>
-          <Button 
-            variant="outline" 
-            className="mt-2" 
-            onClick={() => refetch()}
-          >
-            Yenidən cəhd et
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
+interface RouteParams {
+  schoolId: string;
+}
+
+const SchoolDetailView: React.FC = () => {
+  const { schoolId } = useParams<RouteParams>();
+  const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [school, setSchool] = useState<School | null>(null);
+  const [admin, setAdmin] = useState<any | null>(null);
+
+  const { data, isLoading, refetch } = useQuery(
+    ['school', schoolId],
+    () => getSchoolWithAdmin(schoolId as string),
+    {
+      enabled: !!schoolId,
+      onSuccess: (result) => {
+        if (result) {
+          setSchool(result.school);
+          setAdmin(result.admin);
+        }
+      },
+      onError: (error) => {
+        toast.error(`Məktəb məlumatları alınarkən xəta baş verdi: ${error}`);
+      }
+    }
+  );
+
+  useEffect(() => {
+    if (data) {
+      setSchool(data.school);
+      setAdmin(data.admin);
+    }
+  }, [data]);
+
   const handleSchoolUpdated = () => {
     refetch();
-    setIsEditModalOpen(false);
   };
-  
+
+  if (isLoading || !schoolId) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-infoline-blue" />
+      </div>
+    );
+  }
+
+  if (!school) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-lg">Məktəb tapılmadı.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-infoline-dark-blue">{school.name}</h1>
-        <Button 
-          onClick={() => setIsEditModalOpen(true)}
-          className="bg-infoline-blue hover:bg-infoline-dark-blue"
-        >
-          Redaktə et
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg border p-4 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4 text-infoline-dark-blue">Ümumi məlumatlar</h2>
-          <dl className="grid grid-cols-1 gap-y-2">
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Şəhər/Rayon:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.region || 'N/A'}</dd>
+    <div className="container mx-auto mt-8">
+      <Button onClick={() => navigate(-1)} className="mb-4">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Geri
+      </Button>
+
+      <Card className="w-full">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-2xl font-bold">{school.name}</CardTitle>
+          <Button onClick={() => setIsEditing(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Redaktə et
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Kod:</span>
+              <span>{school.code}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Sektor:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.sector || 'N/A'}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Tip:</span>
+              <span>{school.type}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Məktəb növü:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.type || 'N/A'}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Region:</span>
+              <span>{school.region}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Direktor:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.director || 'N/A'}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Sektor:</span>
+              <span>{school.sector}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Status:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  school.status === 'Aktiv' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {school.status || 'N/A'}
-                </span>
-              </dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Ünvan:</span>
+              <span>{school.address}</span>
             </div>
-          </dl>
-        </div>
-        
-        <div className="bg-white rounded-lg border p-4 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4 text-infoline-dark-blue">Əlaqə məlumatları</h2>
-          <dl className="grid grid-cols-1 gap-y-2">
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Ünvan:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.address || 'N/A'}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Direktor:</span>
+              <span>{school.director}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Email:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.email || 'N/A'}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Email:</span>
+              <span>{school.email}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Telefon:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.phone || 'N/A'}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Telefon:</span>
+              <span>{school.phone}</span>
             </div>
-          </dl>
-        </div>
-        
-        <div className="bg-white rounded-lg border p-4 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4 text-infoline-dark-blue">Statistika</h2>
-          <dl className="grid grid-cols-1 gap-y-2">
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Müəllim sayı:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.teacher_count || 0}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Şagird sayı:</span>
+              <span>{school.studentCount}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Şagird sayı:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{school.student_count || 0}</dd>
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Müəllim sayı:</span>
+              <span>{school.teacherCount}</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500">Doluluk dərəcəsi:</dt>
-              <dd className="text-sm text-gray-900 col-span-2">
+            <div className="flex items-center">
+              <span className="font-semibold w-32">Yaradılma tarixi:</span>
+              <span>{new Date(school.createdAt).toLocaleDateString()}</span>
+            </div>
+            {admin && (
+              <>
                 <div className="flex items-center">
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-infoline-blue h-2.5 rounded-full" 
-                      style={{ width: `${school.completionRate || 0}%` }}
-                    ></div>
-                  </div>
-                  <span className="ml-2">{school.completionRate || 0}%</span>
+                  <span className="font-semibold w-32">Admin Adı:</span>
+                  <span>{admin.first_name} {admin.last_name}</span>
                 </div>
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-      
-      {isEditModalOpen && (
+                <div className="flex items-center">
+                  <span className="font-semibold w-32">Admin Email:</span>
+                  <span>{admin.email}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="font-semibold w-32">Admin Telefon:</span>
+                  <span>{admin.phone}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {isEditing && (
         <SchoolModal
-          isOpen={true}
-          onClose={() => setIsEditModalOpen(false)}
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
           mode="edit"
-          school={school as School}
+          schoolId={school.id} // Use schoolId instead of passing full school object
           onSchoolUpdated={handleSchoolUpdated}
         />
       )}
     </div>
   );
 };
+
+export default SchoolDetailView;

@@ -72,6 +72,7 @@ export const useRegionsData = (options: RegionsQueryOptions) => {
       // Regionları formatla və lazımi məlumatları əlavə et
       const regionsWithStats: RegionWithStats[] = regionsData.map(region => ({
         ...region,
+        // Add default empty string for missing properties
         description: region.description || '',
         sectorCount: region.sectors?.length || 0,
         schoolCount: 0, // Bu məlumatı əlavə sorğu ilə almaq lazım olacaq
