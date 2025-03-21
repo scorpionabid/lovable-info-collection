@@ -1,96 +1,96 @@
-
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { SchoolForm, SchoolFormValues } from "./modal/SchoolForm";
-import { useSchoolForm } from "./modal/useSchoolForm";
+import React from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+// Import properly
+import SchoolForm from "./modal/SchoolForm";
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'create' | 'edit';
-  school?: any; // School data for edit mode
-  onSuccess?: () => void;
-  onSchoolCreated?: () => void;
-  onSchoolUpdated?: () => void;
-  regionId?: string; // Added for RegionDetails.tsx
-  sectorId?: string;
+  schoolId?: string;
 }
 
-export const SchoolModal: React.FC<SchoolModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  mode, 
-  school,
-  onSuccess,
-  onSchoolCreated,
-  onSchoolUpdated,
-  regionId,
-  sectorId
+export const SchoolModal: React.FC<SchoolModalProps> = ({
+  isOpen,
+  onClose,
+  schoolId,
 }) => {
-  const handleSuccess = () => {
-    // Call the appropriate callback based on availability and mode
-    if (onSuccess) {
-      onSuccess();
-    } else if (mode === 'create' && onSchoolCreated) {
-      onSchoolCreated();
-    } else if (mode === 'edit' && onSchoolUpdated) {
-      onSchoolUpdated();
-    }
-    onClose();
-  };
-
-  // If regionId is provided, add it to the school data
-  const schoolData = regionId && mode === 'create' 
-    ? { ...school, region_id: regionId } 
-    : school;
-
-  // Use the hook to get form functionality
-  const {
-    form,
-    isLoading,
-    isSubmitting,
-    errorMessage,
-    regions,
-    sectors,
-    schoolTypes,
-    handleRegionChange,
-    handleSubmit
-  } = useSchoolForm({
-    mode,
-    initialData: schoolData,
-    onSuccess: handleSuccess,
-    regionId
-  });
+  const { school, isLoading, handleSuccess } = useSchoolData(schoolId, onClose);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Yeni məktəb yarat' : 'Məktəb məlumatlarını redaktə et'}
-          </DialogTitle>
-        </DialogHeader>
-        <SchoolForm 
-          mode={mode}
-          initialData={schoolData}
-          onCancel={onClose}
-          defaultRegionId={regionId}
-          defaultSectorId={sectorId}
-          form={form}
-          isSubmitting={isSubmitting}
-          errorMessage={errorMessage}
-          regions={regions}
-          sectors={sectors}
-          schoolTypes={schoolTypes}
-          onRegionChange={handleRegionChange}
-          handleSubmit={handleSubmit}
-        />
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+        {isLoading ? (
+          <div className="flex justify-center items-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-infoline-blue" />
+          </div>
+        ) : (
+          <SchoolForm
+            onSuccess={handleSuccess}
+            onCancel={onClose}
+            initialData={school}
+            mode={schoolId ? "edit" : "create"}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
+};
+
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getSchoolById } from "@/services/supabase/school/queries/schoolQueries";
+
+interface SchoolData {
+  id: string;
+  name: string;
+  address: string;
+  email: string;
+  phone: string;
+  region_id: string;
+  sector_id: string;
+  student_count: number;
+  teacher_count: number;
+  status: string;
+  director: string;
+  created_at: string;
+}
+
+interface UseSchoolDataResult {
+  school: SchoolData | null;
+  isLoading: boolean;
+  handleSuccess: () => void;
+}
+
+export const useSchoolData = (
+  schoolId: string | undefined,
+  onClose: () => void
+): UseSchoolDataResult => {
+  const queryClient = useQueryClient();
+  const [school, setSchool] = useState<SchoolData | null>(null);
+
+  const {
+    data: schoolData,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["school", schoolId],
+    queryFn: () => getSchoolById(schoolId as string),
+    enabled: !!schoolId,
+  });
+
+  useEffect(() => {
+    if (schoolData) {
+      setSchool(schoolData);
+    }
+  }, [schoolData]);
+
+  const handleSuccess = useCallback(() => {
+    toast.success("Məktəb məlumatları uğurla yeniləndi!");
+    queryClient.invalidateQueries({ queryKey: ["schools"] });
+    onClose();
+  }, [onClose, queryClient]);
+
+  return { school, isLoading, handleSuccess };
 };

@@ -9,12 +9,16 @@ import {
   checkConnection,
   handleSupabaseError,
   getCurrentUser,
-  getCurrentUserId,
+  getCurrentUserId
+} from '@/lib/supabase';
+
+import {
   isOfflineMode,
   clearCache,
   isNetworkError,
-  queryWithCache
-} from '@/lib/supabase';
+  queryWithCache,
+  CACHE_CONFIG
+} from '@/lib/supabase/cache';
 
 // Bütün funksiyaları ixrac et
 export {
@@ -27,7 +31,8 @@ export {
   isOfflineMode,
   clearCache,
   isNetworkError,
-  queryWithCache
+  queryWithCache,
+  CACHE_CONFIG
 };
 
 // Export query helpers
@@ -36,7 +41,7 @@ export * from '@/lib/supabase/retry';
 
 // Əsas məlumatı konsola yaz
 console.log('Supabase inteqrasiyası yükləndi:', {
-  url: process.env.NODE_ENV === 'production' ? 'PRODUCTION_URL' : supabase.supabaseUrl,
+  url: process.env.NODE_ENV === 'production' ? 'PRODUCTION_URL' : 'SUPABASE_URL',
   authEnabled: !!supabase.auth,
   realtimeEnabled: !!supabase.realtime,
   storageEnabled: !!supabase.storage

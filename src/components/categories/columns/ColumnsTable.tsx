@@ -1,11 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus, GripVertical, Edit, Trash2 } from "lucide-react";
-import { CategoryColumn } from "../CategoryDetailView";
-import { ColumnsTableProps } from "./types";
+import { CategoryColumn, ColumnsTableProps } from "./types";
 
 export const ColumnsTable = ({
   columns,
+  categoryId,
   isLoading,
   isError,
   onAddColumn,
@@ -13,7 +13,7 @@ export const ColumnsTable = ({
   onDeleteColumn,
   onRefetch
 }: ColumnsTableProps) => {
-  const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
+  const sortedColumns = [...columns].sort((a, b) => (a.order || 0) - (b.order || 0));
 
   if (isLoading) {
     return (
@@ -44,13 +44,15 @@ export const ColumnsTable = ({
         <p className="text-infoline-dark-gray">
           Bu kateqoriya üçün məlumat sütunlarını idarə edin. Sütunların nizamlanması funksiyası tezliklə əlavə olunacaq.
         </p>
-        <Button 
-          onClick={onAddColumn}
-          className="bg-infoline-blue hover:bg-infoline-dark-blue"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Yeni Sütun
-        </Button>
+        {onAddColumn && (
+          <Button 
+            onClick={onAddColumn}
+            className="bg-infoline-blue hover:bg-infoline-dark-blue"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Yeni Sütun
+          </Button>
+        )}
       </div>
       
       <div className="bg-infoline-lightest-gray rounded-lg border border-infoline-light-gray overflow-hidden mt-4">
@@ -97,7 +99,7 @@ export const ColumnsTable = ({
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => onDeleteColumn(column.id)}
+                        onClick={() => onDeleteColumn(column)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

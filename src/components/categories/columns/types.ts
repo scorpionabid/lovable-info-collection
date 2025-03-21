@@ -23,7 +23,7 @@ export interface ColumnData {
   description?: string;
 }
 
-// Add missing interfaces for components
+// Component prop interfaces
 export interface CategoryColumnsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,6 +39,10 @@ export interface ColumnFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   isEditing?: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  selectedColumn: CategoryColumn | null;
+  formMode: 'create' | 'edit';
 }
 
 export interface ColumnsTableProps {
@@ -46,4 +50,8 @@ export interface ColumnsTableProps {
   categoryId: string;
   onEditColumn: (column: CategoryColumn) => void;
   onDeleteColumn: (column: CategoryColumn) => void;
+  isLoading?: boolean;
+  isError?: boolean;
+  onAddColumn?: () => void;
+  onRefetch?: () => void;
 }

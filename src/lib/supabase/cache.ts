@@ -1,151 +1,243 @@
 
 /**
- * Supabase keşləmə utilləri
+ * Keşləmə sistemi
  */
-import { supabase } from './client';
 import { logger } from '@/utils/logger';
 
-// Keşləmə parametrləri
-export const CACHE_CONFIG = {
-  ttl: 5 * 60 * 1000, // 5 dəqiqə
-  maxSize: 100, // Maksimum keş elementi
-  prefix: 'supabase_cache_',
-};
-
-// Keş məlumatları üçün interfeys
-interface CacheItem<T> {
-  timestamp: number;
-  expiry: number;
-  data: T;
+export interface CacheOptions {
+  ttl?: number; // Milliseconds
+  cacheKey?: string;
 }
 
-// Keş məlumatlarının saxlanması üçün obyekt
-const memoryCache: Map<string, CacheItem<any>> = new Map();
+export interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiry: number;
+}
 
-// Əsas keşləmə funksiyası
-export const queryWithCache = async <T>(
+export const CACHE_CONFIG = {
+  DEFAULT_TTL: 5 * 60 * 1000, // 5 dəqiqə
+  STORAGE_KEY_PREFIX: 'infoline_cache_',
+  MAX_CACHE_SIZE: 100, // Max entries
+  CLEANUP_INTERVAL: 10 * 60 * 1000, // 10 dəqiqə
+};
+
+// In-memory cache
+const memoryCache = new Map<string, CacheEntry<any>>();
+
+// Generate a cache key
+export const generateCacheKey = (
+  key: string, 
+  params?: Record<string, any>
+): string => {
+  if (!params) return key;
+  
+  const sortedParams = Object.keys(params)
+    .sort()
+    .reduce((obj, k) => {
+      obj[k] = params[k];
+      return obj;
+    }, {} as Record<string, any>);
+  
+  return `${key}_${JSON.stringify(sortedParams)}`;
+};
+
+// Set item in cache
+export const setCacheItem = <T>(
   key: string,
-  queryFn: () => Promise<{ data: T | null; error: any }>,
-  ttl: number = CACHE_CONFIG.ttl
-): Promise<{ data: T | null; error: any }> => {
-  // Keş açarını yaratmaq
-  const cacheKey = `${CACHE_CONFIG.prefix}${key}`;
+  data: T,
+  options: CacheOptions = {}
+): void => {
+  const ttl = options.ttl || CACHE_CONFIG.DEFAULT_TTL;
+  const now = Date.now();
+  
+  const entry: CacheEntry<T> = {
+    data,
+    timestamp: now,
+    expiry: now + ttl
+  };
   
   try {
-    // Yaddaşda keşlənmiş məlumatı yoxla
-    const cachedItem = memoryCache.get(cacheKey);
+    // Set in memory cache
+    memoryCache.set(key, entry);
     
-    // Keşdə varsa və vaxtı keçməyibsə, keşdən ver
-    if (cachedItem && cachedItem.expiry > Date.now()) {
-      logger.debug('Cache hit:', cacheKey);
-      return { data: cachedItem.data, error: null };
+    // Also persist in localStorage when possible
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        `${CACHE_CONFIG.STORAGE_KEY_PREFIX}${key}`,
+        JSON.stringify(entry)
+      );
+    }
+  } catch (error) {
+    logger.warn('Cache set error:', error);
+  }
+};
+
+// Get item from cache
+export const getCacheItem = <T>(key: string): T | null => {
+  try {
+    // First check memory cache
+    if (memoryCache.has(key)) {
+      const entry = memoryCache.get(key) as CacheEntry<T>;
+      
+      // Check if expired
+      if (entry.expiry > Date.now()) {
+        return entry.data;
+      }
+      
+      // Expired, remove from cache
+      memoryCache.delete(key);
     }
     
-    // Keşdə yoxdursa və ya vaxtı keçibsə, yeni sorğu et
-    logger.debug('Cache miss, fetching data:', cacheKey);
-    const result = await queryFn();
-    
-    // Xəta varsa keşləmə
-    if (result.error) {
-      logger.error('Error fetching data for cache:', result.error);
-      return result;
-    }
-    
-    // Uğurlu nəticəni keşlə
-    if (result.data) {
-      const cacheItem: CacheItem<T> = {
-        timestamp: Date.now(),
-        expiry: Date.now() + ttl,
-        data: result.data,
-      };
+    // Then check localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`${CACHE_CONFIG.STORAGE_KEY_PREFIX}${key}`);
       
-      // Yaddaşda saxla
-      memoryCache.set(cacheKey, cacheItem);
-      
-      // Keşin ölçüsünü yoxla və lazım gələrsə təmizlə
-      if (memoryCache.size > CACHE_CONFIG.maxSize) {
-        const oldestKey = [...memoryCache.entries()]
-          .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
-        memoryCache.delete(oldestKey);
+      if (stored) {
+        const entry = JSON.parse(stored) as CacheEntry<T>;
+        
+        // Check if expired
+        if (entry.expiry > Date.now()) {
+          // Sync to memory cache
+          memoryCache.set(key, entry);
+          return entry.data;
+        }
+        
+        // Expired, remove from localStorage
+        localStorage.removeItem(`${CACHE_CONFIG.STORAGE_KEY_PREFIX}${key}`);
       }
     }
     
+    return null;
+  } catch (error) {
+    logger.warn('Cache get error:', error);
+    return null;
+  }
+};
+
+// Remove item from cache
+export const removeCacheItem = (key: string): void => {
+  try {
+    memoryCache.delete(key);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`${CACHE_CONFIG.STORAGE_KEY_PREFIX}${key}`);
+    }
+  } catch (error) {
+    logger.warn('Cache remove error:', error);
+  }
+};
+
+// Clear all cache
+export const clearCache = (): void => {
+  try {
+    memoryCache.clear();
+    
+    if (typeof window !== 'undefined') {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(CACHE_CONFIG.STORAGE_KEY_PREFIX)) {
+          keys.push(key);
+        }
+      }
+      
+      keys.forEach(key => localStorage.removeItem(key));
+    }
+  } catch (error) {
+    logger.warn('Cache clear error:', error);
+  }
+};
+
+// Check if network is available
+export const isOfflineMode = (): boolean => {
+  if (typeof navigator !== 'undefined') {
+    return !navigator.onLine;
+  }
+  return false;
+};
+
+// Helper to check if an error is a network error
+export const isNetworkError = (error: any): boolean => {
+  if (!error) return false;
+  
+  // Check common network error messages
+  const errorMessage = error.message?.toLowerCase() || '';
+  return (
+    errorMessage.includes('network') ||
+    errorMessage.includes('connection') ||
+    errorMessage.includes('offline') ||
+    errorMessage.includes('failed to fetch') ||
+    errorMessage.includes('cors') ||
+    errorMessage.includes('timeout') ||
+    (typeof error.status === 'number' && error.status === 0) ||
+    (typeof navigator !== 'undefined' && !navigator.onLine)
+  );
+};
+
+// Query with cache wrapper function
+export const queryWithCache = async <T>(
+  cacheKey: string,
+  queryFn: () => Promise<T>,
+  ttl?: number
+): Promise<T> => {
+  // First check cache
+  const cached = getCacheItem<T>(cacheKey);
+  
+  if (cached) {
+    logger.debug(`Cache hit for key: ${cacheKey}`);
+    return cached;
+  }
+  
+  logger.debug(`Cache miss for key: ${cacheKey}`);
+  
+  // Not in cache, perform query
+  if (isOfflineMode()) {
+    logger.warn('Attempting to fetch data while offline');
+    throw new Error('Offline mode active, cannot fetch new data');
+  }
+  
+  try {
+    const result = await queryFn();
+    
+    // Store in cache
+    setCacheItem<T>(cacheKey, result, { ttl });
+    
     return result;
   } catch (error) {
-    logger.error('Cache operation error:', error);
-    // Keş xətası baş verdikdə birbaşa sorğu et
-    return await queryFn();
+    logger.error(`Query error for key ${cacheKey}:`, error);
+    throw error;
   }
 };
 
-// Keşin təmizlənməsi
-export const clearCache = (prefix?: string): void => {
-  if (prefix) {
-    // Müəyyən prefikslə başlayan keşləri təmizlə
-    const keys = [...memoryCache.keys()].filter(key => key.startsWith(prefix));
-    keys.forEach(key => memoryCache.delete(key));
-    logger.info(`Cache cleared with prefix: ${prefix}, ${keys.length} items removed`);
-  } else {
-    // Bütün keşi təmizlə
-    memoryCache.clear();
-    logger.info('Complete cache cleared');
-  }
-  
-  // Təmizləmə hadisəsini yay
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('supabase-cache-clear', { 
-      detail: { prefix } 
-    }));
-  }
-};
-
-// Xüsusi keşləri təmizləmək
-export const invalidateCache = (key: string): void => {
-  const cacheKey = `${CACHE_CONFIG.prefix}${key}`;
-  memoryCache.delete(cacheKey);
-  logger.info(`Cache invalidated: ${cacheKey}`);
-};
-
-// Müəyyən patternə uyğun keşləri təmizləmək
-export const invalidateCachePattern = (pattern: string): void => {
-  const regex = new RegExp(pattern);
-  const keys = [...memoryCache.keys()].filter(key => regex.test(key));
-  keys.forEach(key => memoryCache.delete(key));
-  logger.info(`Cache pattern invalidated: ${pattern}, ${keys.length} items removed`);
-};
-
-// Vaxtı keçmiş bütün keşləri təmizləmək
-export const cleanExpiredCache = (): void => {
-  const now = Date.now();
-  let removedCount = 0;
-  
-  [...memoryCache.entries()].forEach(([key, item]) => {
-    if (item.expiry < now) {
-      memoryCache.delete(key);
-      removedCount++;
+// Clean up expired cache entries
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    
+    // Clean memory cache
+    for (const [key, entry] of memoryCache.entries()) {
+      if (entry.expiry < now) {
+        memoryCache.delete(key);
+      }
     }
-  });
-  
-  if (removedCount > 0) {
-    logger.info(`Removed ${removedCount} expired cache items`);
-  }
-};
-
-// Keşin statistikasını almaq
-export const getCacheStats = () => {
-  const now = Date.now();
-  const total = memoryCache.size;
-  let expired = 0;
-  
-  [...memoryCache.values()].forEach(item => {
-    if (item.expiry < now) expired++;
-  });
-  
-  return {
-    total,
-    expired,
-    active: total - expired,
-    maxSize: CACHE_CONFIG.maxSize,
-    ttl: CACHE_CONFIG.ttl,
-  };
-};
+    
+    // Clean localStorage cache
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(CACHE_CONFIG.STORAGE_KEY_PREFIX)) {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const entry = JSON.parse(stored) as CacheEntry<any>;
+            if (entry.expiry < now) {
+              localStorage.removeItem(key);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Cache cleanup error:', error);
+    }
+  }, CACHE_CONFIG.CLEANUP_INTERVAL);
+}

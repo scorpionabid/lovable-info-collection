@@ -1,98 +1,37 @@
-
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { SchoolForm } from "./SchoolForm";
-import { useSchoolForm } from "./useSchoolForm";
+import React from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+// Import properly
+import SchoolForm from "./SchoolForm";
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'create' | 'edit';
-  initialData?: any; // School data for edit mode
-  onSuccess?: () => void;
-  onSchoolCreated?: () => void;
-  onSchoolUpdated?: () => void;
-  regionId?: string; // Added for RegionDetails.tsx
-  sectorId?: string;
-  onCreated?: () => void; // Added for compatibility with RegionDetails.tsx
+  schoolId?: string;
 }
 
-export const SchoolModal: React.FC<SchoolModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  mode, 
-  initialData, 
-  onSuccess,
-  onSchoolCreated,
-  onSchoolUpdated,
-  onCreated,
-  regionId,
-  sectorId
+export const SchoolModal: React.FC<SchoolModalProps> = ({
+  isOpen,
+  onClose,
+  schoolId,
 }) => {
-  const handleSuccess = () => {
-    // Call the appropriate callback based on availability and mode
-    if (onSuccess) {
-      onSuccess();
-    } else if (mode === 'create') {
-      if (onSchoolCreated) onSchoolCreated();
-      if (onCreated) onCreated(); // Support both callback conventions
-    } else if (mode === 'edit' && onSchoolUpdated) {
-      onSchoolUpdated();
-    }
-    onClose();
-  };
-
-  // If regionId is provided, add it to the school data
-  const schoolData = regionId && mode === 'create' 
-    ? { ...initialData, region_id: regionId } 
-    : initialData;
-
-  // Use the hook to get form functionality
-  const {
-    form,
-    isLoading,
-    isSubmitting,
-    errorMessage,
-    regions,
-    sectors,
-    schoolTypes,
-    handleRegionChange,
-    handleSubmit
-  } = useSchoolForm({
-    mode,
-    initialData: schoolData,
-    onSuccess: handleSuccess,
-    regionId
-  });
+  const { school, isLoading, handleSuccess } = useSchoolData(schoolId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Yeni məktəb yarat' : 'Məktəb məlumatlarını redaktə et'}
-          </DialogTitle>
-        </DialogHeader>
-        <SchoolForm 
-          mode={mode}
-          initialData={schoolData}
-          onCancel={onClose}
-          defaultRegionId={regionId}
-          defaultSectorId={sectorId}
-          form={form}
-          isSubmitting={isSubmitting}
-          errorMessage={errorMessage}
-          regions={regions}
-          sectors={sectors}
-          schoolTypes={schoolTypes}
-          onRegionChange={handleRegionChange}
-          onSubmit={handleSubmit}
-        />
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+        {isLoading ? (
+          <div className="flex justify-center items-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-infoline-blue" />
+          </div>
+        ) : (
+          <SchoolForm
+            onSuccess={handleSuccess}
+            onCancel={onClose}
+            initialData={school}
+            mode={schoolId ? "edit" : "create"}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

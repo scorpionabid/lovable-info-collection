@@ -4,13 +4,12 @@ import { toast } from "sonner";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { CategoryType, CategoryColumn } from "../CategoryDetailView";
+import { CategoryColumn, CategoryColumnsModalProps } from "./types";
 import * as categoryService from '@/services/supabase/category';
 import { ColumnsTable } from './ColumnsTable';
 import { ColumnForm } from './ColumnForm';
-import { CategoryColumnsModalProps } from './types';
 
-export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColumnsModalProps) => {
+export const CategoryColumnsModal = ({ isOpen, onClose, categoryId, categoryName }: CategoryColumnsModalProps) => {
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState<CategoryColumn | null>(null);
   const [columnFormMode, setColumnFormMode] = useState<'create' | 'edit'>('create');
@@ -21,13 +20,13 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     isError,
     refetch 
   } = useQuery({
-    queryKey: ['category-columns', category.id],
-    queryFn: () => categoryService.getCategoryColumns(category.id),
+    queryKey: ['category-columns', categoryId],
+    queryFn: () => categoryService.getCategoryColumns(categoryId),
     enabled: isOpen
   });
 
   const deleteColumnMutation = useMutation({
-    mutationFn: (id: string) => categoryService.deleteColumn(id),
+    mutationFn: (columnId: string) => categoryService.deleteColumn(columnId),
     onSuccess: () => {
       refetch();
       toast.success('Sütun uğurla silindi');
@@ -49,9 +48,9 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
     setIsColumnModalOpen(true);
   };
 
-  const handleDeleteColumn = async (columnId: string) => {
+  const handleDeleteColumn = async (column: CategoryColumn) => {
     if (window.confirm('Bu sütunu silmək istədiyinizə əminsiniz?')) {
-      deleteColumnMutation.mutate(columnId);
+      deleteColumnMutation.mutate(column.id);
     }
   };
 
@@ -69,7 +68,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
         <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden animate-scale-in">
           <div className="flex items-center justify-between px-6 py-4 border-b border-infoline-light-gray">
             <h2 className="text-xl font-semibold text-infoline-dark-blue">
-              Sütunları İdarə Et: {category.name}
+              Sütunları İdarə Et: {categoryName}
             </h2>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-5 w-5" />
@@ -79,6 +78,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
             <ColumnsTable 
               columns={columns}
+              categoryId={categoryId}
               isLoading={isLoading}
               isError={isError}
               onAddColumn={handleAddColumn}
@@ -101,7 +101,7 @@ export const CategoryColumnsModal = ({ isOpen, onClose, category }: CategoryColu
         onClose={handleColumnFormClose}
         selectedColumn={selectedColumn}
         formMode={columnFormMode}
-        categoryId={category.id}
+        categoryId={categoryId}
         onSuccess={() => refetch()}
       />
     </div>
