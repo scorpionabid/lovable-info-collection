@@ -1,28 +1,36 @@
 
 /**
- * İnfoLine servisləri
- * Fayd, bu modul bütün servis funksiyalarını bir araya gətirir
- * və tətbiqin müxtəlif hissələrindən istifadə olunması üçün ixrac edir
+ * Servislər üçün index faylı
+ * Köhnə API-dan yeni API-ya keçid üçün adapter
  */
 
-// Service exports 
-export { default as authService } from './authService';
-export { default as userService } from './userService';
-// Fix the regionService export - no default required
-export * from './regionService';
-export { default as sectorService } from './sectorService';
-// Import from supabase/school instead since schoolService doesn't exist
-export * from './supabase/school';
-export { default as categoryService } from './categoryService';
-export { default as notificationService } from './notificationService';
-// Import replacement for logService
-export { logger as logService } from '@/utils/logger';
-export { metricService } from './metricService';
-export { default as dataService } from './dataService';
-// Import placeholder for validationService
-export const validationService = {
-  validateInput: (input: any, rules: any) => {
-    // Basic validation implementation
-    return { isValid: true, errors: [] };
-  }
-};
+// Supabase ilə bağlı bütün servislər
+export * from '@/supabase/services/regions';
+export * from '@/supabase/services/sectors';
+export * from '@/supabase/services/schools';
+export * from '@/supabase/services/users';
+export * from '@/supabase/services/auth';
+
+// Hook və müştəri exportları
+export * from '@/supabase/client';
+export * from '@/supabase/config';
+
+// Region servisi
+import regionService from './regionService';
+export { regionService };
+
+// Sector servisi
+import sectorService from './sectorService';
+export { sectorService };
+
+// School servisi
+import schoolService from './schoolService';
+export { schoolService };
+
+// User servisi
+import userService from './userService';
+export { userService };
+
+// Auth servisi
+import authService from './authService';
+export { authService };

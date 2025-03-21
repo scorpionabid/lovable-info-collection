@@ -37,8 +37,8 @@ export const useAuth = () => {
       setLoading(true);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['auth-session']);
-      queryClient.invalidateQueries(['auth-user']);
+      queryClient.invalidateQueries({ queryKey: ['auth-session'] });
+      queryClient.invalidateQueries({ queryKey: ['auth-user'] });
       toast.success('Uğurla daxil oldunuz');
       navigate('/dashboard');
     },

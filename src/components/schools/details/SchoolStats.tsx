@@ -1,76 +1,87 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { getSchoolStats } from '@/services/supabase/school/queries/statsQueries';
-import { Loader2 } from 'lucide-react';
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
+import { School } from '@/supabase/types';
 
 interface SchoolStatsProps {
-  schoolId: string;
+  school: School;
 }
 
-const SchoolStats: React.FC<SchoolStatsProps> = ({ schoolId }) => {
-  const { data: stats, isLoading, error } = useQuery({
-    queryKey: ['schoolStats', schoolId],
-    queryFn: () => getSchoolStats(schoolId),
-    enabled: !!schoolId
-  });
-
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Məktəb Statistikası</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-infoline-blue" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error || !stats) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Məktəb Statistikası</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-red-500">Statistika məlumatları yüklənərkən xəta baş verdi.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+const SchoolStats: React.FC<SchoolStatsProps> = ({ school }) => {
+  const completionRate = school.completionRate || 0;
+  const studentCount = school.student_count || 0;
+  const teacherCount = school.teacher_count || 0;
+  
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Məktəb Statistikası</CardTitle>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-semibold text-infoline-dark-blue">
+          Məktəb statistikası
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-sm text-gray-500">Şagird sayı</h3>
-            <p className="text-2xl font-bold text-blue-700">{stats.total_students}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-500 text-center">Tamamlanma dərəcəsi</p>
+            <div className="w-24 h-24 mx-auto">
+              <CircularProgressbar
+                value={completionRate}
+                text={`${completionRate}%`}
+                styles={buildStyles({
+                  textSize: '22px',
+                  pathColor: getCompletionColor(completionRate),
+                  textColor: getCompletionColor(completionRate),
+                  trailColor: '#e0e0e0',
+                })}
+              />
+            </div>
           </div>
           
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-sm text-gray-500">Müəllim sayı</h3>
-            <p className="text-2xl font-bold text-green-700">{stats.total_teachers}</p>
-          </div>
+          <StatCard
+            title="Şagird sayı"
+            value={studentCount}
+            icon="👨‍🎓"
+            color="bg-blue-50 text-blue-800"
+          />
           
-          <div className="bg-amber-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-sm text-gray-500">Tamamlanma faizi</h3>
-            <p className="text-2xl font-bold text-amber-700">{stats.completion_rate}%</p>
-          </div>
-        </div>
-        
-        <div className="mt-4 text-sm text-gray-500">
-          Son yenilənmə: {new Date(stats.lastUpdate).toLocaleString('az-AZ')}
+          <StatCard
+            title="Müəllim sayı"
+            value={teacherCount}
+            icon="👨‍🏫"
+            color="bg-green-50 text-green-800"
+          />
         </div>
       </CardContent>
     </Card>
   );
+};
+
+interface StatCardProps {
+  title: string;
+  value: number;
+  icon: string;
+  color: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => {
+  return (
+    <div className="flex flex-col items-center justify-center space-y-2 p-4 rounded-lg border border-gray-200">
+      <div className={`h-10 w-10 rounded-full ${color} flex items-center justify-center text-xl`}>
+        {icon}
+      </div>
+      <p className="text-sm font-medium text-gray-500">{title}</p>
+      <p className="text-2xl font-bold">{value}</p>
+    </div>
+  );
+};
+
+// Tamamlanma dərəcəsinə görə rəng vermə
+const getCompletionColor = (rate: number): string => {
+  if (rate >= 80) return '#10b981'; // green
+  if (rate >= 60) return '#f59e0b'; // yellow
+  return '#ef4444'; // red
 };
 
 export default SchoolStats;

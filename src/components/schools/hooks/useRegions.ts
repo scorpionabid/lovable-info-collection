@@ -1,36 +1,23 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+// İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
+// Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
+import { useRegionsDropdown } from '@/supabase/hooks/useRegions';
 
-export interface Region {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-const fetchRegions = async (): Promise<Region[]> => {
-  const { data, error } = await supabase
-    .from('regions')
-    .select('*')
-    .order('name');
-  
-  if (error) throw error;
-  
-  return (data || []).map(region => ({
-    ...region,
-    description: region.description || '' // Ensure description is not undefined
-  }));
-};
-
+// Default export regionları almaq üçün hook
 export default function useRegions() {
-  const { data: regions = [], isLoading, error } = useQuery({
-    queryKey: ['regions'],
-    queryFn: fetchRegions
-  });
-
+  const { regions, isLoading, error } = useRegionsDropdown();
+  
+  // Köhnə struktura uyğun data qaytarırıq
+  const formattedRegions = regions.map(region => ({
+    ...region,
+    description: '' // Əskik sahələri əlavə edirik
+  }));
+  
   return {
-    regions,
+    regions: formattedRegions,
     isLoading,
     error
   };
 }
+
+export const useRegions = useRegionsDropdown;

@@ -5,13 +5,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as usersService from "../services/users";
+import { 
+  User, 
+  UserFilters,
+  CreateUserDto,
+  UpdateUserDto
+} from "../types";
 
 // Bütün istifadəçiləri almaq üçün hook
-export const useUsers = (filters?: usersService.UserFilters) => {
+export const useUsers = (filters?: UserFilters) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['users', filters],
     queryFn: () => usersService.getUsers(filters),
-    keepPreviousData: true
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -27,7 +33,8 @@ export const useUser = (id: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['user', id],
     queryFn: () => usersService.getUserById(id),
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -41,7 +48,8 @@ export const useUser = (id: string) => {
 export const useRoles = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['roles'],
-    queryFn: () => usersService.getRoles()
+    queryFn: () => usersService.getRoles(),
+    staleTime: 1000 * 60 * 30 // 30 dəqiqə
   });
 
   return {
@@ -51,25 +59,15 @@ export const useRoles = () => {
   };
 };
 
-// UTIS kodu mövcudluğunu yoxlamaq üçün hook
-export const useCheckUtisCode = () => {
-  const mutation = useMutation({
-    mutationFn: ({ utisCode, userId }: { utisCode: string; userId?: string }) => 
-      usersService.checkUtisCodeExists(utisCode, userId)
-  });
-
-  return mutation;
-};
-
 // İstifadəçi yaratmaq üçün hook
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (userData: usersService.CreateUserDto) => 
+    mutationFn: (userData: CreateUserDto) => 
       usersService.createUser(userData),
     onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('İstifadəçi uğurla yaradıldı');
     },
     onError: (error: any) => {
@@ -85,11 +83,11 @@ export const useUpdateUser = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ id, userData }: { id: string; userData: usersService.UpdateUserDto }) => 
+    mutationFn: ({ id, userData }: { id: string; userData: UpdateUserDto }) => 
       usersService.updateUser(id, userData),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['users']);
-      queryClient.invalidateQueries(['user', variables.id]);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', variables.id] });
       toast.success('İstifadəçi uğurla yeniləndi');
     },
     onError: (error: any) => {
@@ -107,7 +105,7 @@ export const useDeleteUser = () => {
   const mutation = useMutation({
     mutationFn: (id: string) => usersService.deleteUser(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('İstifadəçi uğurla silindi');
     },
     onError: (error: any) => {
@@ -118,15 +116,15 @@ export const useDeleteUser = () => {
   return mutation;
 };
 
-// İstifadəçini bloklamaq üçün hook
+// İstifadəçi bloklamaq üçün hook
 export const useBlockUser = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: (id: string) => usersService.blockUser(id),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['users']);
-      queryClient.invalidateQueries(['user', variables]);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', variables] });
       toast.success('İstifadəçi uğurla bloklandı');
     },
     onError: (error: any) => {
@@ -137,19 +135,19 @@ export const useBlockUser = () => {
   return mutation;
 };
 
-// İstifadəçini aktivləşdirmək üçün hook
+// İstifadəçi aktivləşdirmək üçün hook
 export const useActivateUser = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: (id: string) => usersService.activateUser(id),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['users']);
-      queryClient.invalidateQueries(['user', variables]);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', variables] });
       toast.success('İstifadəçi uğurla aktivləşdirildi');
     },
     onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'İstifadəçi aktivləşdirilərkən problem baş verdi'}`);
+      toast.error(`Xəta: ${error.message || 'İstifadəçi aktivləşdirilirkən problem baş verdi'}`);
     }
   });
 
@@ -158,10 +156,12 @@ export const useActivateUser = () => {
 
 // Şifrə sıfırlamaq üçün hook
 export const useResetPassword = () => {
+  const queryClient = useQueryClient();
+
   const mutation = useMutation({
     mutationFn: (id: string) => usersService.resetPassword(id),
     onSuccess: () => {
-      toast.success('Şifrə sıfırlama bağlantısı istifadəçiyə göndərildi');
+      toast.success('Şifrə sıfırlama linki istifadəçiyə göndərildi');
     },
     onError: (error: any) => {
       toast.error(`Xəta: ${error.message || 'Şifrə sıfırlanarkən problem baş verdi'}`);

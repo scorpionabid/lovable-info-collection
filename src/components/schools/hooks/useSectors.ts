@@ -1,43 +1,23 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+// İstifadəçilərin köhnə code-dan istifadəsini dəstəkləmək üçün
+// Əvvəlki strukturdan yeni strukturdakı funksiyaları export edirik
+import { useSectorsByRegion } from '@/supabase/hooks/useSectors';
 
-export interface Sector {
-  id: string;
-  name: string;
-  region_id: string;
-  description?: string;
-}
-
-const fetchSectors = async (regionId?: string): Promise<Sector[]> => {
-  let query = supabase.from('sectors').select('*');
+// Default export sektorları region id ilə almaq üçün hook
+export default function useSectors(regionId: string) {
+  const { sectors, isLoading, error } = useSectorsByRegion(regionId);
   
-  if (regionId) {
-    query = query.eq('region_id', regionId);
-  }
-  
-  query = query.order('name');
-  
-  const { data, error } = await query;
-  
-  if (error) throw error;
-  
-  return (data || []).map(sector => ({
+  // Köhnə struktura uyğun data qaytarırıq
+  const formattedSectors = sectors.map(sector => ({
     ...sector,
-    description: sector.description || '' // Ensure description is not undefined
+    description: sector.description || '' // Əskik sahələri əlavə edirik
   }));
-};
-
-export default function useSectors(regionId?: string) {
-  const { data: sectors = [], isLoading, error } = useQuery({
-    queryKey: ['sectors', regionId],
-    queryFn: () => fetchSectors(regionId),
-    enabled: !!regionId
-  });
-
+  
   return {
-    sectors,
+    sectors: formattedSectors,
     isLoading,
     error
   };
 }
+
+export const useSectors = useSectorsByRegion;

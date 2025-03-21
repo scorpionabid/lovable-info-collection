@@ -5,16 +5,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as schoolsService from "../services/schools";
+import { 
+  School, 
+  SchoolFilter,
+  SchoolSortParams, 
+  SchoolType,
+  CreateSchoolDto,
+  UpdateSchoolDto
+} from "../types";
 
 // Bütün məktəbləri almaq üçün hook
-export const useSchools = (
-  filters?: schoolsService.SchoolFilter,
-  sort?: schoolsService.SchoolSortParams
-) => {
+export const useSchools = (filters?: SchoolFilter) => {
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['schools', filters, sort],
-    queryFn: () => schoolsService.getSchools(filters, sort),
-    keepPreviousData: true
+    queryKey: ['schools', filters],
+    queryFn: () => schoolsService.getSchools(filters),
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -30,7 +35,8 @@ export const useSchool = (id: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['school', id],
     queryFn: () => schoolsService.getSchoolById(id),
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -40,12 +46,31 @@ export const useSchool = (id: string) => {
   };
 };
 
-// Region ID ilə məktəbləri almaq üçün hook
+// Məktəb və adminini birlikdə almaq üçün hook
+export const useSchoolWithAdmin = (id: string) => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['schoolWithAdmin', id],
+    queryFn: () => schoolsService.getSchoolWithAdmin(id),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
+  });
+
+  return {
+    schoolWithAdmin: data,
+    school: data?.school,
+    admin: data?.admin,
+    isLoading,
+    error
+  };
+};
+
+// Region üzrə məktəbləri almaq
 export const useSchoolsByRegion = (regionId: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['schoolsByRegion', regionId],
-    queryFn: () => schoolsService.getSchoolsByRegion(regionId),
-    enabled: !!regionId
+    queryFn: () => schoolsService.getSchoolsByRegionId(regionId),
+    enabled: !!regionId,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -55,12 +80,13 @@ export const useSchoolsByRegion = (regionId: string) => {
   };
 };
 
-// Sektor ID ilə məktəbləri almaq üçün hook
+// Sektor üzrə məktəbləri almaq
 export const useSchoolsBySector = (sectorId: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['schoolsBySector', sectorId],
-    queryFn: () => schoolsService.getSchoolsBySector(sectorId),
-    enabled: !!sectorId
+    queryFn: () => schoolsService.getSchoolsBySectorId(sectorId),
+    enabled: !!sectorId,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -71,11 +97,12 @@ export const useSchoolsBySector = (sectorId: string) => {
 };
 
 // Dropdown üçün məktəbləri almaq
-export const useSchoolsDropdown = (sectorId?: string, regionId?: string) => {
+export const useSchoolsDropdown = (regionId?: string, sectorId?: string) => {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['schoolsDropdown', sectorId, regionId],
-    queryFn: () => schoolsService.getSchoolsForDropdown(sectorId, regionId),
-    enabled: !!(sectorId || regionId)
+    queryKey: ['schoolsDropdown', regionId, sectorId],
+    queryFn: () => schoolsService.getSchoolsForDropdown(regionId, sectorId),
+    enabled: regionId !== undefined || sectorId !== undefined,
+    staleTime: 1000 * 60 * 10 // 10 dəqiqə
   });
 
   return {
@@ -85,11 +112,12 @@ export const useSchoolsDropdown = (sectorId?: string, regionId?: string) => {
   };
 };
 
-// Məktəb tipləri üçün hook
+// Məktəb növlərini almaq
 export const useSchoolTypes = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['schoolTypes'],
-    queryFn: () => schoolsService.getSchoolTypes()
+    queryFn: () => schoolsService.getSchoolTypes(),
+    staleTime: 1000 * 60 * 30 // 30 dəqiqə
   });
 
   return {
@@ -104,13 +132,13 @@ export const useCreateSchool = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (schoolData: schoolsService.CreateSchoolDto) => 
+    mutationFn: (schoolData: CreateSchoolDto) => 
       schoolsService.createSchool(schoolData),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['schools']);
-      queryClient.invalidateQueries(['schoolsByRegion', variables.region_id]);
-      queryClient.invalidateQueries(['schoolsBySector', variables.sector_id]);
-      queryClient.invalidateQueries(['schoolsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+      queryClient.invalidateQueries({ queryKey: ['schoolsDropdown'] });
+      queryClient.invalidateQueries({ queryKey: ['schoolsByRegion', variables.region_id] });
+      queryClient.invalidateQueries({ queryKey: ['schoolsBySector', variables.sector_id] });
       toast.success('Məktəb uğurla yaradıldı');
     },
     onError: (error: any) => {
@@ -126,18 +154,22 @@ export const useUpdateSchool = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ id, schoolData }: { id: string; schoolData: schoolsService.UpdateSchoolDto }) => 
+    mutationFn: ({ id, schoolData }: { id: string; schoolData: UpdateSchoolDto }) => 
       schoolsService.updateSchool(id, schoolData),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['schools']);
-      queryClient.invalidateQueries(['school', variables.id]);
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+      queryClient.invalidateQueries({ queryKey: ['school', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['schoolWithAdmin', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['schoolsDropdown'] });
+      
       if (variables.schoolData.region_id) {
-        queryClient.invalidateQueries(['schoolsByRegion', variables.schoolData.region_id]);
+        queryClient.invalidateQueries({ queryKey: ['schoolsByRegion', variables.schoolData.region_id] });
       }
+      
       if (variables.schoolData.sector_id) {
-        queryClient.invalidateQueries(['schoolsBySector', variables.schoolData.sector_id]);
+        queryClient.invalidateQueries({ queryKey: ['schoolsBySector', variables.schoolData.sector_id] });
       }
-      queryClient.invalidateQueries(['schoolsDropdown']);
+      
       toast.success('Məktəb uğurla yeniləndi');
     },
     onError: (error: any) => {
@@ -155,8 +187,8 @@ export const useDeleteSchool = () => {
   const mutation = useMutation({
     mutationFn: (id: string) => schoolsService.deleteSchool(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['schools']);
-      queryClient.invalidateQueries(['schoolsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+      queryClient.invalidateQueries({ queryKey: ['schoolsDropdown'] });
       toast.success('Məktəb uğurla silindi');
     },
     onError: (error: any) => {

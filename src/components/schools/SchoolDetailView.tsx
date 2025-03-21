@@ -1,98 +1,132 @@
 
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getSchoolWithAdmin } from '@/services/supabase/school/queries/schoolQueries';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { PencilIcon, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getSchoolWithAdmin } from '@/supabase/services/schools';
+import { toast } from 'sonner';
 import SchoolInfo from './details/SchoolInfo';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminInfo from './details/AdminInfo';
 import SchoolStats from './details/SchoolStats';
-import { Loader2, Edit, ArrowLeft } from 'lucide-react';
-import SchoolModal from './modal/SchoolModal';
+import { SchoolModal } from './modal/SchoolModal';
 
-export const SchoolDetailView = () => {
+interface SchoolDetailViewProps {
+  schoolId: string;
+}
+
+const SchoolDetailView: React.FC<SchoolDetailViewProps> = ({ schoolId }) => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [schoolData, setSchoolData] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const params = useParams<{ id: string }>();
-  const schoolId = params.id;
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['school', schoolId],
-    queryFn: () => getSchoolWithAdmin(schoolId as string),
-    enabled: !!schoolId,
-  });
+  useEffect(() => {
+    const loadSchoolData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const data = await getSchoolWithAdmin(schoolId);
+        
+        if (!data) {
+          setError('Məktəb məlumatları tapılmadı');
+          return;
+        }
+        
+        setSchoolData(data);
+      } catch (err) {
+        console.error('Məktəb məlumatları yüklənərkən xəta:', err);
+        setError('Məktəb məlumatları yüklənə bilmədi');
+        toast.error('Məktəb məlumatları yüklənə bilmədi');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadSchoolData();
+  }, [schoolId]);
 
-  const handleGoBack = () => {
-    window.history.back();
+  const handleRefresh = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getSchoolWithAdmin(schoolId);
+      if (data) {
+        setSchoolData(data);
+        toast.success('Məlumatlar yeniləndi');
+      }
+    } catch (err) {
+      toast.error('Məlumatları yeniləmə xətası');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSchoolUpdated = () => {
-    refetch();
+  const handleEditClick = () => {
+    setIsEditModalOpen(true);
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-80">
-        <Loader2 className="h-10 w-10 animate-spin text-infoline-blue" />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
       </div>
     );
   }
 
-  if (isError || !data) {
+  if (error || !schoolData) {
     return (
-      <Card className="p-8 text-center">
-        <h2 className="text-xl text-red-600 mb-4">Məktəb məlumatları yüklənərkən xəta baş verdi</h2>
-        <Button onClick={handleGoBack}>Geri Qayıt</Button>
-      </Card>
-    );
-  }
-
-  const { school, admin } = data;
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <Button variant="ghost" className="mr-2" onClick={handleGoBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Geri
-          </Button>
-          <h1 className="text-2xl font-bold">{school.name}</h1>
-        </div>
-        <Button onClick={() => setIsEditModalOpen(true)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Düzəliş Et
+      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg my-4">
+        <h3 className="font-medium">Xəta</h3>
+        <p>{error || 'Məktəb məlumatları tapılmadı'}</p>
+        <Button variant="outline" onClick={() => navigate(-1)} className="mt-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Geri qayıt
         </Button>
       </div>
+    );
+  }
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="general">Ümumi Məlumat</TabsTrigger>
-          <TabsTrigger value="admin">Admin</TabsTrigger>
-          <TabsTrigger value="stats">Statistika</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="general" className="mt-4">
+  const { school, admin } = schoolData;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Geri
+          </Button>
+          <h1 className="text-2xl font-bold text-infoline-dark-blue">{school.name}</h1>
+        </div>
+        <Button onClick={handleEditClick}>
+          <PencilIcon className="h-4 w-4 mr-1" />
+          Redaktə et
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
           <SchoolInfo school={school} />
-        </TabsContent>
-        
-        <TabsContent value="admin" className="mt-4">
-          <AdminInfo admin={admin} />
-        </TabsContent>
-        
-        <TabsContent value="stats" className="mt-4">
-          <SchoolStats schoolId={school.id} />
-        </TabsContent>
-      </Tabs>
-
+        </div>
+        <div>
+          <AdminInfo 
+            admin={admin} 
+            onAssignAdmin={() => {}} 
+            onRemoveAdmin={() => {}} 
+          />
+        </div>
+      </div>
+      
+      <SchoolStats school={school} />
+      
       {isEditModalOpen && (
         <SchoolModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           mode="edit"
-          schoolId={school.id}
-          onSchoolUpdated={handleSchoolUpdated}
+          initialData={school}
+          onSuccess={handleRefresh}
         />
       )}
     </div>

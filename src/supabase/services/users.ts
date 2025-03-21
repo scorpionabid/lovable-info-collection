@@ -1,94 +1,31 @@
 
 /**
- * Users servisi
- * İstifadəçilərlə bağlı bütün əməliyyatlar
+ * İstifadəçi servis funksiyaları
  */
-import { supabase, withRetry, handleSupabaseError } from '../client';
-import { TABLE_NAMES } from '../config';
-import { queryWithCache } from '../utils/cache';
+import { supabase, handleSupabaseError, withRetry } from '../client';
+import { TABLES } from '../config';
+import { 
+  User, 
+  UserWithRole, 
+  UserFilters, 
+  CreateUserDto, 
+  UpdateUserDto 
+} from '../types';
 import { logger } from '@/utils/logger';
 
-// İstifadəçi tipi
-export interface User {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role_id: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  phone?: string;
-  utis_code?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at?: string;
-  last_login?: string;
-  
-  // Əlaqəli obyektlərdən gələn məlumatlar
-  role?: string | { id: string; name: string; permissions: string[] };
-  roleName?: string;
-}
-
-// Rolla birlikdə istifadəçi tipi
-export interface UserWithRole extends User {
-  role: {
-    id: string;
-    name: string;
-    description?: string;
-    permissions: string[];
-  };
-}
-
-// İstifadəçi filtri
-export interface UserFilters {
-  search?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  status?: 'active' | 'inactive' | 'all';
-}
-
-// İstifadəçi yaratmaq üçün DTO
-export interface CreateUserDto {
-  email: string;
-  first_name: string;
-  last_name: string;
-  role_id: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  phone?: string;
-  utis_code?: string;
-  password?: string;
-  is_active?: boolean;
-}
-
-// İstifadəçi yeniləmək üçün DTO
-export interface UpdateUserDto {
-  first_name?: string;
-  last_name?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  phone?: string;
-  utis_code?: string;
-  is_active?: boolean;
-}
-
-// Bütün istifadəçiləri almaq
+/**
+ * İstifadəçi siyahısını alır
+ */
 export const getUsers = async (filters?: UserFilters): Promise<User[]> => {
   try {
     let query = supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .select(`
         *,
-        roles:${TABLE_NAMES.ROLES}(id, name, permissions)
+        roles:${TABLES.ROLES}(id, name, permissions)
       `);
     
-    // Filterlər tətbiq olunur
+    // Filterləri tətbiq edirik
     if (filters?.search) {
       query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
     }
@@ -112,18 +49,19 @@ export const getUsers = async (filters?: UserFilters): Promise<User[]> => {
     if (filters?.status) {
       if (filters.status === 'active') {
         query = query.eq('is_active', true);
-      } else if (filters.status === 'inactive') {
+      } else if (filters.status === 'inactive' || filters.status === 'blocked') {
         query = query.eq('is_active', false);
       }
     }
 
+    // Sıralama
     query = query.order('last_name', { ascending: true });
     
     const { data, error } = await query;
     
     if (error) throw error;
     
-    // İstifadəçiləri User formatına çevirmək və rol adını əlavə etmək
+    // İstifadəçiləri User formatına çeviririk və rol adını əlavə edirik
     return (data || []).map(user => {
       const roleName = user.roles?.name || '';
       return {
@@ -137,14 +75,16 @@ export const getUsers = async (filters?: UserFilters): Promise<User[]> => {
   }
 };
 
-// ID ilə istifadəçi almaq
+/**
+ * İstifadəçi məlumatlarını ID ilə alır
+ */
 export const getUserById = async (id: string): Promise<UserWithRole | null> => {
   try {
     const { data, error } = await supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .select(`
         *,
-        roles:${TABLE_NAMES.ROLES}(id, name, description, permissions)
+        roles:${TABLES.ROLES}(id, name, description, permissions)
       `)
       .eq('id', id)
       .single();
@@ -161,11 +101,13 @@ export const getUserById = async (id: string): Promise<UserWithRole | null> => {
   }
 };
 
-// UTIS kodu mövcudluğunu yoxlamaq
+/**
+ * UTIS kodu mövcudluğunu yoxlamaq
+ */
 export const checkUtisCodeExists = async (utisCode: string, userId?: string): Promise<boolean> => {
   try {
     let query = supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .select('id')
       .eq('utis_code', utisCode);
     
@@ -184,7 +126,9 @@ export const checkUtisCodeExists = async (utisCode: string, userId?: string): Pr
   }
 };
 
-// İstifadəçi yaratmaq
+/**
+ * İstifadəçi yaratmaq
+ */
 export const createUser = async (userData: CreateUserDto): Promise<User> => {
   try {
     // Əvvəlcə auth.users cədvəlində istifadəçi yaradılır
@@ -202,10 +146,13 @@ export const createUser = async (userData: CreateUserDto): Promise<User> => {
     
     if (authError) throw authError;
     
-    // users cədvəlində istifadəçi məlumatları saxlanılır (trigger ilə avtomatik yaradılır)
-    // Əlavə məlumatları yeniləmək üçün
+    if (!authData.user) {
+      throw new Error('İstifadəçi yaradıla bilmədi');
+    }
+    
+    // Əlavə məlumatları yeniləyirik
     const { data, error } = await supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .update({
         role_id: userData.role_id,
         region_id: userData.region_id,
@@ -228,11 +175,13 @@ export const createUser = async (userData: CreateUserDto): Promise<User> => {
   }
 };
 
-// İstifadəçi yeniləmək
+/**
+ * İstifadəçi məlumatlarını yeniləmək
+ */
 export const updateUser = async (id: string, userData: UpdateUserDto): Promise<User> => {
   try {
     const { data, error } = await supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .update({
         first_name: userData.first_name,
         last_name: userData.last_name,
@@ -251,7 +200,7 @@ export const updateUser = async (id: string, userData: UpdateUserDto): Promise<U
     
     if (error) throw error;
     
-    // Auth məlumatlarını da yeniləmək
+    // Auth metadata yeniləyirik
     await supabase.auth.updateUser({
       data: {
         first_name: userData.first_name,
@@ -267,7 +216,9 @@ export const updateUser = async (id: string, userData: UpdateUserDto): Promise<U
   }
 };
 
-// İstifadəçi silmək
+/**
+ * İstifadəçini silmək
+ */
 export const deleteUser = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabase.auth.admin.deleteUser(id);
@@ -281,11 +232,13 @@ export const deleteUser = async (id: string): Promise<boolean> => {
   }
 };
 
-// İstifadəçini bloklamaq
+/**
+ * İstifadəçini bloklamaq
+ */
 export const blockUser = async (id: string): Promise<User> => {
   try {
     const { data, error } = await supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .update({
         is_active: false,
         updated_at: new Date().toISOString()
@@ -295,10 +248,10 @@ export const blockUser = async (id: string): Promise<User> => {
       .single();
     
     if (error) throw error;
-    
-    // Auth tərəfdə də bloklamaq
+
+    // Auth tərəfində də bloklamaq
     await supabase.auth.admin.updateUserById(id, {
-      banned: true
+      user_metadata: { is_active: false }
     });
     
     return data as User;
@@ -308,11 +261,13 @@ export const blockUser = async (id: string): Promise<User> => {
   }
 };
 
-// İstifadəçini aktivləşdirmək
+/**
+ * İstifadəçini aktivləşdirmək
+ */
 export const activateUser = async (id: string): Promise<User> => {
   try {
     const { data, error } = await supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .update({
         is_active: true,
         updated_at: new Date().toISOString()
@@ -323,9 +278,9 @@ export const activateUser = async (id: string): Promise<User> => {
     
     if (error) throw error;
     
-    // Auth tərəfdə də aktivləşdirmək
+    // Auth tərəfində də aktivləşdirmək
     await supabase.auth.admin.updateUserById(id, {
-      banned: false
+      user_metadata: { is_active: true }
     });
     
     return data as User;
@@ -335,11 +290,13 @@ export const activateUser = async (id: string): Promise<User> => {
   }
 };
 
-// Şifrəni sıfırlamaq
+/**
+ * Şifrəni sıfırlamaq
+ */
 export const resetPassword = async (id: string): Promise<boolean> => {
   try {
     const { data, error } = await supabase
-      .from(TABLE_NAMES.USERS)
+      .from(TABLES.USERS)
       .select('email')
       .eq('id', id)
       .single();
@@ -357,18 +314,19 @@ export const resetPassword = async (id: string): Promise<boolean> => {
   }
 };
 
-// Rolları almaq
+/**
+ * Rolları almaq
+ */
 export const getRoles = async (): Promise<{id: string; name: string}[]> => {
   try {
-    const cacheKey = 'roles';
+    const { data, error } = await supabase
+      .from(TABLES.ROLES)
+      .select('id, name')
+      .order('name');
     
-    return await queryWithCache<{id: string; name: string}[]>(
-      cacheKey,
-      () => supabase
-        .from(TABLE_NAMES.ROLES)
-        .select('id, name')
-        .order('name')
-    );
+    if (error) throw error;
+    
+    return data as {id: string; name: string}[];
   } catch (error) {
     logger.error('Rolları alma xətası:', error);
     throw handleSupabaseError(error, 'Rolları alma');

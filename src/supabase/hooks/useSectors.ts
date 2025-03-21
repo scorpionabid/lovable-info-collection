@@ -5,17 +5,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as sectorsService from "../services/sectors";
+import { 
+  Sector, 
+  SectorWithStats, 
+  PaginationParams, 
+  SortParams, 
+  SectorFilters 
+} from "../types";
 
 // Bütün sektorları almaq üçün hook
 export const useSectors = (
-  pagination?: sectorsService.PaginationParams,
-  sort?: sectorsService.SortParams,
-  filters?: sectorsService.SectorFilters
+  pagination?: PaginationParams,
+  sort?: SortParams,
+  filters?: SectorFilters
 ) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['sectors', pagination, sort, filters],
     queryFn: () => sectorsService.getSectors(pagination, sort, filters),
-    keepPreviousData: true
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -32,7 +39,8 @@ export const useSector = (id: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['sector', id],
     queryFn: () => sectorsService.getSectorById(id),
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -42,12 +50,13 @@ export const useSector = (id: string) => {
   };
 };
 
-// Region ID ilə sektorları almaq üçün hook
-export const useSectorsByRegion = (regionId?: string) => {
+// Region üzrə sektorları almaq
+export const useSectorsByRegion = (regionId: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['sectorsByRegion', regionId],
     queryFn: () => sectorsService.getSectorsByRegionId(regionId),
-    enabled: !!regionId
+    enabled: !!regionId,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -58,11 +67,11 @@ export const useSectorsByRegion = (regionId?: string) => {
 };
 
 // Dropdown üçün sektorları almaq
-export const useSectorsDropdown = (regionId?: string) => {
+export const useSectorsDropdown = () => {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['sectorsDropdown', regionId],
-    queryFn: () => sectorsService.getSectorsForDropdown(regionId),
-    enabled: true // RegionId olmasa da bütün sektorları gətirə bilər
+    queryKey: ['sectorsDropdown'],
+    queryFn: () => sectorsService.getSectorsForDropdown(),
+    staleTime: 1000 * 60 * 10 // 10 dəqiqə
   });
 
   return {
@@ -77,12 +86,12 @@ export const useCreateSector = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (sectorData: Partial<sectorsService.Sector>) => 
+    mutationFn: (sectorData: Partial<Sector>) => 
       sectorsService.createSector(sectorData),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['sectors']);
-      queryClient.invalidateQueries(['sectorsByRegion', variables.region_id]);
-      queryClient.invalidateQueries(['sectorsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['sectors'] });
+      queryClient.invalidateQueries({ queryKey: ['sectorsByRegion', variables.region_id] });
+      queryClient.invalidateQueries({ queryKey: ['sectorsDropdown'] });
       toast.success('Sektor uğurla yaradıldı');
     },
     onError: (error: any) => {
@@ -98,13 +107,15 @@ export const useUpdateSector = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ id, sectorData }: { id: string; sectorData: Partial<sectorsService.Sector> }) => 
+    mutationFn: ({ id, sectorData }: { id: string; sectorData: Partial<Sector> }) => 
       sectorsService.updateSector(id, sectorData),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['sectors']);
-      queryClient.invalidateQueries(['sector', variables.id]);
-      queryClient.invalidateQueries(['sectorsByRegion', variables.sectorData.region_id]);
-      queryClient.invalidateQueries(['sectorsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['sectors'] });
+      queryClient.invalidateQueries({ queryKey: ['sector', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['sectorsDropdown'] });
+      if (variables.sectorData.region_id) {
+        queryClient.invalidateQueries({ queryKey: ['sectorsByRegion', variables.sectorData.region_id] });
+      }
       toast.success('Sektor uğurla yeniləndi');
     },
     onError: (error: any) => {
@@ -122,32 +133,12 @@ export const useDeleteSector = () => {
   const mutation = useMutation({
     mutationFn: (id: string) => sectorsService.deleteSector(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['sectors']);
-      queryClient.invalidateQueries(['sectorsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['sectors'] });
+      queryClient.invalidateQueries({ queryKey: ['sectorsDropdown'] });
       toast.success('Sektor uğurla silindi');
     },
     onError: (error: any) => {
       toast.error(`Xəta: ${error.message || 'Sektor silinərkən problem baş verdi'}`);
-    }
-  });
-
-  return mutation;
-};
-
-// Sektor arxivləşdirmək üçün hook
-export const useArchiveSector = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: ({ id, archive }: { id: string; archive: boolean }) => 
-      sectorsService.archiveSector(id, archive),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['sectors']);
-      queryClient.invalidateQueries(['sectorsDropdown']);
-      toast.success('Sektor statusu uğurla dəyişdirildi');
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error.message || 'Sektor statusu dəyişdirilərkən problem baş verdi'}`);
     }
   });
 

@@ -5,17 +5,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import * as regionsService from "../services/regions";
+import { 
+  Region, 
+  RegionWithStats, 
+  PaginationParams, 
+  SortParams, 
+  RegionFilters 
+} from "../types";
 
 // Bütün regionları almaq üçün hook
 export const useRegions = (
-  pagination?: regionsService.PaginationParams,
-  sort?: regionsService.SortParams,
-  filters?: regionsService.RegionFilters
+  pagination?: PaginationParams,
+  sort?: SortParams,
+  filters?: RegionFilters
 ) => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['regions', pagination, sort, filters],
     queryFn: () => regionsService.getRegions(pagination, sort, filters),
-    keepPreviousData: true
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -32,7 +39,8 @@ export const useRegion = (id: string) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['region', id],
     queryFn: () => regionsService.getRegionById(id),
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5 // 5 dəqiqə
   });
 
   return {
@@ -46,7 +54,8 @@ export const useRegion = (id: string) => {
 export const useRegionsDropdown = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['regionsDropdown'],
-    queryFn: () => regionsService.getRegionsForDropdown()
+    queryFn: () => regionsService.getRegionsForDropdown(),
+    staleTime: 1000 * 60 * 10 // 10 dəqiqə
   });
 
   return {
@@ -61,11 +70,11 @@ export const useCreateRegion = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (regionData: Partial<regionsService.Region>) => 
+    mutationFn: (regionData: Partial<Region>) => 
       regionsService.createRegion(regionData),
     onSuccess: () => {
-      queryClient.invalidateQueries(['regions']);
-      queryClient.invalidateQueries(['regionsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+      queryClient.invalidateQueries({ queryKey: ['regionsDropdown'] });
       toast.success('Region uğurla yaradıldı');
     },
     onError: (error: any) => {
@@ -81,12 +90,12 @@ export const useUpdateRegion = () => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ id, regionData }: { id: string; regionData: Partial<regionsService.Region> }) => 
+    mutationFn: ({ id, regionData }: { id: string; regionData: Partial<Region> }) => 
       regionsService.updateRegion(id, regionData),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries(['regions']);
-      queryClient.invalidateQueries(['region', variables.id]);
-      queryClient.invalidateQueries(['regionsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+      queryClient.invalidateQueries({ queryKey: ['region', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['regionsDropdown'] });
       toast.success('Region uğurla yeniləndi');
     },
     onError: (error: any) => {
@@ -104,8 +113,8 @@ export const useDeleteRegion = () => {
   const mutation = useMutation({
     mutationFn: (id: string) => regionsService.deleteRegion(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['regions']);
-      queryClient.invalidateQueries(['regionsDropdown']);
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+      queryClient.invalidateQueries({ queryKey: ['regionsDropdown'] });
       toast.success('Region uğurla silindi');
     },
     onError: (error: any) => {

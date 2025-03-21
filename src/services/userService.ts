@@ -1,9 +1,11 @@
 
-/**
- * İstifadəçi xidməti - istifadəçilərin idarə edilməsi üçün
- */
-import userServiceBridge from './userService-bridge';
-export * from './userService-bridge';
+// Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
+import * as usersService from '@/supabase/services/users';
+export * from '@/supabase/services/users';
 
-// Export the bridge module directly
-export default userServiceBridge;
+// Köhnə API-ya uyğunluq üçün default export
+const userService = {
+  ...usersService
+};
+
+export default userService;
