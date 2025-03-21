@@ -4,11 +4,11 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import { logger } from '@/utils/logger';
+import { supabaseConfig } from './config';
 
-// Supabase konfiqurasiyası
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wxkaasjwpavlwrpvsuia.supabase.co";
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4a2Fhc2p3cGF2bHdycHZzdWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODA3NzAsImV4cCI6MjA1NTk1Njc3MH0.Sy0ktssGHAMNtU4kCrEKuFNf8Yf5R280uqwpsMcZpuM";
-export const REQUEST_TIMEOUT_MS = 15000; // 15 saniyə
+// Supabase konfiqurasiyasından dəyişənlər
+const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, offline: OFFLINE_CONFIG } = supabaseConfig;
+const { requestTimeoutMs: REQUEST_TIMEOUT_MS } = OFFLINE_CONFIG;
 
 // Offline rejim idarəetməsi
 let isOffline = false;
@@ -40,19 +40,7 @@ interface QueuedRequest {
 }
 
 const offlineQueue: QueuedRequest[] = [];
-const MAX_QUEUE_SIZE = 100;
-const MAX_RETRY_COUNT = 3;
-
-// Keşləmə üçün konfiqurasiya
-export interface CacheConfig {
-  ttl: number; // millisaniyə ilə
-  maxSize: number;
-}
-
-export const CACHE_CONFIG: CacheConfig = {
-  ttl: 5 * 60 * 1000, // 5 dəqiqə
-  maxSize: 100 // maksimum keş elementi
-};
+const { maxQueueSize: MAX_QUEUE_SIZE, maxRetryCount: MAX_RETRY_COUNT } = OFFLINE_CONFIG;
 
 // Supabase müştərisinin yaradılması
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -271,4 +259,86 @@ export const handleSupabaseError = (error: any, context: string = 'Supabase əm�
   });
   
   return formattedError;
+};
+
+// Təkrar cəhd mexanizmi
+export const withRetry = async <T>(
+  queryFn: () => Promise<T>, 
+  maxRetries = 2,
+  retryDelay = 1000,
+  offlineQueueable = true
+): Promise<T> => {
+  let retries = 0;
+  let lastError: unknown;
+  
+  // Offline rejim yoxlaması
+  if (isOfflineMode() && offlineQueueable) {
+    const requestId = crypto.randomUUID();
+    
+    logger.info(`Offline rejim: Sorğu növbəyə əlavə edildi ${requestId}`);
+    
+    // Növbənin limit yoxlaması
+    if (offlineQueue.length >= MAX_QUEUE_SIZE) {
+      logger.warn(`Offline növbə limiti dolub (${MAX_QUEUE_SIZE}), əvvəlki sorğu silinir`);
+      offlineQueue.shift(); // Ən köhnə sorğunu sil
+    }
+    
+    // Sorğunu növbəyə əlavə et
+    offlineQueue.push({
+      id: requestId,
+      execute: queryFn,
+      timestamp: Date.now(),
+      retryCount: 0
+    });
+    
+    // Yeni növbəni saxla
+    saveOfflineQueue();
+    
+    throw new Error(`Offline mode: Request queued with ID ${requestId}`);
+  }
+  
+  while (retries <= maxRetries) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      lastError = error;
+      
+      if (retries === maxRetries) {
+        break;
+      }
+      
+      const isNetworkIssue = error instanceof Error && isNetworkError(error);
+      
+      // Şəbəkə xətası olmayan xətaları yenidən cəhd etmə
+      if (!isNetworkIssue) {
+        logger.warn(`Şəbəkə xətası olmayan xəta, təkrar cəhd edilmir`, { error });
+        break;
+      }
+      
+      retries++;
+      const delay = retryDelay * Math.pow(1.5, retries - 1);
+      logger.info(`Təkrar cəhd ${retries}/${maxRetries}, ${delay}ms gözləyir...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+};
+
+// Cari istifadəçini əldə et
+export const getCurrentUser = async () => {
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return data.user;
+  } catch (error) {
+    logger.error('İstifadəçi məlumatları alınarkən xəta:', error);
+    return null;
+  }
+};
+
+// Cari istifadəçi ID-sini əldə et
+export const getCurrentUserId = async (): Promise<string | null> => {
+  const user = await getCurrentUser();
+  return user?.id || null;
 };
