@@ -5,11 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import { logger } from '@/utils/logger';
-import { supabaseConfig } from './config';
-
-// Supabase konfiqurasiyasından dəyişənlər
-const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, offline: OFFLINE_CONFIG } = supabaseConfig;
-const { requestTimeoutMs: REQUEST_TIMEOUT_MS } = OFFLINE_CONFIG;
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_CONFIG } from './config';
 
 // Offline rejim idarəetməsi
 let isOffline = false;
@@ -41,7 +37,9 @@ interface QueuedRequest {
 }
 
 const offlineQueue: QueuedRequest[] = [];
-const { maxQueueSize: MAX_QUEUE_SIZE, maxRetryCount: MAX_RETRY_COUNT } = OFFLINE_CONFIG;
+const MAX_QUEUE_SIZE = 100;
+const MAX_RETRY_COUNT = 3;
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Supabase müştərisinin yaradılması
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -268,14 +266,13 @@ export const handleSupabaseError = (error: any, context: string = 'Supabase əm�
 export const withRetry = async <T>(
   queryFn: () => Promise<T>, 
   maxRetries = 2,
-  retryDelay = 1000,
-  offlineQueueable = true
+  retryDelay = 1000
 ): Promise<T> => {
   let retries = 0;
   let lastError: unknown;
   
   // Offline rejim yoxlaması
-  if (isOfflineMode() && offlineQueueable) {
+  if (isOfflineMode()) {
     const requestId = crypto.randomUUID();
     
     logger.info(`Offline rejim: Sorğu növbəyə əlavə edildi ${requestId}`);
@@ -346,5 +343,5 @@ export const getCurrentUserId = async (): Promise<string | null> => {
   return user?.id || null;
 };
 
-// Export queryWithCache
+// Export queryWithCache from the cache module
 export { queryWithCache } from './cache';

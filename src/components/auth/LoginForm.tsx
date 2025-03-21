@@ -59,11 +59,27 @@ export const LoginForm = () => {
       // Login success is handled in useAuthProvider (navigation and toast notification)
     } catch (err: any) {
       console.error('Login form error:', err);
-      setError(err.message || "Daxil etdiyiniz məlumatlar yanlışdır");
+      
+      let errorMessage = "Daxil etdiyiniz məlumatlar yanlışdır";
+      
+      // Handle specific Supabase errors
+      if (err?.message) {
+        if (err.message.includes('Failed to fetch')) {
+          errorMessage = "Əlaqə xətası: Supabase serverinə qoşulmaq mümkün olmadı";
+        } else if (err.message.includes('Invalid login credentials')) {
+          errorMessage = "Yanlış email və ya şifrə";
+        } else if (err.message.includes('Email not confirmed')) {
+          errorMessage = "Email təsdiqlənməyib. Zəhmət olmasa email-i yoxlayın";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
       
       toast({
         title: "Giriş xətası",
-        description: err.message || "Daxil etdiyiniz məlumatlar yanlışdır",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -86,7 +102,6 @@ export const LoginForm = () => {
   };
 
   // Use local isSubmitting state rather than the global loading state
-  // This ensures that the button state is tied directly to this form's submission
   const isDisabled = isSubmitting;
 
   return (

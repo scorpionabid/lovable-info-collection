@@ -11,7 +11,7 @@ export const SUPABASE_SERVICE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_KEY;
 // API baza URL-i
 export const API_URL = import.meta.env.VITE_API_URL || "https://api.infoline.az";
 
-// Export URL as a named variable to match the import in client.ts
+// Export URL və anonKey dəyişənləri
 export const url = SUPABASE_URL;
 export const anonKey = SUPABASE_ANON_KEY;
 
@@ -47,7 +47,7 @@ export const SUPABASE_CONFIG = {
   }
 };
 
-// Define supabaseConfig to match the import in client.ts
+// Define supabaseConfig object with the right values
 export const supabaseConfig = {
   url: SUPABASE_URL,
   anonKey: SUPABASE_ANON_KEY,
