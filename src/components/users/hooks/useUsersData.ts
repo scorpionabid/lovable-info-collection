@@ -1,8 +1,8 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getUsers } from '@/supabase/services/users';
-import { UserFilters } from '@/supabase/types';
+import { getUsers } from '@/lib/supabase/services/users';
+import { UserFilters } from '@/lib/supabase/types';
 
 export const useUsersData = () => {
   const [currentPage, setCurrentPage] = useState(1);

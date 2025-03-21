@@ -1,59 +1,26 @@
-import { useAuthActions } from "./auth/useAuthActions";
-import { useUserData } from "./auth/useUserData";
-import { useAuthListener } from "./auth/useAuthListener";
-import { UserRole, LoginCredentials } from "./types/authTypes";
-
-export type { UserRole, LoginCredentials };
+/**
+ * Adapter hook: köhnə strukturdan yeni strukturaya yönləndirir
+ * @deprecated Bu hook köhnə API-ya uyğunluq üçün saxlanılıb. Birbaşa @/lib/supabase/hooks/useAuth istifadə edin.
+ */
+import { useAuth } from '@/lib/supabase/hooks/useAuth';
+export type { UserRole, LoginCredentials } from '@/lib/supabase/hooks/useAuth';
 
 export const useAuthProvider = () => {
-  // Setup user data state management
-  const {
-    user,
-    userRole,
-    loading,
-    setLoading,
-    authInitialized,
-    setAuthInitialized,
-    handleUserLoggedIn,
-    handleUserLoggedOut,
-    sessionExists
-  } = useUserData();
-
-  // Setup auth actions
-  const { login, logout } = useAuthActions(handleUserLoggedIn, handleUserLoggedOut);
-
-  // Setup auth listener
-  useAuthListener(
-    handleUserLoggedIn,
-    handleUserLoggedOut,
-    setLoading,
-    setAuthInitialized,
-    user
-  );
+  const auth = useAuth();
   
-  // İstifadəçi mövcuddursa və ya sessiya mövcuddursa, həmişə autentifikasiya olunmuş sayaq
-  const isAuthenticated = Boolean(user) || sessionExists;
-  
-  // Yüklənmə vəziyyətini təyin edərkən sessiya və istifadəçi nəzərə alaq
-  const isLoading = loading && !user && !sessionExists;
-  
-  // Daha sadə və açıq bir şəkildə isUserReady dəyişənini təyin edək
-  const isUserReady = Boolean(user) || sessionExists;
-
-  // Handle permissions with fallback
-  const permissions = user?.roles?.permissions || [];
-
-  return { 
-    user, 
-    userRole, 
-    loading, 
-    isLoading, 
-    isAuthenticated, 
-    login, 
-    logout,
-    permissions,
-    authInitialized,
-    sessionExists,
-    isUserReady
+  return {
+    ...auth,
+    user: auth.user,
+    userRole: auth.userRole,
+    loading: auth.loading,
+    isAuthenticated: Boolean(auth.user) || Boolean(auth.session),
+    isLoading: auth.loading && !auth.user,
+    isUserReady: Boolean(auth.user) || Boolean(auth.session),
+    login: auth.login,
+    logout: auth.logout,
+    resetPassword: auth.resetPassword,
+    updatePassword: auth.updatePassword
   };
 };
+
+export default useAuthProvider;

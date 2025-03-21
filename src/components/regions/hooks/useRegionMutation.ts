@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { queryClient } from '@/lib/queryClient';
 import { createRegion, updateRegion } from '@/services/supabase/region/regionOperations';
 import { useMutation } from '@tanstack/react-query';
-import { CreateRegionDto, UpdateRegionDto } from '@/supabase/types/region';
+import { CreateRegionDto, UpdateRegionDto } from '@/lib/supabase/types/region';
 
 export const useRegionMutation = () => {
   const createMutation = useMutation({

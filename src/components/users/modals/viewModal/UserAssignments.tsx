@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, XCircle } from 'lucide-react';
 

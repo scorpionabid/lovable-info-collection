@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface UserAvatarProps {

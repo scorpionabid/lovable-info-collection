@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { School } from '@/supabase/types';
+import { School } from '@/lib/supabase/types';
 import SchoolForm from './SchoolForm';
 
 interface SchoolModalContentProps {

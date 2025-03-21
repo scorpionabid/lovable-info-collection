@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { RegionTableRow } from './RegionTableRow';
-import { RegionWithStats } from '@/supabase/types';
+import { RegionWithStats } from '@/lib/supabase/types';
 import { Pagination } from '@/components/ui/pagination';
 import { RegionTableHeader } from './RegionTableHeader';
 

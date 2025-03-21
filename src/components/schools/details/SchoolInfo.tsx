@@ -1,5 +1,5 @@
 
-import { School } from '@/supabase/types';
+import { School } from '@/lib/supabase/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSchoolType } from '@/components/schools/hooks/useSchoolType';

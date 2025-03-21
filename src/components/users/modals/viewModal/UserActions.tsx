@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Edit, Lock, PowerOff, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';

@@ -1,5 +1,5 @@
 
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 
 // Get readable user status
 export const getUserStatusLabel = (user: User): string => {

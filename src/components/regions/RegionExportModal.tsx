@@ -7,8 +7,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FilterParams } from '@/supabase/types';
-import { RegionWithStats } from '@/supabase/types/region';
+import { FilterParams } from '@/lib/supabase/types';
+import { RegionWithStats } from '@/lib/supabase/types/region';
 
 export interface RegionExportModalProps {
   isOpen: boolean;

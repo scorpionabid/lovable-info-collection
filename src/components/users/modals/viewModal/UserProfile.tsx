@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

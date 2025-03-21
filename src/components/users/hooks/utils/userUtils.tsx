@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/integrations/client";
 import { User } from "@/services/userService-bridge";
 import { UserFormValues } from "../../modals/UserFormSchema";
 import { TableName } from "@/services/supabase/constants";

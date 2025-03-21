@@ -1,7 +1,7 @@
 
 import React from "react";
 import { OrganizationSelectionComponent } from "./OrganizationSelectionComponent";
-import { User } from "@/supabase/types";
+import { User } from "@/lib/supabase/types";
 
 interface RoleTabProps {
   roles: any[];

@@ -1,5 +1,5 @@
 
-import { Database } from '@/integrations/supabase/types';
+import { Database } from '@/lib/supabase/types';
 
 // Mock data store for our mock Supabase instance
 interface MockDataStore {

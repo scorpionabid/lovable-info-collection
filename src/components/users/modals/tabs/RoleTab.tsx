@@ -8,9 +8,9 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 interface RoleTabProps {
   formData: {

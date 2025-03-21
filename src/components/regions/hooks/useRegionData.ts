@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getRegions } from '@/services/supabase/region';
-import { RegionWithStats } from '@/supabase/types';
+import { RegionWithStats } from '@/lib/supabase/types';
 
 interface UseRegionDataParams {
   currentPage: number;

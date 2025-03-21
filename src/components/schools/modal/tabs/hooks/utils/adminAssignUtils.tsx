@@ -1,6 +1,6 @@
 
 import { toast } from 'sonner';
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 // Assign existing admin to school
 export const assignAdminToSchool = async (schoolId: string, userId: string): Promise<boolean> => {

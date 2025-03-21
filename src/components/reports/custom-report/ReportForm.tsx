@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 interface Category {
   id: string;

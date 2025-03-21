@@ -1,11 +1,9 @@
-
-// Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
-import * as schoolsService from '@/supabase/services/schools';
-export * from '@/supabase/services/schools';
+/**
+ * Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
+ * @deprecated Bu fayl köhnə API-ya uyğunluq üçün saxlanılıb. Birbaşa @/lib/supabase istifadə edin.
+ */
+import * as schoolsService from '@/lib/supabase/services/schools';
+export * from '@/lib/supabase/services/schools';
 
 // Köhnə API-ya uyğunluq üçün default export
-const schoolService = {
-  ...schoolsService
-};
-
-export default schoolService;
+export default schoolsService;

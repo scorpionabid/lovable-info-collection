@@ -10,7 +10,7 @@ import { Plus, Filter } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterBar } from "@/components/shared/FilterBar";
 import { RegionExportModal } from './RegionExportModal';
-import { type RegionWithStats } from '@/supabase/types';
+import { type RegionWithStats } from '@/lib/supabase/types';
 
 const RegionsOverview = () => {
   const [isFilterVisible, setIsFilterVisible] = useState(false);

@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getRegions } from '@/supabase/services/regions';
-import type { RegionWithStats, FilterParams } from '@/supabase/types';
+import { getRegions } from '@/lib/supabase/services/regions';
+import type { RegionWithStats, FilterParams } from '@/lib/supabase/types';
 
 // Export RegionWithStats type so it can be used by other modules
 export type { RegionWithStats, FilterParams };

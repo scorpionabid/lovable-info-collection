@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { type User } from '@/services/userService/types';
 
 export const useAdminFetching = (schoolId?: string) => {

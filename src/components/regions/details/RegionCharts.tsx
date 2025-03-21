@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RegionWithStats } from '@/supabase/types';
+import { RegionWithStats } from '@/lib/supabase/types';
 import { 
   BarChart, 
   Bar, 

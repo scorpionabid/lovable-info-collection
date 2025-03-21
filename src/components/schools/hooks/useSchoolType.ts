@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/supabase/client';
-import { SchoolType } from '@/supabase/types/school';
+import { supabase } from '@/lib/supabase/client';
+import { SchoolType } from '@/lib/supabase/types/school';
 
 export interface UseSchoolTypeOptions {
   typeId?: string;

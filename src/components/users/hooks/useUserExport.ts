@@ -1,5 +1,5 @@
 
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 

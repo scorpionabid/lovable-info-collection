@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCcw } from 'lucide-react';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 
 interface SecurityTabProps {
   formData: {

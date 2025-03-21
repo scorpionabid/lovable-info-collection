@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 export const useSectors = (regionId: string) => {
   const fetchSectors = async () => {

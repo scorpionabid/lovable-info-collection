@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserModalContent } from "./modals/UserModalContent";
-import { User } from "@/supabase/types";
+import { User } from "@/lib/supabase/types";
 
 export interface UserModalProps {
   isOpen: boolean;

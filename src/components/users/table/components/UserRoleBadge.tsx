@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { User } from '@/supabase/types/user';
+import { User } from '@/lib/supabase/types/user';
 
 interface UserRoleBadgeProps {
   user: User;

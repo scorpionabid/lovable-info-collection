@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { School } from '@/supabase/types';
+import { School } from '@/lib/supabase/types';
 import { useRegions } from '../hooks/useRegions';
 import { useSectors } from '../hooks/useSectors';
 import { useSchoolTypes } from '../hooks/useSchoolTypes';

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RegionWithStats } from '@/supabase/types';
+import { RegionWithStats } from '@/lib/supabase/types';
 import { Link } from 'react-router-dom';
 
 interface RegionTableRowProps {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 import PersonalTab from './tabs/PersonalTab';
 import RoleTab from './tabs/RoleTab';
 import SecurityTab from './tabs/SecurityTab';

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { School } from '@/supabase/types';
+import { School } from '@/lib/supabase/types';
 import SchoolModalContent from './SchoolModalContent';
 
 export interface SchoolModalProps {

@@ -1,7 +1,9 @@
-
-// Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
-import * as authService from '@/supabase/services/auth';
-export * from '@/supabase/services/auth';
+/**
+ * Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
+ * @deprecated Bu fayl köhnə API-ya uyğunluq üçün saxlanılıb. Birbaşa @/lib/supabase istifadə edin.
+ */
+import * as authService from '@/lib/supabase/services/auth';
+export * from '@/lib/supabase/services/auth';
 
 // Köhnə API-ya uyğunluq üçün default export
 export default authService;

@@ -1,16 +1,10 @@
-
-// Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
-import * as sectorsService from '@/supabase/services/sectors';
-import { getSectorsByRegionId } from '@/supabase/services/sectors';
-export * from '@/supabase/services/sectors';
-
-// Əlavə köməkçi funksiyaları əlavə et
-export { getSectorsByRegionId };
+/**
+ * Adapter fayl: köhnə strukturdan yeni strukturaya yönləndirir
+ * @deprecated Bu fayl köhnə API-ya uyğunluq üçün saxlanılıb. Birbaşa @/lib/supabase istifadə edin.
+ */
+import * as sectorsService from '@/lib/supabase/services/sectors';
+import { getSectorsByRegionId } from '@/lib/supabase/services/sectors';
+export * from '@/lib/supabase/services/sectors';
 
 // Köhnə API-ya uyğunluq üçün default export
-const sectorService = {
-  ...sectorsService,
-  getSectorsByRegionId
-};
-
-export default sectorService;
+export default sectorsService;

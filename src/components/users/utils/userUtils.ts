@@ -1,5 +1,5 @@
 
-import { User } from "@/supabase/types";
+import { User } from "@/lib/supabase/types";
 
 // Get the display name for a user
 export const getUserDisplayName = (user: User): string => {

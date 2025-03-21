@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 
 export const useUserForm = (user?: User) => {
   const initialData = {

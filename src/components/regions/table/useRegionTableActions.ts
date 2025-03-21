@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { deleteRegion, archiveRegion } from '@/services/supabase/region/regionOperations';
-import { Region } from '@/supabase/types';
+import { Region } from '@/lib/supabase/types';
 
 export const useRegionTableActions = (onRefresh: () => void) => {
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);

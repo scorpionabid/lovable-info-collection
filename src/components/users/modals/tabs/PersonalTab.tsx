@@ -3,7 +3,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormField } from '@/components/ui/form';
-import { User } from '@/supabase/types';
+import { User } from '@/lib/supabase/types';
 
 interface PersonalTabProps {
   formData: {

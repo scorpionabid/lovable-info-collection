@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Region } from '@/supabase/types';
+import { Region } from '@/lib/supabase/types';
 import { searchRegions } from '@/services/supabase/region'; // Make sure this exists
 
 interface UseRegionSearchProps {

@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User } from "@/supabase/types";
+import { User } from "@/lib/supabase/types";
 import { UserProfile } from "./viewModal/UserProfile";
 import { UserRole } from "./viewModal/UserRole";
 import { UserActions } from "./viewModal/UserActions";

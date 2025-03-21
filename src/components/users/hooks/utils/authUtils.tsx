@@ -1,4 +1,4 @@
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { AuthError } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
 

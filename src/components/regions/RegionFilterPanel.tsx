@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FilterParams } from '@/supabase/types';
+import { FilterParams } from '@/lib/supabase/types';
 
 export interface RegionFilterPanelProps {
   filters: FilterParams;
