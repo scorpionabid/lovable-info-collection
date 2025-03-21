@@ -1,163 +1,76 @@
 
-import React, { useState } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter
-} from "@/components/ui/dialog";
+import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RegionWithStats } from '@/supabase/types';
-import { RegionFilters } from '@/supabase/types';
+import { FilterParams } from '@/supabase/types'; // Updated import
 
-export interface RegionExportModalProps {
+interface RegionExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  region?: RegionWithStats;
-  filters?: {
-    search: string;
-    status: 'active' | 'inactive' | 'all';
-  };
+  onExport: (format: string, includeStats: boolean) => void;
+  filters: FilterParams; // Using FilterParams instead of RegionFilters
 }
 
-export const RegionExportModal: React.FC<RegionExportModalProps> = ({ 
-  isOpen, 
+export const RegionExportModal: React.FC<RegionExportModalProps> = ({
+  isOpen,
   onClose,
-  region,
+  onExport,
   filters
 }) => {
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'excel' | 'csv'>('excel');
-  const [includeFields, setIncludeFields] = useState({
-    basic: true,
-    sectors: true,
-    schools: true,
-    stats: true
-  });
+  const [exportFormat, setExportFormat] = React.useState<string>("xlsx");
+  const [includeStats, setIncludeStats] = React.useState<boolean>(true);
 
-  const handleFormatChange = (format: 'excel' | 'csv') => {
-    setExportFormat(format);
-  };
-
-  const handleFieldToggle = (field: keyof typeof includeFields) => {
-    setIncludeFields(prev => ({
-      ...prev,
-      [field]: !prev[field]
-    }));
-  };
-
-  const handleExport = async () => {
-    setIsExporting(true);
-    
-    try {
-      // Simulate export
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log('Exporting with format:', exportFormat);
-      console.log('Including fields:', includeFields);
-      
-      if (region) {
-        console.log('Exporting single region:', region.name);
-      } else if (filters) {
-        console.log('Exporting with filters:', filters);
-      } else {
-        console.log('Exporting all regions');
-      }
-      
-      onClose();
-    } catch (error) {
-      console.error('Error exporting regions:', error);
-    } finally {
-      setIsExporting(false);
-    }
+  const handleExport = () => {
+    onExport(exportFormat, includeStats);
+    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {region ? `"${region.name}" Region İxracı` : 'Regionlar İxracı'}
-          </DialogTitle>
+          <DialogTitle>Export Regions</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>İxrac formatı</Label>
-            <div className="flex space-x-4">
-              <Button
-                type="button"
-                variant={exportFormat === 'excel' ? 'default' : 'outline'}
-                onClick={() => handleFormatChange('excel')}
-                className="flex-1"
-              >
-                Excel (.xlsx)
-              </Button>
-              <Button
-                type="button"
-                variant={exportFormat === 'csv' ? 'default' : 'outline'}
-                onClick={() => handleFormatChange('csv')}
-                className="flex-1"
-              >
-                CSV
-              </Button>
-            </div>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="format" className="text-right">
+              Format
+            </Label>
+            <Select
+              value={exportFormat}
+              onValueChange={setExportFormat}
+            >
+              <SelectTrigger id="format" className="col-span-3">
+                <SelectValue placeholder="Select format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+                <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="pdf">PDF</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="space-y-2">
-            <Label>Daxil ediləcək sahələr</Label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="basic" 
-                  checked={includeFields.basic} 
-                  onCheckedChange={() => handleFieldToggle('basic')}
-                />
-                <Label htmlFor="basic">Əsas məlumatlar (Ad, Kod, Təsvir)</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="sectors" 
-                  checked={includeFields.sectors} 
-                  onCheckedChange={() => handleFieldToggle('sectors')}
-                />
-                <Label htmlFor="sectors">Sektorlar</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="schools" 
-                  checked={includeFields.schools} 
-                  onCheckedChange={() => handleFieldToggle('schools')}
-                />
-                <Label htmlFor="schools">Məktəblər</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="stats" 
-                  checked={includeFields.stats} 
-                  onCheckedChange={() => handleFieldToggle('stats')}
-                />
-                <Label htmlFor="stats">Statistikalar</Label>
-              </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <div className="col-span-4 flex items-center space-x-2">
+              <Checkbox 
+                id="includeStats" 
+                checked={includeStats}
+                onCheckedChange={(checked) => setIncludeStats(checked as boolean)}
+              />
+              <Label htmlFor="includeStats">Include statistics</Label>
             </div>
           </div>
         </div>
-        
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isExporting}>
-            Ləğv et
-          </Button>
-          <Button onClick={handleExport} disabled={isExporting}>
-            {isExporting ? 'İxrac edilir...' : 'İxrac et'}
-          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleExport}>Export</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
+
+export default RegionExportModal;

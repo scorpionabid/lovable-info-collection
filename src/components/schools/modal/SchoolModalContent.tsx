@@ -1,99 +1,50 @@
 
-import { Form } from "@/components/ui/form";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ModalHeader } from "./ModalHeader";
-import { GeneralInfoTab } from "./tabs/GeneralInfoTab";
-import { AdminTab } from "./tabs/AdminTab";
-import { ModalFooter } from "./ModalFooter";
-import { SchoolModalProps } from "./types";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { SchoolFormValues, schoolSchema } from "./types";
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { School } from '@/supabase/types';
+import SchoolForm from './SchoolForm';
 
-export const SchoolModalContent = ({
+interface SchoolModalContentProps {
+  mode: 'create' | 'edit' | 'view';
+  onClose: () => void;
+  onSuccess?: () => void;
+  initialData?: School;
+  regionId?: string;
+}
+
+const SchoolModalContent: React.FC<SchoolModalContentProps> = ({
   mode,
-  school,
   onClose,
-  onSchoolCreated,
-  onSchoolUpdated
-}: SchoolModalProps) => {
-  const [activeTab, setActiveTab] = useState("general");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<SchoolFormValues>({
-    resolver: zodResolver(schoolSchema),
-    defaultValues: {
-      name: school?.name || "",
-      type: school?.type || "",
-      regionId: school?.region_id || "",
-      sectorId: school?.sector_id || "",
-      studentCount: school?.studentCount || 0,
-      teacherCount: school?.teacherCount || 0,
-      address: school?.address || "",
-      contactEmail: school?.contactEmail || "",
-      contactPhone: school?.contactPhone || "",
-      status: school?.status || "Aktiv",
-    }
-  });
-
-  const watchedRegionId = form.watch("regionId");
-
-  const onSubmit = async (data: SchoolFormValues) => {
-    setIsSubmitting(true);
-    try {
-      // Submit the form data
-      console.log("Form data submitted:", data);
-      // Here you would normally call a service to save the data
-      setIsSubmitting(false);
-      
-      if (mode === 'create' && onSchoolCreated) {
-        onSchoolCreated();
-      } else if (mode === 'edit' && onSchoolUpdated) {
-        onSchoolUpdated();
-      }
-      
-      if (onClose) onClose();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      setIsSubmitting(false);
-    }
-  };
-
+  onSuccess,
+  initialData,
+  regionId = '',
+}) => {
   return (
-    <>
-      <ModalHeader mode={mode} />
+    <Tabs defaultValue="general" className="w-full">
+      <TabsList className="mb-4">
+        <TabsTrigger value="general">General Information</TabsTrigger>
+        {mode !== 'create' && <TabsTrigger value="admin">Admin</TabsTrigger>}
+      </TabsList>
       
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="general">Ümumi Məlumatlar</TabsTrigger>
-              <TabsTrigger value="admin">Admin Təyini</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="general">
-              <GeneralInfoTab 
-                form={form}
-                regions={[]}
-                sectors={[]}
-                schoolTypes={[]}
-                watchedRegionId={watchedRegionId}
-              />
-            </TabsContent>
-            
-            <TabsContent value="admin">
-              <AdminTab schoolId={school?.id} />
-            </TabsContent>
-          </Tabs>
-          
-          <ModalFooter 
-            onClose={onClose} 
-            isSubmitting={isSubmitting} 
-            mode={mode} 
-          />
-        </form>
-      </Form>
-    </>
+      <TabsContent value="general">
+        <SchoolForm 
+          school={initialData} 
+          onClose={onClose} 
+          onSuccess={onSuccess}
+          regionId={regionId}
+          mode={mode}
+        />
+      </TabsContent>
+      
+      <TabsContent value="admin">
+        {mode !== 'create' && (
+          <div className="p-4 bg-gray-50 rounded-md">
+            <p>Admin management functionality will be implemented here.</p>
+          </div>
+        )}
+      </TabsContent>
+    </Tabs>
   );
 };
+
+export default SchoolModalContent;

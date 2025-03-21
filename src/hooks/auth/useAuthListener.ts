@@ -1,86 +1,72 @@
 
-import { useEffect } from 'react';
-import { getCurrentUser, getSession } from '@/supabase/services/auth';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { supabase } from '@/supabase/client'; // Fixed import path
 
-export const useAuthListener = (
-  handleUserLoggedIn: (userData: any) => void,
-  handleUserLoggedOut: () => void,
-  setLoading: (loading: boolean) => void,
-  setAuthInitialized: (initialized: boolean) => void,
-  currentUser: any
-) => {
+interface UseAuthListenerOptions {
+  redirectTo?: string;
+  requireAuth?: boolean;
+}
+
+export const useAuthListener = ({
+  redirectTo = '/login',
+  requireAuth = true
+}: UseAuthListenerOptions = {}) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // First check if there's an active session
-        const session = await getSession();
-        
-        if (session) {
-          // Get the current user
-          const user = await getCurrentUser();
-          
-          if (user) {
-            // We have a valid session and user
-            handleUserLoggedIn(user);
-          } else {
-            // Session exists but no user (unusual)
-            handleUserLoggedOut();
-          }
-        } else {
-          // No session, definitely logged out
-          handleUserLoggedOut();
-        }
-      } catch (error) {
-        console.error('Error checking authentication status:', error);
-        handleUserLoggedOut();
-      } finally {
-        setLoading(false);
-        setAuthInitialized(true);
-      }
-    };
-
-    // Only run auth check if we haven't loaded a user yet
-    if (!currentUser) {
-      checkAuth();
-    } else {
-      // If we already have a user, just mark as initialized
-      setAuthInitialized(true);
-    }
-
-    // Set up auth state listener
+    // Setup auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
+        setIsLoading(true);
+        const currentUser = session?.user;
         
-        if (event === 'SIGNED_IN' && session) {
-          // Get fresh user data
-          const user = await getCurrentUser();
-          if (user) {
-            handleUserLoggedIn(user);
+        if (event === 'SIGNED_OUT' || !currentUser) {
+          setUser(null);
+          setIsAuthenticated(false);
+          
+          if (requireAuth) {
+            toast.info('Authentication required');
+            navigate(redirectTo);
           }
-        } else if (event === 'SIGNED_OUT') {
-          handleUserLoggedOut();
-        } else if (event === 'USER_UPDATED' && session) {
-          // Get updated user data
-          const user = await getCurrentUser();
-          if (user) {
-            handleUserLoggedIn(user);
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setUser(currentUser);
+          setIsAuthenticated(true);
+          
+          if (!requireAuth) {
+            navigate('/dashboard');
           }
         }
+        
+        setIsLoading(false);
       }
     );
 
-    // Clean up the listener
-    return () => {
-      if (authListener) {
-        authListener.subscription.unsubscribe();
+    // Initial auth check
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const userSession = data.session;
+      
+      setIsAuthenticated(!!userSession);
+      setUser(userSession?.user || null);
+      setIsLoading(false);
+      
+      if (requireAuth && !userSession) {
+        navigate(redirectTo);
       }
+    })();
+
+    // Cleanup
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-  }, [
-    handleUserLoggedIn,
-    handleUserLoggedOut,
-    setLoading,
-    setAuthInitialized,
-    currentUser
-  ]);
+  }, [navigate, redirectTo, requireAuth]);
+
+  return { isLoading, isAuthenticated, user };
 };
+
+export default useAuthListener;

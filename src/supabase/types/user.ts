@@ -2,10 +2,47 @@
 import { Tables } from '@/integrations/supabase/types';
 
 // Base User type from database
-export type User = Tables<'users'> & {
+export interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  role_id?: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  utis_code?: string;
+  is_active: boolean;
+  avatar_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_login?: string;
+  
+  // Virtual fields
   role?: string;
   roleName?: string;
-};
+  
+  // For compatibility with existing code that uses roles instead of role
+  roles?: {
+    id?: string;
+    name?: string;
+  };
+  
+  // Virtual fields for locations
+  region?: {
+    id?: string;
+    name?: string;
+  };
+  sector?: {
+    id?: string;
+    name?: string;
+  };
+  school?: {
+    id?: string;
+    name?: string;
+  };
+}
 
 // User with role information
 export interface UserWithRole extends User {

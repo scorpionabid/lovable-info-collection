@@ -1,94 +1,60 @@
 
 import React from 'react';
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RegionFilters } from '@/supabase/types';
+import { Search, X } from "lucide-react";
+import { FilterParams } from '@/supabase/types'; // Updated import
 
-export interface RegionFilterPanelProps {
-  filters: {
-    search: string;
-    status: 'active' | 'inactive' | 'all';
-  };
-  onFilterChange: (key: string, value: any) => void;
-  onFiltersChange: React.Dispatch<React.SetStateAction<{
-    search: string;
-    status: 'active' | 'inactive' | 'all';
-  }>>;
-  onFilterApply: () => void;
+interface RegionFilterPanelProps {
+  filters: FilterParams; // Using FilterParams instead of RegionFilters
+  onFilterChange: (name: string, value: any) => void;
+  onResetFilters: () => void;
 }
 
-export const RegionFilterPanel: React.FC<RegionFilterPanelProps> = ({ 
-  filters, 
-  onFilterChange, 
-  onFiltersChange,
-  onFilterApply 
+export const RegionFilterPanel: React.FC<RegionFilterPanelProps> = ({
+  filters,
+  onFilterChange,
+  onResetFilters
 }) => {
-  // Use a local copy of filters to avoid immediate re-renders
-  const [localFilters, setLocalFilters] = React.useState(filters);
-
-  React.useEffect(() => {
-    setLocalFilters(filters);
-  }, [filters]);
-
-  const handleStatusChange = (value: string) => {
-    setLocalFilters(prev => ({ ...prev, status: value as 'active' | 'inactive' | 'all' }));
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFilterChange('search', e.target.value);
   };
 
-  const handleApply = () => {
-    onFiltersChange(localFilters);
-    onFilterApply();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Trigger search on enter if needed
+    }
   };
 
-  const handleReset = () => {
-    const resetFilters = {
-      search: '',
-      status: 'active' as const
-    };
-    setLocalFilters(resetFilters);
-    onFiltersChange(resetFilters);
-    onFilterApply();
-  };
+  const hasActiveFilters = !!filters.search;
 
   return (
-    <div className="bg-white p-4 rounded-md border border-infoline-light-gray mb-4">
-      <div className="space-y-4">
-        <div>
-          <Label className="text-infoline-dark-blue font-medium">Status</Label>
-          <RadioGroup value={localFilters.status} onValueChange={handleStatusChange} className="mt-2">
-            <div className="flex space-x-4">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="active" id="active" />
-                <Label htmlFor="active" className="cursor-pointer">Aktiv</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="inactive" id="inactive" />
-                <Label htmlFor="inactive" className="cursor-pointer">Deaktiv</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="all" />
-                <Label htmlFor="all" className="cursor-pointer">Hamısı</Label>
-              </div>
-            </div>
-          </RadioGroup>
-        </div>
-        
-        <div className="flex justify-end space-x-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-          >
-            Sıfırla
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleApply}
-          >
-            Tətbiq et
-          </Button>
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="relative flex w-full md:max-w-sm">
+        <Input
+          placeholder="Search regions..."
+          value={filters.search || ''}
+          onChange={handleSearchChange}
+          onKeyDown={handleKeyDown}
+          className="pr-10"
+        />
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <Search className="h-4 w-4 text-gray-400" />
         </div>
       </div>
+      {hasActiveFilters && (
+        <Button
+          variant="ghost"
+          onClick={onResetFilters}
+          className="flex items-center text-xs"
+        >
+          <X className="mr-1 h-4 w-4" />
+          Reset filters
+        </Button>
+      )}
     </div>
   );
 };
+
+export default RegionFilterPanel;

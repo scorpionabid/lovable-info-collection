@@ -1,46 +1,49 @@
 
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { SchoolForm } from './SchoolForm';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { School } from '@/supabase/types';
+import SchoolModalContent from './SchoolModalContent';
 
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  school?: School | null;
-  mode: 'create' | 'edit';
+  mode: 'create' | 'edit' | 'view';
   onSuccess?: () => void;
+  initialData?: School; // Add this prop
   regionId?: string;
+  onCreated?: () => void; // Add this prop for backward compatibility
 }
 
 export const SchoolModal: React.FC<SchoolModalProps> = ({
   isOpen,
   onClose,
-  school,
   mode,
   onSuccess,
-  regionId
+  initialData,
+  regionId,
+  onCreated,
 }) => {
-  const title = mode === 'create' ? 'Yeni Məktəb' : 'Məktəbi Redaktə Et';
+  // Map onCreated to onSuccess for backward compatibility
+  const handleSuccess = () => {
+    if (onSuccess) onSuccess();
+    if (onCreated) onCreated();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>
+            {mode === 'create' ? 'Add New School' : 
+             mode === 'edit' ? 'Edit School' : 'School Details'}
+          </DialogTitle>
         </DialogHeader>
-        
-        <SchoolForm 
-          school={school} 
-          onClose={onClose}
-          onSuccess={onSuccess}
-          regionId={regionId || ''}
-          mode={mode}
+        <SchoolModalContent 
+          mode={mode} 
+          onClose={onClose} 
+          onSuccess={handleSuccess}
+          initialData={initialData}
+          regionId={regionId}
         />
       </DialogContent>
     </Dialog>

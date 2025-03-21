@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/supabase/client';
 
 interface Category {
   id: string;

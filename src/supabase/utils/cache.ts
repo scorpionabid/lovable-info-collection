@@ -1,4 +1,3 @@
-
 // Simple in-memory cache for API responses
 
 const cacheConfig = {
@@ -63,7 +62,8 @@ export const setInCache = <T>(key: string, data: T, type?: keyof typeof cacheCon
   try {
     // Determine TTL based on data type
     const ttl = type && cacheConfig[type] ? cacheConfig[type] : cacheConfig.defaultTTL;
-    const expiry = Date.now() + ttl;
+    const cacheExpirationMs = typeof ttl === 'number' ? ttl : 3600 * 1000;
+    const expiry = Date.now() + cacheExpirationMs;
     
     // Store in memory cache
     memoryCache[key] = { data, expiry };

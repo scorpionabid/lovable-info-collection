@@ -1,44 +1,29 @@
 
 import { useState } from 'react';
-import { FilterParams } from "@/services/supabase/region";
+import { FilterParams } from '@/supabase/types'; // Updated import
 
 export const useRegionFilters = () => {
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<FilterParams>({
-    searchQuery: '',
-    dateFrom: '',
-    dateTo: '',
-    completionRate: 'all'
+    search: '',
+    status: 'all',
   });
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    const timeoutId = setTimeout(() => {
-      setFilters(prev => ({ ...prev, searchQuery: e.target.value }));
-      setCurrentPage(1);
-    }, 300);
-    return () => clearTimeout(timeoutId);
+  const updateFilter = (name: string, value: any) => {
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleApplyFilters = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
-    setShowFilters(false);
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      status: 'all',
+    });
   };
-
-  const toggleFilters = () => setShowFilters(!showFilters);
 
   return {
-    showFilters,
-    searchQuery,
-    currentPage,
     filters,
-    setCurrentPage,
-    setShowFilters,
-    handleSearchChange,
-    handleApplyFilters,
-    toggleFilters
+    updateFilter,
+    resetFilters
   };
 };
+
+export default useRegionFilters;

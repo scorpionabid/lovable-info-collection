@@ -1,68 +1,49 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from "@/hooks/use-toast";
-import { RegionWithStats } from "@/services/supabase/region";
-import regionService from "@/services/supabase/region";
+import { toast } from 'sonner';
+import { deleteRegion, archiveRegion } from '@/services/supabase/region/regionOperations';
+import { Region } from '@/supabase/types';
 
 export const useRegionTableActions = (onRefresh: () => void) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const [selectedRegion, setSelectedRegion] = useState<RegionWithStats | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
 
-  // Navigate to region details page
-  const handleView = (region: RegionWithStats) => {
-    navigate(`/regions/${region.id}`);
-  };
-
-  // Open edit modal
-  const handleEdit = (region: RegionWithStats) => {
-    setSelectedRegion(region);
-    setIsEditModalOpen(true);
-  };
-
-  // Archive region
-  const handleArchive = async (region: RegionWithStats) => {
+  const handleArchive = async (region: Region) => {
+    if (actionInProgress) return;
+    
+    setActionInProgress(region.id);
     try {
-      await regionService.archiveRegion(region.id);
-      
-      toast({
-        title: "Region arxivləşdirildi",
-        description: `${region.name} regionu uğurla arxivləşdirildi`,
-      });
-      
-      // Refresh the regions list
+      await archiveRegion(region.id);
+      toast.success(`"${region.name}" has been archived`);
       onRefresh();
     } catch (error) {
       console.error('Error archiving region:', error);
-      toast({
-        title: "Xəta baş verdi",
-        description: "Region arxivləşdirilərkən xəta baş verdi",
-        variant: "destructive",
-      });
+      toast.error('Failed to archive region');
+    } finally {
+      setActionInProgress(null);
     }
   };
 
-  // Open export modal
-  const handleExport = (region: RegionWithStats) => {
-    setSelectedRegion(region);
-    setIsExportModalOpen(true);
+  const handleDelete = async (region: Region) => {
+    if (actionInProgress) return;
+    
+    setActionInProgress(region.id);
+    try {
+      await deleteRegion(region.id);
+      toast.success(`"${region.name}" has been deleted`);
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting region:', error);
+      toast.error('Failed to delete region');
+    } finally {
+      setActionInProgress(null);
+    }
   };
 
   return {
-    selectedRegion,
-    isEditModalOpen,
-    isExportModalOpen,
-    setIsEditModalOpen,
-    setIsExportModalOpen,
-    handleView,
-    handleEdit,
+    actionInProgress,
     handleArchive,
-    handleExport
+    handleDelete
   };
 };
+
+export default useRegionTableActions;

@@ -15,18 +15,13 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
     if (!typeId) return null;
 
     try {
+      // Call the stored function for getting school types
       const { data, error } = await supabase
         .rpc('get_school_types')
-        .eq('id', typeId)
-        .single();
+        .filter('id', 'eq', typeId)
+        .maybeSingle();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null; // Not found
-        }
-        throw error;
-      }
-
+      if (error) throw error;
       return data || null;
     } catch (error) {
       console.error('Error fetching school type:', error);

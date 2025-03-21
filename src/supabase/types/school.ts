@@ -2,10 +2,14 @@
 import { Tables } from '@/integrations/supabase/types';
 
 // School type interface
-export type School = Tables<'schools'> & {
-  archived: boolean;
+export type School = Tables<'schools'>;
+
+// School with Statistics
+export interface SchoolWithStats extends School {
   completionRate?: number;
-};
+  adminName?: string;
+  adminId?: string;
+}
 
 // School filter interface
 export interface SchoolFilter {
@@ -60,4 +64,5 @@ export interface UpdateSchoolDto {
   student_count?: number;
   teacher_count?: number;
   status?: string;
+  archived?: boolean;
 }
