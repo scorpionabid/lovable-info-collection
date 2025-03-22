@@ -1,8 +1,18 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/supabase/client';
-import { User, UserRole } from '@/lib/supabase/types/user';
+import { User } from '@/lib/supabase/types/user';
 import { useToast } from '@/hooks/use-toast';
+import { LoginCredentials } from '@/hooks/types/authTypes';
+
+// Define UserRole enum to be exported
+export enum UserRole {
+  SuperAdmin = 'super-admin',
+  RegionAdmin = 'region-admin',
+  SectorAdmin = 'sector-admin',
+  SchoolAdmin = 'school-admin',
+  Unknown = 'unknown'
+}
 
 // Define the auth context shape
 interface AuthContextProps {
@@ -12,7 +22,7 @@ interface AuthContextProps {
   isAuthenticated: boolean;
   isLoading: boolean;
   isUserReady: boolean;
-  login: (email: string, password: string) => Promise<any>;
+  login: (credentials: LoginCredentials) => Promise<any>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<any>;
   signUp: (email: string, password: string, userData: any) => Promise<any>;
@@ -81,10 +91,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userError) throw userError;
             
             if (userData) {
-              setUser(userData);
+              // Handle potential incompatible types for user
+              const typeSafeUser = userData as any;
+              setUser(typeSafeUser);
               
               // Set user role
-              const roleValue = userData.role || userData.roles;
+              const roleValue = typeSafeUser.roles;
               let userRoleValue = UserRole.Unknown;
               
               if (typeof roleValue === 'object' && roleValue) {
@@ -133,10 +145,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userError) throw userError;
           
           if (userData) {
-            setUser(userData);
+            const typeSafeUser = userData as any;
+            setUser(typeSafeUser);
             
             // Set user role
-            const roleValue = userData.role || userData.roles;
+            const roleValue = typeSafeUser.roles;
             let userRoleValue = UserRole.Unknown;
             
             if (typeof roleValue === 'object' && roleValue) {
@@ -190,14 +203,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Login function
-  const login = async (email: string, password: string) => {
+  const login = async (credentials: LoginCredentials) => {
     setLoading(true);
     setError(null);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+        email: credentials.email,
+        password: credentials.password
       });
       
       if (error) throw error;

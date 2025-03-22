@@ -2,31 +2,15 @@
 import { Tables } from "./shared";
 
 // Base School type from the database
-export interface School {
-  id: string;
-  name: string;
+export type School = Tables<'schools'> & {
+  archived?: boolean; // Make archived optional to accommodate both versions
   code?: string;
-  region_id: string;
-  sector_id: string;
-  type_id?: string;
-  address?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
-  created_at: string;
-  updated_at?: string;
-  archived: boolean;
-  // Virtual/derived fields
+  description?: string;
   completionRate?: number;
   type?: string;
   region?: string;
   sector?: string;
-  adminName?: string;
-  adminId?: string;
-}
+};
 
 // SchoolType definition
 export interface SchoolType {
@@ -47,7 +31,7 @@ export interface SchoolFilter {
   status?: string;
   page?: number;
   pageSize?: number;
-  // Sort parameters
+  // Modified to make both formats compatible
   sort?: SchoolSortParams;
   sort_field?: string;
   sort_direction?: 'asc' | 'desc';
@@ -103,4 +87,6 @@ export interface UpdateSchoolDto {
 // School with statistics
 export interface SchoolWithStats extends School {
   completionRate: number;
+  adminName?: string;
+  adminId?: string;
 }

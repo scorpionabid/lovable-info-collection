@@ -1,8 +1,7 @@
 
 import { ReactNode, useEffect, useState, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import type { UserRole } from '@/hooks/types/authTypes';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { LoadingState } from '../users/modals/LoadingState';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -10,7 +9,7 @@ import { useLogger } from '@/hooks/useLogger';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles?: UserRole[];
+  allowedRoles?: string[];
 }
 
 export const ProtectedRoute = ({ 
@@ -40,7 +39,9 @@ export const ProtectedRoute = ({
     
     // If roles are specified and we have a userRole, check them
     if (allowedRoles && allowedRoles.length > 0 && userRole) {
-      return allowedRoles.includes(userRole);
+      // Convert userRole enum to string for comparison with allowedRoles
+      const roleStr = userRole.toString();
+      return allowedRoles.includes(roleStr);
     }
     
     // Default case - require auth but no specific role
@@ -62,7 +63,7 @@ export const ProtectedRoute = ({
       });
       setLoadingScreenShown(true);
     }
-  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname, isUserReady, sessionExists, userRole, allowedRoles]);
+  }, [isAuthenticated, isLoading, isAllowed, loadingScreenShown, location.pathname, isUserReady, sessionExists, userRole, allowedRoles, logger]);
 
   // Set long loading state after 5 seconds to show refresh option
   useEffect(() => {
@@ -75,7 +76,7 @@ export const ProtectedRoute = ({
     } else {
       setLongLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, logger]);
 
   // Handle page refresh
   const handleRefresh = () => {

@@ -50,7 +50,7 @@ export interface AuthContextType {
   loading: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string | LoginCredentials, password?: string) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   permissions: string[];
   authInitialized: boolean;

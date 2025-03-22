@@ -3,14 +3,15 @@ import { Tables } from "./shared";
 
 // Base Region type from the database
 export type Region = Tables<'regions'> & {
-  code: string;
+  code?: string;
   description?: string;
+  archived?: boolean;
 };
 
 // Filter parameters for region queries
 export interface RegionFilters {
   search?: string;
-  status?: 'active' | 'inactive' | 'all';
+  status?: 'active' | 'inactive' | 'all' | 'archived';
   min_completion_rate?: number;
   max_completion_rate?: number;
   page?: number;

@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { Layout } from "@/components/layout/Layout";
-import RegionsOverview from "@/components/regions/RegionsOverview";
+import { Layout } from '@/components/layout/Layout';
+import { RegionsOverview } from '@/components/regions/RegionsOverview';
 
-const Regions = () => {
+const RegionsPage: React.FC = () => {
   return (
-    <Layout userRole="super-admin">
+    <Layout>
       <RegionsOverview />
     </Layout>
   );
 };
 
-export default Regions;
+export default RegionsPage;

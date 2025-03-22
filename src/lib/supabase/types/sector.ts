@@ -7,13 +7,18 @@ export type Sector = Tables<'sectors'> & {
   description?: string;
   region?: string;
   archived?: boolean;
+  regionName?: string;
+  schools_count?: number;
+  completion_rate?: number;
+  schoolCount?: number;
+  completionRate?: number;
 };
 
 // Filter parameters for sector queries
 export interface SectorFilters {
   search?: string;
   region_id?: string;
-  status?: 'active' | 'inactive' | 'all';
+  status?: 'active' | 'inactive' | 'all' | 'archived';
   page?: number;
   page_size?: number;
 }

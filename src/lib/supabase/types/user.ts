@@ -1,12 +1,22 @@
 
 import { Tables } from "./shared";
+import { Json } from "@/types/supabase";
 
-// Role interface
+// Role interface for user roles
 export interface Role {
   id: string;
   name: string;
+  permissions?: string[];
   description?: string;
-  permissions?: string[] | any;
+}
+
+// Define UserRole enum for standard user roles
+export enum UserRole {
+  SuperAdmin = 'super-admin',
+  RegionAdmin = 'region-admin',
+  SectorAdmin = 'sector-admin',
+  SchoolAdmin = 'school-admin',
+  Unknown = 'unknown'
 }
 
 // Base User type from the database
@@ -26,23 +36,21 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   last_login?: string;
+  role?: string;
+  userRole?: string;
   
-  // For backward compatibility (either role or roles can be used)
-  role?: string | Role;
+  // Role information - can be either a string or a Role object
   roles?: string | Role;
   
-  // Organizational relationship names
+  // Organization entities names
   region?: string;
   sector?: string;
   school?: string;
-  
-  // Permissions for authenticated users
-  permissions?: string[];
 }
 
 // User with role information
 export interface UserWithRole extends User {
-  role: string | Role;
+  role: string;
 }
 
 // User filters for API requests
@@ -87,17 +95,11 @@ export interface UpdateUserDto {
   avatar_url?: string;
 }
 
-// Login credentials
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-// User role enum for TypeScript
-export enum UserRole {
-  SuperAdmin = 'super-admin',
-  RegionAdmin = 'region-admin',
-  SectorAdmin = 'sector-admin',
-  SchoolAdmin = 'school-admin',
-  Unknown = 'unknown'
+// Helper Types
+export interface UserRoleClaims extends User {
+  app_metadata?: {
+    claims?: {
+      roles?: string[] | string;
+    }
+  }
 }

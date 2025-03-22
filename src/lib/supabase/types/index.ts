@@ -3,10 +3,10 @@
 export * from './shared';
 
 // Export all types from the individual files
-export * from './region';
-export * from './sector';
-export * from './school';
-export * from './user';
+export type { Region, RegionWithStats, RegionFilters, CreateRegionDto, UpdateRegionDto } from './region';
+export type { Sector, SectorWithStats, SectorFilters, CreateSectorDto, UpdateSectorDto } from './sector';
+export type { School, SchoolType, SchoolFilter, SchoolSortParams, CreateSchoolDto, UpdateSchoolDto, SchoolWithStats } from './school';
+export type { User, UserWithRole, UserFilters, CreateUserDto, UpdateUserDto, Role, UserRole, UserRoleClaims } from './user';
 
 // Common interfaces used across multiple entity types
 export interface FilterParams {

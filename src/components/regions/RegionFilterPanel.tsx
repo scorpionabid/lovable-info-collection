@@ -1,86 +1,103 @@
 
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FilterParams } from '@/lib/supabase/types';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export interface RegionFilterPanelProps {
-  filters: FilterParams;
-  onFilterChange: (key: string, value: any) => void;
-  onFilterApply: () => Promise<void>;
-  onFiltersReset?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  filters: {
+    search: string;
+    status: string;
+  };
+  onApplyFilters: (filters: any) => void;
 }
 
 export const RegionFilterPanel: React.FC<RegionFilterPanelProps> = ({
+  isOpen,
+  onClose,
   filters,
-  onFilterChange,
-  onFilterApply,
-  onFiltersReset
+  onApplyFilters
 }) => {
-  const handleFilterChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFilterChange(key, e.target.value);
+  const [localFilters, setLocalFilters] = useState(filters);
+
+  const handleStatusChange = (value: string) => {
+    setLocalFilters({
+      ...localFilters,
+      status: value
+    });
   };
 
-  const handleSelectChange = (key: string) => (value: string) => {
-    onFilterChange(key, value);
-  };
-
-  const handleApplyFilters = async () => {
-    await onFilterApply();
+  const handleApplyFilters = () => {
+    onApplyFilters(localFilters);
+    onClose();
   };
 
   const handleResetFilters = () => {
-    if (onFiltersReset) {
-      onFiltersReset();
-    }
+    const resetFilters = {
+      search: '',
+      status: 'active'
+    };
+    setLocalFilters(resetFilters);
+    onApplyFilters(resetFilters);
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm space-y-4">
-      <h3 className="text-lg font-medium mb-4">Filter Regions</h3>
-      
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="search">Search</Label>
-          <Input
-            id="search"
-            placeholder="Search by name or code..."
-            value={filters.search || ''}
-            onChange={handleFilterChange('search')}
-            className="mt-1"
-          />
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-[300px] sm:w-[400px]">
+        <SheetHeader>
+          <SheetTitle>Filterlər</SheetTitle>
+          <SheetDescription>
+            Regionları filtirləmək üçün parametrləri seçin
+          </SheetDescription>
+        </SheetHeader>
+        <div className="py-4 space-y-6">
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <RadioGroup 
+              value={localFilters.status}
+              onValueChange={handleStatusChange}
+              className="flex flex-col space-y-1"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="active" id="active" />
+                <Label htmlFor="active">Aktiv</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="inactive" id="inactive" />
+                <Label htmlFor="inactive">Deaktiv</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="all" />
+                <Label htmlFor="all">Hamısı</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="archived" id="archived" />
+                <Label htmlFor="archived">Arxivlənmiş</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          <div className="flex justify-between pt-4">
+            <Button variant="outline" onClick={handleResetFilters}>
+              Sıfırla
+            </Button>
+            <Button onClick={handleApplyFilters}>
+              Tətbiq et
+            </Button>
+          </div>
         </div>
-        
-        <div>
-          <Label htmlFor="status">Status</Label>
-          <Select 
-            value={filters.status || 'all'} 
-            onValueChange={handleSelectChange('status')}
-          >
-            <SelectTrigger id="status" className="w-full mt-1">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" onClick={handleResetFilters} className="flex-1">
-            Reset
-          </Button>
-          <Button onClick={handleApplyFilters} className="flex-1">
-            Apply Filters
-          </Button>
-        </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
