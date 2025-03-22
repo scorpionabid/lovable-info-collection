@@ -3,6 +3,7 @@ import { UserRole } from "@/hooks/types/authTypes";
 import { User } from "@/lib/supabase/types/user";
 import { isRoleObject } from "@/lib/supabase/types/user/role";
 import { Badge } from "@/components/ui/badge";
+import React from "react";
 
 // Özəl rol adlarını əldə etmək üçün funksiya
 export const getUserRoleName = (user: User): string => {
@@ -64,11 +65,17 @@ export const getUserEntity = (user: User): string => {
   return '';
 };
 
-// İstifadəçi statusu əsasında badge rəngi
+// İstifadəçi statusu əsasında badge qaytaran funksiya
 export const getUserStatusBadge = (isActive: boolean) => {
-  return isActive 
-    ? <Badge className="bg-green-100 text-green-800 border-green-200">Aktiv</Badge>
-    : <Badge className="bg-red-100 text-red-800 border-red-200">Deaktiv</Badge>;
+  if (isActive) {
+    return React.createElement(Badge, { 
+      className: "bg-green-100 text-green-800 border-green-200" 
+    }, "Aktiv");
+  } else {
+    return React.createElement(Badge, { 
+      className: "bg-red-100 text-red-800 border-red-200" 
+    }, "Deaktiv");
+  }
 };
 
 // String-i "Role" tipi kimi işləyib-işləmədiyini yoxlamaq üçün
