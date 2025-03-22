@@ -85,3 +85,5 @@ export const SectorDetailView: React.FC<SectorDetailViewProps> = ({
     </div>
   );
 };
+
+export default SectorDetailView;

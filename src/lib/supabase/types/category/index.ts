@@ -2,12 +2,12 @@
 import { Json } from '@/lib/supabase/types';
 
 export type CategoryAssignment = 'All' | 'Regions' | 'Sectors' | 'Schools' | string;
-export type CategoryStatus = 'active' | 'inactive' | string;
+export type CategoryStatus = 'active' | 'inactive' | 'draft' | 'archived' | string;
 
 export interface CategoryFilter {
   searchQuery?: string;
-  status?: string;
-  assignment?: string;
+  status?: CategoryStatus;
+  assignment?: CategoryAssignment;
   region_id?: string;
   sector_id?: string;
   school_id?: string;

@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { SchoolType } from '@/lib/supabase/types/school';
 
 export interface UseSchoolTypeOptions {
@@ -15,12 +15,9 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
     if (!typeId) return null;
 
     try {
-      // Instead of directly querying school_types table (which might not exist),
-      // let's use a safer approach with error handling
+      // Use the RPC function to get school types safely
       const { data, error } = await supabase
-        .rpc('get_school_types')
-        .eq('id', typeId)
-        .single();
+        .rpc('get_school_types');
 
       if (error) {
         console.error('Error fetching school type:', error);
@@ -32,12 +29,16 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
         };
       }
       
-      if (data) {
-        return {
-          id: data.id,
-          name: data.name,
-          description: data.description || ''
-        };
+      // Find the school type with the matching ID
+      if (data && Array.isArray(data)) {
+        const schoolType = data.find(type => type.id === typeId);
+        if (schoolType) {
+          return {
+            id: schoolType.id,
+            name: schoolType.name,
+            description: schoolType.description || ''
+          };
+        }
       }
       
       return null;

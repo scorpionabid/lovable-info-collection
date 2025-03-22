@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { SchoolType } from '@/lib/supabase/types/school';
 
 export const useSchoolTypes = () => {
@@ -8,8 +8,7 @@ export const useSchoolTypes = () => {
     try {
       // Use the RPC function instead of direct table access
       const { data, error } = await supabase
-        .rpc('get_school_types')
-        .order('name');
+        .rpc('get_school_types');
 
       if (error) {
         console.error('Error fetching school types:', error);
