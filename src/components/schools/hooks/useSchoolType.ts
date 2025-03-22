@@ -16,6 +16,7 @@ export function useSchoolType(id: string | undefined) {
         throw error;
       }
       
+      // Data bir array olmalıdır
       if (!data || !Array.isArray(data)) {
         return null;
       }

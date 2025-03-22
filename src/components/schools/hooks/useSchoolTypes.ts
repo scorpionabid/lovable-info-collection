@@ -14,11 +14,12 @@ export const useSchoolTypes = () => {
         throw error;
       }
       
+      // Əgər data yoxdursa və ya array deyilsə, boş array qaytaraq
       if (!data || !Array.isArray(data)) {
         return [];
       }
       
-      // Map data to SchoolType format
+      // Məlumatları SchoolType formatına çevirmək
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,

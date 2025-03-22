@@ -4,12 +4,11 @@ import { School } from "@/lib/supabase/types/school";
 export interface SchoolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: "view" | "create" | "edit";
-  initialData?: School;
-  onSuccess?: () => void;
-  regionId?: string;
+  mode: 'create' | 'edit' | 'view';
   school?: School;
-  onCreated?: () => void;
+  initialData?: any;
+  onSuccess?: () => void;
   onSchoolCreated?: () => void;
   onSchoolUpdated?: () => void;
+  regionId?: string;
 }

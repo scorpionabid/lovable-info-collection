@@ -1,12 +1,18 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { User } from '@/lib/supabase/types/user';
+import { Role } from '@/types/common';
 
 // Əgər User tipi xaricində əlavə məlumatlar lazımdırsa
 interface UserWithPaginationResult {
   data: User[];
   count: number;
+}
+
+// Mock data interface to ensure type compatibility 
+interface MockUser extends User {
+  roles: Role | string;
 }
 
 export const useUsers = () => {
@@ -17,6 +23,7 @@ export const useUsers = () => {
   const [filter, setFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [filters, setFilters] = useState({});
 
   // Mock users data for development use
   const mockFetchUsers = async (): Promise<UserWithPaginationResult> => {
@@ -24,7 +31,7 @@ export const useUsers = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Mock data
-    const users: User[] = Array.from({ length: 30 }, (_, index) => ({
+    const users: MockUser[] = Array.from({ length: 30 }, (_, index) => ({
       id: `user-${index + 1}`,
       email: `user${index + 1}@example.com`,
       first_name: `First${index + 1}`,
@@ -32,7 +39,10 @@ export const useUsers = () => {
       role_id: `role-${(index % 4) + 1}`,
       is_active: index % 5 !== 0,
       created_at: new Date(Date.now() - (index * 86400000)).toISOString(),
-      roles: { name: ['super-admin', 'region-admin', 'sector-admin', 'school-admin'][index % 4] }
+      roles: { 
+        id: `role-${(index % 4) + 1}`,
+        name: ['super-admin', 'region-admin', 'sector-admin', 'school-admin'][index % 4]
+      }
     }));
     
     // Apply filters (only for mock data)
@@ -93,6 +103,29 @@ export const useUsers = () => {
     }
   };
 
+  const handleFilterChange = (newFilters: any) => {
+    setFilters({ ...filters, ...newFilters });
+    
+    if (newFilters.search !== undefined) {
+      setFilter(newFilters.search);
+    }
+    
+    if (newFilters.role !== undefined) {
+      setRoleFilter(newFilters.role);
+    }
+    
+    if (newFilters.status !== undefined) {
+      setStatusFilter(newFilters.status);
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    // Mock implementation
+    console.log(`Deleting user with ID: ${userId}`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return true;
+  };
+
   return {
     users: data?.data || [],
     totalCount: data?.count || 0,
@@ -111,7 +144,10 @@ export const useUsers = () => {
     setStatusFilter,
     isLoading,
     isError,
-    refetch
+    refetch,
+    handleFilterChange,
+    filters,
+    deleteUser
   };
 };
 
