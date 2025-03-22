@@ -1,47 +1,58 @@
 
 import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Region } from '@/lib/supabase/types';
-import { searchRegions } from '@/services/supabase/region'; // Make sure this exists
+// searchRegions eksport edilmədiyindən onu daxil etmirik
+// bunun əvəzinə getRegions funksiyasını istifadə edirik
+import { getRegions } from '@/services/supabase/region';
 
-interface UseRegionSearchProps {
-  initialValue?: string;
-  delay?: number;
-}
-
-export const useRegionSearch = ({ initialValue = '', delay = 300 }: UseRegionSearchProps = {}) => {
-  const [searchQuery, setSearchQuery] = useState(initialValue);
-  const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<Region[]>([]);
-  const debouncedQuery = useDebounce(searchQuery, delay);
+export const useRegionSearch = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
-    const fetchResults = async () => {
-      if (!debouncedQuery || debouncedQuery.length < 2) {
+    const search = async () => {
+      if (!debouncedSearchTerm) {
         setResults([]);
         return;
       }
 
-      setIsSearching(true);
+      setIsLoading(true);
+      setError(null);
+
       try {
-        const searchResults = await searchRegions(debouncedQuery);
-        setResults(searchResults);
-      } catch (error) {
-        console.error('Error searching regions:', error);
+        // searchRegions funksiyası olmadığı üçün, bunun əvəzinə getRegions istifadə edirik
+        const data = await getRegions({
+          search: debouncedSearchTerm,
+          status: 'all',
+        });
+        
+        if (Array.isArray(data)) {
+          setResults(data);
+        } else if (data && 'data' in data) {
+          setResults(data.data);
+        } else {
+          setResults([]);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Error searching regions'));
         setResults([]);
       } finally {
-        setIsSearching(false);
+        setIsLoading(false);
       }
     };
 
-    fetchResults();
-  }, [debouncedQuery]);
+    search();
+  }, [debouncedSearchTerm]);
 
   return {
-    searchQuery,
-    setSearchQuery,
-    isSearching,
-    results
+    searchTerm,
+    setSearchTerm,
+    results,
+    isLoading,
+    error,
   };
 };
 

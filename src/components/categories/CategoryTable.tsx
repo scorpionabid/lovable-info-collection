@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CategoryStatus } from '@/lib/supabase/types/category';
 
@@ -23,11 +24,20 @@ interface CategoryTableProps {
   isLoading: boolean;
   onRefresh: () => void;
   onDelete: (category: CategoryType) => void;
-  onView: (category: CategoryType) => void;
-  onEdit: (category: CategoryType) => void;
+  onView?: (category: CategoryType) => void;
+  onEdit?: (category: CategoryType) => void;
+  onUpdatePriority?: (id: string, newPriority: number) => void;
 }
 
-export const CategoryTable = ({ categories, isLoading, onRefresh, onDelete, onView, onEdit }: CategoryTableProps) => {
+export const CategoryTable = ({ 
+  categories, 
+  isLoading, 
+  onRefresh, 
+  onDelete, 
+  onView, 
+  onEdit,
+  onUpdatePriority
+}: CategoryTableProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
@@ -35,18 +45,26 @@ export const CategoryTable = ({ categories, isLoading, onRefresh, onDelete, onVi
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
 
   const handleView = (category: CategoryType) => {
-    navigate(`/categories/${category.id}`);
+    if (onView) {
+      onView(category);
+    } else {
+      navigate(`/categories/${category.id}`);
+    }
   };
 
   const handleEdit = (category: CategoryType) => {
-    setSelectedCategory(category);
-    setIsEditModalOpen(true);
+    if (onEdit) {
+      onEdit(category);
+    } else {
+      setSelectedCategory(category);
+      setIsEditModalOpen(true);
+    }
   };
 
   const handleArchive = async (category: CategoryType) => {
     try {
       await categoryService.updateCategory(category.id, {
-        status: category.status === 'active' ? 'inactive' : 'active' as CategoryStatus
+        status: category.status === 'active' ? 'inactive' as CategoryStatus : 'active' as CategoryStatus
       });
       
       queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -84,6 +102,8 @@ export const CategoryTable = ({ categories, isLoading, onRefresh, onDelete, onVi
   };
 
   const handlePriorityChange = (category: CategoryType, direction: 'up' | 'down') => {
+    if (!onUpdatePriority) return;
+    
     const sortedCategories = [...categories].sort((a, b) => a.priority - b.priority);
     const index = sortedCategories.findIndex(c => c.id === category.id);
     
@@ -216,7 +236,7 @@ export const CategoryTable = ({ categories, isLoading, onRefresh, onDelete, onVi
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleArchive(category)}>
                         <Archive className="mr-2 h-4 w-4" />
-                        <span>{category.status === 'Active' ? 'Arxivləşdir' : 'Aktivləşdir'}</span>
+                        <span>{category.status === 'active' ? 'Arxivləşdir' : 'Aktivləşdir'}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDownloadTemplate(category)}>
                         <Download className="mr-2 h-4 w-4" />

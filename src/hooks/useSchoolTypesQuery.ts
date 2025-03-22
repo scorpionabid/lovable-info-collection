@@ -14,7 +14,7 @@ export function useSchoolTypesQuery() {
         throw error;
       }
       
-      if (!data) {
+      if (!data || !Array.isArray(data)) {
         return [];
       }
       

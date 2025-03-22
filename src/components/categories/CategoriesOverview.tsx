@@ -30,7 +30,7 @@ const adaptCategoryData = (category: any): CategoryType => {
     name: category.name,
     description: category.description || '',
     assignment: category.assignment || 'All',
-    status: category.status || 'active',
+    status: (category.status || 'active').toLowerCase() as CategoryStatus, // Ensure status is lowercase to match CategoryStatus
     priority: category.priority || 0,
     region_id: category.region_id,
     sector_id: category.sector_id,
@@ -152,6 +152,30 @@ export const CategoriesOverview = () => {
     }
   };
 
+  const handleUpdatePriority = (id: string, newPriority: number) => {
+    const previousCategories = queryClient.getQueryData<CategoryType[]>(['categories']);
+    
+    if (previousCategories) {
+      queryClient.setQueryData(['categories'], 
+        previousCategories.map(cat => 
+          cat.id === id ? { ...cat, priority: newPriority } : cat
+        )
+      );
+    }
+    
+    categoryService.updateCategoryPriority(id, newPriority)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+      })
+      .catch(error => {
+        if (previousCategories) {
+          queryClient.setQueryData(['categories'], previousCategories);
+        }
+        toast.error('Prioritet dəyişdirilərkən xəta baş verdi');
+        console.error(error);
+      });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -251,30 +275,10 @@ export const CategoriesOverview = () => {
       ) : (
         <CategoryTable 
           categories={categories} 
-          onDelete={(category) => handleDeleteCategory(category)}
-          onUpdatePriority={(id, newPriority) => {
-            const previousCategories = queryClient.getQueryData<CategoryType[]>(['categories']);
-            
-            if (previousCategories) {
-              queryClient.setQueryData(['categories'], 
-                previousCategories.map(cat => 
-                  cat.id === id ? { ...cat, priority: newPriority } : cat
-                )
-              );
-            }
-            
-            categoryService.updateCategoryPriority(id, newPriority)
-              .then(() => {
-                queryClient.invalidateQueries({ queryKey: ['categories'] });
-              })
-              .catch(error => {
-                if (previousCategories) {
-                  queryClient.setQueryData(['categories'], previousCategories);
-                }
-                toast.error('Prioritet dəyişdirilərkən xəta baş verdi');
-                console.error(error);
-              });
-          }}
+          isLoading={isLoading}
+          onRefresh={handleRefresh}
+          onDelete={handleDeleteCategory}
+          onUpdatePriority={handleUpdatePriority}
         />
       )}
       

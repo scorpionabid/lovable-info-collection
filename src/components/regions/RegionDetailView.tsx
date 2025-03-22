@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import SectorTable from "@/components/sectors/SectorTable";
 
-// RegionWithStats tipini import edirik, məntiqə görə bizə lazım olan statistika da var
+// Region tipini @/lib/supabase/types faylından import edirik
 import { RegionWithStats } from "@/lib/supabase/types/region";
 import { Sector } from "@/lib/supabase/types/sector";
 

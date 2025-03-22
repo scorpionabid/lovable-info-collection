@@ -26,7 +26,31 @@ export const useRegionsData = ({
   const [sortColumn, setSortColumn] = useState(initialSortColumn);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(initialSortDirection);
 
-  // getRegions funksiyası PaginatedResult<RegionWithStats> qaytarmalıdır
+  // getRegions funksiyasını tipləri düzəltərək istifadə edirik
+  const fetchRegionsData = async (): Promise<PaginatedResult<RegionWithStats>> => {
+    const result = await getRegions({
+      ...filters,
+      page: currentPage,
+      pageSize, // page_size deyil pageSize
+      // field əlavə edilə bilən bir xüsusiyyət olduğundan əmin olmalıyıq
+      // əgər regionFilters.ts-də field xüsusiyyəti yoxdursa, xəbərdarlıq edəcək
+      // tipləri uyğunlaşdırmaq üçün
+      field: sortColumn,
+      direction: sortDirection
+    });
+    
+    // Əgər qaytarılan nəticə bir massivdirsə, onu istənilən formata çeviririk
+    if (Array.isArray(result)) {
+      return {
+        data: result,
+        count: result.length
+      };
+    }
+    
+    // Əgər artıq PaginatedResult formatındadırsa, olduğu kimi qaytarırıq
+    return result;
+  };
+
   const {
     data,
     isLoading,
@@ -34,13 +58,7 @@ export const useRegionsData = ({
     refetch
   } = useQuery<PaginatedResult<RegionWithStats>>({
     queryKey: ['regions', filters, currentPage, pageSize, sortColumn, sortDirection],
-    queryFn: () => getRegions({
-      ...filters,
-      page: currentPage,
-      pageSize: pageSize, // page_size deyil pageSize
-      field: sortColumn,
-      direction: sortDirection
-    }),
+    queryFn: fetchRegionsData,
     keepPreviousData: true,
   });
 
