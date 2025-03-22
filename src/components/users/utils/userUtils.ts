@@ -70,3 +70,13 @@ export const getUserStatusBadge = (isActive: boolean) => {
     ? <Badge className="bg-green-100 text-green-800 border-green-200">Aktiv</Badge>
     : <Badge className="bg-red-100 text-red-800 border-red-200">Deaktiv</Badge>;
 };
+
+// String-i "Role" tipi kimi işləyib-işləmədiyini yoxlamaq üçün
+export const isStringInRoleFormat = (value: string): boolean => {
+  return /^(super_admin|region_admin|sector_admin|school_admin)$/.test(value);
+};
+
+// String-i "Role" tipi olub-olmadığını yoxlamaq üçün əlavə helper
+export const validateRoleString = (value: string): boolean => {
+  return /^(super_admin|region_admin|sector_admin|school_admin)$/.test(value);
+};
