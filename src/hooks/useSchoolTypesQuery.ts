@@ -1,7 +1,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
-import { SchoolType } from '@/lib/supabase/types/school';
+
+interface SchoolType {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 export const useSchoolTypesQuery = () => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
@@ -32,7 +37,7 @@ export const useSchoolTypesQuery = () => {
   };
 
   return useQuery<SchoolType[]>({
-    queryKey: ["schoolTypes"],
+    queryKey: ["schoolTypesQuery"],
     queryFn: fetchSchoolTypes,
   });
 };
