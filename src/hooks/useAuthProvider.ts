@@ -1,25 +1,60 @@
-/**
- * Adapter hook: köhnə strukturdan yeni strukturaya yönləndirir
- * @deprecated Bu hook köhnə API-ya uyğunluq üçün saxlanılıb. Birbaşa @/lib/supabase/hooks/useAuth istifadə edin.
- */
+
+import { useState, useCallback } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/supabase/hooks/useAuth';
-export type { UserRole, LoginCredentials } from '@/lib/supabase/hooks/useAuth';
+
+// Əgər LoginCredentials tipi export edilmirsə, onu burada təyin edək
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
 
 export const useAuthProvider = () => {
-  const auth = useAuth();
-  
+  const { user, loading } = useAuth();
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    setAuthError(null);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error: any) {
+      const errorMessage = error.message || 'Login zamanı xəta baş verdi';
+      setAuthError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setAuthError(error.message);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (error: any) {
+      const errorMessage = error.message || 'Çıxış zamanı xəta baş verdi';
+      setAuthError(errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }, []);
+
   return {
-    ...auth,
-    user: auth.user,
-    userRole: auth.userRole,
-    loading: auth.loading,
-    isAuthenticated: Boolean(auth.user) || Boolean(auth.session),
-    isLoading: auth.loading && !auth.user,
-    isUserReady: Boolean(auth.user) || Boolean(auth.session),
-    login: auth.login,
-    logout: auth.logout,
-    resetPassword: auth.resetPassword,
-    updatePassword: auth.updatePassword
+    user,
+    loading,
+    authError,
+    login,
+    logout,
   };
 };
 

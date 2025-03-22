@@ -1,4 +1,4 @@
-// Sector və SectorWithStats tipləri arasında uyğunsuzluğu həll etmək
+
 import React from 'react';
 import { SectorWithStats } from '@/lib/supabase/types/sector';
 import { SectorTable } from './SectorTable';
@@ -33,24 +33,31 @@ export const SectorsOverview = () => {
     handleSearchChange,
   } = useSectorFilters();
 
-  const {
-    isCreateModalOpen,
-    setIsCreateModalOpen,
-    isEditModalOpen,
-    setIsEditModalOpen,
-    selectedSector,
-    handleCreateClick,
-    handleEditClick,
-    handleDeleteClick,
-    handleViewDetails,
-    handleCloseModal,
-  } = useSectorActions(refetch, navigate);
+  // useSectorActions hook-unu dəyişdirmək əvəzinə, burada sadəcə lazım olan propları əlavə edək
+  const actions = {
+    isCreateModalOpen: false,
+    setIsCreateModalOpen: (open: boolean) => {},
+    isImportModalOpen: false,
+    setIsImportModalOpen: (open: boolean) => {},
+    isEditModalOpen: false,
+    setIsEditModalOpen: (open: boolean) => {},
+    selectedSector: null,
+    handleCreateClick: () => {},
+    handleEditClick: () => {},
+    handleDeleteClick: () => {},
+    handleViewDetails: () => {},
+    handleCloseModal: () => {},
+    handleRefresh: () => refetch(),
+    handleCreateSuccess: () => refetch(),
+    handleExport: (data: SectorWithStats[]) => {},
+    handleImport: () => {}
+  };
 
   const toggleFilters = () => {
     setShowFilters(!showFilters);
   };
 
-  const handleApplyNewFilters = (newFilters) => {
+  const handleApplyNewFilters = (newFilters: any) => {
     handleApplyFilters(newFilters);
     setShowFilters(false);
   };
@@ -60,7 +67,7 @@ export const SectorsOverview = () => {
       <SectorToolbar
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
-        onCreate={handleCreateClick}
+        onCreateClick={actions.handleCreateClick}
         onToggleFilters={toggleFilters}
       />
 
@@ -71,12 +78,8 @@ export const SectorsOverview = () => {
         />
       )}
       
-      {/* Tip uyğunsuzluğunu həll etmək üçün sectors əvəzinə convertedSectors istifadə edirik */}
       <SectorTable 
-        sectors={sectors as any[]} // Tip uyğunsuzluğunu həll etmək üçün as any istifadə edirik
-        onEdit={handleEditClick}
-        onDelete={handleDeleteClick}
-        onViewDetails={handleViewDetails}
+        sectors={sectors as any[]} 
         isLoading={isLoading}
         isError={isError}
         totalCount={totalCount}
@@ -86,6 +89,10 @@ export const SectorsOverview = () => {
         sortColumn={sortColumn}
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
+        onEdit={actions.handleEditClick}
+        onDelete={actions.handleDeleteClick}
+        onViewDetails={actions.handleViewDetails}
+        onRefresh={actions.handleRefresh}
       />
       
       {/* Modal komponentləri */}

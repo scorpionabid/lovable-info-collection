@@ -1,75 +1,71 @@
 
-import { User } from "@/lib/supabase/types/user";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { getUserRoleName, getUserEntity, getUserStatusBadge } from "../utils/userUtils";
-import { EllipsisVertical, Eye, Pencil, Trash2 } from "lucide-react";
-import { formatDate } from "@/utils/dateUtils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { TableCell, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { User } from '@/lib/supabase/types/user';
+import { Badge } from '@/components/ui/badge';
 
-export interface UserTableRowProps {
+interface UserTableRowProps {
   user: User;
   isSelected: boolean;
-  onSelect: (userId: string, checked: boolean) => void;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onSelect: (userId: string, isSelected: boolean) => void;
+  onView: (user: User) => void;
+  onEdit: (user: User) => void;
+  onDelete: (userId: string) => void;
 }
 
-export const UserTableRow = ({ 
-  user, 
-  isSelected, 
-  onSelect, 
-  onView, 
-  onEdit, 
-  onDelete 
-}: UserTableRowProps) => {
-  const fullName = `${user.first_name} ${user.last_name}`;
-  const roleName = getUserRoleName(user);
-  const entity = getUserEntity(user);
-  const lastLoginDate = user.last_login ? formatDate(user.last_login) : 'Heç vaxt';
+export const UserTableRow: React.FC<UserTableRowProps> = ({
+  user,
+  isSelected,
+  onSelect,
+  onView,
+  onEdit,
+  onDelete
+}) => {
+  const { id, first_name, last_name, email, roles } = user;
+  
+  const roleName = typeof roles === 'string' ? roles : roles?.name || 'Unknown';
+  
+  // Formatlanmış tarix
+  const formattedDate = user.created_at 
+    ? new Date(user.created_at).toLocaleDateString() 
+    : 'N/A';
+  
+  // İstifadəçinin statusu üçün badge rəngi
+  const statusColor = user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+  const statusText = user.is_active ? 'Aktiv' : 'Deaktiv';
   
   return (
-    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-      <td className="px-4 py-3">
+    <TableRow className="hover:bg-gray-50 dark:hover:bg-gray-800">
+      <TableCell className="w-12">
         <Checkbox 
-          checked={isSelected}
-          onCheckedChange={(checked) => onSelect(user.id, !!checked)}
+          checked={isSelected} 
+          onCheckedChange={(checked) => onSelect(id, checked as boolean)} 
         />
-      </td>
-      <td className="px-4 py-3">{fullName}</td>
-      <td className="px-4 py-3">{user.email}</td>
-      <td className="px-4 py-3">{roleName}</td>
-      <td className="px-4 py-3">{entity}</td>
-      <td className="px-4 py-3">{lastLoginDate}</td>
-      <td className="px-4 py-3">
-        {getUserStatusBadge(user.is_active)}
-      </td>
-      <td className="px-4 py-3 text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <EllipsisVertical size={16} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onView} className="cursor-pointer">
-              <Eye className="mr-2 h-4 w-4" />
-              <span>Bax</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onEdit} className="cursor-pointer">
-              <Pencil className="mr-2 h-4 w-4" />
-              <span>Redaktə et</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onDelete} className="cursor-pointer text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Sil</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </td>
-    </tr>
+      </TableCell>
+      <TableCell className="font-medium">{first_name} {last_name}</TableCell>
+      <TableCell>{email}</TableCell>
+      <TableCell>{roleName}</TableCell>
+      <TableCell>
+        <Badge className={statusColor}>{statusText}</Badge>
+      </TableCell>
+      <TableCell>{formattedDate}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="icon" onClick={() => onView(user)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="text-red-500" onClick={() => onDelete(id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 };
 

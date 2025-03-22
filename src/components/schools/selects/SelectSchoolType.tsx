@@ -1,53 +1,52 @@
 
 import React from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useSchoolTypes } from '../hooks/useSchoolTypes';
-import { School, SchoolType } from '@/lib/supabase/types/school';
+import { useSchoolTypesQuery } from '@/hooks/useSchoolTypesQuery';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Control, Controller } from 'react-hook-form';
 
-interface SelectSchoolTypeProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
+export interface SelectSchoolTypeProps {
+  name: string;
+  error?: string;
   disabled?: boolean;
+  control: Control<any>;
 }
 
-export const SelectSchoolType: React.FC<SelectSchoolTypeProps> = ({
-  value,
-  onChange,
-  placeholder = "Məktəb növünü seçin",
-  disabled = false,
-}) => {
-  const { data: schoolTypes = [], isLoading } = useSchoolTypes();
+const SelectSchoolType: React.FC<SelectSchoolTypeProps> = ({ name, error, disabled, control }) => {
+  const { data: schoolTypes, isLoading } = useSchoolTypesQuery();
+
+  if (isLoading) {
+    return <div>Məktəb tipləri yüklənir...</div>;
+  }
 
   return (
-    <Select
-      value={value}
-      onValueChange={onChange}
-      disabled={disabled || isLoading}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {schoolTypes && schoolTypes.length > 0 ? (
-          schoolTypes.map((type: SchoolType) => (
-            <SelectItem key={type.id} value={type.id}>
-              {type.name}
-            </SelectItem>
-          ))
-        ) : (
-          <SelectItem value="none" disabled>
-            Məktəb növləri tapılmadı
-          </SelectItem>
-        )}
-      </SelectContent>
-    </Select>
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormControl>
+            <Select
+              disabled={disabled}
+              value={field.value}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger className={error ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Məktəb tipi seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {schoolTypes && schoolTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormControl>
+          {error && <FormMessage>{error}</FormMessage>}
+        </FormItem>
+      )}
+    />
   );
 };
 

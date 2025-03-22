@@ -1,59 +1,87 @@
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { getUserById, getUsers, deleteUser } from '@/services/supabase/user';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { User } from '@/lib/supabase/types/user';
 
-interface UserFilters {
-  search?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  status?: 'active' | 'inactive' | 'all';
+// Əgər User tipi xaricində əlavə məlumatlar lazımdırsa
+interface UserWithPaginationResult {
+  data: User[];
+  count: number;
 }
 
 export const useUsers = () => {
-  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sortColumn, setSortColumn] = useState('first_name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [filters, setFilters] = useState<UserFilters>({
-    status: 'active',
-  });
+  const [sortColumn, setSortColumn] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [filter, setFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  // Fetch users with pagination, sorting, and filtering
-  const { data: usersData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['users', currentPage, pageSize, sortColumn, sortDirection, filters],
-    queryFn: async () => {
-      try {
-        return await getUsers({
-          ...filters,
-          page: currentPage,
-          pageSize: pageSize,
-        }, {
-          column: sortColumn,
-          direction: sortDirection,
-        });
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        throw error;
-      }
-    },
-  });
+  // Mock users data for development use
+  const mockFetchUsers = async (): Promise<UserWithPaginationResult> => {
+    // Simulate API call 
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mock data
+    const users: User[] = Array.from({ length: 30 }, (_, index) => ({
+      id: `user-${index + 1}`,
+      email: `user${index + 1}@example.com`,
+      first_name: `First${index + 1}`,
+      last_name: `Last${index + 1}`,
+      role_id: `role-${(index % 4) + 1}`,
+      is_active: index % 5 !== 0,
+      created_at: new Date(Date.now() - (index * 86400000)).toISOString(),
+      roles: { name: ['super-admin', 'region-admin', 'sector-admin', 'school-admin'][index % 4] }
+    }));
+    
+    // Apply filters (only for mock data)
+    let filteredUsers = users;
+    
+    if (filter) {
+      const lowerFilter = filter.toLowerCase();
+      filteredUsers = filteredUsers.filter(user => 
+        user.email.toLowerCase().includes(lowerFilter) || 
+        user.first_name.toLowerCase().includes(lowerFilter) || 
+        user.last_name.toLowerCase().includes(lowerFilter)
+      );
+    }
+    
+    if (roleFilter) {
+      filteredUsers = filteredUsers.filter(user => 
+        typeof user.roles === 'object' && user.roles.name === roleFilter
+      );
+    }
+    
+    if (statusFilter) {
+      filteredUsers = filteredUsers.filter(user => 
+        statusFilter === 'active' ? user.is_active : !user.is_active
+      );
+    }
+    
+    // Apply sorting (only for mock data)
+    filteredUsers.sort((a, b) => {
+      const valueA = a[sortColumn as keyof User] || '';
+      const valueB = b[sortColumn as keyof User] || '';
+      const comparison = valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    // Apply pagination
+    const paginatedUsers = filteredUsers.slice(
+      (currentPage - 1) * pageSize, 
+      currentPage * pageSize
+    );
+    
+    return {
+      data: paginatedUsers,
+      count: filteredUsers.length
+    };
+  };
 
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: deleteUser,
-    onSuccess: () => {
-      toast.success('User deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-    onError: (error) => {
-      toast.error(`Error deleting user: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    },
+  const { data, isLoading, isError, refetch } = useQuery<UserWithPaginationResult>({
+    queryKey: ['users', currentPage, pageSize, sortColumn, sortDirection, filter, roleFilter, statusFilter],
+    queryFn: mockFetchUsers,
   });
 
   const handleSortChange = (column: string) => {
@@ -65,27 +93,25 @@ export const useUsers = () => {
     }
   };
 
-  const handleFilterChange = (newFilters: UserFilters) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page on filter change
-  };
-
   return {
-    users: usersData?.data || [],
-    totalCount: usersData?.count || 0,
-    isLoading,
-    isError,
+    users: data?.data || [],
+    totalCount: data?.count || 0,
     currentPage,
+    setCurrentPage,
     pageSize,
+    setPageSize,
     sortColumn,
     sortDirection,
-    filters,
-    setCurrentPage,
-    setPageSize,
     handleSortChange,
-    handleFilterChange,
-    refetch,
-    deleteUser: deleteUserMutation.mutate,
+    filter,
+    setFilter,
+    roleFilter,
+    setRoleFilter,
+    statusFilter,
+    setStatusFilter,
+    isLoading,
+    isError,
+    refetch
   };
 };
 

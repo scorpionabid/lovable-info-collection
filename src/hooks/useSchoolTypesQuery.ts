@@ -14,13 +14,12 @@ export function useSchoolTypesQuery() {
         throw error;
       }
       
-      if (!data) {
+      if (!data || !Array.isArray(data)) {
         return [];
       }
       
       // RPC cavabını SchoolType[] formatına dəyişmək
-      const schoolTypesArray = data as any[];
-      return schoolTypesArray.map((item: any) => ({
+      return data.map((item: any) => ({
         id: item.id,
         name: item.name,
         description: item.description || '' // Əgər description gəlmirsə boş string istifadə edirik
