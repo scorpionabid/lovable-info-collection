@@ -7,6 +7,7 @@ export type { Region, RegionWithStats, RegionFilters, CreateRegionDto, UpdateReg
 export type { Sector, SectorWithStats, SectorFilters, CreateSectorDto, UpdateSectorDto } from './sector';
 export type { School, SchoolType, SchoolFilter, SchoolSortParams, CreateSchoolDto, UpdateSchoolDto, SchoolWithStats } from './school';
 export type { User, UserWithRole, UserFilters, CreateUserDto, UpdateUserDto, Role, UserRole, UserRoleClaims } from './user';
+export type { CategoryAssignment, CategoryStatus, CategoryFilter, Category, CategoryColumn, CreateCategoryDto, UpdateCategoryDto, CreateColumnDto, UpdateColumnDto, CategoryStats, CategoryData, ExtendedColumnData } from './category';
 
 // Common interfaces used across multiple entity types
 export interface FilterParams {
@@ -23,6 +24,8 @@ export interface FilterParams {
   // For backward compatibility
   regionId?: string;
   sectorId?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface SortParams {

@@ -11,19 +11,19 @@ import {
 } from '@/lib/supabase/services/regions';
 
 // Import types
-import { 
+import type { 
   Region, 
   RegionWithStats, 
   CreateRegionDto, 
   UpdateRegionDto, 
   RegionFilters 
-} from '@/lib/supabase/types/region';
+} from '@/lib/supabase/types';
 
 // Helper function to get regions for dropdown menus
 export const getRegionsForDropdown = async (): Promise<{ id: string; name: string; }[]> => {
   try {
     const regions = await getRegions();
-    return (regions?.data || []).map(region => ({
+    return (regions || []).map(region => ({
       id: region.id,
       name: region.name
     }));
@@ -41,7 +41,9 @@ export {
   updateRegion,
   deleteRegion,
   getSectorsByRegion,
-  archiveRegion,
+  archiveRegion
+};
+export type {
   Region,
   RegionWithStats,
   CreateRegionDto,

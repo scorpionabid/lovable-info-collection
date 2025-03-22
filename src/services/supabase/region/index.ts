@@ -23,7 +23,7 @@ import {
 export const getRegionsForDropdown = async (): Promise<{ id: string; name: string; }[]> => {
   try {
     const regions = await getRegions();
-    return (regions?.data || []).map(region => ({
+    return (regions || []).map(region => ({
       id: region.id,
       name: region.name
     }));
