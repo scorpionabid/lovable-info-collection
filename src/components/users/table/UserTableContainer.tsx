@@ -1,167 +1,154 @@
 
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { User } from "@/services/userService";
-import { UserTableHeader } from "./UserTableHeader";
-import { UserTableRow } from "./UserTableRow";
-import { toast } from "sonner";
-import userService from "@/services/userService";
+import React, { useState } from 'react';
+import { User } from '@/lib/supabase/types/user';
+import { UserTableHeader } from './UserTableHeader';
+import { UserTableRow } from './UserTableRow';
+import { Button } from '@/components/ui/button';
+import { useUserTable } from '../hooks/useUserTable';
+import { Pagination } from '@/components/ui/pagination';
 
 interface UserTableContainerProps {
   users: User[];
-  selectedRows: string[];
-  onSelectedRowsChange: (rows: string[]) => void;
-  onRefetch: () => void;
+  totalCount?: number;
+  currentPage: number;
+  pageSize: number;
+  sortColumn: string;
+  sortDirection: 'asc' | 'desc';
+  isLoading: boolean;
+  isError: boolean;
+  onSortChange: (column: string) => void;
+  onPageChange: (page: number) => void;
+  onRefresh: () => void;
+  onViewUser: (user: User) => void;
+  onEditUser: (user: User) => void;
+  onDeleteUser: (userId: string) => void;
 }
 
-export const UserTableContainer = ({ 
-  users, 
-  selectedRows, 
-  onSelectedRowsChange,
-  onRefetch
-}: UserTableContainerProps) => {
-  const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+export const UserTableContainer: React.FC<UserTableContainerProps> = ({
+  users,
+  totalCount = 0,
+  currentPage,
+  pageSize,
+  sortColumn,
+  sortDirection,
+  isLoading,
+  isError,
+  onSortChange,
+  onPageChange,
+  onRefresh,
+  onViewUser,
+  onEditUser,
+  onDeleteUser,
+}) => {
+  const { columns, getSortIcon } = useUserTable();
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  // Table actions
-  const deleteUserMutation = useMutation({
-    mutationFn: (userId: string) => userService.deleteUser(userId),
-    onSuccess: () => {
-      toast.success("İstifadəçi uğurla silindi");
-      onRefetch();
-    },
-    onError: (error) => {
-      toast.error(`Silinmə xətası: ${(error as Error).message}`);
-    }
-  });
-
-  const blockUserMutation = useMutation({
-    mutationFn: (userId: string) => userService.blockUser(userId),
-    onSuccess: () => {
-      toast.success("İstifadəçi uğurla bloklandı");
-      onRefetch();
-    },
-    onError: (error) => {
-      toast.error(`Bloklama xətası: ${(error as Error).message}`);
-    }
-  });
-
-  const activateUserMutation = useMutation({
-    mutationFn: (userId: string) => userService.activateUser(userId),
-    onSuccess: () => {
-      toast.success("İstifadəçi uğurla aktivləşdirildi");
-      onRefetch();
-    },
-    onError: (error) => {
-      toast.error(`Aktivləşdirmə xətası: ${(error as Error).message}`);
-    }
-  });
-
-  const resetPasswordMutation = useMutation({
-    mutationFn: (userId: string) => userService.resetPassword(userId),
-    onSuccess: () => {
-      toast.success("Şifrə sıfırlama linki göndərildi");
-    },
-    onError: (error) => {
-      toast.error(`Şifrə sıfırlama xətası: ${(error as Error).message}`);
-    }
-  });
-
-  // Sorting logic
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedUsers(users.map(user => user.id));
     } else {
-      setSortField(field);
-      setSortDirection('asc');
+      setSelectedUsers([]);
     }
   };
 
-  // Manual sorting implementation
-  const sortUsers = (users: User[], field: string | null, direction: 'asc' | 'desc') => {
-    if (!field) return users;
+  const handleSelectUser = (userId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedUsers(prev => [...prev, userId]);
+    } else {
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
+    }
+  };
+
+  const renderEmptyState = () => (
+    <tr>
+      <td colSpan={columns.length + 1} className="px-6 py-4 text-center text-gray-500">
+        {isError ? (
+          <div>
+            <p>Error loading users.</p>
+            <Button variant="outline" size="sm" onClick={onRefresh} className="mt-2">
+              Try Again
+            </Button>
+          </div>
+        ) : (
+          'No users found.'
+        )}
+      </td>
+    </tr>
+  );
+
+  const renderLoadingState = () => (
+    <tr>
+      <td colSpan={columns.length + 1} className="px-6 py-4 text-center">
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+          <span className="ml-2">Loading...</span>
+        </div>
+      </td>
+    </tr>
+  );
+
+  // Helper function to get role name from user
+  const getRoleName = (user: User): string => {
+    const roleValue = user.role || user.roles;
     
-    return [...users].sort((a, b) => {
-      let valueA, valueB;
-      
-      switch (field) {
-        case 'name':
-          valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
-          valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
-          break;
-        case 'email':
-          valueA = a.email.toLowerCase();
-          valueB = b.email.toLowerCase();
-          break;
-        case 'role':
-          valueA = a.roles?.name || '';
-          valueB = b.roles?.name || '';
-          break;
-        case 'lastLogin':
-          valueA = a.last_login || '';
-          valueB = b.last_login || '';
-          break;
-        case 'status':
-          valueA = a.is_active ? 'active' : 'inactive';
-          valueB = b.is_active ? 'active' : 'inactive';
-          break;
-        default:
-          return 0;
-      }
-      
-      if (valueA < valueB) return direction === 'asc' ? -1 : 1;
-      if (valueA > valueB) return direction === 'asc' ? 1 : -1;
-      return 0;
-    });
+    if (typeof roleValue === 'object' && roleValue) {
+      return roleValue.name || '';
+    }
+    
+    return String(roleValue || '');
   };
 
-  const sortedUsers = sortUsers(users, sortField, sortDirection);
-
-  // Select/deselect all rows
-  const handleSelectAll = () => {
-    if (selectedRows.length === users.length) {
-      onSelectedRowsChange([]);
-    } else {
-      onSelectedRowsChange(users.map(user => user.id));
-    }
-  };
-
-  // Handle individual row selection
-  const handleSelectRow = (userId: string) => {
-    if (selectedRows.includes(userId)) {
-      onSelectedRowsChange(selectedRows.filter(id => id !== userId));
-    } else {
-      onSelectedRowsChange([...selectedRows, userId]);
-    }
+  // Render pagination controls
+  const renderPagination = () => {
+    const totalPages = Math.ceil(totalCount / pageSize);
+    
+    if (totalPages <= 1) return null;
+    
+    return (
+      <Pagination 
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+      />
+    );
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div className="overflow-x-auto rounded-md border">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <UserTableHeader 
-          onSelectAll={handleSelectAll}
-          allSelected={selectedRows.length === users.length && users.length > 0}
-          hasUsers={users.length > 0}
-          onSort={handleSort}
-          sortField={sortField}
+          columns={columns}
+          sortColumn={sortColumn}
           sortDirection={sortDirection}
+          onSelectAll={handleSelectAll}
+          allSelected={users.length > 0 && selectedUsers.length === users.length}
+          onSortChange={onSortChange}
+          getSortIcon={getSortIcon}
         />
-        <tbody className="bg-white divide-y divide-gray-200">
-          {sortedUsers.map((user) => (
-            <UserTableRow 
-              key={user.id} 
-              user={user}
-              isSelected={selectedRows.includes(user.id)}
-              onSelectRow={handleSelectRow}
-              onDelete={(id) => deleteUserMutation.mutate(id)}
-              onBlock={(id) => blockUserMutation.mutate(id)}
-              onActivate={(id) => activateUserMutation.mutate(id)}
-              onResetPassword={(id) => resetPasswordMutation.mutate(id)}
-              onRefetch={onRefetch}
-            />
-          ))}
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+          {isLoading ? (
+            renderLoadingState()
+          ) : users.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            users.map(user => (
+              <UserTableRow
+                key={user.id}
+                user={user}
+                selected={selectedUsers.includes(user.id)}
+                onSelect={handleSelectUser}
+                onView={() => onViewUser(user)}
+                onEdit={() => onEditUser(user)}
+                onDelete={() => onDeleteUser(user.id)}
+              />
+            ))
+          )}
         </tbody>
       </table>
+      
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        {renderPagination()}
+      </div>
     </div>
   );
 };

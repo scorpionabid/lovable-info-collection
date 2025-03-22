@@ -1,164 +1,134 @@
 
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { useRegionData } from './hooks/useRegionData';
-import { RegionFilterPanel } from './RegionFilterPanel';
+import { useState, useCallback } from 'react';
 import { RegionTable } from './table/RegionTable';
+import { RegionToolbar } from './RegionToolbar';
+import { RegionFilterPanel } from './RegionFilterPanel';
 import { RegionModal } from './RegionModal';
-import { Plus, Filter } from 'lucide-react';
-import { Skeleton } from "@/components/ui/skeleton";
-import { FilterBar } from "@/components/shared/FilterBar";
-import { RegionExportModal } from './RegionExportModal';
-import { type RegionWithStats } from '@/lib/supabase/types';
+import { useRegionsData } from './hooks/useRegionsData';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
-const RegionsOverview = () => {
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState<RegionWithStats | null>(null);
-  const [filters, setFilters] = useState({
-    search: '',
-    status: 'active' as const
-  });
-  const [currentPage, setCurrentPage] = useState(1);
+export const RegionsOverview = () => {
   const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'active' as const,
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  const queryClient = useQueryClient();
 
-  const { 
-    regionsData, 
-    isLoading, 
-    isError, 
-    refetch 
-  } = useRegionData({
+  // Fetch regions data
+  const { regionsData, isLoading, isError, refetch } = useRegionsData({
     currentPage,
     pageSize,
     sortColumn,
     sortDirection,
-    filters
+    filters,
   });
 
-  const regions = regionsData.data;
-  const totalCount = regionsData.count;
-
-  const toggleFilter = () => {
-    setIsFilterVisible(prev => !prev);
+  // Handle sort change
+  const handleSortChange = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
   };
 
-  const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  // Handle search change
+  const handleSearchChange = (search: string) => {
+    setFilters((prev) => ({ ...prev, search }));
+    setCurrentPage(1);
   };
 
-  const renderLoading = () => (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-32 w-full" />
-    </div>
-  );
+  // Handle filter application
+  const handleApplyFilters = (newFilters: any) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setCurrentPage(1);
+    setShowFilters(false);
+  };
 
-  const renderError = () => (
-    <div className="p-4 text-red-600 bg-red-50 rounded-md">
-      Regionları yükləmək mümkün olmadı. Zəhmət olmasa, yenidən cəhd edin.
-    </div>
-  );
+  // Toggle filter panel
+  const toggleFilters = () => {
+    setShowFilters((prev) => !prev);
+  };
+
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    try {
+      // Use the queryClient to invalidate the regions query instead of calling refetch directly
+      await queryClient.invalidateQueries({ queryKey: ['regions'] });
+      toast.success('Regions data refreshed');
+    } catch (error) {
+      console.error('Error refreshing regions:', error);
+      toast.error('Failed to refresh regions data');
+    }
+  }, [queryClient]);
+
+  // Handle export
+  const handleExport = () => {
+    // Implementation for exporting regions
+    toast.info('Export functionality not implemented yet');
+  };
+
+  // Handle create success
+  const handleCreateSuccess = () => {
+    setIsCreateModalOpen(false);
+    toast.success('Region created successfully');
+    // Refresh the data
+    queryClient.invalidateQueries({ queryKey: ['regions'] });
+  };
+  
+  // Extract the data from the result of useRegionsData
+  const regions = regionsData?.data || [];
+  const totalCount = regionsData?.count || 0;
 
   return (
-    <div>
-      {/* Header with actions */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Regionlar</h1>
-          <p className="text-infoline-dark-gray">Bu bölmədə regionları idarə edə bilərsiniz</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={toggleFilter}>
-            <Filter className="h-4 w-4 mr-2" />
-            Filtrlər
-          </Button>
-          <Button onClick={() => setIsExportModalOpen(true)} variant="outline">
-            İxrac et
-          </Button>
-          <Button onClick={() => setIsModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Region əlavə et
-          </Button>
-        </div>
-      </div>
-
-      {/* Filter bar and filters */}
-      <FilterBar
-        searchValue={filters.search}
-        onSearchChange={(value) => handleFilterChange('search', value)}
-        onSearch={() => refetch()}
-        filterCount={Object.keys(filters).filter(k => filters[k as keyof typeof filters] !== '').length}
-        onClearAll={() => setFilters({ search: '', status: 'active' })}
+    <div className="container mx-auto py-6 space-y-6">
+      <RegionToolbar
+        searchQuery={filters.search}
+        onSearchChange={handleSearchChange}
+        onRefresh={handleRefresh}
+        onExport={handleExport}
+        onCreateRegion={() => setIsCreateModalOpen(true)}
+        onToggleFilters={toggleFilters}
       />
 
-      {isFilterVisible && (
-        <RegionFilterPanel 
-          filters={filters} 
-          onFilterChange={handleFilterChange}
-          onFiltersChange={setFilters} 
-          onFilterApply={() => refetch()}
+      {showFilters && (
+        <RegionFilterPanel
+          onApplyFilters={handleApplyFilters}
+          onClose={toggleFilters}
+          filters={filters}
         />
       )}
 
-      {/* Region data */}
-      {isLoading ? (
-        renderLoading()
-      ) : isError ? (
-        renderError()
-      ) : (
-        <RegionTable 
-          regions={regions}
-          onEdit={(region) => {
-            setSelectedRegion(region);
-            setIsModalOpen(true);
-          }}
-          onDelete={(region) => {
-            // Handle delete logic
-            console.log('Delete region:', region);
-          }}
-          onSort={(column, direction) => {
-            setSortColumn(column);
-            setSortDirection(direction);
-          }}
-          currentSort={{ field: sortColumn, direction: sortDirection }}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          totalItems={totalCount}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
+      <RegionTable
+        regions={regions}
+        totalCount={totalCount}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        setCurrentPage={setCurrentPage}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
+        onSortChange={handleSortChange}
+        isLoading={isLoading}
+        isError={isError}
+        onRefresh={handleRefresh}
+      />
+
+      {isCreateModalOpen && (
+        <RegionModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={handleCreateSuccess}
         />
       )}
-
-      {/* Create/Edit Region Modal */}
-      <RegionModal 
-        isOpen={isModalOpen} 
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedRegion(null);
-        }}
-        mode={selectedRegion ? 'edit' : 'create'}
-        region={selectedRegion || undefined}
-        onSuccess={() => {
-          refetch();
-          setIsModalOpen(false);
-          setSelectedRegion(null);
-        }}
-      />
-
-      {/* Export Modal */}
-      <RegionExportModal 
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        filters={filters}
-      />
     </div>
   );
 };
-
-export default RegionsOverview;

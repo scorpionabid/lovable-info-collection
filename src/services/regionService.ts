@@ -1,5 +1,5 @@
 
-// Import və re-export src/lib/supabase/services/regions faylından
+// Import all functions from the supabase region service
 import {
   getRegions,
   getRegionById,
@@ -10,6 +10,30 @@ import {
   archiveRegion
 } from '@/lib/supabase/services/regions';
 
+// Import types
+import { 
+  Region, 
+  RegionWithStats, 
+  CreateRegionDto, 
+  UpdateRegionDto, 
+  RegionFilters 
+} from '@/lib/supabase/types/region';
+
+// Helper function to get regions for dropdown menus
+export const getRegionsForDropdown = async (): Promise<{ id: string; name: string; }[]> => {
+  try {
+    const regions = await getRegions();
+    return (regions?.data || []).map(region => ({
+      id: region.id,
+      name: region.name
+    }));
+  } catch (error) {
+    console.error('Error fetching regions for dropdown:', error);
+    return [];
+  }
+};
+
+// Re-export all functions and types
 export {
   getRegions,
   getRegionById,
@@ -17,10 +41,15 @@ export {
   updateRegion,
   deleteRegion,
   getSectorsByRegion,
-  archiveRegion
+  archiveRegion,
+  Region,
+  RegionWithStats,
+  CreateRegionDto,
+  UpdateRegionDto,
+  RegionFilters
 };
 
-// Default export üçün servis obyekti
+// Default export for backward compatibility
 const regionService = {
   getRegions,
   getRegionById,
@@ -28,7 +57,8 @@ const regionService = {
   updateRegion,
   deleteRegion,
   getSectorsByRegion,
-  archiveRegion
+  archiveRegion,
+  getRegionsForDropdown
 };
 
 export default regionService;

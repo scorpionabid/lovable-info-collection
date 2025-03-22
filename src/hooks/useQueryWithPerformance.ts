@@ -1,38 +1,73 @@
-/**
- * Adapter hook: köhnə strukturdan yeni strukturaya yönləndirir
- * @deprecated Bu hook köhnə API-ya uyğunluq üçün saxlanılıb. Birbaşa @/lib/supabase/hooks/useSupabaseQuery istifadə edin.
- */
-import { useSupabaseQuery } from '@/lib/supabase/hooks/useSupabaseQuery';
-import { useQuery, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
-import { performanceMonitor } from '@/utils/performanceMonitor';
+
+import { useQuery, QueryKey, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
+import { useRef, useCallback, useEffect } from 'react';
+
+type QueryFn<TData, TKey> = (context: {
+  queryKey: TKey;
+  signal: AbortSignal;
+  meta: Record<string, unknown>;
+}) => Promise<TData>;
 
 export function useQueryWithPerformance<
   TQueryFnData = unknown,
   TError = unknown,
   TData = TQueryFnData,
-  TQueryKey extends unknown[] = unknown[]
+  TQueryKey extends QueryKey = QueryKey
 >(
-  queryName: string,
-  options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>
+  queryKey: TQueryKey,
+  queryFn: QueryFn<TQueryFnData, TQueryKey>,
+  options?: Omit<UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, 'queryKey' | 'queryFn'>
 ): UseQueryResult<TData, TError> {
-  // Orijinal useQuery-ni istifadə edirik, amma performans ölçmələri əlavə edirik
-  return useQuery({
-    ...options,
-    queryFn: async (context) => {
-      const originalQueryFn = options.queryFn;
-      if (!originalQueryFn) throw new Error('queryFn is required');
+  // Store start time
+  const startTimeRef = useRef<number | null>(null);
+  
+  // Function to log performance metrics
+  const logPerformance = useCallback(async (duration: number, success: boolean) => {
+    try {
+      // You can implement performance logging here
+      console.log(`Query ${queryKey.join(':')} took ${duration}ms (${success ? 'success' : 'error'})`);
       
-      return await performanceMonitor.measure(
-        `query:${queryName}`,
-        async () => {
-          return await originalQueryFn(context);
-        },
-        {
-          queryKey: options.queryKey,
-        }
-      );
+      // Example: You could send metrics to a backend service
+      // await fetch('/api/metrics', {
+      //   method: 'POST',
+      //   body: JSON.stringify({
+      //     type: 'query',
+      //     key: queryKey.join(':'),
+      //     duration,
+      //     success
+      //   })
+      // });
+    } catch (error) {
+      console.error('Failed to log performance metrics:', error);
     }
+  }, [queryKey]);
+  
+  // Wrap the query function to measure performance
+  const measuredQueryFn = useCallback(async (context: any) => {
+    startTimeRef.current = performance.now();
+    
+    try {
+      // Traditional function call approach that works with any function
+      const result = await queryFn(context);
+      const duration = performance.now() - (startTimeRef.current || 0);
+      
+      // Log performance for successful queries
+      logPerformance(duration, true);
+      
+      return result;
+    } catch (error) {
+      const duration = performance.now() - (startTimeRef.current || 0);
+      
+      // Log performance for failed queries
+      logPerformance(duration, false);
+      
+      throw error;
+    }
+  }, [queryFn, logPerformance]);
+  
+  return useQuery({
+    queryKey,
+    queryFn: measuredQueryFn,
+    ...options
   });
 }
-
-export default useQueryWithPerformance;

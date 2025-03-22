@@ -1,73 +1,71 @@
 
-import { useState } from 'react';
-import { RegionWithStats } from '@/services/supabase/region';
-import { RegionModal } from './RegionModal';
-import { RegionExportModal } from './RegionExportModal';
-import { useToast } from '@/hooks/use-toast';
-import { RegionHeader } from './details/RegionHeader';
-import { RegionStats } from './details/RegionStats';
-import { RegionCharts } from './details/RegionCharts';
-import { RegionSectors } from './details/RegionSectors';
-import { RegionAdmins } from './details/RegionAdmins';
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RegionWithStats } from '@/lib/supabase/types/region';
+import { RegionStats } from './RegionStats';
+import { SectorTable } from '../sectors/SectorTable';
 
-interface Sector {
-  id: string;
-  name: string;
-  description?: string;
-  schoolCount: number;
-  completionRate: number;
+interface RegionDetailViewProps {
+  region: RegionWithStats;
+  sectors: any[];
+  isLoadingSectors: boolean;
+  onRefresh: () => void;
 }
 
-interface RegionDetailProps {
-  region: RegionWithStats & { userCount?: number };
-  sectors: Sector[];
-  onRegionUpdated: () => void;
-}
-
-export const RegionDetailView = ({ region, sectors, onRegionUpdated }: RegionDetailProps) => {
-  const { toast } = useToast();
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-
-  // Handle edit success
-  const handleEditSuccess = () => {
-    onRegionUpdated();
-    setIsEditModalOpen(false);
-    toast({
-      title: "Region yeniləndi",
-      description: "Region məlumatları uğurla yeniləndi",
-    });
+export const RegionDetailView: React.FC<RegionDetailViewProps> = ({
+  region,
+  sectors,
+  isLoadingSectors,
+  onRefresh
+}) => {
+  // Ensure the region has all required properties with defaults if missing
+  const regionWithDefaults: RegionWithStats = {
+    ...region,
+    // Ensure all required properties are present
+    sectorCount: region.sectorCount || region.sectors_count || 0,
+    schoolCount: region.schoolCount || region.schools_count || 0,
+    completionRate: region.completionRate || region.completion_rate || 0,
+    // Adding additional required properties from Region
+    id: region.id,
+    name: region.name,
+    code: region.code || '',
+    created_at: region.created_at,
+    // Optional properties with defaults
+    description: region.description || '',
+    updated_at: region.updated_at,
+    archived: region.archived || false
   };
 
   return (
     <div className="space-y-6">
-      <RegionHeader 
-        region={region} 
-        onEdit={() => setIsEditModalOpen(true)} 
-        onExport={() => setIsExportModalOpen(true)} 
-      />
-      
-      <RegionStats region={region} />
-      
-      <RegionCharts region={region} />
-      
-      <RegionSectors sectors={sectors} regionId={region.id} />
-      
-      <RegionAdmins />
-      
-      <RegionModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-        mode="edit"
-        region={region}
-        onSuccess={handleEditSuccess}
-      />
-      
-      <RegionExportModal 
-        isOpen={isExportModalOpen} 
-        onClose={() => setIsExportModalOpen(false)} 
-        region={region}
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Region: {regionWithDefaults.name}</CardTitle>
+          <CardDescription>
+            {regionWithDefaults.description || 'No description available'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RegionStats region={regionWithDefaults} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sectors in this Region</CardTitle>
+          <CardDescription>
+            View and manage all sectors in {regionWithDefaults.name}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SectorTable 
+            sectors={sectors}
+            isLoading={isLoadingSectors}
+            onRefresh={onRefresh}
+            regionId={regionWithDefaults.id}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 };

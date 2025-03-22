@@ -1,5 +1,5 @@
 
-import { Tables } from '@/types/supabase';
+import { Tables } from "./shared";
 
 // Base Region type from the database
 export type Region = Tables<'regions'> & {
@@ -25,7 +25,8 @@ export interface RegionWithStats extends Region {
   teacherCount?: number; 
   userCount?: number;   
   completionRate: number;
-  status?: string;      
+  status?: string;
+  archived?: boolean;
   // Support older property names for backward compatibility
   sectors_count?: number;
   schools_count?: number;

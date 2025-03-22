@@ -1,189 +1,138 @@
 
 import React, { useState } from 'react';
-import { User } from '@/lib/supabase/types';
+import { MoreHorizontal, Edit, Trash2, RefreshCw, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Edit, Lock, PowerOff, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useUserMutation } from '@/hooks/users/useUserMutation';
-import { toast } from 'sonner';
+import { User } from '@/lib/supabase/types/user';
 
 interface UserActionsProps {
   user: User;
-  onClose: () => void;
+  onEdit: () => void;
+  onDeleted: () => void;
 }
 
-export const UserActions: React.FC<UserActionsProps> = ({ user, onClose }) => {
-  const [deleteDialog, setDeleteDialog] = useState(false);
-  const [passwordResetDialog, setPasswordResetDialog] = useState(false);
-  const [statusChangeDialog, setStatusChangeDialog] = useState(false);
+export const UserActions: React.FC<UserActionsProps> = ({ user, onEdit, onDeleted }) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   
-  const { updateUser, deleteUser, resetUserPassword, isLoading } = useUserMutation();
-  
-  const handleEdit = () => {
-    // Just close the view modal, parent component should handle opening edit modal
-    onClose();
+  // Get mutation functions
+  const { 
+    updateUser, 
+    deleteUser, 
+    resetUserPassword,
+    isLoading 
+  } = useUserMutation();
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    await deleteUser(user.id);
+    setIsDeleteDialogOpen(false);
+    onDeleted();
   };
-  
-  const handleDelete = async () => {
-    try {
-      await deleteUser(user.id);
-      toast.success('İstifadəçi uğurla silindi');
-      setDeleteDialog(false);
-      onClose();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error('İstifadəçi silinərkən xəta baş verdi');
-    }
-  };
-  
+
+  // Handle reset password
   const handleResetPassword = async () => {
-    try {
-      await resetUserPassword(user.id);
-      toast.success('Şifrə sıfırlama e-poçtu göndərildi');
-      setPasswordResetDialog(false);
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error('Şifrə sıfırlanarkən xəta baş verdi');
-    }
+    await resetUserPassword(user.id);
+    setIsResetPasswordDialogOpen(false);
   };
-  
+
+  // Handle toggle user status
   const handleToggleStatus = async () => {
-    try {
-      await updateUser(user.id, { is_active: !user.is_active });
-      toast.success(user.is_active 
-        ? 'İstifadəçi uğurla deaktiv edildi' 
-        : 'İstifadəçi uğurla aktiv edildi'
-      );
-      setStatusChangeDialog(false);
-      onClose();
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      toast.error('İstifadəçi statusu yenilərkən xəta baş verdi');
-    }
+    await updateUser(user.id, { is_active: !user.is_active });
   };
 
   return (
     <>
-      <Card className="mt-4">
-        <CardContent className="space-y-2 pt-6">
-          <Button 
-            variant="outline" 
-            className="w-full flex justify-start" 
-            onClick={handleEdit}
-          >
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onEdit}>
             <Edit className="mr-2 h-4 w-4" />
-            Redaktə etmək
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="w-full flex justify-start" 
-            onClick={() => setPasswordResetDialog(true)}
-          >
-            <Lock className="mr-2 h-4 w-4" />
-            Şifrəni sıfırla
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className={`w-full flex justify-start ${
-              user.is_active ? 'text-red-500 hover:text-red-600' : 'text-green-500 hover:text-green-600'
-            }`}
-            onClick={() => setStatusChangeDialog(true)}
-          >
-            <PowerOff className="mr-2 h-4 w-4" />
-            {user.is_active ? 'Deaktiv et' : 'Aktiv et'}
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="w-full flex justify-start text-red-500 hover:text-red-600" 
-            onClick={() => setDeleteDialog(true)}
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setIsResetPasswordDialogOpen(true)}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Reset Password
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleToggleStatus}>
+            {user.is_active ? (
+              <>
+                <X className="mr-2 h-4 w-4 text-red-500" />
+                Deactivate
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4 text-green-500" />
+                Activate
+              </>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem 
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="text-red-500 focus:text-red-500"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Sil
-          </Button>
-        </CardContent>
-      </Card>
-      
-      {/* Delete Dialog */}
-      <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>İstifadəçini silmək istədiyinizə əminsiniz?</AlertDialogTitle>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu əməliyyat geri qaytarıla bilməz. Bu istifadəçi və bütün əlaqəli məlumatlar daimi olaraq silinəcək.
+              Are you sure you want to delete this user? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Ləğv et</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDelete} 
+              onClick={handleDeleteUser} 
               disabled={isLoading}
               className="bg-red-500 hover:bg-red-600"
             >
-              {isLoading ? 'Silinir...' : 'Sil'}
+              {isLoading ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-      {/* Password Reset Dialog */}
-      <AlertDialog open={passwordResetDialog} onOpenChange={setPasswordResetDialog}>
+
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Şifrəni sıfırlamaq istədiyinizə əminsiniz?</AlertDialogTitle>
+            <AlertDialogTitle>Reset Password</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu istifadəçiyə şifrəni sıfırlamaq üçün təlimatları olan bir e-poçt göndəriləcək.
+              Are you sure you want to reset the password for this user? 
+              They will receive an email with instructions to set a new password.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Ləğv et</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleResetPassword} 
               disabled={isLoading}
             >
-              {isLoading ? 'Göndərilir...' : 'Şifrəni sıfırla'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Status Change Dialog */}
-      <AlertDialog open={statusChangeDialog} onOpenChange={setStatusChangeDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              İstifadəçini {user.is_active ? 'deaktiv etmək' : 'aktiv etmək'} istədiyinizə əminsiniz?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {user.is_active 
-                ? 'Deaktiv edildikdən sonra istifadəçi sistemə daxil ola bilməyəcək.' 
-                : 'Aktiv edildikdən sonra istifadəçi sistemə daxil ola biləcək.'
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Ləğv et</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleToggleStatus} 
-              disabled={isLoading}
-              className={user.is_active ? "bg-red-500 hover:bg-red-600" : ""}
-            >
-              {isLoading 
-                ? (user.is_active ? 'Deaktiv edilir...' : 'Aktiv edilir...')
-                : (user.is_active ? 'Deaktiv et' : 'Aktiv et')
-              }
+              {isLoading ? 'Sending...' : 'Reset Password'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

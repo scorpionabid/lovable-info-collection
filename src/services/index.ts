@@ -1,15 +1,37 @@
-/**
- * Mərkəzi export nöqtəsi bütün servis funksionallığı üçün
- * @deprecated Birbaşa @/lib/supabase istifadə edin.
- */
 
-// Bütün servisləri yenidən ixrac edirik
-export * from '@/lib/supabase';
+// Re-export all services for easier imports
+export * from './categoryService';
+export * from './regionService';
+export * from './schoolService';
+export * from './sectorService';
 
-// Supabase klienti və konfiqurasiyasını ixrac edirik
-export { supabase } from '@/lib/supabase/client';
-export { 
-  SUPABASE_URL, 
-  SUPABASE_ANON_KEY, 
-  CACHE_CONFIG 
-} from '@/lib/supabase/config';
+// Create a service for accessing school types
+export const createSchool = async (data: any) => {
+  const { createSchool } = await import('./schoolService');
+  return createSchool(data);
+};
+
+export const updateSchool = async (id: string, data: any) => {
+  const { updateSchool } = await import('./schoolService');
+  return updateSchool(id, data);
+};
+
+export const createUser = async (data: any) => {
+  const { createUser } = await import('@/lib/supabase/services/users');
+  return createUser(data);
+};
+
+export const updateUser = async (id: string, data: any) => {
+  const { updateUser } = await import('@/lib/supabase/services/users');
+  return updateUser(id, data);
+};
+
+export const deleteUser = async (id: string) => {
+  const { deleteUser } = await import('@/lib/supabase/services/users');
+  return deleteUser(id);
+};
+
+export const resetUserPassword = async (id: string) => {
+  const { resetPassword } = await import('@/lib/supabase/services/users');
+  return resetPassword(id);
+};

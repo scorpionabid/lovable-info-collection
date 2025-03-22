@@ -1,5 +1,13 @@
 
-import { Tables } from '@/types/supabase';
+import { Tables } from "./shared";
+
+// Role interface
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  permissions?: string[] | any;
+}
 
 // Base User type from the database
 export interface User {
@@ -18,22 +26,23 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   last_login?: string;
-  role?: string;
-  userRole?: string;
   
-  // Backward compatibility fields to support `roles` property
-  // These should be used as User.role, but some components use User.roles
-  roles?: string;
+  // For backward compatibility (either role or roles can be used)
+  role?: string | Role;
+  roles?: string | Role;
   
-  // Organization entities names
+  // Organizational relationship names
   region?: string;
   sector?: string;
   school?: string;
+  
+  // Permissions for authenticated users
+  permissions?: string[];
 }
 
 // User with role information
 export interface UserWithRole extends User {
-  role: string;
+  role: string | Role;
 }
 
 // User filters for API requests
@@ -76,4 +85,19 @@ export interface UpdateUserDto {
   utis_code?: string;
   is_active?: boolean;
   avatar_url?: string;
+}
+
+// Login credentials
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+// User role enum for TypeScript
+export enum UserRole {
+  SuperAdmin = 'super-admin',
+  RegionAdmin = 'region-admin',
+  SectorAdmin = 'sector-admin',
+  SchoolAdmin = 'school-admin',
+  Unknown = 'unknown'
 }

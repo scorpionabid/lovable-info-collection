@@ -1,93 +1,14 @@
 
-// Core types for consistent usage across the application
-export interface Region {
-  id: string;
-  name: string;
-  code?: string;
-  description?: string;
-  created_at: string;
-  updated_at?: string;
-}
+// Export the shared utilities
+export * from './shared';
 
-export interface RegionWithStats extends Region {
-  sectorCount?: number;
-  schoolCount?: number;
-  studentCount?: number;
-  teacherCount?: number;
-  completionRate?: number;
-  // For backward compatibility
-  sectors_count?: number;
-  schools_count?: number;
-  completion_rate?: number;
-}
+// Export all types from the individual files
+export * from './region';
+export * from './sector';
+export * from './school';
+export * from './user';
 
-export interface Sector {
-  id: string;
-  name: string;
-  region_id: string;
-  description?: string;
-  archived?: boolean;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface School {
-  id: string;
-  name: string;
-  code?: string;
-  region_id: string;
-  sector_id: string;
-  type_id?: string;
-  address?: string;
-  director?: string;
-  email?: string;
-  phone?: string;
-  student_count?: number;
-  teacher_count?: number;
-  status?: string;
-  created_at: string;
-  updated_at?: string;
-  archived: boolean;
-  // Virtual/derived fields
-  completionRate?: number;
-  type?: string;
-  region?: string;
-  sector?: string;
-}
-
-export interface User {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  role_id?: string;
-  region_id?: string;
-  sector_id?: string;
-  school_id?: string;
-  utis_code?: string;
-  is_active: boolean;
-  avatar_url?: string;
-  created_at?: string;
-  updated_at?: string;
-  last_login?: string;
-  role?: string;
-  userRole?: string;
-}
-
-export interface UserRoleClaims extends User {
-  app_metadata?: {
-    claims?: {
-      roles?: string[] | string;
-    }
-  }
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
+// Common interfaces used across multiple entity types
 export interface FilterParams {
   search?: string;
   region_id?: string;

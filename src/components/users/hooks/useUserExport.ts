@@ -1,60 +1,44 @@
 
-import { User } from '@/lib/supabase/types';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
+import { User } from '@/lib/supabase/types/user';
+import * as xlsx from 'xlsx';
 
 export const useUserExport = () => {
-  const [isExporting, setIsExporting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const exportUsers = async (users: User[]) => {
+  const exportToExcel = async (users: User[], fileName = 'users-export.xlsx') => {
     try {
-      setIsExporting(true);
+      setLoading(true);
       
-      // Format users data for export
-      const formattedUsers = users.map(user => ({
-        'Full Name': `${user.first_name} ${user.last_name}`,
+      // Map users to a format appropriate for export
+      const data = users.map(user => ({
+        'First Name': user.first_name,
+        'Last Name': user.last_name,
         'Email': user.email,
-        'Phone': user.phone || 'N/A',
-        'Role': user.roles?.name || 'Unknown',
-        'Active': user.is_active ? 'Yes' : 'No',
-        'UTIS Code': user.utis_code || 'N/A',
-        'Last Login': user.last_login 
-          ? new Date(user.last_login).toLocaleString() 
-          : 'Never logged in'
+        'Phone': user.phone || '',
+        'Role': user.role || '', // Use role instead of roles
+        'UTIS Code': user.utis_code || '',
+        'Status': user.is_active ? 'Active' : 'Inactive',
+        'Last Login': user.last_login ? new Date(user.last_login).toLocaleString() : 'Never',
+        'Created At': user.created_at ? new Date(user.created_at).toLocaleString() : ''
       }));
       
-      // Create a worksheet
-      const worksheet = XLSX.utils.json_to_sheet(formattedUsers);
+      // Create workbook and worksheet
+      const workbook = xlsx.utils.book_new();
+      const worksheet = xlsx.utils.json_to_sheet(data);
       
-      // Create a workbook
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+      // Add worksheet to workbook
+      xlsx.utils.book_append_sheet(workbook, worksheet, 'Users');
       
-      // Generate Excel file
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      
-      // Create a Blob from the buffer
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `users_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      
-      // Clean up
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Write to file and trigger download
+      xlsx.writeFile(workbook, fileName);
     } catch (error) {
-      console.error('Export error:', error);
+      console.error('Error exporting users:', error);
+      throw error;
     } finally {
-      setIsExporting(false);
+      setLoading(false);
     }
   };
-
-  return { exportUsers, isExporting };
+  
+  return { exportToExcel, loading };
 };

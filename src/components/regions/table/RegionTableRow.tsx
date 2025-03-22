@@ -1,7 +1,7 @@
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, Eye, Edit, Trash } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,70 +9,87 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { RegionWithStats } from '@/lib/supabase/types';
+} from '@/components/ui/dropdown-menu';
+import { RegionWithStats } from '@/lib/supabase/types/region';
 import { Link } from 'react-router-dom';
 
 interface RegionTableRowProps {
   region: RegionWithStats;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit: (region: RegionWithStats) => void;
+  onDelete: (regionId: string) => void;
+  onView: (regionId: string) => void;
 }
 
-export const RegionTableRow: React.FC<RegionTableRowProps> = ({ region, onEdit, onDelete }) => {
-  const formatNumber = (num: number) => {
-    return num.toLocaleString();
+export const RegionTableRow: React.FC<RegionTableRowProps> = ({
+  region,
+  onEdit,
+  onDelete,
+  onView,
+}) => {
+  const formatCompletionRate = (rate: number): string => {
+    return `${rate.toFixed(0)}%`;
+  };
+
+  const getStatusBadge = () => {
+    if (region.archived) {
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-800">
+          Archived
+        </Badge>
+      );
+    }
+    
+    if (region.completionRate >= 90 || region.status === 'completed') {
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800">
+          Completed
+        </Badge>
+      );
+    } else if (region.completionRate >= 50 || region.status === 'in-progress') {
+      return (
+        <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+          In Progress
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="bg-red-100 text-red-800">
+          Pending
+        </Badge>
+      );
+    }
   };
 
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm font-medium text-gray-900">
-          <Link to={`/regions/${region.id}`} className="hover:text-indigo-600 hover:underline">
-            {region.name}
-          </Link>
-        </div>
-        {region.code && <div className="text-xs text-gray-500">{region.code}</div>}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">{formatNumber(region.sectorCount)}</div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">{formatNumber(region.schoolCount)}</div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="w-24 bg-gray-200 rounded-full h-2.5">
-          <div 
-            className="bg-blue-600 h-2.5 rounded-full" 
-            style={{ width: `${region.completionRate}%` }}
-          ></div>
-        </div>
-        <div className="text-xs text-gray-500 mt-1">{region.completionRate}%</div>
-      </td>
-      <td className="px-4 py-2">
-        <div className="flex justify-center">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${region.archived ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800'}`}>
-            {region.archived ? 'Archived' : 'Active'}
-          </span>
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+    <tr className="border-b transition-colors hover:bg-muted/20">
+      <td className="py-3 px-4">{region.name}</td>
+      <td className="py-3 px-4">{region.code || '-'}</td>
+      <td className="py-3 px-4">{region.sectorCount}</td>
+      <td className="py-3 px-4">{region.schoolCount}</td>
+      <td className="py-3 px-4">{formatCompletionRate(region.completionRate)}</td>
+      <td className="py-3 px-4">{getStatusBadge()}</td>
+      <td className="py-3 px-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Əməliyyatlar</DropdownMenuLabel>
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => onEdit()}>
-              <Edit className="mr-2 h-4 w-4" />
-              Redaktə et
+            <DropdownMenuItem onClick={() => onView(region.id)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onDelete()}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Sil
+            <DropdownMenuItem onClick={() => onEdit(region)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDelete(region.id)} className="text-red-600">
+              <Trash className="mr-2 h-4 w-4" />
+              Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

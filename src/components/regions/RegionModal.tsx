@@ -1,152 +1,208 @@
 
-import { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RegionWithStats } from "@/lib/supabase/types";
-import regionService from "@/services/supabase/region";
-import { useToast } from "@/hooks/use-toast";
-import { BasicInfoTab } from './modals/BasicInfoTab';
-import { AdminTab } from './modals/AdminTab';
-import { ConfigTab } from './modals/ConfigTab';
-import { ModalHeader } from './modals/ModalHeader';
-import { ModalFooter } from './modals/ModalFooter';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as regionService from '@/services/supabase/region/index';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
-export interface RegionModalProps {
+// Define schema for region form
+const regionSchema = z.object({
+  name: z.string().min(2, 'Region name is required (min 2 characters)'),
+  code: z.string().optional(),
+  description: z.string().optional(),
+});
+
+type RegionFormValues = z.infer<typeof regionSchema>;
+
+interface RegionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'create' | 'edit';
-  region?: RegionWithStats;
+  regionId?: string;
   onSuccess?: () => void;
 }
 
-export const RegionModal = ({ isOpen, onClose, mode, region, onSuccess }: RegionModalProps) => {
+export const RegionModal: React.FC<RegionModalProps> = ({
+  isOpen,
+  onClose,
+  regionId,
+  onSuccess,
+}) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("basic");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    description: '',
-    adminId: '',
+  const queryClient = useQueryClient();
+  const isEditMode = !!regionId;
+  
+  // Form setup
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<RegionFormValues>({
+    resolver: zodResolver(regionSchema),
+    defaultValues: {
+      name: '',
+      code: '',
+      description: '',
+    },
   });
-
-  // Initialize form data when modal opens or region changes
-  useEffect(() => {
-    if (mode === 'edit' && region) {
-      setFormData({
-        name: region.name || '',
-        code: region.code || '',
-        description: region.description || '',
-        adminId: '',
-      });
-    } else {
-      // Reset form for create mode
-      setFormData({
-        name: '',
-        code: '',
-        description: '',
-        adminId: '',
-      });
-    }
-  }, [mode, region, isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  
+  // Load region data if in edit mode
+  React.useEffect(() => {
+    const loadRegion = async () => {
+      if (isEditMode && regionId) {
+        try {
+          const regionData = await regionService.getRegionById(regionId);
+          reset({
+            name: regionData.name,
+            code: regionData.code || '',
+            description: regionData.description || '',
+          });
+        } catch (error) {
+          console.error('Error loading region:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load region details',
+            variant: 'destructive',
+          });
+          onClose();
+        }
+      }
+    };
     
-    try {
-      setIsSubmitting(true);
-      
-      if (mode === 'create') {
-        await regionService.createRegion({
-          name: formData.name,
-          code: formData.code,
-          description: formData.description,
-        });
-        
-        toast({
-          title: "Region yaradıldı",
-          description: "Yeni region uğurla yaradıldı",
-        });
-      } else if (mode === 'edit' && region) {
-        await regionService.updateRegion(region.id, {
-          name: formData.name,
-          code: formData.code,
-          description: formData.description,
-        });
-        
-        toast({
-          title: "Region yeniləndi",
-          description: "Region məlumatları uğurla yeniləndi",
-        });
-      }
-      
-      // Call success callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-      // Close the modal
+    if (isOpen) {
+      loadRegion();
+    }
+  }, [isOpen, isEditMode, regionId, reset, toast, onClose]);
+  
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (data: RegionFormValues) => regionService.createRegion(data),
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Region created successfully' });
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+      reset();
       onClose();
-    } catch (error) {
-      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} region:`, error);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: any) => {
       toast({
-        title: "Xəta",
-        description: `Region ${mode === 'create' ? 'yaradılarkən' : 'yenilənərkən'} xəta baş verdi`,
-        variant: "destructive",
+        title: 'Error',
+        description: `Failed to create region: ${error.message}`,
+        variant: 'destructive',
       });
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+  
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: (data: RegionFormValues) => 
+      regionService.updateRegion(regionId as string, data),
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Region updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['regions'] });
+      queryClient.invalidateQueries({ queryKey: ['region', regionId] });
+      reset();
+      onClose();
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: `Failed to update region: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Submit handler
+  const onSubmit = async (data: RegionFormValues) => {
+    if (isEditMode) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
     }
   };
-
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden animate-scale-in">
-        <ModalHeader 
-          title={mode === 'create' ? 'Yeni Region Yarat' : 'Regionu Redaktə Et'}
-          onClose={onClose}
-        />
-        
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="basic">Əsas Məlumatlar</TabsTrigger>
-              <TabsTrigger value="admin">Region Admini</TabsTrigger>
-              <TabsTrigger value="config">Konfiqurasiya</TabsTrigger>
-            </TabsList>
-            
-            <form onSubmit={handleSubmit}>
-              <TabsContent value="basic">
-                <BasicInfoTab formData={formData} handleChange={handleChange} />
-              </TabsContent>
-              
-              <TabsContent value="admin">
-                <AdminTab formData={formData} handleSelectChange={handleSelectChange} />
-              </TabsContent>
-              
-              <TabsContent value="config">
-                <ConfigTab />
-              </TabsContent>
-              
-              <ModalFooter 
-                onClose={onClose}
-                isSubmitting={isSubmitting}
-                mode={mode}
-              />
-            </form>
-          </Tabs>
+    <Modal
+      title={isEditMode ? 'Edit Region' : 'Create New Region'}
+      open={isOpen}
+      onClose={onClose}
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium">
+            Region Name *
+          </label>
+          <Input
+            id="name"
+            {...register('name')}
+            placeholder="Enter region name"
+            error={errors.name?.message}
+          />
+          {errors.name && (
+            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+          )}
         </div>
-      </div>
-    </div>
+        
+        <div>
+          <label htmlFor="code" className="block text-sm font-medium">
+            Region Code
+          </label>
+          <Input
+            id="code"
+            {...register('code')}
+            placeholder="Enter region code (optional)"
+            error={errors.code?.message}
+          />
+          {errors.code && (
+            <p className="text-red-500 text-sm mt-1">{errors.code.message}</p>
+          )}
+        </div>
+        
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium">
+            Description
+          </label>
+          <Textarea
+            id="description"
+            {...register('description')}
+            placeholder="Enter region description (optional)"
+            rows={3}
+            error={errors.description?.message}
+          />
+          {errors.description && (
+            <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+          )}
+        </div>
+        
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
+            {isSubmitting || createMutation.isPending || updateMutation.isPending ? (
+              <>
+                <span className="animate-spin mr-2">⏳</span>
+                {isEditMode ? 'Updating...' : 'Creating...'}
+              </>
+            ) : (
+              <>{isEditMode ? 'Update' : 'Create'}</>
+            )}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
+
+export default RegionModal;

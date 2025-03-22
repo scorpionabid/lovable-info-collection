@@ -1,11 +1,12 @@
 
-import { Tables } from '@/types/supabase';
+import { Tables } from "./shared";
 
 // Base Sector type
 export type Sector = Tables<'sectors'> & {
   code?: string;
   description?: string;
   region?: string;
+  archived?: boolean;
 };
 
 // Filter parameters for sector queries

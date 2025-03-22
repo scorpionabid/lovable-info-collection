@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/supabase/client';
 import { SchoolType } from '@/lib/supabase/types/school';
 
 export interface UseSchoolTypeOptions {
@@ -15,15 +15,21 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
     if (!typeId) return null;
 
     try {
-      // Use a direct SQL query using RPC
+      // Direct query to school_types table
       const { data, error } = await supabase
-        .rpc('get_school_type_by_id', { type_id: typeId });
+        .from('school_types')
+        .select('*')
+        .eq('id', typeId)
+        .single();
 
       if (error) throw error;
       
-      // Make sure we have valid data
-      if (data && typeof data === 'object' && 'id' in data && 'name' in data) {
-        return data as SchoolType;
+      if (data) {
+        return {
+          id: data.id,
+          name: data.name,
+          description: data.description
+        };
       }
       
       return null;
@@ -39,3 +45,5 @@ export const useSchoolType = (options: UseSchoolTypeOptions = {}) => {
     enabled: enabled && !!typeId,
   });
 };
+
+export default useSchoolType;

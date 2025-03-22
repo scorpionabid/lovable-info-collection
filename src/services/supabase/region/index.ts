@@ -1,60 +1,64 @@
-import { supabase } from '@/lib/supabase'; // Fixed import
+
+// Import core types
 import { 
   Region, 
   RegionWithStats, 
   RegionFilters, 
   CreateRegionDto, 
   UpdateRegionDto 
-} from '@/supabase/types'; // Fixed import to use consolidated types
+} from '@/lib/supabase/types';
 
-// Define FilterParams interface for backward compatibility
-export interface FilterParams {
-  search?: string;
-  region_id?: string;
-  status?: 'active' | 'inactive' | 'all';
-  min_completion_rate?: number;
-  max_completion_rate?: number;
-  searchQuery?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  archived?: boolean;
-  completionRate?: string;
-  // For backward compatibility
-  regionId?: string;
-}
+// Import region operations
+import {
+  getRegions,
+  getRegionById,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  getSectorsByRegion,
+  archiveRegion
+} from '@/lib/supabase/services/regions';
 
-// Re-export interfaces for backward compatibility
-export type { Region, RegionWithStats, RegionFilters, CreateRegionDto, UpdateRegionDto };
-
-// Get all regions with pagination, filters and sorting
-export const getRegions = async (
-  filters?: RegionFilters
-): Promise<{ data: RegionWithStats[]; count: number }> => {
+// Helper function to get regions for dropdown menus
+export const getRegionsForDropdown = async (): Promise<{ id: string; name: string; }[]> => {
   try {
-    // Implementation details omitted for brevity
-    return { data: [], count: 0 }; // Placeholder return
+    const regions = await getRegions();
+    return (regions?.data || []).map(region => ({
+      id: region.id,
+      name: region.name
+    }));
   } catch (error) {
-    console.error('Error fetching regions:', error);
-    throw error;
+    console.error('Error fetching regions for dropdown:', error);
+    return [];
   }
 };
 
-// Search regions by name
-export const searchRegions = async (searchTerm: string): Promise<Region[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('regions')
-      .select('*')
-      .ilike('name', `%${searchTerm}%`)
-      .order('name');
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error searching regions:', error);
-    throw error;
-  }
+// Re-export all functions and types
+export {
+  getRegions,
+  getRegionById,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  getSectorsByRegion,
+  archiveRegion,
+  Region,
+  RegionWithStats,
+  CreateRegionDto,
+  UpdateRegionDto,
+  RegionFilters
 };
 
-// Export other region operations
-export * from './regionOperations';
+// Default export for backward compatibility
+const regionModule = {
+  getRegions,
+  getRegionById,
+  createRegion,
+  updateRegion,
+  deleteRegion,
+  getSectorsByRegion,
+  archiveRegion,
+  getRegionsForDropdown
+};
+
+export default regionModule;

@@ -1,98 +1,96 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import * as userService from '@/services/userService';
-import * as regionService from '@/services/regionService';
-import * as sectorService from '@/services/sectorService';
-import * as schoolService from '@/services/schoolService';
+import regionService from '@/services/regionService';
+import sectorService from '@/services/sectorService';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/lib/supabase/types/user';
 
 export const useFilterData = () => {
-  const [roles, setRoles] = useState<any[]>([]);
+  const { user, userRole } = useAuth();
   const [regions, setRegions] = useState<any[]>([]);
   const [sectors, setSectors] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<string>('');
-  const [selectedSector, setSelectedSector] = useState<string>('');
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
   
-  // Fetch roles
-  const { data: rolesData } = useQuery({
-    queryKey: ['roles'],
-    queryFn: userService.getRoles,
-    staleTime: 5 * 60 * 1000 // 5 minutes
+  // Custom function to fetch regions
+  const fetchRegions = async () => {
+    try {
+      const data = await regionService.getRegionsForDropdown();
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching regions:', error);
+      return [];
+    }
+  };
+
+  // Query for regions
+  const regionsQuery = useQuery({
+    queryKey: ['regions', 'dropdown'],
+    queryFn: fetchRegions,
+    enabled: userRole !== UserRole.Unknown
   });
-  
-  // Fetch regions
-  const { data: regionsData } = useQuery({
-    queryKey: ['regions'],
-    queryFn: regionService.getRegionsForDropdown,
-    staleTime: 5 * 60 * 1000 // 5 minutes
+
+  // Set regions from query result
+  useEffect(() => {
+    if (regionsQuery.data) {
+      setRegions(regionsQuery.data);
+    }
+  }, [regionsQuery.data]);
+
+  // Custom function to fetch sectors based on region
+  const fetchSectors = async (regionId: string) => {
+    if (!regionId) return [];
+    
+    try {
+      const sectors = await sectorService.getSectorsByRegionId(regionId);
+      return sectors.map(sector => ({
+        id: sector.id,
+        name: sector.name
+      }));
+    } catch (error) {
+      console.error('Error fetching sectors:', error);
+      return [];
+    }
+  };
+
+  // Query for sectors
+  const sectorsQuery = useQuery({
+    queryKey: ['sectors', 'dropdown', selectedRegionId],
+    queryFn: () => fetchSectors(selectedRegionId || ''),
+    enabled: !!selectedRegionId
   });
-  
-  // Fetch sectors based on selected region
-  const { data: sectorsData } = useQuery({
-    queryKey: ['sectors', selectedRegion],
-    queryFn: () => selectedRegion 
-      ? sectorService.getSectorsByRegionId(selectedRegion)
-      : sectorService.getSectorsForDropdown(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: Boolean(regionsData?.length)
-  });
-  
-  // Fetch schools based on selected sector
-  const { data: schoolsData } = useQuery({
-    queryKey: ['schools', selectedRegion, selectedSector],
-    queryFn: () => {
-      if (selectedSector) {
-        return schoolService.getSchoolsBySectorId(selectedSector);
-      } else if (selectedRegion) {
-        return schoolService.getSchoolsByRegionId(selectedRegion);
-      } else {
-        return schoolService.getSchoolsForDropdown();
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: Boolean(regionsData?.length)
-  });
-  
+
+  // Set sectors from query result
   useEffect(() => {
-    if (rolesData) {
-      setRoles(rolesData);
+    if (sectorsQuery.data && Array.isArray(sectorsQuery.data)) {
+      setSectors(sectorsQuery.data);
     }
-  }, [rolesData]);
-  
-  useEffect(() => {
-    if (regionsData) {
-      setRegions(regionsData);
-    }
-  }, [regionsData]);
-  
-  useEffect(() => {
-    if (sectorsData) {
-      setSectors(sectorsData);
-    }
-  }, [sectorsData]);
-  
-  useEffect(() => {
-    if (schoolsData) {
-      setSchools(schoolsData);
-    }
-  }, [schoolsData]);
-  
-  // Reset selections when region changes
-  useEffect(() => {
-    if (selectedRegion === '') {
-      setSelectedSector('');
-    }
-  }, [selectedRegion]);
-  
+  }, [sectorsQuery.data]);
+
+  // Handle region change
+  const handleRegionChange = (regionId: string) => {
+    setSelectedRegionId(regionId);
+    setSelectedSectorId(null);
+    setSchools([]);
+  };
+
+  // Handle sector change
+  const handleSectorChange = (sectorId: string) => {
+    setSelectedSectorId(sectorId);
+  };
+
   return {
-    roles,
     regions,
     sectors,
     schools,
-    selectedRegion,
-    setSelectedRegion,
-    selectedSector,
-    setSelectedSector
+    selectedRegionId,
+    selectedSectorId,
+    handleRegionChange,
+    handleSectorChange,
+    isLoadingRegions: regionsQuery.isLoading,
+    isLoadingSectors: sectorsQuery.isLoading,
+    isLoadingSchools: false
   };
 };

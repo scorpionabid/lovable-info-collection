@@ -1,18 +1,20 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/supabase/client';
 import { SchoolType } from '@/lib/supabase/types/school';
 
 export const useSchoolTypes = () => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
-      // Use a direct SQL query using RPC
+      // Direct query to school_types table
       const { data, error } = await supabase
-        .rpc('get_school_types');
+        .from('school_types')
+        .select('*')
+        .order('name');
 
       if (error) throw error;
       
-      // Make sure we have valid data
+      // Map the raw data to the SchoolType interface
       if (data && Array.isArray(data)) {
         return data.map(item => ({
           id: item.id,
