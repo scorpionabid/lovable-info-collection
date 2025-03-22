@@ -11,7 +11,7 @@ interface SchoolType {
 export const useSchoolTypesQuery = () => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
-      // RPC funksiyası çağırmaq üçün
+      // RPC funksiyası ilə məlumatları əldə edirik
       const { data, error } = await supabase.rpc('get_school_types');
       
       if (error) {
@@ -19,12 +19,12 @@ export const useSchoolTypesQuery = () => {
         throw error;
       }
       
-      // Əgər data yoxdursa və ya array deyilsə, boş array qaytaraq
+      // Əgər məlumat yoxdursa və ya array deyilsə, boş array qaytarırıq
       if (!data || !Array.isArray(data)) {
         return [];
       }
       
-      // Məlumatları SchoolType formatına çevirmək
+      // Məlumatları SchoolType formatına çeviririk
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,

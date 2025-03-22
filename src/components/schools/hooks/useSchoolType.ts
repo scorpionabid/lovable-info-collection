@@ -13,7 +13,7 @@ export function useSchoolType(id: string | undefined) {
     if (!id) return null;
     
     try {
-      // RPC funksiyası çağırmaq üçün
+      // RPC funksiyası ilə məlumatları əldə edirik
       const { data, error } = await supabase.rpc('get_school_types');
       
       if (error) {
@@ -21,12 +21,12 @@ export function useSchoolType(id: string | undefined) {
         throw error;
       }
       
-      // Data bir array olduğundan əmin olmaq
+      // Əgər məlumat yoxdursa, null qaytarırıq
       if (!data || !Array.isArray(data)) {
         return null;
       }
       
-      // Axtarılan id ilə olan school type-ı tapmaq
+      // Verilmiş ID ilə məktəb növünü tapırıq
       const schoolType = data.find((item: any) => item.id === id);
       
       if (!schoolType) {
@@ -36,7 +36,7 @@ export function useSchoolType(id: string | undefined) {
       return {
         id: schoolType.id,
         name: schoolType.name,
-        description: schoolType.description || '' // Əgər description gəlmirsə boş string istifadə edirik
+        description: schoolType.description || ''
       };
     } catch (error) {
       console.error(`Error fetching school type with ID ${id}:`, error);
@@ -47,7 +47,7 @@ export function useSchoolType(id: string | undefined) {
   return useQuery<SchoolType | null>({
     queryKey: ['schoolType', id],
     queryFn: fetchSchoolType,
-    enabled: !!id // Yalnız ID mövcud olduqda sorğu göndərmək
+    enabled: !!id // Yalnız ID mövcud olduqda sorğu göndəririk
   });
 }
 

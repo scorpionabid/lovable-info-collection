@@ -1,7 +1,10 @@
 
+import { MouseEventHandler } from "react";
+
 export interface SectorToolbarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
-  onCreateClick: () => void;
   onToggleFilters: () => void;
+  onCreateClick: () => void; // Bu xəta verən prop
+  isFilterActive?: boolean;
 }

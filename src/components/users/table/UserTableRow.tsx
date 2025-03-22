@@ -26,6 +26,7 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
 }) => {
   const { id, first_name, last_name, email, role } = user;
   
+  // Null-safety problemini həll edirik
   const roleName = typeof role === 'object' && role !== null ? role.name : typeof role === 'string' ? role : 'Unknown';
   
   // Formatlanmış tarix
