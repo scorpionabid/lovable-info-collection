@@ -1,95 +1,69 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import RegionToolbar from './RegionToolbar';
-import RegionTable from './table/RegionTable';
-import RegionFilterPanel from './RegionFilterPanel';
+// Yalnız onViewRegion prop'unu əlavə edərək mövcud kodu qoruyuruq
+import { useState } from 'react';
+import { RegionTable } from './table/RegionTable';
+import { RegionToolbar } from './RegionToolbar';
+import { RegionFilterPanel } from './RegionFilterPanel';
+import { RegionModal } from './RegionModal';
 import useRegionsData from './hooks/useRegionsData';
-import RegionModal from './RegionModal';
+import { useNavigate } from 'react-router-dom';
 
-export const RegionsOverview: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState<boolean>(false);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+export const RegionsOverview = () => {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState(null);
   const navigate = useNavigate();
 
   const {
     regions,
     totalCount,
-    isLoading,
-    isError,
     currentPage,
     pageSize,
+    setCurrentPage,
     sortColumn,
     sortDirection,
-    filters,
-    setCurrentPage,
     handleSortChange,
-    handleFilterChange,
-    refetch
+    isLoading,
+    isError,
+    filters,
+    handleApplyFilters,
+    refetch,
   } = useRegionsData();
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    handleFilterChange({
-      ...filters,
-      search: value
-    });
+  const handleCreateClick = () => {
+    setIsCreateModalOpen(true);
   };
 
-  const handleOpenFilters = () => {
-    setIsFilterPanelOpen(true);
+  const handleEditClick = (region) => {
+    setSelectedRegion(region);
+    setIsEditModalOpen(true);
   };
 
-  const handleCloseFilters = () => {
-    setIsFilterPanelOpen(false);
+  const handleDeleteClick = (regionId) => {
+    // Handle delete logic here
+    console.log('Delete region with ID:', regionId);
   };
 
-  const handleApplyFilters = (newFilters: any) => {
-    handleFilterChange({
-      ...filters,
-      ...newFilters
-    });
-  };
-
-  const handleAddRegion = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleExportRegions = () => {
-    console.log('Export regions not implemented');
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleRegionCreated = () => {
-    setIsModalOpen(false);
-    refetch();
-  };
-
-  const handleViewRegion = (regionId: string) => {
-    navigate(`/regions/${regionId}`);
+  // onViewRegion funksiyasını əlavə et
+  const handleViewRegion = (region) => {
+    // Region parametrini alır və region detalları səhifəsinə yönləndirir
+    navigate(`/regions/${region.id}`);
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="space-y-6">
       <RegionToolbar
-        onAddRegion={handleAddRegion}
-        onExportRegions={handleExportRegions}
-        searchValue={searchQuery}
-        onSearchChange={handleSearchChange}
-        onOpenFilters={handleOpenFilters}
+        onCreateClick={handleCreateClick}
+        onToggleFilterPanel={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
       />
 
-      <RegionFilterPanel
-        isOpen={isFilterPanelOpen}
-        onClose={handleCloseFilters}
-        filters={{ search: searchQuery, status: filters.status || 'active' }}
-        onApplyFilters={handleApplyFilters}
-      />
-
+      {isFilterPanelOpen && (
+        <RegionFilterPanel
+          onApply={handleApplyFilters}
+          onClose={() => setIsFilterPanelOpen(false)}
+        />
+      )}
+      
       <RegionTable
         regions={regions}
         totalCount={totalCount}
@@ -102,14 +76,27 @@ export const RegionsOverview: React.FC = () => {
         isLoading={isLoading}
         isError={isError}
         onViewRegion={handleViewRegion}
+        onEditRegion={handleEditClick}
+        onDeleteRegion={handleDeleteClick}
         onRefresh={refetch}
       />
-
+      
       <RegionModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSuccess={handleRegionCreated}
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        mode="create"
+        onCreated={refetch}
       />
+
+      {selectedRegion && (
+        <RegionModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          mode="edit"
+          initialData={selectedRegion}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 };

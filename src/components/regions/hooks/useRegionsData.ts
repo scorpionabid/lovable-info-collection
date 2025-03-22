@@ -1,66 +1,81 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getRegions } from '@/services/supabase/region';
-import { FilterParams, SortParams } from '@/lib/supabase/types';
-import { Region, RegionWithStats } from '@/lib/supabase/types/region';
+import { getRegions } from '@/lib/supabase/services/regions';
+import { RegionWithStats } from '@/lib/supabase/types/region';
 
-interface PaginatedResult<T> {
-  data: T[];
-  count: number;
-}
-
-export const useRegionsData = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [totalCount, setTotalCount] = useState(0);
   const [sortColumn, setSortColumn] = useState('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [filters, setFilters] = useState<FilterParams>({
-    status: 'active',
-  });
+  const [filters, setFilters] = useState({});
 
-  // Wrap the API call to transform the result into PaginatedResult format
-  const fetchRegions = async (): Promise<PaginatedResult<RegionWithStats>> => {
-    const sortParams: SortParams = {
-      column: sortColumn,
-      direction: sortDirection
-    };
-
-    // Request regions with pagination and sorting
-    const regionsData = await getRegions({
-      ...filters,
-      page: currentPage,
-      pageSize: pageSize
-    }, sortParams);
-
-    // If the API doesn't return paginated result already, transform it
-    if (Array.isArray(regionsData)) {
-      return {
-        data: regionsData,
-        count: regionsData.length // This is a simplification
-      };
-    }
-
-    // If already in the correct format (has data and count properties)
-    if (regionsData && typeof regionsData === 'object' && 'data' in regionsData && 'count' in regionsData) {
-      return regionsData as PaginatedResult<RegionWithStats>;
-    }
-
-    // Default empty result
-    return { data: [], count: 0 };
+  // Sorğu parametrləri
+  const queryParams = {
+    ...filters,
+    pageSize,
+    page: currentPage,
+    sortField: sortColumn,
+    sortDirection,
   };
 
-  // Use React Query for data fetching
+  // Sorğu funksiyası regionları və ümumi sayı qaytarır
+  const fetchRegions = async () => {
+    // RegionWithStats[]
+    try {
+      const response = await getRegions(queryParams);
+      
+      // Əgər cavab formatı { data: RegionWithStats[], count: number } şəklindədirsə
+      if (response && !Array.isArray(response) && 'data' in response && 'count' in response) {
+        setTotalCount(response.count);
+        return {
+          data: response.data,
+          count: response.count
+        };
+      }
+      
+      // Əgər cavab formatı sadəcə RegionWithStats[] şəklindədirsə
+      if (Array.isArray(response)) {
+        setTotalCount(response.length);
+        return {
+          data: response,
+          count: response.length
+        };
+      }
+      
+      // Heç bir cavab alınmadığı halda
+      return {
+        data: [],
+        count: 0
+      };
+    } catch (error) {
+      console.error('Error fetching regions:', error);
+      throw error;
+    }
+  };
+
   const { 
-    data: paginatedResult = { data: [], count: 0 }, 
+    data: result,
     isLoading, 
-    isError,
-    refetch
-  } = useQuery<PaginatedResult<RegionWithStats>, Error>({
+    isError, 
+    refetch 
+  } = useQuery({
     queryKey: ['regions', currentPage, pageSize, sortColumn, sortDirection, filters],
     queryFn: fetchRegions,
   });
 
+  // Nəticələri düzgün formatda qaytarırıq
+  const regions = result?.data || [];
+  const count = result?.count || 0;
+
+  // Sorğu parametrləri dəyişdikdə avtomatik olaraq regionları yeniləyirik
+  useEffect(() => {
+    refetch();
+  }, [currentPage, pageSize, sortColumn, sortDirection, filters, refetch]);
+
+  // Sort funksiyası
   const handleSortChange = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -70,26 +85,27 @@ export const useRegionsData = () => {
     }
   };
 
-  const handleFilterChange = (newFilters: FilterParams) => {
+  // Filterləri tətbiq et
+  const handleApplyFilters = (newFilters: any) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1); // Filterlər dəyişdikdə ilk səhifəyə qayıt
   };
 
   return {
-    regions: paginatedResult.data || [],
-    totalCount: paginatedResult.count || 0,
-    isLoading,
-    isError,
+    regions,
+    totalCount: count,
     currentPage,
     pageSize,
-    sortColumn,
-    sortDirection,
-    filters,
     setCurrentPage,
     setPageSize,
+    sortColumn,
+    sortDirection,
     handleSortChange,
-    handleFilterChange,
-    refetch
+    isLoading,
+    isError,
+    filters,
+    handleApplyFilters,
+    refetch,
   };
 };
 

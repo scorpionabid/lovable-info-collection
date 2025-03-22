@@ -17,3 +17,11 @@ export interface CategoryType {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface CategoryTableProps {
+  categories: CategoryType[];
+  isLoading?: boolean;
+  onRefresh?: () => void;
+  onDelete: (category: CategoryType) => Promise<void>;
+  onUpdatePriority: (id: string, newPriority: number) => void;
+}

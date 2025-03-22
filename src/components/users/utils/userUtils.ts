@@ -1,67 +1,72 @@
 
-import { User } from '@/lib/supabase/types/user';
-import { getRoleName, isRoleObject } from '@/lib/supabase/types/user/role';
+import { UserRole } from "@/hooks/types/authTypes";
+import { User } from "@/lib/supabase/types/user";
+import { isRoleObject } from "@/lib/supabase/types/user/role";
+import { Badge } from "@/components/ui/badge";
 
-export const getUserRoleBadgeColor = (user: User) => {
-  const roleName = getUserRoleName(user);
-  
-  switch (roleName.toLowerCase()) {
-    case 'super-admin':
-    case 'superadmin':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'region-admin':
-    case 'regionadmin':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'sector-admin':
-    case 'sectoradmin':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'school-admin':
-    case 'schooladmin':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
+// Özəl rol adlarını əldə etmək üçün funksiya
 export const getUserRoleName = (user: User): string => {
-  // First try to get from the roles property
-  if (user.roles) {
-    if (isRoleObject(user.roles)) {
-      return user.roles.name;
-    }
-    return user.roles as string;
+  if (!user.role_id) return 'Unknown';
+  
+  if (isRoleObject(user.role)) {
+    return user.role.name;
   }
   
-  // Fallback to role property
-  if (user.role) {
-    return user.role;
+  return user.role as string;
+};
+
+// Rol əsasında badge rəngi təyin etmək
+export const getUserRoleBadgeColor = (user: User): string => {
+  const roleName = getUserRoleName(user).toLowerCase();
+  
+  if (roleName.includes('super')) {
+    return 'bg-red-100 text-red-800 border-red-200';
   }
   
-  // Fallback to userRole property
-  if (user.userRole) {
-    return user.userRole;
+  if (roleName.includes('region')) {
+    return 'bg-blue-100 text-blue-800 border-blue-200';
   }
   
-  return 'Unknown';
-};
-
-export const getUserDisplayEntity = (user: User): string => {
-  if (user.region) {
-    return `Region: ${user.region}`;
-  } else if (user.sector) {
-    return `Sektor: ${user.sector}`;
-  } else if (user.school) {
-    return `Məktəb: ${user.school}`;
+  if (roleName.includes('sector')) {
+    return 'bg-purple-100 text-purple-800 border-purple-200';
   }
-  return '-';
+  
+  if (roleName.includes('school')) {
+    return 'bg-green-100 text-green-800 border-green-200';
+  }
+  
+  return 'bg-gray-100 text-gray-800 border-gray-200';
 };
 
-export const getUserStatusBadgeColor = (status: boolean): string => {
-  return status
-    ? 'bg-green-100 text-green-800 border-green-200'
-    : 'bg-red-100 text-red-800 border-red-200';
+// İstifadəçinin rolunu əsas mətn kimi qaytarır 
+export const getUserRoleText = (user: User | null): string => {
+  if (!user) return 'Unknown';
+  return getUserRoleName(user);
 };
 
-export const getUserStatusText = (status: boolean): string => {
-  return status ? 'Aktiv' : 'Deaktiv';
+// İstifadəçinin təşkilatını (region, sektor, məktəb) təyin edir
+export const getUserEntity = (user: User): string => {
+  if (!user) return '';
+  
+  // Region, sektor və ya məktəbin adını göstər
+  if (user.school && user.school.name) {
+    return user.school.name;
+  }
+  
+  if (user.sector && user.sector.name) {
+    return user.sector.name;
+  }
+  
+  if (user.region && user.region.name) {
+    return user.region.name;
+  }
+  
+  return '';
+};
+
+// İstifadəçi statusu əsasında badge rəngi
+export const getUserStatusBadge = (isActive: boolean) => {
+  return isActive 
+    ? <Badge className="bg-green-100 text-green-800 border-green-200">Aktiv</Badge>
+    : <Badge className="bg-red-100 text-red-800 border-red-200">Deaktiv</Badge>;
 };

@@ -1,56 +1,60 @@
 
 import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { getRegions } from '@/services/supabase/region';
+import { getRegions } from '@/lib/supabase/services/regions';
+import { RegionWithStats } from '@/lib/supabase/types/region';
 
-export const useRegionSearch = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+export const useRegionSearch = (initialQuery = '') => {
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [regions, setRegions] = useState<RegionWithStats[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-
+  
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  
+  const search = async (query: string) => {
+    if (!query.trim()) {
+      setRegions([]);
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await getRegions({ search: query });
+      // Əgər bize [{data:..., count:...}] formatında qaytarırsa, uyğunlaşdırmaq:
+      if (result && Array.isArray(result)) {
+        setRegions(result);
+      }
+      // Əgər {data:..., count:...} formatında qaytarırsa:
+      else if (result && 'data' in result) {
+        setRegions(result.data);
+      }
+      // Başqa bir format gəlirsə:
+      else {
+        setRegions([]);
+      }
+    } catch (err) {
+      console.error('Error searching regions:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setRegions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    const search = async () => {
-      if (!debouncedSearchTerm) {
-        setResults([]);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const regionsResult = await getRegions({
-          search: debouncedSearchTerm,
-          status: 'all',
-        });
-        
-        // Handle the results
-        if (Array.isArray(regionsResult)) {
-          setResults(regionsResult);
-        } else if (regionsResult && typeof regionsResult === 'object' && 'data' in regionsResult) {
-          setResults(regionsResult.data || []);
-        } else {
-          setResults([]);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Error searching regions'));
-        setResults([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    search();
-  }, [debouncedSearchTerm]);
-
+    search(debouncedSearchQuery);
+  }, [debouncedSearchQuery]);
+  
   return {
-    searchTerm,
-    setSearchTerm,
-    results,
-    isLoading,
+    searchQuery,
+    setSearchQuery,
+    regions,
+    loading,
     error,
+    search
   };
 };
 

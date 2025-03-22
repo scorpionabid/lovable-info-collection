@@ -1,26 +1,29 @@
 
-import { UserTableContainer } from "./table/UserTableContainer";
-import { User } from "@/services/userService";
+import { UserTableContainer, UserTableContainerProps } from "./table/UserTableContainer";
+import { User } from "@/lib/supabase/types/user";
 
-interface UserTableProps {
-  users: User[];
-  selectedRows: string[];
-  onSelectedRowsChange: (rows: string[]) => void;
-  onRefetch: () => void;
+// UserTableProps interfeysi burada UserTableContainerProps-dən genişləndirilir
+interface UserTableProps extends Omit<UserTableContainerProps, 'selectedRows' | 'onSelectedRowsChange'> {
+  selectedRows?: string[];
+  onSelectedRowsChange?: (rows: string[]) => void;
 }
 
 export const UserTable = ({ 
   users, 
   selectedRows, 
   onSelectedRowsChange, 
-  onRefetch 
+  onRefresh,
+  ...rest
 }: UserTableProps) => {
   return (
     <UserTableContainer
       users={users}
       selectedRows={selectedRows}
       onSelectedRowsChange={onSelectedRowsChange}
-      onRefetch={onRefetch}
+      onRefresh={onRefresh}
+      {...rest}
     />
   );
 };
+
+export default UserTable;

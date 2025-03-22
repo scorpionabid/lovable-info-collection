@@ -2,14 +2,30 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { schoolSchema, SchoolFormValues } from './types';
+import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { School } from '@/lib/supabase/types/school';
 import { Textarea } from '@/components/ui/textarea';
-import { SelectRegion } from '../selects/SelectRegion';
-import { SelectSector } from '../selects/SelectSector';
-import { SelectSchoolType } from '../selects/SelectSchoolType';
+import SelectRegion from '../selects/SelectRegion';
+import SelectSector from '../selects/SelectSector';
+import SelectSchoolType from '../selects/SelectSchoolType';
+
+// Zod schema for form validation
+const schoolSchema = z.object({
+  name: z.string().min(3, { message: "Məktəb adı ən azı 3 simvol olmalıdır" }),
+  status: z.string().optional(),
+  type: z.string().optional(),
+  address: z.string().optional(),
+  regionId: z.string().optional(),
+  sectorId: z.string().min(1, { message: "Sektor seçilməlidir" }),
+  studentCount: z.coerce.number().optional(),
+  teacherCount: z.coerce.number().optional(),
+  contactEmail: z.string().email({ message: "Düzgün email formatı daxil edin" }).optional().or(z.literal('')),
+  contactPhone: z.string().optional(),
+});
+
+type SchoolFormValues = z.infer<typeof schoolSchema>;
 
 interface SchoolFormProps {
   initialData?: School;
@@ -37,16 +53,15 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
     resolver: zodResolver(schoolSchema),
     defaultValues: {
       name: initialData?.name || '',
-      code: initialData?.code || '',
-      regionId: initialData?.region_id || regionId || '',
-      sectorId: initialData?.sector_id || '',
+      status: initialData?.status || 'Aktiv',
       type: initialData?.type_id || '',
       address: initialData?.address || '',
+      regionId: initialData?.region_id || regionId || '',
+      sectorId: initialData?.sector_id || '',
       studentCount: initialData?.student_count || 0,
       teacherCount: initialData?.teacher_count || 0,
       contactEmail: initialData?.email || '',
       contactPhone: initialData?.phone || '',
-      status: initialData?.status || 'Aktiv',
     },
   });
 
@@ -72,22 +87,6 @@ export const SchoolForm: React.FC<SchoolFormProps> = ({
           />
           {errors.name && (
             <p className="text-xs text-red-500">{errors.name.message}</p>
-          )}
-        </div>
-
-        {/* School code field */}
-        <div className="space-y-2">
-          <label htmlFor="code" className="block text-sm font-medium">
-            Məktəb kodu *
-          </label>
-          <Input
-            id="code"
-            disabled={disabled}
-            {...register('code')}
-            className={errors.code ? 'border-red-500' : ''}
-          />
-          {errors.code && (
-            <p className="text-xs text-red-500">{errors.code.message}</p>
           )}
         </div>
 

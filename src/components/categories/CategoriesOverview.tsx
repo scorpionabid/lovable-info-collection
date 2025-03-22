@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "sonner";
@@ -30,7 +29,7 @@ const adaptCategoryData = (category: any): CategoryType => {
     name: category.name,
     description: category.description || '',
     assignment: category.assignment || 'All',
-    status: (category.status || 'active').toLowerCase() as CategoryStatus, // Ensure status is lowercase to match CategoryStatus
+    status: (category.status || 'active').toLowerCase() as CategoryStatus,
     priority: category.priority || 0,
     region_id: category.region_id,
     sector_id: category.sector_id,
@@ -177,7 +176,7 @@ export const CategoriesOverview = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="relative flex-1">
           <Input
@@ -277,7 +276,7 @@ export const CategoriesOverview = () => {
           categories={categories} 
           isLoading={isLoading}
           onRefresh={handleRefresh}
-          onDelete={handleDeleteCategory}
+          onDelete={handleDeleteCategory} 
           onUpdatePriority={handleUpdatePriority}
         />
       )}
