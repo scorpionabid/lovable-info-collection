@@ -5,6 +5,6 @@ export interface SectorToolbarProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   onToggleFilters: () => void;
-  onCreateClick: () => void; // Bu xəta verən prop
+  onCreateClick: () => void; // Əlavə edilmiş prop
   isFilterActive?: boolean;
 }

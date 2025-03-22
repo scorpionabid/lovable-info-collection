@@ -15,7 +15,7 @@ export interface UseSchoolTypeOptions {
 export const useSchoolTypes = (options?: UseSchoolTypeOptions) => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
-      // Use the stored procedure to get school types
+      // Məktəb növlərini almaq üçün RPC funksiyasını çağırırıq
       const { data, error } = await supabase.rpc('get_school_types');
       
       if (error) {
@@ -31,39 +31,39 @@ export const useSchoolTypes = (options?: UseSchoolTypeOptions) => {
 
   const fetchSchoolTypeById = async (id: string): Promise<SchoolType | null> => {
     try {
-      const { data, error } = await supabase
-        .from('school_types')
-        .select('id, name')
-        .eq('id', id)
-        .single();
+      // Bütün məktəb növlərini alaraq içərisindən istədiyimizi tapırıq
+      const { data, error } = await supabase.rpc('get_school_types');
       
       if (error) {
-        if (error.code === 'PGRST116') return null; // No rows returned
         throw error;
       }
       
-      return data;
+      if (!data || !Array.isArray(data)) return null;
+      
+      // ID-yə görə filtrlənir
+      const schoolType = data.find(type => type.id === id);
+      return schoolType || null;
     } catch (error) {
       console.error(`Error fetching school type with id ${id}:`, error);
       return null;
     }
   };
 
-  // Query for all school types
+  // Bütün məktəb növləri üçün sorğu
   const allTypesQuery = useQuery({
     queryKey: ['school_types'],
     queryFn: fetchSchoolTypes,
     enabled: options?.enabled !== false && !options?.id
   });
 
-  // Query for specific school type
+  // Xüsusi bir məktəb növü üçün sorğu
   const singleTypeQuery = useQuery({
     queryKey: ['school_type', options?.id],
     queryFn: () => fetchSchoolTypeById(options?.id!),
     enabled: !!options?.id && options?.enabled !== false
   });
 
-  // Return the appropriate query result based on whether an ID was provided
+  // ID təqdim olunub-olunmamasına görə müvafiq sorğu nəticəsini qaytarırıq
   if (options?.id) {
     return {
       ...singleTypeQuery,

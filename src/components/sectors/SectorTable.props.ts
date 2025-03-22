@@ -5,7 +5,7 @@ import { SectorWithStats } from "@/lib/supabase/types";
 export interface SectorTableProps {
   sectors: SectorWithStats[];
   isLoading: boolean;
-  isError: boolean; // Bu xəta verən prop
+  isError: boolean; // Əlavə edilmiş prop
   totalCount: number;
   currentPage: number;
   pageSize: number;

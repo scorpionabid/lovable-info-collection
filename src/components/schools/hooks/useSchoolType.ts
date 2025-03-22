@@ -1,54 +1,47 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
 export interface SchoolType {
   id: string;
   name: string;
-  description?: string;
 }
 
-export function useSchoolType(id: string | undefined) {
-  const fetchSchoolType = async (): Promise<SchoolType | null> => {
-    if (!id) return null;
-    
-    try {
-      // RPC funksiyası ilə məlumatları əldə edirik
-      const { data, error } = await supabase.rpc('get_school_types');
-      
-      if (error) {
-        console.error('Error fetching school types:', error);
-        throw error;
-      }
-      
-      // Əgər məlumat yoxdursa, null qaytarırıq
-      if (!data || !Array.isArray(data)) {
-        return null;
-      }
-      
-      // Verilmiş ID ilə məktəb növünü tapırıq
-      const schoolType = data.find((item: any) => item.id === id);
-      
-      if (!schoolType) {
-        return null;
-      }
-      
-      return {
-        id: schoolType.id,
-        name: schoolType.name,
-        description: schoolType.description || ''
-      };
-    } catch (error) {
-      console.error(`Error fetching school type with ID ${id}:`, error);
-      return null;
-    }
-  };
+export const useSchoolType = (typeId?: string) => {
+  const [schoolType, setSchoolType] = useState<SchoolType | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useQuery<SchoolType | null>({
-    queryKey: ['schoolType', id],
-    queryFn: fetchSchoolType,
-    enabled: !!id // Yalnız ID mövcud olduqda sorğu göndəririk
-  });
-}
+  useEffect(() => {
+    if (!typeId) return;
 
-export default useSchoolType;
+    const fetchSchoolType = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Stored procedure çağırışı ilə məktəb tiplərini əldə edirik
+        const { data, error } = await supabase.rpc('get_school_types');
+        
+        if (error) throw error;
+        
+        if (data && Array.isArray(data)) {
+          // Məktəb tipini ID-yə görə tapırıq
+          const foundType = data.find(type => type.id === typeId);
+          setSchoolType(foundType || null);
+        } else {
+          setSchoolType(null);
+        }
+      } catch (err) {
+        console.error('Error fetching school type:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSchoolType();
+  }, [typeId]);
+
+  return { schoolType, isLoading, error };
+};

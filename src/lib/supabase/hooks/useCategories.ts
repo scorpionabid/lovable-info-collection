@@ -23,7 +23,7 @@ export const useCategories = () => {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
     search: '',
-    type: 'all'
+    assignment: 'all' // type yerine assignment kullanıyoruz çünkü bu alan categories tablosunda mevcut
   });
 
   // Fetch all categories
@@ -44,8 +44,8 @@ export const useCategories = () => {
           return false;
         }
         
-        // Type filter
-        if (filters.type !== 'all' && category.type !== filters.type) {
+        // Assignment filter (type değil)
+        if (filters.assignment !== 'all' && category.assignment !== filters.assignment) {
           return false;
         }
         

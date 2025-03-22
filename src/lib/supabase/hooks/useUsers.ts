@@ -2,7 +2,27 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
-import { User } from '@/lib/supabase/types/user';
+
+export interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  role_id: string;
+  region_id?: string;
+  sector_id?: string;
+  school_id?: string;
+  utis_code?: string;
+  is_active: boolean;
+  avatar_url?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_login?: string;
+  role?: string;
+  userRole?: string;
+  roles?: { id: string; name: string; };
+}
 
 // Filterlər üçün tip
 export interface UserFilters {
@@ -110,7 +130,8 @@ export const useUsers = (initialFilters: UserFilters = {}) => {
       return { 
         data: data.map(user => ({
           ...user,
-          role: user.roles?.name || user.role || 'unknown'
+          // Burada role property üçün roles.name istifadə edirik
+          role: user.roles?.name || 'unknown'
         })) as User[], 
         count: count || 0 
       };

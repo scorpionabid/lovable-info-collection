@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { useLogger } from './useLogger';
 
 interface UseSupabaseQueryProps<T> {
   queryFn: () => Promise<T>;
@@ -12,6 +11,13 @@ interface UseSupabaseQueryProps<T> {
   successMessage?: string;
   loggerName?: string;
 }
+
+// Logger funksiyasını əlavə edək
+const useLogger = (name: string) => ({
+  info: (message: string, data?: any) => console.log(`[${name}] INFO:`, message, data || ''),
+  warn: (message: string, data?: any) => console.warn(`[${name}] WARN:`, message, data || ''),
+  error: (message: string, data?: any) => console.error(`[${name}] ERROR:`, message, data || '')
+});
 
 export function useSupabaseQuery<T>({
   queryFn,

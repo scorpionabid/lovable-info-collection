@@ -1,15 +1,17 @@
 
-// Export the shared utilities
-export * from './shared';
+// Bütün tip modullarını bir mərkəzi nöqtədən ixrac edirik
+export * from './region';
+export * from './sector';
+export * from './school';
+export * from './user/index';
+export * from './user/role';
+export * from './user/dto';
+export * from './data';
+export * from './notification';
+export * from './database';
+export * from '../types-util';
 
-// Export all types from the individual files
-export type { Region, RegionWithStats, RegionFilters, CreateRegionDto, UpdateRegionDto } from './region';
-export type { Sector, SectorWithStats, SectorFilters, CreateSectorDto, UpdateSectorDto } from './sector';
-export type { School, SchoolType, SchoolFilter, SchoolSortParams, CreateSchoolDto, UpdateSchoolDto, SchoolWithStats } from './school';
-export type { User, UserWithRole, UserFilters, CreateUserDto, UpdateUserDto, Role, UserRole, UserRoleClaims } from './user';
-export type { CategoryAssignment, CategoryStatus, CategoryFilter, Category, CategoryColumn, CreateCategoryDto, UpdateCategoryDto, CreateColumnDto, UpdateColumnDto, CategoryStats, CategoryData, ExtendedColumnData } from './category';
-
-// Common interfaces used across multiple entity types
+// Ümumi interfeyslər çoxsaylı entity tipləri üçün istifadə olunur
 export interface FilterParams {
   search?: string;
   region_id?: string;
@@ -21,11 +23,9 @@ export interface FilterParams {
   max_completion_rate?: number;
   searchQuery?: string;
   archived?: boolean;
-  // For backward compatibility
+  // Geriyə doğru uyğunluq üçün
   regionId?: string;
   sectorId?: string;
-  page?: number;
-  pageSize?: number;
 }
 
 export interface SortParams {
@@ -43,3 +43,9 @@ export interface PaginatedResult<T> {
   data: T[];
   count: number;
 }
+
+// RegionFilters və digər filter tipləri üçün tip aliasları
+export type RegionFilters = FilterParams;
+export type SectorFilters = FilterParams;
+export type SchoolFilters = FilterParams;
+export type UserFilters = FilterParams;

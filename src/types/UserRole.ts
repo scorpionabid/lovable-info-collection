@@ -1,9 +1,9 @@
 
-// A shared UserRole definition to avoid duplication
+// İstifadəçi rolları üçün ortaq tip təyini
 export type UserRole = 
   | 'super-admin' 
+  | 'superadmin'  // əlavə edildi
   | 'region-admin' 
   | 'sector-admin' 
   | 'school-admin' 
-  | 'teacher' 
-  | 'superadmin';
+  | 'teacher';

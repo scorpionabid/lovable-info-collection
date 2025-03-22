@@ -1,45 +1,43 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
-interface SchoolType {
+export interface SchoolType {
   id: string;
   name: string;
-  description?: string;
 }
 
 export const useSchoolTypesQuery = () => {
-  const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
-    try {
-      // RPC funksiyası ilə məlumatları əldə edirik
-      const { data, error } = await supabase.rpc('get_school_types');
-      
-      if (error) {
-        console.error('Error fetching school types:', error);
-        throw error;
-      }
-      
-      // Əgər məlumat yoxdursa və ya array deyilsə, boş array qaytarırıq
-      if (!data || !Array.isArray(data)) {
-        return [];
-      }
-      
-      // Məlumatları SchoolType formatına çeviririk
-      return data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || ''
-      }));
-    } catch (error) {
-      console.error("Error fetching school types:", error);
-      return [];
-    }
-  };
+  const [schoolTypes, setSchoolTypes] = useState<SchoolType[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useQuery<SchoolType[]>({
-    queryKey: ["schoolTypesQuery"],
-    queryFn: fetchSchoolTypes,
-  });
+  useEffect(() => {
+    const fetchSchoolTypes = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // RPC funksiyasını istifadə edərək məktəb növlərini əldə edirik
+        const { data, error } = await supabase.rpc('get_school_types');
+        
+        if (error) throw error;
+        
+        if (data && Array.isArray(data)) {
+          setSchoolTypes(data);
+        } else {
+          setSchoolTypes([]);
+        }
+      } catch (err) {
+        console.error('Error fetching school types:', err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSchoolTypes();
+  }, []);
+
+  return { schoolTypes, isLoading, error };
 };
-
-export default useSchoolTypesQuery;
