@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { UserTableRowProps } from './UserTableRow.props';
 
-const UserTableRow = ({ user, isSelected, onSelect, onView, onEdit, onDelete }: UserTableRowProps) => {
+export const UserTableRow = ({ user, isSelected, onSelect, onView, onEdit, onDelete }: UserTableRowProps) => {
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSelect(user.id, e.target.checked);
   };

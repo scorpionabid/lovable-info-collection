@@ -1,27 +1,43 @@
 
-import { UserTableContainer, UserTableContainerProps } from "./table/UserTableContainer";
-import { User } from "@/lib/supabase/types/user";
-
-// UserTableProps interfeysi burada UserTableContainerProps-dən genişləndirilir
-interface UserTableProps extends Omit<UserTableContainerProps, 'selectedRows' | 'onSelectedRowsChange'> {
-  selectedRows?: string[];
-  onSelectedRowsChange?: (rows: string[]) => void;
-}
+import UserTableContainer from "./table/UserTableContainer";
+import { UserTableProps } from "./table/UserTable.props";
 
 export const UserTable = ({ 
-  users, 
+  users,
+  totalCount,
+  currentPage = 1,
+  pageSize = 10,
+  sortColumn = "first_name",
+  sortDirection = "asc",
+  isLoading = false,
+  isError = false,
   selectedRows, 
-  onSelectedRowsChange, 
-  onRefresh,
-  ...rest
+  onSelectedRowsChange,
+  onRefresh = () => {}, 
+  onSortChange = () => {},
+  onPageChange = () => {},
+  onViewUser = () => {},
+  onEditUser = () => {},
+  onDeleteUser = () => {}
 }: UserTableProps) => {
   return (
     <UserTableContainer
       users={users}
+      totalCount={totalCount}
+      currentPage={currentPage}
+      pageSize={pageSize}
+      sortColumn={sortColumn}
+      sortDirection={sortDirection}
+      isLoading={isLoading}
+      isError={isError}
       selectedRows={selectedRows}
       onSelectedRowsChange={onSelectedRowsChange}
       onRefresh={onRefresh}
-      {...rest}
+      onSortChange={onSortChange}
+      onPageChange={onPageChange}
+      onViewUser={onViewUser}
+      onEditUser={onEditUser}
+      onDeleteUser={onDeleteUser}
     />
   );
 };

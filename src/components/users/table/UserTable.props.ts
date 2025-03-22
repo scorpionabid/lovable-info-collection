@@ -10,13 +10,14 @@ export interface UserTableProps {
   sortDirection?: 'asc' | 'desc';
   isLoading?: boolean;
   isError?: boolean;
-  selectedRows?: string[];
-  onSelectedRowsChange?: (rows: string[]) => void;
   onSortChange?: (column: string) => void;
   onPageChange?: (page: number) => void;
-  onRefetch?: () => void; // Bu xəta verən prop
-  onRefresh?: () => Promise<void>;
+  onRefresh?: () => void;
   onViewUser?: (user: User) => void;
   onEditUser?: (user: User) => void;
   onDeleteUser?: (userId: string) => void;
+  
+  // For selection
+  selectedRows?: string[];
+  onSelectedRowsChange?: (rows: string[]) => void;
 }

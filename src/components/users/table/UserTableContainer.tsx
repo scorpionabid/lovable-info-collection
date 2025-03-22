@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User } from '@/lib/supabase/types/user';
 import { UserTableHeader } from './UserTableHeader';
-import { UserTableRow } from './UserTableRow';
+import UserTableRow from './UserTableRow';
 import { Button } from '@/components/ui/button';
 import { useUserTable } from '../hooks/useUserTable';
 import { Pagination } from '@/components/ui/pagination';
@@ -115,7 +115,7 @@ export const UserTableContainer: React.FC<UserTableContainerProps> = ({
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <UserTableHeader 
           columns={columns}
-          sortColumn={sortColumn}
+          sortField={sortColumn}
           sortDirection={sortDirection}
           onSelectAll={handleSelectAll}
           allSelected={users.length > 0 && selectedUsers.length === users.length}

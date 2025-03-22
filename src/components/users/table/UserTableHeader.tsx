@@ -1,17 +1,7 @@
 
 import { ChevronDown, ChevronUp, LucideIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-
-export interface UserTableHeaderProps {
-  onSelectAll: () => void;
-  allSelected: boolean;
-  hasUsers?: boolean;
-  onSort: (field: string) => void;
-  sortField: string | null;
-  sortDirection: 'asc' | 'desc';
-  columns?: { key: string; label: string }[];
-  getSortIcon?: (column: string) => LucideIcon;
-}
+import { UserTableHeaderProps } from "./UserTableHeader.props";
 
 export const UserTableHeader = ({ 
   onSelectAll, 
