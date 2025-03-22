@@ -23,33 +23,24 @@ export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
 
   // Sorğu funksiyası regionları və ümumi sayı qaytarır
   const fetchRegions = async () => {
-    // RegionWithStats[]
     try {
       const response = await getRegions(queryParams);
       
-      // Əgər cavab formatı { data: RegionWithStats[], count: number } şəklindədirsə
-      if (response && !Array.isArray(response) && 'data' in response && 'count' in response) {
-        setTotalCount(response.count);
-        return {
-          data: response.data,
-          count: response.count
-        };
+      // Nəticələri düzgün formatda qaytarırıq
+      // Əgər response bir array deyilsə və data və count xüsusiyyətləri varsa
+      if (response && typeof response === 'object' && 'data' in response && 'count' in response) {
+        const regionsData = response.data as RegionWithStats[];
+        const totalCount = response.count as number;
+        return { data: regionsData, count: totalCount };
       }
       
-      // Əgər cavab formatı sadəcə RegionWithStats[] şəklindədirsə
+      // Əgər response birbaşa RegionWithStats[] arrayidirsə
       if (Array.isArray(response)) {
-        setTotalCount(response.length);
-        return {
-          data: response,
-          count: response.length
-        };
+        return { data: response, count: response.length };
       }
       
-      // Heç bir cavab alınmadığı halda
-      return {
-        data: [],
-        count: 0
-      };
+      // Heç bir cavab alınmadığı halda boş nəticə qaytarırıq
+      return { data: [] as RegionWithStats[], count: 0 };
     } catch (error) {
       console.error('Error fetching regions:', error);
       throw error;
@@ -57,7 +48,7 @@ export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
   };
 
   const { 
-    data: result,
+    data = { data: [] as RegionWithStats[], count: 0 }, 
     isLoading, 
     isError, 
     refetch 
@@ -67,13 +58,8 @@ export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
   });
 
   // Nəticələri düzgün formatda qaytarırıq
-  const regions = result?.data || [];
-  const count = result?.count || 0;
-
-  // Sorğu parametrləri dəyişdikdə avtomatik olaraq regionları yeniləyirik
-  useEffect(() => {
-    refetch();
-  }, [currentPage, pageSize, sortColumn, sortDirection, filters, refetch]);
+  const regions = data?.data || [];
+  const count = data?.count || 0;
 
   // Sort funksiyası
   const handleSortChange = (column: string) => {

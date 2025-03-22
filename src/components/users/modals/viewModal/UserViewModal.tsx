@@ -4,7 +4,13 @@ import { User } from '@/lib/supabase/types/user';
 import { Modal } from '@/components/ui/modal';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { getUserRoleName, getUserEntity, getUserStatusBadge, getUserStatusColor, getUserStatusText, getUserRoleBadgeColor } from '../../utils/userUtils';
+import { 
+  getUserRoleName, 
+  getUserEntity, 
+  getUserStatusColor, 
+  getUserStatusText, 
+  getUserRoleBadgeColor 
+} from '../../utils/userUtils';
 import { formatDate } from '@/utils/dateUtils';
 
 interface UserViewModalProps {

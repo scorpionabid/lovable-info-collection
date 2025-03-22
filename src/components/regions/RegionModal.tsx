@@ -87,7 +87,17 @@ export const RegionModal: React.FC<RegionModalProps> = ({
   
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: RegionFormValues) => regionService.createRegion(data),
+    mutationFn: (data: RegionFormValues) => {
+      // Ensure name is required when creating
+      if (!data.name) {
+        throw new Error("Region name is required");
+      }
+      return regionService.createRegion({
+        name: data.name,
+        code: data.code,
+        description: data.description,
+      });
+    },
     onSuccess: () => {
       toast({ 
         title: 'Əməliyyat tamamlandı', 
