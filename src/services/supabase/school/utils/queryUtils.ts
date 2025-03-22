@@ -1,58 +1,41 @@
 
-/**
- * Utility function to calculate completion rate for a school
- * This is a placeholder - in a real app this would query the data table
- * to calculate the actual completion rate based on submitted forms, etc.
- */
-export const calculateCompletionRate = async (schoolId: string): Promise<number> => {
-  // Placeholder calculation - in a real app this would be based on actual data
-  const randomRate = Math.floor(Math.random() * 40) + 60; // Random number between 60-100
-  return randomRate;
-};
+import { supabase } from '../../supabaseClient';
 
 /**
- * Handle errors safely when working with school data
+ * Calculate completion rate for a school
+ * This is a placeholder implementation that returns random values
  */
-export const handleSchoolQueryError = (error: any): void => {
-  if (error instanceof Error) {
-    console.error(`School query error: ${error.message}`);
-    if (error.stack) {
-      console.debug(error.stack);
-    }
-  } else {
-    console.error('Unknown school query error:', error);
+export const calculateCompletionRate = async (schoolId: string): Promise<number> => {
+  try {
+    // In a real application, this would calculate based on actual data entries
+    // For now, just return a random number between 60-100 to simulate completion rates
+    return Math.floor(Math.random() * 40) + 60;
+  } catch (error) {
+    console.error(`Error calculating completion rate for school ${schoolId}:`, error);
+    return 0;
   }
 };
 
 /**
- * Extract school data from query results safely
+ * Get school statistics 
  */
-export const extractSchoolData = (data: any): any => {
-  if (!data) return null;
-  
+export const getSchoolStats = async (schoolId: string) => {
   try {
-    // Extract top-level properties
-    const result = { ...data };
-    
-    // Handle nested objects safely
-    if (data.school_types) {
-      result.type = data.school_types.name;
-      delete result.school_types;
-    }
-    
-    if (data.regions) {
-      result.region = data.regions.name;
-      delete result.regions;
-    }
-    
-    if (data.sectors) {
-      result.sector = data.sectors.name;
-      delete result.sectors;
-    }
-    
-    return result;
+    // This would be a more complex query in a real application
+    // For demo purposes, returning random stats
+    return {
+      studentCount: Math.floor(Math.random() * 500) + 100,
+      teacherCount: Math.floor(Math.random() * 50) + 10,
+      completionRate: await calculateCompletionRate(schoolId),
+      activeCategories: Math.floor(Math.random() * 5) + 3
+    };
   } catch (error) {
-    handleSchoolQueryError(error);
-    return data; // Return original data if extraction fails
+    console.error(`Error fetching stats for school ${schoolId}:`, error);
+    return {
+      studentCount: 0,
+      teacherCount: 0,
+      completionRate: 0,
+      activeCategories: 0
+    };
   }
 };
