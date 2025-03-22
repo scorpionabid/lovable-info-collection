@@ -3,15 +3,7 @@ import { useState, useEffect } from 'react';
 import { User } from '@/lib/supabase/types/user';
 import { UserRole } from '@/types/UserRole';
 
-// Yalnız type birləşdirmə problemi üçün, real istifadədə tələb olunmaya bilər
-type CompatibleRole = {
-  id: string;
-  name: string;
-  description?: string;
-  permissions?: string[];
-};
-
-// Mock data
+// Mock users that conform to the User interface
 const mockUsers: User[] = [
   {
     id: '1',
@@ -22,7 +14,6 @@ const mockUsers: User[] = [
     is_active: true,
     created_at: new Date().toISOString(),
     role: 'super-admin',
-    userRole: 'super-admin',
   },
   {
     id: '2',
@@ -34,7 +25,6 @@ const mockUsers: User[] = [
     is_active: true,
     created_at: new Date().toISOString(),
     role: 'region-admin',
-    userRole: 'region-admin',
   },
   {
     id: '3',
@@ -48,7 +38,6 @@ const mockUsers: User[] = [
     is_active: true,
     created_at: new Date().toISOString(),
     role: 'school-admin',
-    userRole: 'school-admin',
   },
 ];
 
@@ -57,6 +46,13 @@ export const useUsers = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [totalCount, setTotalCount] = useState(mockUsers.length);
+  
+  // For pagination and sorting
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortColumn, setSortColumn] = useState('first_name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState({});
 
   useEffect(() => {
     // Simulate API call
@@ -77,6 +73,17 @@ export const useUsers = () => {
     fetchUsers();
   }, []);
 
+  const handleSortChange = (column: string) => {
+    const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortColumn(column);
+    setSortDirection(newDirection);
+  };
+
+  const handleFilterChange = (newFilters: any) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
   const createUser = async (userData: Partial<User>) => {
     try {
       // In a real implementation, this would be an API call
@@ -89,8 +96,7 @@ export const useUsers = () => {
         role_id: userData.role_id || '',
         is_active: userData.is_active !== undefined ? userData.is_active : true,
         created_at: new Date().toISOString(),
-        role: userData.role || 'user',
-        userRole: userData.userRole || 'user',
+        role: userData.role || 'school-admin',
       };
       
       setUsers(prev => [...prev, newUser]);
@@ -101,11 +107,31 @@ export const useUsers = () => {
     }
   };
 
+  const deleteUser = async (userId: string) => {
+    try {
+      // In a real implementation, this would be an API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setUsers(prev => prev.filter(user => user.id !== userId));
+      setTotalCount(prev => prev - 1);
+      return true;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+  };
+
   return {
     users,
     totalCount,
     isLoading,
     isError: error !== null,
+    currentPage,
+    pageSize,
+    sortColumn,
+    sortDirection,
+    filters,
+    setCurrentPage,
+    handleSortChange,
+    handleFilterChange,
     refetch: async () => {
       setIsLoading(true);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -114,6 +140,7 @@ export const useUsers = () => {
       setIsLoading(false);
     },
     createUser,
+    deleteUser
   };
 };
 
