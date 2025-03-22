@@ -1,7 +1,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
-import { SchoolType } from '@/lib/supabase/types/school';
+
+export interface SchoolType {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 export function useSchoolType(id: string | undefined) {
   const fetchSchoolType = async (): Promise<SchoolType | null> => {

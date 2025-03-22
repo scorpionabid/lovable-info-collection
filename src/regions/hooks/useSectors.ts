@@ -1,11 +1,12 @@
 
 import { useSectorsByRegion } from '@/lib/supabase/hooks/useSectors';
+import { Sector } from '@/lib/supabase/types/sector';
 
 export const useSectors = (regionId: string) => {
-  const { data: sectors, isLoading, error } = useSectorsByRegion(regionId);
+  const { data, isLoading, error } = useSectorsByRegion(regionId);
   
   return {
-    sectors,
+    sectors: data || [] as Sector[],
     isLoading,
     error
   };
