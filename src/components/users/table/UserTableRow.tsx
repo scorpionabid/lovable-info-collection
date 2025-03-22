@@ -24,9 +24,9 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   onEdit,
   onDelete
 }) => {
-  const { id, first_name, last_name, email, roles } = user;
+  const { id, first_name, last_name, email, role } = user;
   
-  const roleName = typeof roles === 'string' ? roles : roles?.name || 'Unknown';
+  const roleName = typeof role === 'string' ? role : role?.name || 'Unknown';
   
   // Formatlanmış tarix
   const formattedDate = user.created_at 
@@ -42,7 +42,7 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
       <TableCell className="w-12">
         <Checkbox 
           checked={isSelected} 
-          onCheckedChange={(checked) => onSelect(id, checked as boolean)} 
+          onCheckedChange={(checked) => onSelect(id, !!checked)} 
         />
       </TableCell>
       <TableCell className="font-medium">{first_name} {last_name}</TableCell>

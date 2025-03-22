@@ -10,5 +10,6 @@ export interface SchoolModalProps {
   onSuccess?: () => void;
   onSchoolCreated?: () => void;
   onSchoolUpdated?: () => void;
+  onCreated?: () => void;
   regionId?: string;
 }

@@ -1,153 +1,119 @@
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { User } from '@/lib/supabase/types/user';
-import { Role } from '@/types/common';
+import { UserRole } from '@/types/UserRole';
 
-// Əgər User tipi xaricində əlavə məlumatlar lazımdırsa
-interface UserWithPaginationResult {
-  data: User[];
-  count: number;
-}
+// Yalnız type birləşdirmə problemi üçün, real istifadədə tələb olunmaya bilər
+type CompatibleRole = {
+  id: string;
+  name: string;
+  description?: string;
+  permissions?: string[];
+};
 
-// Mock data interface to ensure type compatibility 
-interface MockUser extends User {
-  roles: Role | string;
-}
+// Mock data
+const mockUsers: User[] = [
+  {
+    id: '1',
+    first_name: 'Admin',
+    last_name: 'User',
+    email: 'admin@example.com',
+    role_id: '1',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    role: 'super-admin',
+    userRole: 'super-admin',
+  },
+  {
+    id: '2',
+    first_name: 'Region',
+    last_name: 'Admin',
+    email: 'region@example.com',
+    role_id: '2',
+    region_id: '1',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    role: 'region-admin',
+    userRole: 'region-admin',
+  },
+  {
+    id: '3',
+    first_name: 'School',
+    last_name: 'Admin',
+    email: 'school@example.com',
+    role_id: '3',
+    region_id: '1',
+    sector_id: '1',
+    school_id: '1',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    role: 'school-admin',
+    userRole: 'school-admin',
+  },
+];
 
 export const useUsers = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortColumn, setSortColumn] = useState('created_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [filter, setFilter] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [filters, setFilters] = useState({});
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [totalCount, setTotalCount] = useState(mockUsers.length);
 
-  // Mock users data for development use
-  const mockFetchUsers = async (): Promise<UserWithPaginationResult> => {
-    // Simulate API call 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock data
-    const users: MockUser[] = Array.from({ length: 30 }, (_, index) => ({
-      id: `user-${index + 1}`,
-      email: `user${index + 1}@example.com`,
-      first_name: `First${index + 1}`,
-      last_name: `Last${index + 1}`,
-      role_id: `role-${(index % 4) + 1}`,
-      is_active: index % 5 !== 0,
-      created_at: new Date(Date.now() - (index * 86400000)).toISOString(),
-      roles: { 
-        id: `role-${(index % 4) + 1}`,
-        name: ['super-admin', 'region-admin', 'sector-admin', 'school-admin'][index % 4]
+  useEffect(() => {
+    // Simulate API call
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        // In a real implementation, this would be an API call
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setUsers(mockUsers);
+        setTotalCount(mockUsers.length);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoading(false);
       }
-    }));
-    
-    // Apply filters (only for mock data)
-    let filteredUsers = users;
-    
-    if (filter) {
-      const lowerFilter = filter.toLowerCase();
-      filteredUsers = filteredUsers.filter(user => 
-        user.email.toLowerCase().includes(lowerFilter) || 
-        user.first_name.toLowerCase().includes(lowerFilter) || 
-        user.last_name.toLowerCase().includes(lowerFilter)
-      );
-    }
-    
-    if (roleFilter) {
-      filteredUsers = filteredUsers.filter(user => 
-        typeof user.roles === 'object' && user.roles.name === roleFilter
-      );
-    }
-    
-    if (statusFilter) {
-      filteredUsers = filteredUsers.filter(user => 
-        statusFilter === 'active' ? user.is_active : !user.is_active
-      );
-    }
-    
-    // Apply sorting (only for mock data)
-    filteredUsers.sort((a, b) => {
-      const valueA = a[sortColumn as keyof User] || '';
-      const valueB = b[sortColumn as keyof User] || '';
-      const comparison = valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-    
-    // Apply pagination
-    const paginatedUsers = filteredUsers.slice(
-      (currentPage - 1) * pageSize, 
-      currentPage * pageSize
-    );
-    
-    return {
-      data: paginatedUsers,
-      count: filteredUsers.length
     };
-  };
 
-  const { data, isLoading, isError, refetch } = useQuery<UserWithPaginationResult>({
-    queryKey: ['users', currentPage, pageSize, sortColumn, sortDirection, filter, roleFilter, statusFilter],
-    queryFn: mockFetchUsers,
-  });
+    fetchUsers();
+  }, []);
 
-  const handleSortChange = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
+  const createUser = async (userData: Partial<User>) => {
+    try {
+      // In a real implementation, this would be an API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const newUser: User = {
+        id: String(Date.now()),
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
+        email: userData.email || '',
+        role_id: userData.role_id || '',
+        is_active: userData.is_active !== undefined ? userData.is_active : true,
+        created_at: new Date().toISOString(),
+        role: userData.role || 'user',
+        userRole: userData.userRole || 'user',
+      };
+      
+      setUsers(prev => [...prev, newUser]);
+      setTotalCount(prev => prev + 1);
+      return newUser;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error(String(err));
     }
-  };
-
-  const handleFilterChange = (newFilters: any) => {
-    setFilters({ ...filters, ...newFilters });
-    
-    if (newFilters.search !== undefined) {
-      setFilter(newFilters.search);
-    }
-    
-    if (newFilters.role !== undefined) {
-      setRoleFilter(newFilters.role);
-    }
-    
-    if (newFilters.status !== undefined) {
-      setStatusFilter(newFilters.status);
-    }
-  };
-
-  const deleteUser = async (userId: string) => {
-    // Mock implementation
-    console.log(`Deleting user with ID: ${userId}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return true;
   };
 
   return {
-    users: data?.data || [],
-    totalCount: data?.count || 0,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    setPageSize,
-    sortColumn,
-    sortDirection,
-    handleSortChange,
-    filter,
-    setFilter,
-    roleFilter,
-    setRoleFilter,
-    statusFilter,
-    setStatusFilter,
+    users,
+    totalCount,
     isLoading,
-    isError,
-    refetch,
-    handleFilterChange,
-    filters,
-    deleteUser
+    isError: error !== null,
+    refetch: async () => {
+      setIsLoading(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setUsers(mockUsers);
+      setTotalCount(mockUsers.length);
+      setIsLoading(false);
+    },
+    createUser,
   };
 };
 
