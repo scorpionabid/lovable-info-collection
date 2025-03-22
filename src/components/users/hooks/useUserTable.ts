@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 export const useUserTable = () => {
   const [sortColumn, setSortColumn] = useState<string>('name');

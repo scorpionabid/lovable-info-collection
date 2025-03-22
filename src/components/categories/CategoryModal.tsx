@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useMutation } from '@tanstack/react-query';
@@ -44,7 +45,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
         description: category.description || '',
         assignment: category.assignment as 'All' | 'Sectors' | 'Regions' | 'Schools',
         priority: category.priority,
-        status: category.status === 'Active',
+        status: category.status === 'active',
       });
     } else {
       setFormData({
@@ -140,7 +141,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
       description: formData.description,
       assignment: formData.assignment,
       priority: formData.priority,
-      status: formData.status ? 'Active' : 'Inactive' as 'Active' | 'Inactive'
+      status: formData.status ? 'active' : 'inactive' as categoryService.CategoryStatus
     };
 
     if (mode === 'create') {
@@ -148,7 +149,7 @@ export const CategoryModal = ({ isOpen, onClose, mode, category, onSuccess }: Ca
     } else if (mode === 'edit' && category) {
       updateMutation.mutate({ 
         id: category.id, 
-        data: categoryData 
+        data: categoryData as categoryService.UpdateCategoryDto
       });
     }
   };

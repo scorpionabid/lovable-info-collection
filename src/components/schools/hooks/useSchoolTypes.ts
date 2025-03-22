@@ -6,13 +6,15 @@ import { SchoolType } from '@/lib/supabase/types/school';
 export const useSchoolTypes = () => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
-      // Direct query to school_types table
+      // Use the RPC function instead of direct table access
       const { data, error } = await supabase
-        .from('school_types')
-        .select('*')
+        .rpc('get_school_types')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching school types:', error);
+        throw error;
+      }
       
       // Map the raw data to the SchoolType interface
       if (data && Array.isArray(data)) {

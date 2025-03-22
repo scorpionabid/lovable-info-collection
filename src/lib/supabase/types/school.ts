@@ -10,6 +10,14 @@ export type School = Tables<'schools'> & {
   type?: string;
   region?: string;
   sector?: string;
+  
+  // Adding the missing properties from the error messages
+  director?: string;
+  email?: string;
+  phone?: string;
+  student_count?: number;
+  teacher_count?: number;
+  status?: string;
 };
 
 // SchoolType definition
