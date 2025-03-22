@@ -7,6 +7,6 @@ export interface UserTableHeaderProps {
   allSelected: boolean;
   onSort: (column: string) => void;
   getSortIcon: (column: string) => LucideIcon;
-  sortColumn: string; // Düzgün prop
+  sortColumn: string;
   sortDirection: 'asc' | 'desc';
 }

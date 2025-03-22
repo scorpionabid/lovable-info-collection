@@ -1,35 +1,41 @@
 
-/**
- * Tətbiq boyu logger funksionalı təmin edən hook
- */
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-export const useLogger = (name: string) => {
-  const getTimestamp = () => new Date().toISOString();
+interface Logger {
+  debug: (message: string, data?: any) => void;
+  info: (message: string, data?: any) => void;
+  warn: (message: string, data?: any) => void;
+  error: (message: string, data?: any) => void;
+}
+
+export const useLogger = (namespace: string): Logger => {
+  const logWithLevel = (level: LogLevel, message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    const formattedMessage = `[${timestamp}] [${level.toUpperCase()}] [${namespace}] ${message}`;
+    
+    switch (level) {
+      case 'debug':
+        console.debug(formattedMessage, data || '');
+        break;
+      case 'info':
+        console.info(formattedMessage, data || '');
+        break;
+      case 'warn':
+        console.warn(formattedMessage, data || '');
+        break;
+      case 'error':
+        console.error(formattedMessage, data || '');
+        break;
+    }
+    
+    // Burada servere log göndərmək üçün əlavə funksionallıq da əlavə edilə bilər
+  };
   
   return {
-    info: (message: string, data?: any) => {
-      console.log(`[${name}] [${getTimestamp()}] INFO: ${message}`, data ?? '');
-    },
-    
-    warn: (message: string, data?: any) => {
-      console.warn(`[${name}] [${getTimestamp()}] WARN: ${message}`, data ?? '');
-    },
-    
-    error: (message: string, data?: any) => {
-      console.error(`[${name}] [${getTimestamp()}] ERROR: ${message}`, data ?? '');
-    },
-    
-    debug: (message: string, data?: any) => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.debug(`[${name}] [${getTimestamp()}] DEBUG: ${message}`, data ?? '');
-      }
-    },
-    
-    trace: (message: string, data?: any) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.trace(`[${name}] [${getTimestamp()}] TRACE: ${message}`, data ?? '');
-      }
-    }
+    debug: (message: string, data?: any) => logWithLevel('debug', message, data),
+    info: (message: string, data?: any) => logWithLevel('info', message, data),
+    warn: (message: string, data?: any) => logWithLevel('warn', message, data),
+    error: (message: string, data?: any) => logWithLevel('error', message, data)
   };
 };
 

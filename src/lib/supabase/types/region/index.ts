@@ -9,24 +9,15 @@ export interface Region {
 }
 
 export interface RegionWithStats extends Region {
-  sectorCount?: number;
-  schoolCount?: number;
-  studentCount?: number;
-  teacherCount?: number;
-  completionRate?: number;
-  // For backward compatibility
+  sectorCount: number;
+  schoolCount: number;
+  studentCount: number;
+  teacherCount: number;
+  completionRate: number;
+  
+  // Compatibility properties
   sectors_count?: number;
   schools_count?: number;
-  completion_rate?: number;
-}
-
-export interface RegionFilters {
-  search?: string;
-  status?: 'active' | 'inactive' | 'all';
-  dateFrom?: string;
-  dateTo?: string;
-  min_completion_rate?: number;
-  max_completion_rate?: number;
 }
 
 export interface CreateRegionDto {
@@ -35,8 +26,4 @@ export interface CreateRegionDto {
   description?: string;
 }
 
-export interface UpdateRegionDto {
-  name?: string;
-  code?: string;
-  description?: string;
-}
+export interface UpdateRegionDto extends Partial<CreateRegionDto> {}

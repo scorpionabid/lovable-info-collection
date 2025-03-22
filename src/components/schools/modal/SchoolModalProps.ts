@@ -8,10 +8,10 @@ export interface SchoolModalProps {
   regionId?: string;
   sectorId?: string;
   schoolId?: string;
-  initialData?: School; // Dəyişməyən prop
-  onSuccess?: () => void; // Dəyişməyən prop
-  onCreated?: () => void; // Əlavə edilmiş prop
-  onSchoolCreated?: (data: School) => void; // Əlavə edilmiş prop
-  onSchoolUpdated?: (data: School) => void; // Əlavə edilmiş prop
-  school?: School; // Əlavə edilmiş prop
+  initialData?: School;
+  onSuccess?: () => void;
+  onCreated?: () => void;
+  onSchoolCreated?: (data: School) => void;
+  onSchoolUpdated?: (data: School) => void;
+  school?: School;
 }

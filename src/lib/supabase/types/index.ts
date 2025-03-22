@@ -3,13 +3,11 @@
 export * from './region';
 export * from './sector';
 export * from './school';
-export * from './user/index';
-export * from './user/role';
-export * from './user/dto';
+export type { User, Role, UserFilters, UserStatus, CreateUserDto, UpdateUserDto, UserRoleClaims } from './user';
 export * from './data';
 export * from './notification';
-export * from './database';
 export * from '../types-util';
+export * from './shared';
 
 // Ümumi interfeyslər çoxsaylı entity tipləri üçün istifadə olunur
 export interface FilterParams {
@@ -23,9 +21,12 @@ export interface FilterParams {
   max_completion_rate?: number;
   searchQuery?: string;
   archived?: boolean;
-  // Geriyə doğru uyğunluq üçün
-  regionId?: string;
-  sectorId?: string;
+  // Filter parameters for users
+  role?: string;
+  role_id?: string;
+  school_id?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface SortParams {

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getRegions } from '@/lib/supabase/services/regions';
-import { RegionWithStats } from '@/lib/supabase/types/region';
+import { RegionWithStats, FilterParams } from '@/lib/supabase/types';
 
 export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -10,13 +10,13 @@ export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
   const [totalCount, setTotalCount] = useState(0);
   const [sortColumn, setSortColumn] = useState('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState<FilterParams>({});
 
   // Sorğu parametrləri
-  const queryParams = {
+  const queryParams: FilterParams = {
     ...filters,
-    pageSize,
     page: currentPage,
+    pageSize: pageSize,
     sortField: sortColumn,
     sortDirection,
   };
@@ -75,7 +75,7 @@ export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
   };
 
   // Filterləri tətbiq et
-  const handleApplyFilters = (newFilters: any) => {
+  const handleApplyFilters = (newFilters: FilterParams) => {
     setFilters(newFilters);
     setCurrentPage(1); // Filterlər dəyişdikdə ilk səhifəyə qayıt
   };

@@ -1,7 +1,5 @@
 
-/**
- * Bildiriş əməliyyatları üçün tiplər
- */
+import { Json } from '../shared';
 
 export interface Notification {
   id: string;
@@ -13,7 +11,7 @@ export interface Notification {
   created_at: string;
   read_at?: string;
   action_url?: string;
-  data?: any;
+  data?: Json;
 }
 
 export interface CreateNotificationDto {
@@ -22,5 +20,5 @@ export interface CreateNotificationDto {
   body: string;
   notification_type: string;
   action_url?: string;
-  data?: any;
+  data?: Json;
 }

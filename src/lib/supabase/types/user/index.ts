@@ -1,24 +1,13 @@
 
-// Import any required dependencies
-import { PostgrestResponse } from '@supabase/supabase-js';
+import { Tables } from '../shared';
 
-// Define the Role interface
-export interface Role {
-  id: string;
-  name: string;
-  description: string;
-  permissions: string[] | any; // Allow for JSON type from Supabase
-}
-
-// Define the User interface
 export interface User {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
   role_id: string;
-  roles?: Role;
-  role?: string; // Add backwards compatibility field
+  roles?: Role | string;
   region_id?: string;
   sector_id?: string;
   school_id?: string;
@@ -28,12 +17,16 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   last_login?: string;
+  avatar_url?: string;
 }
 
-// Define the UserStatus type
-export type UserStatus = 'active' | 'inactive' | 'all';
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[] | any;
+}
 
-// User Filters interface
 export interface UserFilters {
   role?: string;
   role_id?: string;
@@ -42,9 +35,12 @@ export interface UserFilters {
   school_id?: string;
   status?: UserStatus;
   search?: string;
+  page?: number;
+  pageSize?: number;
 }
 
-// CreateUserDto should mirror User but make id optional
+export type UserStatus = 'active' | 'inactive' | 'all';
+
 export interface CreateUserDto {
   email: string;
   first_name: string;
@@ -56,25 +52,13 @@ export interface CreateUserDto {
   phone?: string;
   utis_code?: string;
   is_active: boolean;
-  password?: string; // Additional field for creation
-  id?: string; // Make id optional for creation
+  password?: string;
+  id?: string;
 }
 
-// Define UpdateUserDto
 export interface UpdateUserDto extends Partial<CreateUserDto> {}
 
-// Define any other types needed
-export type QueryResult<T> = Promise<PostgrestResponse<T>>;
-
-// Define error structure for multi-user creation
-export interface UserCreationError {
-  user: CreateUserDto;
-  error: any;
-}
-
-// Define multi-user creation result
-export interface MultiUserCreationResult {
-  data: User[] | null;
-  error: Error | null;
-  errorDetails?: UserCreationError[];
+export interface UserRoleClaims {
+  role: string;
+  permissions: string[];
 }

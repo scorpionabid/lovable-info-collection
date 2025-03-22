@@ -1,5 +1,5 @@
 
-import { Database } from "@/types/supabase";
+import { Database } from '@/types/supabase';
 
 export type Json =
   | string

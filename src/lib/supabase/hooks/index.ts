@@ -1,25 +1,25 @@
 
-/**
- * Mərkəzi export nöqtəsi bütün Supabase hook-ları üçün
- */
+// Əsas hook'ları export edirik
+export { default as useAuth } from './auth/useAuth';
+export { default as useUserProfile } from './auth/useUserProfile';
+export { default as useUserData } from './auth/useUserData';
+export type { UserProfile } from './auth/useUserProfile';
+export type { UserRoleType } from './auth/useUserData';
 
-// Auth hooks
-export * from './auth/useAuthActions';
-export * from './auth/useAuthListener';
-export { UserRole } from './auth/useUserData';
-export * from './useAuth';
+// Digər hook'ları export edirik
+export { default as useRegions } from './useRegions';
+export { default as useSectors } from './useSectors';
+export { default as useSchools } from './useSchools';
+export { default as useCategories } from './useCategories';
+export { default as useData } from './useData';
+export { default as useNotifications } from './useNotifications';
+export { default as useSchoolTypes } from './useSchoolTypes';
 
-// Data hooks
-export * from './useCategories';
-export * from './useData';
-export * from './useRegions';
-export * from './useSchoolTypes';
-export * from './useSchools';
-export * from './useSectors';
-export * from './useUsers';
+// Query və mutation hook'ları export edirik
+export { default as useQuerySupabase } from './useQuerySupabase';
+export { default as useMutateSupabase } from './useMutateSupabase';
+export { default as useSupabaseQuery } from './useSupabaseQuery';
 
-// Query hooks
-export { useSupabaseMutation } from './useSupabaseMutation';
-export { useSupabaseQuery } from './useSupabaseQuery';
-export * from './useSupabaseQueryLegacy';
-export * from './useSupabaseClient';
+// Ümumi custom hooklar
+export { default as useSupabaseStorage } from './useSupabaseStorage';
+export { default as useAuditLog } from './useAuditLog';

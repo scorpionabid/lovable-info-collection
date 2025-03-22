@@ -1,44 +1,75 @@
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/supabase/client';
-import { Sector } from '@/supabase/types';
+import { Sector, SectorFilter } from '@/lib/supabase/types/sector';
 
-interface UseSectorsOptions {
-  regionId?: string;
-  enabled?: boolean;
-}
+export const useSectors = (filters: SectorFilter = {}) => {
+  const [loading, setLoading] = useState(true);
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [error, setError] = useState<Error | null>(null);
 
-export const useSectors = (options: UseSectorsOptions = {}) => {
-  const { regionId, enabled = true } = options;
-  
-  const fetchSectors = async (): Promise<Sector[]> => {
+  const fetchSectors = async () => {
     try {
-      let query = supabase.from('sectors').select('*').order('name');
-      
-      if (regionId) {
-        query = query.eq('region_id', regionId);
+      let query = supabase.from('sectors').select(`
+        id,
+        name,
+        region_id,
+        description,
+        created_at,
+        updated_at,
+        archived,
+        regions:regions (id, name)
+      `);
+
+      if (filters.search) {
+        query = query.ilike('name', `%${filters.search}%`);
       }
-      
+
+      if (filters.region_id || filters.regionId) {
+        query = query.eq('region_id', filters.region_id || filters.regionId);
+      }
+
+      if (filters.status === 'archived') {
+        query = query.eq('archived', true);
+      } else if (filters.status === 'active' || !filters.status) {
+        query = query.eq('archived', false);
+      }
+
+      if ('archived' in filters) {
+        query = query.eq('archived', filters.archived);
+      }
+
       const { data, error } = await query;
-      
+
       if (error) throw error;
       
-      return data || [];
+      return data as Sector[];
     } catch (error) {
       console.error('Error fetching sectors:', error);
-      return [];
+      throw error;
     }
   };
-  
-  return useQuery({
-    queryKey: ['sectors', regionId],
-    queryFn: fetchSectors,
-    enabled: enabled
-  });
-};
 
-export const useSectorsByRegion = (regionId?: string, enabled: boolean = true) => {
-  return useSectors({ regionId, enabled });
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['sectors', filters],
+    queryFn: fetchSectors
+  });
+
+  useEffect(() => {
+    if (data) {
+      setSectors(data);
+    }
+    setLoading(isLoading);
+    setError(isError ? new Error('Failed to fetch sectors') : null);
+  }, [data, isLoading, isError]);
+
+  return {
+    sectors,
+    loading,
+    error,
+    refetch,
+  };
 };
 
 export default useSectors;

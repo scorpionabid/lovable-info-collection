@@ -1,93 +1,71 @@
 
-import { cn } from "@/lib/utils";
-import { User } from "@/lib/supabase/types/user";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash2, UserCog } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import React from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Edit, Eye, Trash2 } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { UserTableRowProps } from './UserTableRow.props';
 
-export interface UserTableRowProps {
-  user: User;
-  isSelected: boolean;
-  onSelectedChange: (selected: boolean) => void;
-  onEdit?: (userId: string) => void;
-  onDelete?: (userId: string) => void;
-  onResetPassword?: (userId: string) => void;
-}
+const UserTableRow = ({ user, isSelected, onSelect, onView, onEdit, onDelete }: UserTableRowProps) => {
+  const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onSelect(user.id, e.target.checked);
+  };
 
-export const UserTableRow = ({ 
-  user, 
-  isSelected, 
-  onSelectedChange,
-  onEdit,
-  onDelete,
-  onResetPassword
-}: UserTableRowProps) => {
-  const statusColor = user.is_active ? 'bg-green-500' : 'bg-red-500';
-  // Null check əlavə et
-  const roleName = user.role || user.roles?.name || "Naməlum";
-  
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  // Null check role to prevent runtime error
+  const roleName = user.roles 
+    ? (typeof user.roles === 'string' 
+      ? user.roles 
+      : user.roles.name || '') 
+    : '';
+
   return (
-    <tr className={cn("border-b transition-colors hover:bg-muted/50", isSelected && "bg-muted")}>
-      <td className="p-2 pl-4">
-        <Checkbox 
-          checked={isSelected} 
-          onCheckedChange={onSelectedChange} 
+    <tr className="border-b border-gray-200 hover:bg-gray-50">
+      <td className="px-2 py-3">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={(checked) => onSelect(user.id, checked as boolean)}
         />
       </td>
-      <td className="p-2 whitespace-nowrap font-medium">{user.first_name} {user.last_name}</td>
-      <td className="p-2 text-sm">{user.email}</td>
-      <td className="p-2 text-sm">{user.phone || '-'}</td>
-      <td className="p-2">
-        <Badge variant="outline">{roleName}</Badge>
+      <td className="px-4 py-3 flex items-center gap-3">
+        <Avatar className="h-9 w-9">
+          <AvatarFallback className="bg-primary text-white">
+            {getInitials(user.first_name, user.last_name)}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{user.first_name} {user.last_name}</p>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+        </div>
       </td>
-      <td className="p-2 text-sm">
-        <span className={`inline-block w-3 h-3 rounded-full ${statusColor} mr-2`}></span>
-        {user.is_active ? 'Aktiv' : 'Deaktiv'}
+      <td className="px-4 py-3">{roleName}</td>
+      <td className="px-4 py-3">{user.region_id || '-'}</td>
+      <td className="px-4 py-3">{user.sector_id || '-'}</td>
+      <td className="px-4 py-3">{user.school_id || '-'}</td>
+      <td className="px-4 py-3">
+        <Badge variant={user.is_active ? "success" : "destructive"}>
+          {user.is_active ? 'Aktiv' : 'Deaktiv'}
+        </Badge>
       </td>
-      <td className="p-2 text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Menyu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Əməliyyatlar</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {onEdit && (
-              <DropdownMenuItem onClick={() => onEdit(user.id)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                <span>Düzəliş et</span>
-              </DropdownMenuItem>
-            )}
-            {onResetPassword && (
-              <DropdownMenuItem onClick={() => onResetPassword(user.id)}>
-                <UserCog className="mr-2 h-4 w-4" />
-                <span>Şifrəni sıfırla</span>
-              </DropdownMenuItem>
-            )}
-            {onDelete && (
-              <DropdownMenuItem 
-                onClick={() => onDelete(user.id)}
-                className="text-red-600 focus:text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Sil</span>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <td className="px-4 py-3 text-right">
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="icon" onClick={onView}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onEdit}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => onDelete()}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </td>
     </tr>
   );
 };
+
+export default UserTableRow;

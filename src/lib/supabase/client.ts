@@ -62,46 +62,4 @@ export const checkConnection = async (): Promise<boolean> => {
   }
 };
 
-// Additional utilities that might be used
-export const isOfflineMode = (): boolean => {
-  return !navigator.onLine;
-};
-
-export const queryWithCache = async <T>(
-  key: string, 
-  queryFn: () => Promise<T>, 
-  ttlSeconds = 300
-): Promise<T> => {
-  // Implement caching logic here if needed
-  return queryFn();
-};
-
-export const buildPaginatedQuery = (query: any, pagination: { page: number; pageSize: number }) => {
-  const { page, pageSize } = pagination;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  
-  return query.range(from, to);
-};
-
-export const buildSortedQuery = (query: any, sort: { column?: string; direction?: 'asc' | 'desc' }) => {
-  if (sort.column) {
-    return query.order(sort.column, { ascending: sort.direction === 'asc' });
-  }
-  return query;
-};
-
-export const buildFilteredQuery = (query: any, filters: Record<string, any>) => {
-  let filteredQuery = query;
-  
-  // Add common filter logic
-  if (filters.search) {
-    filteredQuery = filteredQuery.ilike('name', `%${filters.search}%`);
-  }
-  
-  // Add other common filters
-  
-  return filteredQuery;
-};
-
 export default supabase;
