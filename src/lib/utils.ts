@@ -2,6 +2,16 @@
 /**
  * Utility functions for the application
  */
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+/**
+ * Combines class names with Tailwind's merge utility
+ * Used throughout the application for conditional styling
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 /**
  * Formats a date string into a localized format
