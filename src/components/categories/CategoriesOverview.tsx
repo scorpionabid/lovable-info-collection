@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Filter, RefreshCcw, Download, Upload } from "lucide-react";
 import * as categoryService from '@/services/supabase/category';
-import { Category, CategoryFilter } from '@/services/supabase/category/types';
+import { Category, CategoryFilter, CategoryStatus } from '@/services/supabase/category/types';
 import { CategoryType } from './types';
 
 const convertToCategory = (category: Category): CategoryType => {
@@ -29,7 +30,7 @@ const adaptCategoryData = (category: any): CategoryType => {
     name: category.name,
     description: category.description || '',
     assignment: category.assignment || 'All',
-    status: category.status || 'Active',
+    status: category.status || 'active',
     priority: category.priority || 0,
     region_id: category.region_id,
     sector_id: category.sector_id,
@@ -55,7 +56,7 @@ export const CategoriesOverview = () => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   
   const assignment = searchParams.get('assignment') as 'All' | 'Regions' | 'Sectors' | 'Schools' | undefined;
-  const status = searchParams.get('status') as 'Active' | 'Inactive' | undefined;
+  const status = searchParams.get('status') as CategoryStatus | undefined;
   const deadlineBefore = searchParams.get('deadlineBefore') || undefined;
   const deadlineAfter = searchParams.get('deadlineAfter') || undefined;
   const minCompletionRate = searchParams.get('minCompletionRate') 

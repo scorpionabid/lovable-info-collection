@@ -1,346 +1,163 @@
-import React from 'react';
-import { useState } from 'react';
+
+import React, { useState } from 'react';
+import { Sector } from '@/lib/supabase/types/sector'; 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { PlusIcon, RefreshCwIcon, PencilIcon, EyeIcon, TrashIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { SectorModal } from './SectorModal';
-import { Eye, Edit, Archive, MoreHorizontal, Download, ArrowUpDown, AlertCircle, RefreshCw } from "lucide-react";
-import { SectorWithStats } from '@/services/supabase/sector/types';
-import { useToast } from "@/hooks/use-toast";
-import { archiveSector } from '@/services/supabase/sector/crudOperations';
-import { useLogger } from '@/hooks/useLogger';
-import {
-  Pagination,
-} from "@/components/ui/pagination";
+import { toast } from 'sonner';
 
 export interface SectorTableProps {
-  sectors: any[];
-  onDataChange?: () => void;
+  sectors: Sector[];
   isLoading: boolean;
-  isError: boolean;
-  errorDetails?: string;
-  totalCount: number;
-  currentPage: number;
-  pageSize: number;
-  setCurrentPage: (page: number) => void;
-  sortColumn: string;
-  sortDirection: 'asc' | 'desc';
-  onSortChange: (column: string) => void;
   onRefresh: () => void;
+  regionId?: string;
 }
 
-export const SectorTable = ({ 
+export const SectorTable: React.FC<SectorTableProps> = ({ 
   sectors, 
-  isLoading,
-  isError,
-  errorDetails = 'Yüklənərkən xəta baş verdi',
-  totalCount,
-  currentPage,
-  pageSize,
-  setCurrentPage,
-  sortColumn,
-  sortDirection,
-  onSortChange,
+  isLoading, 
   onRefresh,
-  onDataChange
-}: SectorTableProps) => {
+  regionId 
+}) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const logger = useLogger('SectorTable');
-  const [selectedSector, setSelectedSector] = useState<SectorWithStats | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const totalPages = Math.ceil(totalCount / pageSize);
-
-  logger.debug('SectorTable rendered', {
-    sectorsCount: sectors?.length || 0,
-    isLoading,
-    isError,
-    totalCount,
-    currentPage,
-    totalPages
-  });
-
-  const handleView = (sector: SectorWithStats) => {
-    logger.info(`Navigating to sector details: ${sector.id}`);
-    navigate(`/sectors/${sector.id}`);
+  const handleAddSector = () => {
+    // You would implement this with a modal or navigation
+    toast("Add sector functionality not yet implemented");
   };
 
-  const handleEdit = (sector: SectorWithStats, event: React.MouseEvent) => {
-    event.stopPropagation();
-    logger.info(`Opening edit modal for sector: ${sector.id}`);
-    setSelectedSector(sector);
-    setIsEditModalOpen(true);
+  const handleEditSector = (id: string) => {
+    navigate(`/sectors/${id}/edit`);
   };
 
-  const handleArchive = async (sector: SectorWithStats, event: React.MouseEvent) => {
-    event.stopPropagation();
-    try {
-      logger.info(`Archiving sector: ${sector.id}`);
-      await archiveSector(sector.id);
-      
-      toast({
-        title: "Sektor arxivləşdirildi",
-        description: `${sector.name} uğurla arxivləşdirildi`,
-      });
-      
-      logger.info(`Sector archived successfully: ${sector.id}`);
-      onRefresh();
-    } catch (error) {
-      logger.error(`Error archiving sector: ${sector.id}`, error);
-      
-      toast({
-        title: "Xəta baş verdi",
-        description: "Sektor arxivləşdirilə bilmədi",
-        variant: "destructive",
-      });
-    }
+  const handleViewSector = (id: string) => {
+    navigate(`/sectors/${id}`);
   };
 
-  const handleExport = (sector: SectorWithStats, event: React.MouseEvent) => {
-    event.stopPropagation();
-    logger.info(`Exporting single sector: ${sector.id}`);
-    
-    toast({
-      title: "Sektor ixrac edilir",
-      description: `${sector.name} məlumatları ixrac edilir`,
-    });
+  const handleDeleteSector = (id: string) => {
+    // This would need to be implemented with your deletion logic
+    toast("Delete sector functionality not yet implemented");
   };
-
-  const renderSortIcon = (column: string) => {
-    if (sortColumn !== column) return <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />;
-    return (
-      <ArrowUpDown className={`ml-1 h-4 w-4 ${sortColumn === column ? 'opacity-100' : 'opacity-50'}`} />
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-infoline-blue mx-auto mb-4"></div>
-        <p className="text-infoline-dark-gray">Sektorlar yüklənir...</p>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-        <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
-        <p className="text-red-500 mb-2">Məlumatlar yüklənərkən xəta baş verdi</p>
-        <p className="text-red-400 text-sm mb-4">{errorDetails}</p>
-        <Button onClick={onRefresh} className="flex items-center gap-2">
-          <RefreshCw size={16} />
-          Yenidən cəhd edin
-        </Button>
-      </div>
-    );
-  }
-
-  if (!sectors || sectors.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-        <p className="text-infoline-dark-gray mb-4">Heç bir sektor tapılmadı</p>
-        <Button onClick={onRefresh} className="flex items-center gap-2">
-          <RefreshCw size={16} />
-          Yenilə
-        </Button>
-      </div>
-    );
-  }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-infoline-lightest-gray border-b border-infoline-light-gray">
-              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">
-                <button 
-                  onClick={() => onSortChange('name')}
-                  className="flex items-center focus:outline-none"
-                >
-                  Ad {renderSortIcon('name')}
-                </button>
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">
-                <button 
-                  onClick={() => onSortChange('description')}
-                  className="flex items-center focus:outline-none"
-                >
-                  Təsvir {renderSortIcon('description')}
-                </button>
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-infoline-dark-blue">
-                <button 
-                  onClick={() => onSortChange('regionName')}
-                  className="flex items-center focus:outline-none"
-                >
-                  Region {renderSortIcon('regionName')}
-                </button>
-              </th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">
-                <button 
-                  onClick={() => onSortChange('schoolCount')}
-                  className="flex items-center justify-center focus:outline-none"
-                >
-                  Məktəb sayı {renderSortIcon('schoolCount')}
-                </button>
-              </th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">
-                <button 
-                  onClick={() => onSortChange('completionRate')}
-                  className="flex items-center justify-center focus:outline-none"
-                >
-                  Doldurma faizi {renderSortIcon('completionRate')}
-                </button>
-              </th>
-              <th className="px-4 py-3 text-center text-sm font-medium text-infoline-dark-blue">
-                <button 
-                  onClick={() => onSortChange('created_at')}
-                  className="flex items-center justify-center focus:outline-none"
-                >
-                  Yaradılma tarixi {renderSortIcon('created_at')}
-                </button>
-              </th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-infoline-dark-blue">Əməliyyatlar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sectors.map((sector) => (
-              <tr 
-                key={sector.id} 
-                className="border-b border-infoline-light-gray hover:bg-infoline-lightest-gray transition-colors cursor-pointer"
-                onClick={() => handleView(sector)}
-              >
-                <td className="px-4 py-3 text-sm font-medium text-infoline-dark-blue">{sector.name || '-'}</td>
-                <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.description || '-'}</td>
-                <td className="px-4 py-3 text-sm text-infoline-dark-gray">{sector.regionName || '-'}</td>
-                <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">{sector.schoolCount}</td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center">
-                    <div className="w-16 bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="h-2.5 rounded-full" 
-                        style={{ 
-                          width: `${sector.completionRate}%`,
-                          backgroundColor: sector.completionRate > 80 ? '#10B981' : sector.completionRate > 50 ? '#F59E0B' : '#EF4444'
-                        }}
-                      ></div>
-                    </div>
-                    <span className="ml-2 text-sm text-infoline-dark-gray">{sector.completionRate}%</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-center text-infoline-dark-gray">
-                  {sector.created_at ? new Date(sector.created_at).toLocaleDateString('az-AZ') : '-'}
-                </td>
-                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleView(sector)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>Baxış</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => handleEdit(sector, e)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        <span>Redaktə et</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => handleArchive(sector, e)}>
-                        <Archive className="mr-2 h-4 w-4" />
-                        <span>Arxivləşdir</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => handleExport(sector, e)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        <span>İxrac et</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      {totalPages > 1 && (
-        <div className="flex justify-center p-4">
-          <div className="flex justify-center items-center gap-2">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Sectors</CardTitle>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCwIcon className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button 
+            onClick={handleAddSector}
+            disabled={isLoading}
+          >
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Add Sector
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="w-full h-64 flex items-center justify-center">
+            <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
+          </div>
+        ) : sectors.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">No sectors found.</p>
             <Button 
               variant="outline" 
-              size="sm" 
-              onClick={() => {
-                if (currentPage > 1) {
-                  logger.info(`Pagination: moving to previous page (${currentPage - 1})`);
-                  setCurrentPage(currentPage - 1);
-                }
-              }}
-              disabled={currentPage === 1}
+              className="mt-4" 
+              onClick={handleAddSector}
             >
-              Previous
-            </Button>
-            
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <Button 
-                  key={i + 1}
-                  variant={currentPage === i + 1 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    logger.info(`Pagination: moving to page ${i + 1}`);
-                    setCurrentPage(i + 1);
-                  }}
-                >
-                  {i + 1}
-                </Button>
-              ))}
-            </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                if (currentPage < totalPages) {
-                  logger.info(`Pagination: moving to next page (${currentPage + 1})`);
-                  setCurrentPage(currentPage + 1);
-                }
-              }}
-              disabled={currentPage === totalPages}
-            >
-              Next
+              Add your first sector
             </Button>
           </div>
-        </div>
-      )}
-      
-      {selectedSector && (
-        <SectorModal 
-          isOpen={isEditModalOpen} 
-          onClose={() => setIsEditModalOpen(false)} 
-          mode="edit"
-          sector={selectedSector}
-          onSuccess={() => {
-            logger.info(`Sector ${selectedSector.id} updated successfully, invalidating query cache`);
-            queryClient.invalidateQueries({ queryKey: ['sectors'] });
-            setIsEditModalOpen(false);
-            toast({
-              title: "Sektor yeniləndi",
-              description: "Sektor məlumatları uğurla yeniləndi",
-            });
-          }}
-        />
-      )}
-    </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Region</TableHead>
+                  <TableHead>Schools</TableHead>
+                  <TableHead>Completion Rate</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sectors.map(sector => (
+                  <TableRow key={sector.id}>
+                    <TableCell className="font-medium">{sector.name}</TableCell>
+                    <TableCell>{sector.code || '-'}</TableCell>
+                    <TableCell>{sector.regionName || sector.region || '-'}</TableCell>
+                    <TableCell>{sector.schoolCount || sector.schools_count || 0}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="h-2.5 rounded-full" 
+                            style={{ 
+                              width: `${sector.completionRate || sector.completion_rate || 0}%`,
+                              backgroundColor: (sector.completionRate || sector.completion_rate || 0) > 80 ? '#10B981' : (sector.completionRate || sector.completion_rate || 0) > 50 ? '#F59E0B' : '#EF4444'
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-xs">{sector.completionRate || sector.completion_rate || 0}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <span className="sr-only">Open menu</span>
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M8.625 2.5C8.625 3.12132 8.12132 3.625 7.5 3.625C6.87868 3.625 6.375 3.12132 6.375 2.5C6.375 1.87868 6.87868 1.375 7.5 1.375C8.12132 1.375 8.625 1.87868 8.625 2.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM7.5 13.625C8.12132 13.625 8.625 13.1213 8.625 12.5C8.625 11.8787 8.12132 11.375 7.5 11.375C6.87868 11.375 6.375 11.8787 6.375 12.5C6.375 13.1213 6.87868 13.625 7.5 13.625Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                            </svg>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewSector(sector.id)}>
+                            <EyeIcon className="mr-2 h-4 w-4" />
+                            View details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditSector(sector.id)}>
+                            <PencilIcon className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteSector(sector.id)}
+                            className="text-red-600"
+                          >
+                            <TrashIcon className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
+
+export default SectorTable;

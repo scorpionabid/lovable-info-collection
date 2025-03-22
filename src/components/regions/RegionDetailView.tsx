@@ -1,71 +1,77 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RegionWithStats } from '@/lib/supabase/types/region';
-import { RegionStats } from './RegionStats';
-import { SectorTable } from '../sectors/SectorTable';
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import SectorTable from "@/components/sectors/SectorTable";
+
+// Import the RegionWithStats and SectorWithStats types from the lib location
+import { Region } from "@/lib/supabase/types/region";
+import { Sector } from "@/lib/supabase/types/sector";
 
 interface RegionDetailViewProps {
-  region: RegionWithStats;
-  sectors: any[];
-  isLoadingSectors: boolean;
+  region: Region;
+  sectors: Sector[];
+  isLoading: boolean;
   onRefresh: () => void;
+  onEdit: () => void;
 }
 
 export const RegionDetailView: React.FC<RegionDetailViewProps> = ({
   region,
   sectors,
-  isLoadingSectors,
-  onRefresh
+  isLoading,
+  onRefresh,
+  onEdit,
 }) => {
-  // Ensure the region has all required properties with defaults if missing
-  const regionWithDefaults: RegionWithStats = {
-    ...region,
-    // Ensure all required properties are present
-    sectorCount: region.sectorCount || region.sectors_count || 0,
-    schoolCount: region.schoolCount || region.schools_count || 0,
-    completionRate: region.completionRate || region.completion_rate || 0,
-    // Adding additional required properties from Region
-    id: region.id,
-    name: region.name,
-    code: region.code || '',
-    created_at: region.created_at,
-    // Optional properties with defaults
-    description: region.description || '',
-    updated_at: region.updated_at,
-    archived: region.archived || false
-  };
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Region: {regionWithDefaults.name}</CardTitle>
-          <CardDescription>
-            {regionWithDefaults.description || 'No description available'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RegionStats region={regionWithDefaults} />
-        </CardContent>
-      </Card>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Region: {region.name}</h1>
+          <p className="text-gray-500">
+            {region.description || "No description available"}
+          </p>
+          {region.code && (
+            <p className="text-sm text-gray-500">Code: {region.code}</p>
+          )}
+        </div>
+        <Button onClick={onEdit}>Edit Region</Button>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Sectors in this Region</CardTitle>
-          <CardDescription>
-            View and manage all sectors in {regionWithDefaults.name}
-          </CardDescription>
+          <CardTitle>Region Statistics</CardTitle>
         </CardHeader>
-        <CardContent>
-          <SectorTable 
-            sectors={sectors}
-            isLoading={isLoadingSectors}
-            onRefresh={onRefresh}
-            regionId={regionWithDefaults.id}
-          />
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-background p-4 rounded-lg shadow">
+            <h3 className="text-lg font-medium mb-1">Sectors</h3>
+            <p className="text-3xl font-bold">
+              {region.sectorCount || region.sectors_count || sectors.length || 0}
+            </p>
+          </div>
+          <div className="bg-background p-4 rounded-lg shadow">
+            <h3 className="text-lg font-medium mb-1">Schools</h3>
+            <p className="text-3xl font-bold">
+              {region.schoolCount || region.schools_count || 0}
+            </p>
+          </div>
+          <div className="bg-background p-4 rounded-lg shadow">
+            <h3 className="text-lg font-medium mb-1">Completion Rate</h3>
+            <p className="text-3xl font-bold">
+              {region.completionRate || region.completion_rate || 0}%
+            </p>
+          </div>
         </CardContent>
       </Card>
+
+      <SectorTable 
+        sectors={sectors}
+        isLoading={isLoading}
+        onRefresh={onRefresh}
+        regionId={region.id}
+      />
     </div>
   );
 };
+
+export default RegionDetailView;

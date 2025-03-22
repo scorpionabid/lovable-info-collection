@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,6 +15,7 @@ import { CategoryColumnsModal } from './CategoryColumnsModal';
 import { Eye, Edit, Archive, MoreHorizontal, Download, Table2, ArrowUp, ArrowDown, Trash } from "lucide-react";
 import { CategoryType } from './CategoryDetailView';
 import * as categoryService from '@/services/supabase/categoryService';
+import { CategoryStatus } from '@/lib/supabase/types/category';
 
 interface CategoryTableProps {
   categories: CategoryType[];
@@ -40,12 +42,12 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
   const handleArchive = async (category: CategoryType) => {
     try {
       await categoryService.updateCategory(category.id, {
-        status: category.status === 'Active' ? 'Inactive' : 'Active'
+        status: category.status === 'active' ? 'inactive' : 'active' as CategoryStatus
       });
       
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       
-      toast.success(`Kateqoriya uğurla ${category.status === 'Active' ? 'arxivləşdirildi' : 'aktivləşdirildi'}`);
+      toast.success(`Kateqoriya uğurla ${category.status === 'active' ? 'arxivləşdirildi' : 'aktivləşdirildi'}`);
     } catch (error) {
       toast.error('Əməliyyat zamanı xəta baş verdi');
       console.error(error);
@@ -170,9 +172,9 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    category.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    category.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {category.status === 'Active' ? 'Aktiv' : 'Deaktiv'}
+                    {category.status === 'active' ? 'Aktiv' : 'Deaktiv'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -242,3 +244,5 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
     </div>
   );
 };
+
+export default CategoryTable;

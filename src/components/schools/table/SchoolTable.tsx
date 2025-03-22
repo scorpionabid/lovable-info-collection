@@ -1,115 +1,172 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
 import { School } from '@/lib/supabase/types/school';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PlusIcon, RefreshCwIcon, PencilIcon, EyeIcon, TrashIcon } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-interface SchoolTableProps {
+export interface SchoolTableProps {
   schools: School[];
   isLoading: boolean;
-  isError?: boolean;
-  onAddSchool?: () => void;
-  onRefresh?: () => void;
+  onRefresh: () => void;
   regionId?: string;
   sectorId?: string;
 }
 
-const SchoolTable: React.FC<SchoolTableProps> = ({
-  schools,
-  isLoading,
-  isError = false,
-  onAddSchool,
+export const SchoolTable: React.FC<SchoolTableProps> = ({ 
+  schools, 
+  isLoading, 
   onRefresh,
   regionId,
   sectorId
 }) => {
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-infoline-blue"></div>
-        <span className="ml-2">Yüklənir...</span>
-      </div>
-    );
-  }
+  const navigate = useNavigate();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
 
-  if (isError) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4">
-        <p className="font-semibold">Məktəbləri yükləyərkən xəta baş verdi</p>
-        <p className="mt-2">Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sistem administratoru ilə əlaqə saxlayın.</p>
-        {onRefresh && (
-          <Button onClick={onRefresh} variant="outline" className="mt-2">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Yenidən cəhd edin
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const handleAddSchool = () => {
+    setIsAddModalOpen(true);
+  };
 
-  if (schools.length === 0) {
-    return (
-      <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg mb-4 text-center">
-        <p className="text-gray-600 mb-2">Bu sektor üçün heç bir məktəb tapılmadı.</p>
-        {onAddSchool && (
-          <Button onClick={onAddSchool} className="mt-2">
-            <Plus className="mr-2 h-4 w-4" />
-            Yeni məktəb əlavə et
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const handleEditSchool = (id: string) => {
+    navigate(`/schools/${id}/edit`);
+  };
+
+  const handleViewSchool = (id: string) => {
+    navigate(`/schools/${id}`);
+  };
+
+  const handleDeleteSchool = (id: string) => {
+    // This would need to be implemented with your deletion logic
+    toast("This feature is not yet implemented");
+  };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-800">
-          <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Ad
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Kod
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Ünvan
-            </th>
-            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Əməliyyatlar
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
-          {schools.map((school) => (
-            <tr key={school.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{school.name}</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-500 dark:text-gray-400">{school.code || '-'}</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-500 dark:text-gray-400">{school.address || '-'}</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <Button variant="ghost" className="text-indoline-600 hover:text-indoline-900 dark:text-indoline-400 dark:hover:text-indoline-300" size="sm">
-                  Bax
-                </Button>
-                <Button variant="ghost" className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 ml-2" size="sm">
-                  Redaktə et
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Schools</CardTitle>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCwIcon className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button 
+            onClick={handleAddSchool}
+            disabled={isLoading}
+          >
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Add School
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="w-full h-64 flex items-center justify-center">
+            <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
+          </div>
+        ) : schools.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">No schools found.</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={handleAddSchool}
+            >
+              Add your first school
+            </Button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Region</TableHead>
+                  <TableHead>Sector</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Students</TableHead>
+                  <TableHead>Teachers</TableHead>
+                  <TableHead>Completion</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {schools.map(school => (
+                  <TableRow key={school.id}>
+                    <TableCell className="font-medium">{school.name}</TableCell>
+                    <TableCell>{school.code || '-'}</TableCell>
+                    <TableCell>{school.region || '-'}</TableCell>
+                    <TableCell>{school.sector || '-'}</TableCell>
+                    <TableCell>{school.type || '-'}</TableCell>
+                    <TableCell>{school.student_count || 0}</TableCell>
+                    <TableCell>{school.teacher_count || 0}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="h-2.5 rounded-full" 
+                            style={{ 
+                              width: `${school.completionRate || 0}%`,
+                              backgroundColor: (school.completionRate || 0) > 80 ? '#10B981' : (school.completionRate || 0) > 50 ? '#F59E0B' : '#EF4444'
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-xs">{school.completionRate || 0}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <span className="sr-only">Open menu</span>
+                            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M8.625 2.5C8.625 3.12132 8.12132 3.625 7.5 3.625C6.87868 3.625 6.375 3.12132 6.375 2.5C6.375 1.87868 6.87868 1.375 7.5 1.375C8.12132 1.375 8.625 1.87868 8.625 2.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM7.5 13.625C8.12132 13.625 8.625 13.1213 8.625 12.5C8.625 11.8787 8.12132 11.375 7.5 11.375C6.87868 11.375 6.375 11.8787 6.375 12.5C6.375 13.1213 6.87868 13.625 7.5 13.625Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                            </svg>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewSchool(school.id)}>
+                            <EyeIcon className="mr-2 h-4 w-4" />
+                            View details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditSchool(school.id)}>
+                            <PencilIcon className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteSchool(school.id)}
+                            className="text-red-600"
+                          >
+                            <TrashIcon className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
-// Add named export alongside default export
-export { SchoolTable };
-
-// Default export
 export default SchoolTable;

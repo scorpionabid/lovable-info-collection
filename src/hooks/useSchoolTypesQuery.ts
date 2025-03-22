@@ -12,11 +12,13 @@ export function useSchoolTypesQuery() {
       
       if (error) throw error;
       
+      if (!data) return [];
+      
       // Transform the data to match the SchoolType interface
-      return data.map(item => ({
+      return data.map((item: any) => ({
         id: item.id,
         name: item.name,
-        description: '', // Default empty description as this field isn't returned by the RPC
+        description: item.description || '', // Default empty description as this field isn't returned by the RPC
       }));
     } catch (error) {
       console.error('Error fetching school types:', error);
@@ -29,3 +31,5 @@ export function useSchoolTypesQuery() {
     queryFn: fetchSchoolTypes,
   });
 }
+
+export default useSchoolTypesQuery;
