@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from "@/components/layout/Layout";
 import { SectorDetailView } from "@/components/sectors/SectorDetailView";
-import sectorService from '@/services/supabase/sectorService';
+import sectorService from '@/services/sectorService';
 import { useToast } from '@/hooks/use-toast';
 
 const SectorDetails = () => {
@@ -15,27 +14,18 @@ const SectorDetails = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(searchParams.get('edit') === 'true');
 
   // Fetch sector data with React Query
-  const { 
-    data: sector, 
-    isLoading, 
-    isError, 
-    error,
-    refetch 
-  } = useQuery({
+  const { data: sector, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['sector', id],
-    queryFn: () => sectorService.getSectorById(id as string),
+    queryFn: () => sectorService.getSectorById(id),
     enabled: !!id,
-    retry: 1,
+    retry: 1
   });
 
   // Fetch schools for this sector
-  const { 
-    data: schools = [], 
-    isLoading: isLoadingSchools 
-  } = useQuery({
+  const { data: schools = [], isLoading: isLoadingSchools } = useQuery({
     queryKey: ['sector-schools', id],
-    queryFn: () => sectorService.getSectorSchools(id as string),
-    enabled: !!id,
+    queryFn: () => sectorService.getSectorSchools(id),
+    enabled: !!id
   });
 
   // Handle errors

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from "@/components/layout/Layout";
@@ -9,9 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { SectorModal } from "@/components/sectors/SectorModal";
 import { SchoolModal } from "@/components/schools/modal/SchoolModal";
-import { getRegionById } from "@/services/supabase/region";
-import { getSectorsByRegionId } from "@/services/supabase/sector/helperFunctions";
-import { RegionWithStats, Sector, SectorWithStats } from "@/services/supabase/region/types";
+import { getRegionById } from "@/services/regionService";
+import { getSectorsByRegionId } from "@/services/sectorService";
 
 const RegionDetails = () => {
   const { id } = useParams();
@@ -29,7 +27,6 @@ const RegionDetails = () => {
     const fetchRegion = async () => {
       const data = await getRegionById(id);
       if (data) {
-        // Ensure all required properties exist with default values if needed
         const regionWithDefaults: RegionWithStats = {
           ...data,
           sectorCount: data.sectorCount || data.sectors_count || 0,
@@ -38,7 +35,6 @@ const RegionDetails = () => {
           teacherCount: data.teacherCount || 0,
           completionRate: data.completionRate || data.completion_rate || 0,
           description: data.description || '',
-          // Add backward compatibility fields
           sectors_count: data.sectors_count || data.sectorCount || 0,
           schools_count: data.schools_count || data.schoolCount || 0,
           completion_rate: data.completion_rate || data.completionRate || 0

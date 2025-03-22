@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { SchoolInfo } from "@/components/schools/SchoolInfo";
 import { SchoolStats } from "@/components/schools/SchoolStats";
 import { SchoolActionsBar } from "@/components/schools/SchoolActionsBar";
 import { SchoolTabs } from "@/components/schools/SchoolTabs";
-import { getSchoolById, getSchoolActivities } from "@/services/supabase/school";
+import { getSchoolById, getSchoolActivities } from "@/services/schoolService";
 import { useToast } from "@/hooks/use-toast";
 import { SchoolModal } from "@/components/schools/modal/SchoolModal";
 

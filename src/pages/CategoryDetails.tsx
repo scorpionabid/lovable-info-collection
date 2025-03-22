@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,41 +6,46 @@ import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/layout/Layout';
 import { CategoryDetailView } from '@/components/categories/CategoryDetailView';
 import categoryService from '@/services/categoryService';
-import { CategoryType } from '@/components/categories/CategoryDetailView';
 
 const CategoryDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
-  const { data: category, isLoading, isError } = useQuery({
+  const { data: category, isLoading: queryIsLoading, isError } = useQuery({
     queryKey: ['category', id],
-    queryFn: () => categoryService.getCategoryById(id as string),
+    queryFn: () => categoryService.getCategoryById(id || ''),
     enabled: !!id,
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => categoryService.updateCategory(id as string, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['category', id] });
-      toast.success('Kateqoriya məlumatları uğurla yeniləndi');
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error?.message || 'Kateqoriya yenilənərkən xəta baş verdi'}`);
+  const updateMutation = useMutation(
+    (data) => categoryService.updateCategory(id || '', data),
+    {
+      onSuccess: () => {
+        toast.success('Kateqoriya uğurla yeniləndi!');
+        queryClient.invalidateQueries(['categories']);
+        queryClient.invalidateQueries(['category', id]);
+      },
+      onError: (error) => {
+        toast.error(`Kateqoriya yenilənərkən xəta baş verdi: ${error.message}`);
+      },
     }
-  });
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: () => categoryService.deleteCategory(id as string),
-    onSuccess: () => {
-      toast.success('Kateqoriya uğurla silindi');
-      navigate('/categories');
-    },
-    onError: (error: any) => {
-      toast.error(`Xəta: ${error?.message || 'Kateqoriya silinərkən xəta baş verdi'}`);
+  const deleteMutation = useMutation(
+    () => categoryService.deleteCategory(id || ''),
+    {
+      onSuccess: () => {
+        toast.success('Kateqoriya uğurla silindi!');
+        queryClient.invalidateQueries(['categories']);
+        navigate('/categories');
+      },
+      onError: (error) => {
+        toast.error(`Kateqoriya silinərkən xəta baş verdi: ${error.message}`);
+      },
     }
-  });
+  );
 
   const handleDelete = async () => {
     if (window.confirm('Bu kateqoriyanı silmək istədiyinizə əminsiniz?')) {
@@ -58,30 +62,16 @@ const CategoryDetails = () => {
     navigate('/categories');
   };
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
-        </div>
-      </Layout>
-    );
+  if (queryIsLoading) {
+    return <div>Yüklənir...</div>;
   }
 
   if (isError || !category) {
-    return (
-      <Layout>
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-          <p className="font-semibold">Kateqoriya məlumatlarını yükləyərkən xəta baş verdi</p>
-          <p className="mt-2">Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sistem administratoru ilə əlaqə saxlayın.</p>
-          <Button className="mt-4" onClick={handleGoBack}>Geri qayıt</Button>
-        </div>
-      </Layout>
-    );
+    return <div>Kateqoriya tapılmadı və ya xəta baş verdi.</div>;
   }
 
   // Ensure createdAt is not optional by providing a default
-  const categoryWithDefaults: CategoryType = {
+  const categoryWithDefaults = {
     id: category?.id || '',
     name: category?.name || '',
     description: category?.description || '',
