@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { CreateRegionDto } from '@/lib/supabase/types/region';
+import { RegionWithStats } from '@/lib/supabase/types/region';
 
 // Define schema for region form
 const regionSchema = z.object({
@@ -21,22 +21,26 @@ const regionSchema = z.object({
 
 type RegionFormValues = z.infer<typeof regionSchema>;
 
-interface RegionModalProps {
+export interface RegionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  regionId?: string;
+  mode: 'create' | 'edit';
+  initialData?: RegionWithStats;
   onSuccess?: () => void;
+  onCreated?: () => void;
 }
 
 export const RegionModal: React.FC<RegionModalProps> = ({
   isOpen,
   onClose,
-  regionId,
+  mode = 'create',
+  initialData,
   onSuccess,
+  onCreated
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isEditMode = !!regionId;
+  const isEditMode = mode === 'edit';
   
   // Form setup
   const {
@@ -47,18 +51,18 @@ export const RegionModal: React.FC<RegionModalProps> = ({
   } = useForm<RegionFormValues>({
     resolver: zodResolver(regionSchema),
     defaultValues: {
-      name: '',
-      code: '',
-      description: '',
+      name: initialData?.name || '',
+      code: initialData?.code || '',
+      description: initialData?.description || '',
     },
   });
   
   // Load region data if in edit mode
   React.useEffect(() => {
     const loadRegion = async () => {
-      if (isEditMode && regionId) {
+      if (isEditMode && initialData?.id) {
         try {
-          const regionData = await regionService.getRegionById(regionId);
+          const regionData = await regionService.getRegionById(initialData.id);
           reset({
             name: regionData.name,
             code: regionData.code || '',
@@ -67,8 +71,8 @@ export const RegionModal: React.FC<RegionModalProps> = ({
         } catch (error) {
           console.error('Error loading region:', error);
           toast({
-            title: 'Error',
-            description: 'Failed to load region details',
+            title: 'Xəta',
+            description: 'Region məlumatlarını yükləyərkən xəta baş verdi',
             variant: 'destructive',
           });
           onClose();
@@ -79,22 +83,26 @@ export const RegionModal: React.FC<RegionModalProps> = ({
     if (isOpen) {
       loadRegion();
     }
-  }, [isOpen, isEditMode, regionId, reset, toast, onClose]);
+  }, [isOpen, isEditMode, initialData, reset, toast, onClose]);
   
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: CreateRegionDto) => regionService.createRegion(data as CreateRegionDto),
+    mutationFn: (data: RegionFormValues) => regionService.createRegion(data),
     onSuccess: () => {
-      toast({ title: 'Success', description: 'Region created successfully' });
+      toast({ 
+        title: 'Əməliyyat tamamlandı', 
+        description: 'Region uğurla yaradıldı' 
+      });
       queryClient.invalidateQueries({ queryKey: ['regions'] });
       reset();
       onClose();
       if (onSuccess) onSuccess();
+      if (onCreated) onCreated();
     },
     onError: (error: any) => {
       toast({
-        title: 'Error',
-        description: `Failed to create region: ${error.message}`,
+        title: 'Xəta',
+        description: `Region yaradılarkən xəta: ${error.message}`,
         variant: 'destructive',
       });
     },
@@ -103,19 +111,22 @@ export const RegionModal: React.FC<RegionModalProps> = ({
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: (data: RegionFormValues) => 
-      regionService.updateRegion(regionId as string, data),
+      regionService.updateRegion(initialData?.id as string, data),
     onSuccess: () => {
-      toast({ title: 'Success', description: 'Region updated successfully' });
+      toast({ 
+        title: 'Əməliyyat tamamlandı', 
+        description: 'Region uğurla yeniləndi' 
+      });
       queryClient.invalidateQueries({ queryKey: ['regions'] });
-      queryClient.invalidateQueries({ queryKey: ['region', regionId] });
+      queryClient.invalidateQueries({ queryKey: ['region', initialData?.id] });
       reset();
       onClose();
       if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
       toast({
-        title: 'Error',
-        description: `Failed to update region: ${error.message}`,
+        title: 'Xəta',
+        description: `Region yenilənərkən xəta: ${error.message}`,
         variant: 'destructive',
       });
     },
@@ -126,82 +137,65 @@ export const RegionModal: React.FC<RegionModalProps> = ({
     if (isEditMode) {
       updateMutation.mutate(data);
     } else {
-      // Ensure data has name for createRegion
-      const createData: CreateRegionDto = {
-        name: data.name,
-        code: data.code,
-        description: data.description
-      };
-      createMutation.mutate(createData);
+      createMutation.mutate(data);
     }
   };
   
   return (
     <Modal
-      title={isEditMode ? 'Edit Region' : 'Create New Region'}
+      title={isEditMode ? 'Regionu Redaktə et' : 'Yeni Region Yarat'}
       isOpen={isOpen}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium">
-            Region Name *
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+            Ad*
           </label>
           <Input
             id="name"
             {...register('name')}
-            placeholder="Enter region name"
+            className={errors.name ? 'border-red-500' : ''}
           />
           {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+            <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
           )}
         </div>
         
         <div>
-          <label htmlFor="code" className="block text-sm font-medium">
-            Region Code
+          <label htmlFor="code" className="block text-sm font-medium text-gray-700">
+            Kod
           </label>
           <Input
             id="code"
             {...register('code')}
-            placeholder="Enter region code (optional)"
+            className={errors.code ? 'border-red-500' : ''}
           />
           {errors.code && (
-            <p className="text-red-500 text-sm mt-1">{errors.code.message}</p>
+            <p className="mt-1 text-sm text-red-500">{errors.code.message}</p>
           )}
         </div>
         
         <div>
-          <label htmlFor="description" className="block text-sm font-medium">
-            Description
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+            Təsvir
           </label>
           <Textarea
             id="description"
             {...register('description')}
-            placeholder="Enter region description (optional)"
-            rows={3}
+            className={errors.description ? 'border-red-500' : ''}
           />
           {errors.description && (
-            <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+            <p className="mt-1 text-sm text-red-500">{errors.description.message}</p>
           )}
         </div>
         
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            Ləğv et
           </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
-          >
-            {isSubmitting || createMutation.isPending || updateMutation.isPending ? (
-              <>
-                <span className="animate-spin mr-2">⏳</span>
-                {isEditMode ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              <>{isEditMode ? 'Update' : 'Create'}</>
-            )}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saxlanılır...' : isEditMode ? 'Yenilə' : 'Yarat'}
           </Button>
         </div>
       </form>

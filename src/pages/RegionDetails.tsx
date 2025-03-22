@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Layout } from "@/components/layout/Layout";
@@ -10,6 +11,9 @@ import { SectorModal } from "@/components/sectors/SectorModal";
 import { SchoolModal } from "@/components/schools/modal/SchoolModal";
 import { getRegionById } from "@/services/regionService";
 import { getSectorsByRegionId } from "@/services/sectorService";
+import { RegionWithStats } from "@/lib/supabase/types/region";
+import { SectorWithStats } from "@/lib/supabase/types/sector";
+import { UserRole } from '@/lib/supabase/types/user';
 
 const RegionDetails = () => {
   const { id } = useParams();
@@ -49,7 +53,7 @@ const RegionDetails = () => {
     if (!id) return;
     try {
       const data = await getSectorsByRegionId(id);
-      setSectors(data.map((sector) => ({
+      setSectors(data.map((sector: any) => ({
         ...sector,
         id: sector.id,
         name: sector.name,
@@ -92,14 +96,14 @@ const RegionDetails = () => {
 
   if (!region) {
     return (
-      <Layout userRole="super-admin">
+      <Layout userRole={UserRole.SuperAdmin}>
         <div>Loading...</div>
       </Layout>
     );
   }
 
   return (
-    <Layout userRole="super-admin">
+    <Layout userRole={UserRole.SuperAdmin}>
       <RegionHeader 
         region={region} 
         onEdit={() => {}} 
@@ -123,7 +127,6 @@ const RegionDetails = () => {
       <SectorTable 
         sectors={sectors}
         isLoading={false}
-        isError={false}
         totalCount={sectors.length}
         currentPage={currentPage}
         pageSize={pageSize}
@@ -132,7 +135,6 @@ const RegionDetails = () => {
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
         onRefresh={fetchSectors}
-        onDataChange={fetchSectors}
       />
       
       <div className="md:px-6 mt-4">
@@ -155,7 +157,7 @@ const RegionDetails = () => {
         onClose={() => setCreateSchoolModalOpen(false)}
         mode="create"
         regionId={id || ''}
-        onCreated={handleSchoolCreated}
+        onSuccess={handleSchoolCreated}
       />
     </Layout>
   );

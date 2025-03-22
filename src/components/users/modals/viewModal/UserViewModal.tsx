@@ -1,19 +1,11 @@
 
 import React from 'react';
 import { User } from '@/lib/supabase/types/user';
-import { Card, CardContent } from '@/components/ui/card';
+import { Modal } from '@/components/ui/modal';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  getUserStatusBadgeColor, 
-  getUserStatusText, 
-  getUserDisplayEntity 
-} from '../../utils/userUtils';
-import { UserInfo } from './UserInfo';
-import { UserContactInfo } from './UserContactInfo';
-import { UserRole } from './UserRole';
-import { UserActions } from './UserActions';
-import { formatDate } from '@/lib/utils';
-import { getRolePermissions } from '@/lib/supabase/types/user/role';
+import { getUserRoleName, getUserEntity, getUserStatusBadge, getUserStatusColor, getUserStatusText, getUserRoleBadgeColor } from '../../utils/userUtils';
+import { formatDate } from '@/utils/dateUtils';
 
 interface UserViewModalProps {
   user: User;
@@ -21,80 +13,69 @@ interface UserViewModalProps {
 }
 
 export const UserViewModal: React.FC<UserViewModalProps> = ({ user, onClose }) => {
-  const actionsWithClose = {
-    user,
-    onClose
-  };
-
   return (
-    <div className="space-y-6">
-      <UserInfo user={user} />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
-            <UserContactInfo user={user} />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-4">
-            <h3 className="text-lg font-semibold mb-4">Role & Permissions</h3>
-            <UserRole user={user} />
-            
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Entity</h4>
-              <p>{getUserDisplayEntity(user)}</p>
-            </div>
-            
-            <div className="mt-4">
-              <h4 className="text-sm font-medium mb-2">Permissions</h4>
-              <div className="flex flex-wrap gap-1">
-                {getRolePermissions(user.roles).length > 0 ? (
-                  getRolePermissions(user.roles).map((permission, index) => (
-                    <Badge key={index} variant="outline" className="mb-1">
-                      {permission}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-gray-500">No permissions set</span>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Card>
-        <CardContent className="pt-4">
-          <h3 className="text-lg font-semibold mb-4">User Status</h3>
-          <div className="flex items-center justify-between">
+    <Modal title="İstifadəçi Məlumatları" isOpen={true} onClose={onClose}>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 space-y-4">
             <div>
-              <h4 className="text-sm font-medium mb-2">Current Status</h4>
-              <Badge 
-                variant="outline" 
-                className={getUserStatusBadgeColor(user.is_active)}
-              >
-                {getUserStatusText(user.is_active)}
-              </Badge>
+              <Label className="text-sm font-medium text-gray-500">Ad Soyad</Label>
+              <div className="text-base font-semibold mt-1">{user.first_name} {user.last_name}</div>
             </div>
             
             <div>
-              <h4 className="text-sm font-medium mb-2">Last Login</h4>
-              <p>{user.last_login ? formatDate(user.last_login) : 'Never'}</p>
+              <Label className="text-sm font-medium text-gray-500">Email</Label>
+              <div className="text-base mt-1">{user.email}</div>
             </div>
             
             <div>
-              <h4 className="text-sm font-medium mb-2">Joined</h4>
-              <p>{user.created_at ? formatDate(user.created_at) : 'Unknown'}</p>
+              <Label className="text-sm font-medium text-gray-500">Telefon</Label>
+              <div className="text-base mt-1">{user.phone || '-'}</div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">UTIS Kodu</Label>
+              <div className="text-base mt-1">{user.utis_code || '-'}</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-      
-      <UserActions user={user} onClose={onClose} />
-    </div>
+          
+          <div className="flex-1 space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-500">Rolu</Label>
+              <div className="mt-1">
+                <Badge className={getUserRoleBadgeColor(user)}>
+                  {getUserRoleName(user)}
+                </Badge>
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">Təşkilat</Label>
+              <div className="text-base mt-1">{getUserEntity(user) || '-'}</div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">Status</Label>
+              <div className="mt-1">
+                <Badge className={getUserStatusColor(user.is_active)}>
+                  {getUserStatusText(user.is_active)}
+                </Badge>
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">Son Giriş</Label>
+              <div className="text-base mt-1">{user.last_login ? formatDate(user.last_login) : 'Heç vaxt'}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <Label className="text-sm font-medium text-gray-500">Yaradılma Tarixi</Label>
+          <div className="text-base mt-1">{formatDate(user.created_at)}</div>
+        </div>
+      </div>
+    </Modal>
   );
 };
 

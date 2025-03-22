@@ -1,7 +1,6 @@
 
 import { RegionWithStats } from "@/lib/supabase/types/region";
 import { Dispatch, SetStateAction } from "react";
-import { RefetchOptions } from "@tanstack/react-query";
 
 export interface RegionTableProps {
   regions: RegionWithStats[];
@@ -17,5 +16,5 @@ export interface RegionTableProps {
   onViewRegion?: (region: RegionWithStats) => void;
   onEditRegion?: (region: RegionWithStats) => void;
   onDeleteRegion?: (regionId: string) => void;
-  onRefresh?: (options?: RefetchOptions) => Promise<any>;
+  onRefresh?: () => Promise<any>;
 }

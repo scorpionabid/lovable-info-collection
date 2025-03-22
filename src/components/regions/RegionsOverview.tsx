@@ -1,17 +1,19 @@
-// Yalnız onViewRegion prop'unu əlavə edərək mövcud kodu qoruyuruq
+
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RegionTable } from './table/RegionTable';
 import { RegionToolbar } from './RegionToolbar';
 import { RegionFilterPanel } from './RegionFilterPanel';
 import { RegionModal } from './RegionModal';
 import useRegionsData from './hooks/useRegionsData';
-import { useNavigate } from 'react-router-dom';
+import { RegionWithStats } from '@/lib/supabase/types/region';
+import { UserRole } from '@/lib/supabase/types/user';
 
 export const RegionsOverview = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [selectedRegion, setSelectedRegion] = useState<RegionWithStats | null>(null);
   const navigate = useNavigate();
 
   const {
@@ -34,19 +36,17 @@ export const RegionsOverview = () => {
     setIsCreateModalOpen(true);
   };
 
-  const handleEditClick = (region) => {
+  const handleEditClick = (region: RegionWithStats) => {
     setSelectedRegion(region);
     setIsEditModalOpen(true);
   };
 
-  const handleDeleteClick = (regionId) => {
+  const handleDeleteClick = (regionId: string) => {
     // Handle delete logic here
     console.log('Delete region with ID:', regionId);
   };
 
-  // onViewRegion funksiyasını əlavə et
-  const handleViewRegion = (region) => {
-    // Region parametrini alır və region detalları səhifəsinə yönləndirir
+  const handleViewRegion = (region: RegionWithStats) => {
     navigate(`/regions/${region.id}`);
   };
 
@@ -55,11 +55,12 @@ export const RegionsOverview = () => {
       <RegionToolbar
         onCreateClick={handleCreateClick}
         onToggleFilterPanel={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+        onRefresh={refetch}
       />
 
       {isFilterPanelOpen && (
         <RegionFilterPanel
-          onApply={handleApplyFilters}
+          onApplyFilters={handleApplyFilters}
           onClose={() => setIsFilterPanelOpen(false)}
         />
       )}
@@ -85,7 +86,7 @@ export const RegionsOverview = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         mode="create"
-        onCreated={refetch}
+        onSuccess={refetch}
       />
 
       {selectedRegion && (

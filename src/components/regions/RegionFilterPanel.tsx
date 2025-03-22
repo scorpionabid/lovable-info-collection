@@ -1,103 +1,124 @@
 
 import React, { useState } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  Slider 
+} from '@/components/ui/slider';
 
 export interface RegionFilterPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  filters: {
-    search: string;
-    status: string;
-  };
   onApplyFilters: (filters: any) => void;
+  onClose: () => void;
+  initialFilters?: any;
 }
 
 export const RegionFilterPanel: React.FC<RegionFilterPanelProps> = ({
-  isOpen,
+  onApplyFilters,
   onClose,
-  filters,
-  onApplyFilters
+  initialFilters = {}
 }) => {
-  const [localFilters, setLocalFilters] = useState(filters);
+  const [filters, setFilters] = useState({
+    search: initialFilters.search || '',
+    status: initialFilters.status || 'all',
+    dateFrom: initialFilters.dateFrom || '',
+    dateTo: initialFilters.dateTo || '',
+    minCompletionRate: initialFilters.minCompletionRate || 0,
+    maxCompletionRate: initialFilters.maxCompletionRate || 100,
+  });
 
-  const handleStatusChange = (value: string) => {
-    setLocalFilters({
-      ...localFilters,
-      status: value
-    });
+  const handleChange = (field: string, value: any) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleApplyFilters = () => {
-    onApplyFilters(localFilters);
-    onClose();
-  };
-
-  const handleResetFilters = () => {
-    const resetFilters = {
-      search: '',
-      status: 'active'
-    };
-    setLocalFilters(resetFilters);
-    onApplyFilters(resetFilters);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onApplyFilters(filters);
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[300px] sm:w-[400px]">
-        <SheetHeader>
-          <SheetTitle>Filterlər</SheetTitle>
-          <SheetDescription>
-            Regionları filtirləmək üçün parametrləri seçin
-          </SheetDescription>
-        </SheetHeader>
-        <div className="py-4 space-y-6">
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <RadioGroup 
-              value={localFilters.status}
-              onValueChange={handleStatusChange}
-              className="flex flex-col space-y-1"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="active" id="active" />
-                <Label htmlFor="active">Aktiv</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="inactive" id="inactive" />
-                <Label htmlFor="inactive">Deaktiv</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="all" />
-                <Label htmlFor="all">Hamısı</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="archived" id="archived" />
-                <Label htmlFor="archived">Arxivlənmiş</Label>
-              </div>
-            </RadioGroup>
+    <div className="bg-white rounded-lg shadow p-6 mb-4">
+      <h3 className="text-lg font-medium mb-4">Filtr Parametrləri</h3>
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="search">Axtarış</Label>
+            <Input 
+              id="search"
+              placeholder="Region adı..."
+              value={filters.search}
+              onChange={(e) => handleChange('search', e.target.value)}
+            />
           </div>
           
-          <div className="flex justify-between pt-4">
-            <Button variant="outline" onClick={handleResetFilters}>
-              Sıfırla
-            </Button>
-            <Button onClick={handleApplyFilters}>
-              Tətbiq et
-            </Button>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select 
+              value={filters.status}
+              onValueChange={(value) => handleChange('status', value)}
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Status seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Hamısı</SelectItem>
+                <SelectItem value="active">Aktiv</SelectItem>
+                <SelectItem value="inactive">Deaktiv</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label htmlFor="dateFrom">Tarixdən</Label>
+            <Input 
+              id="dateFrom"
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => handleChange('dateFrom', e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="dateTo">Tarixə qədər</Label>
+            <Input 
+              id="dateTo"
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => handleChange('dateTo', e.target.value)}
+            />
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+        
+        <div>
+          <Label>Tamamlanma faizi ({filters.minCompletionRate}% - {filters.maxCompletionRate}%)</Label>
+          <div className="pt-4 px-2">
+            <Slider 
+              value={[filters.minCompletionRate, filters.maxCompletionRate]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(value) => {
+                handleChange('minCompletionRate', value[0]);
+                handleChange('maxCompletionRate', value[1]);
+              }}
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="button" variant="outline" onClick={onClose}>Ləğv et</Button>
+          <Button type="submit">Tətbiq et</Button>
+        </div>
+      </form>
+    </div>
   );
 };
 

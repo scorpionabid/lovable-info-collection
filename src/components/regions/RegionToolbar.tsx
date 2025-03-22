@@ -1,49 +1,97 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, FileDown, Search, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Plus, Filter, RefreshCcw, Download, Upload } from 'lucide-react';
 
-interface RegionToolbarProps {
-  onAddRegion: () => void;
-  onExportRegions: () => void;
-  searchValue: string;
-  onSearchChange: (value: string) => void;
-  onOpenFilters: () => void;
+export interface RegionToolbarProps {
+  onCreateClick: () => void;
+  onToggleFilterPanel: () => void;
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
+  onExport?: () => void;
+  onImport?: () => void;
+  onRefresh?: () => void;
 }
 
 export const RegionToolbar: React.FC<RegionToolbarProps> = ({
-  onAddRegion,
-  onExportRegions,
-  searchValue,
+  onCreateClick,
+  onToggleFilterPanel,
+  searchQuery = '',
   onSearchChange,
-  onOpenFilters
+  onExport,
+  onImport,
+  onRefresh
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-      <div className="flex items-center w-full sm:w-auto space-x-2">
-        <Button onClick={onAddRegion} className="bg-infoline-dark-blue">
-          <Plus className="mr-2 h-4 w-4" />
-          Yeni Region
-        </Button>
-        <Button onClick={onExportRegions} variant="outline">
-          <FileDown className="mr-2 h-4 w-4" />
-          Export
-        </Button>
-      </div>
-      
-      <div className="flex items-center space-x-2 w-full sm:w-auto">
-        <div className="relative flex-grow">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+    <div className="flex flex-col sm:flex-row justify-between gap-4 p-4 bg-white rounded-lg shadow">
+      {onSearchChange && (
+        <div className="relative flex-1">
           <Input
             placeholder="Axtarış..."
-            className="pl-8"
-            value={searchValue}
+            value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
           />
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
         </div>
-        <Button onClick={onOpenFilters} variant="outline" size="icon">
-          <Filter className="h-4 w-4" />
+      )}
+      
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2"
+          onClick={onToggleFilterPanel}
+        >
+          <Filter size={16} />
+          Filtrlər
+        </Button>
+        
+        {onRefresh && (
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={onRefresh}
+          >
+            <RefreshCcw size={16} />
+            Yenilə
+          </Button>
+        )}
+        
+        {onExport && (
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={onExport}
+          >
+            <Download size={16} />
+            İxrac et
+          </Button>
+        )}
+        
+        {onImport && (
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={onImport}
+          >
+            <Upload size={16} />
+            İdxal et
+          </Button>
+        )}
+        
+        <Button 
+          className="bg-infoline-blue hover:bg-infoline-dark-blue flex items-center gap-2"
+          onClick={onCreateClick}
+        >
+          <Plus size={16} />
+          Yeni Region
         </Button>
       </div>
     </div>

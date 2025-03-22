@@ -1,31 +1,29 @@
 
 import React from 'react';
-import { RegionWithStats } from '@/lib/supabase/types/region';
-import { RegionTableRow } from './RegionTableRow';
+import { RegionTableProps } from './RegionTableProps';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Pencil,
+  Trash2,
+  RefreshCcw
+} from 'lucide-react';
+import { RegionWithStats } from '@/lib/supabase/types/region';
+import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/ui/pagination';
-
-export interface RegionTableProps {
-  regions: RegionWithStats[];
-  isLoading: boolean;
-  isError: boolean;
-  onRefresh: () => void;
-  totalCount: number;
-  currentPage: number;
-  pageSize: number;
-  setCurrentPage: (page: number) => void;
-  sortColumn: string;
-  sortDirection: 'asc' | 'desc';
-  onSortChange: (column: string) => void;
-  onView: (id: string) => void;
-}
 
 export const RegionTable: React.FC<RegionTableProps> = ({
   regions,
-  isLoading,
-  isError,
-  onRefresh,
   totalCount,
   currentPage,
   pageSize,
@@ -33,129 +31,171 @@ export const RegionTable: React.FC<RegionTableProps> = ({
   sortColumn,
   sortDirection,
   onSortChange,
-  onView
+  isLoading,
+  isError,
+  onViewRegion,
+  onEditRegion,
+  onDeleteRegion,
+  onRefresh
 }) => {
+  const getSortIcon = (column: string) => {
+    if (sortColumn !== column) return null;
+    return sortDirection === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />;
+  };
+  
+  const handleSort = (column: string) => {
+    if (onSortChange) onSortChange(column);
+  };
+  
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+      <div className="bg-white rounded-lg shadow p-8 text-center">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-infoline-blue"></div>
+        </div>
+        <p className="mt-4 text-gray-500">Məlumatlar yüklənir...</p>
       </div>
     );
   }
-
+  
   if (isError) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4">
-        <p className="font-semibold">Regionları yükləyərkən xəta baş verdi</p>
-        <p className="mt-2">Zəhmət olmasa bir az sonra yenidən cəhd edin və ya sistem administratoru ilə əlaqə saxlayın.</p>
-        <Button onClick={onRefresh} variant="outline" className="mt-2">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Yenidən cəhd edin
-        </Button>
+      <div className="bg-white rounded-lg shadow p-8 text-center">
+        <div className="text-red-500 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Xəta baş verdi</h3>
+        <p className="text-gray-500 mb-4">Regionları yükləyərkən xəta baş verdi.</p>
+        {onRefresh && (
+          <Button onClick={onRefresh} variant="outline" className="mx-auto">
+            <RefreshCcw size={16} className="mr-2" />
+            Yenidən cəhd et
+          </Button>
+        )}
       </div>
     );
   }
-
-  if (regions.length === 0) {
+  
+  if (!regions || regions.length === 0) {
     return (
-      <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg mb-4 text-center">
-        <p className="text-gray-600">Regionlar tapılmadı.</p>
+      <div className="bg-white rounded-lg shadow p-8 text-center">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Region tapılmadı</h3>
+        <p className="text-gray-500 mb-4">Heç bir region məlumatı mövcud deyil.</p>
+        {onRefresh && (
+          <Button onClick={onRefresh} variant="outline" className="mx-auto">
+            <RefreshCcw size={16} className="mr-2" />
+            Yenilə
+          </Button>
+        )}
       </div>
     );
   }
-
+  
   const totalPages = Math.ceil(totalCount / pageSize);
-
+  
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-800">
-          <tr>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-              onClick={() => onSortChange('name')}
+    <div className="bg-white rounded-lg shadow">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead 
+              className="cursor-pointer"
+              onClick={() => handleSort('name')}
             >
-              Region
-              {sortColumn === 'name' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-              )}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-              onClick={() => onSortChange('sectorCount')}
+              <div className="flex items-center">
+                Ad {getSortIcon('name')}
+              </div>
+            </TableHead>
+            <TableHead 
+              className="cursor-pointer"
+              onClick={() => handleSort('code')}
             >
-              Sektorlar
-              {sortColumn === 'sectorCount' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-              )}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-              onClick={() => onSortChange('schoolCount')}
+              <div className="flex items-center">
+                Kod {getSortIcon('code')}
+              </div>
+            </TableHead>
+            <TableHead>
+              <div className="flex items-center">
+                Sektorlar
+              </div>
+            </TableHead>
+            <TableHead>
+              <div className="flex items-center">
+                Məktəblər
+              </div>
+            </TableHead>
+            <TableHead 
+              className="cursor-pointer"
+              onClick={() => handleSort('completionRate')}
             >
-              Məktəblər
-              {sortColumn === 'schoolCount' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-              )}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-              onClick={() => onSortChange('completionRate')}
-            >
-              Tamamlanma
-              {sortColumn === 'completionRate' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-              )}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-              onClick={() => onSortChange('created_at')}
-            >
-              Yaradılıb
-              {sortColumn === 'created_at' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-              )}
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
-              onClick={() => onSortChange('status')}
-            >
-              Status
-              {sortColumn === 'status' && (
-                <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-              )}
-            </th>
-            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Əməliyyatlar
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-900 dark:divide-gray-700">
-          {regions.map((region) => (
-            <RegionTableRow
-              key={region.id}
-              region={region}
-              onEdit={() => {}}
-              onDelete={() => {}}
-              onView={() => onView(region.id)}
-            />
+              <div className="flex items-center">
+                Tamamlanma {getSortIcon('completionRate')}
+              </div>
+            </TableHead>
+            <TableHead>Əməliyyatlar</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {regions.map((region: RegionWithStats) => (
+            <TableRow key={region.id}>
+              <TableCell className="font-medium">{region.name}</TableCell>
+              <TableCell>{region.code || '-'}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="bg-blue-50">
+                  {region.sectorCount || region.sectors_count || 0}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className="bg-green-50">
+                  {region.schoolCount || region.schools_count || 0}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center">
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2">
+                    <div 
+                      className="bg-infoline-blue h-2.5 rounded-full" 
+                      style={{ width: `${region.completionRate || region.completion_rate || 0}%` }}
+                    ></div>
+                  </div>
+                  <span>{region.completionRate || region.completion_rate || 0}%</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex space-x-2">
+                  {onViewRegion && (
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onViewRegion(region)}>
+                      <Eye size={16} />
+                    </Button>
+                  )}
+                  {onEditRegion && (
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => onEditRegion(region)}>
+                      <Pencil size={16} />
+                    </Button>
+                  )}
+                  {onDeleteRegion && (
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-red-600" onClick={() => onDeleteRegion(region.id)}>
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-
-      <div className="py-4 px-6 border-t">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+        </TableBody>
+      </Table>
+      
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-gray-200">
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
     </div>
   );
 };
