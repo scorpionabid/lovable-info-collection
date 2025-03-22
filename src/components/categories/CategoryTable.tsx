@@ -141,4 +141,6 @@ const CategoryTable: React.FC<CategoryTableProps> = ({
   );
 };
 
+// Həm default export, həm də adlandırılmış export əlavə edək
+export { CategoryTable };
 export default CategoryTable;
