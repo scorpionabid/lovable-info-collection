@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 export const useUserTable = () => {
   const [sortColumn, setSortColumn] = useState<string>('name');
@@ -15,9 +16,9 @@ export const useUserTable = () => {
     { key: 'status', label: 'Status' },
   ];
 
-  const getSortIcon = (column: string) => {
+  const getSortIcon = (column: string): LucideIcon | null => {
     if (sortColumn !== column) return null;
-    return sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
+    return sortDirection === 'asc' ? ChevronUp : ChevronDown;
   };
 
   const handleSortChange = (column: string) => {
