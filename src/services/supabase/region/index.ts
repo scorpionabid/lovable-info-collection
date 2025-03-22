@@ -1,6 +1,6 @@
 
 // Import core types
-import { 
+import type { 
   Region, 
   RegionWithStats, 
   RegionFilters, 
@@ -33,7 +33,7 @@ export const getRegionsForDropdown = async (): Promise<{ id: string; name: strin
   }
 };
 
-// Re-export all functions and types
+// Re-export all functions
 export {
   getRegions,
   getRegionById,
@@ -41,7 +41,11 @@ export {
   updateRegion,
   deleteRegion,
   getSectorsByRegion,
-  archiveRegion,
+  archiveRegion
+};
+
+// Re-export all types
+export type {
   Region,
   RegionWithStats,
   CreateRegionDto,
