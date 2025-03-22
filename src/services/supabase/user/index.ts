@@ -39,5 +39,5 @@ const userService = {
 };
 
 export type { User, UserFilters };
-// Remove the duplicate export: export { User };
+export { getUsers, getUserById, deleteUser }; // Buraya individual funksiya eksportları əlavə edirik
 export default userService;

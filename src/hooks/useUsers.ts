@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getUserById, getUsers, deleteUser as deleteUserService } from '@/services/supabase/user';
+import { getUserById, getUsers, deleteUser } from '@/services/supabase/user';
 import { User } from '@/lib/supabase/types/user';
 
 interface UserFilters {
@@ -46,7 +46,7 @@ export const useUsers = () => {
 
   // Delete user mutation
   const deleteUserMutation = useMutation({
-    mutationFn: deleteUserService,
+    mutationFn: deleteUser,
     onSuccess: () => {
       toast.success('User deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['users'] });
