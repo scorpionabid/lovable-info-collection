@@ -4,7 +4,7 @@ import { Sector, SectorWithStats } from '@/lib/supabase/types';
 import { School } from '@/lib/supabase/types/school';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SchoolTable } from '@/components/schools/table/SchoolTable';
+import SchoolTable from '@/components/schools/table/SchoolTable';
 
 interface SectorDetailViewProps {
   sector: Sector;

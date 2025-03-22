@@ -93,7 +93,7 @@ const SchoolTable: React.FC<SchoolTableProps> = ({
                 <div className="text-sm text-gray-500 dark:text-gray-400">{school.address || '-'}</div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <Button variant="ghost" className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300" size="sm">
+                <Button variant="ghost" className="text-indoline-600 hover:text-indoline-900 dark:text-indoline-400 dark:hover:text-indoline-300" size="sm">
                   Bax
                 </Button>
                 <Button variant="ghost" className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 ml-2" size="sm">
@@ -108,4 +108,8 @@ const SchoolTable: React.FC<SchoolTableProps> = ({
   );
 };
 
+// Add named export alongside default export
+export { SchoolTable };
+
+// Default export
 export default SchoolTable;
