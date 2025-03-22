@@ -6,19 +6,23 @@ import { SchoolType } from '@/lib/supabase/types/school';
 export function useSchoolTypesQuery() {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
-      // Use a PostgreSQL function call instead of direct table access
-      const { data, error } = await supabase
-        .rpc('get_school_types');
+      // RPC funksiyası çağırmaq üçün
+      const { data, error } = await supabase.rpc('get_school_types');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching school types:', error);
+        throw error;
+      }
       
-      if (!data) return [];
+      if (!data) {
+        return [];
+      }
       
-      // Transform the data to match the SchoolType interface
+      // RPC cavabını SchoolType[] formatına dəyişmək
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
-        description: item.description || '', // Default empty description as this field isn't returned by the RPC
+        description: item.description || '' // Əgər description gəlmirsə boş string istifadə edirik
       }));
     } catch (error) {
       console.error('Error fetching school types:', error);
@@ -28,7 +32,7 @@ export function useSchoolTypesQuery() {
 
   return useQuery({
     queryKey: ['schoolTypes'],
-    queryFn: fetchSchoolTypes,
+    queryFn: fetchSchoolTypes
   });
 }
 

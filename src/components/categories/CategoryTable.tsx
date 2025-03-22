@@ -1,3 +1,5 @@
+import React from 'react';
+import { CategoryStatus } from '@/lib/supabase/types/category';
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,15 +17,17 @@ import { CategoryColumnsModal } from './CategoryColumnsModal';
 import { Eye, Edit, Archive, MoreHorizontal, Download, Table2, ArrowUp, ArrowDown, Trash } from "lucide-react";
 import { CategoryType } from './CategoryDetailView';
 import * as categoryService from '@/services/supabase/categoryService';
-import { CategoryStatus } from '@/lib/supabase/types/category';
 
 interface CategoryTableProps {
   categories: CategoryType[];
+  isLoading: boolean;
+  onRefresh: () => void;
   onDelete: (category: CategoryType) => void;
-  onUpdatePriority: (id: string, newPriority: number) => void;
+  onView: (category: CategoryType) => void;
+  onEdit: (category: CategoryType) => void;
 }
 
-export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: CategoryTableProps) => {
+export const CategoryTable = ({ categories, isLoading, onRefresh, onDelete, onView, onEdit }: CategoryTableProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
@@ -96,6 +100,23 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
     setIsEditModalOpen(false);
     queryClient.invalidateQueries({ queryKey: ['categories'] });
     toast.success('Kateqoriya uğurla yeniləndi');
+  };
+
+  const getStatusBadge = (status: CategoryStatus) => {
+    const normalizedStatus = status.toLowerCase() as CategoryStatus;
+    
+    switch (normalizedStatus) {
+      case 'active':
+        return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Aktiv</span>;
+      case 'inactive':
+        return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Qeyri-aktiv</span>;
+      case 'draft':
+        return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Qaralama</span>;
+      case 'archived':
+        return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">Arxivlənmiş</span>;
+      default:
+        return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">{status}</span>;
+    }
   };
 
   return (
@@ -171,11 +192,7 @@ export const CategoryTable = ({ categories, onDelete, onUpdatePriority }: Catego
                   </div>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    category.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {category.status === 'active' ? 'Aktiv' : 'Deaktiv'}
-                  </span>
+                  {getStatusBadge(category.status)}
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>

@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import SectorTable from "@/components/sectors/SectorTable";
 
-// Import the RegionWithStats and SectorWithStats types from the lib location
-import { Region } from "@/lib/supabase/types/region";
+// RegionWithStats tipini import edirik, məntiqə görə bizə lazım olan statistika da var
+import { RegionWithStats } from "@/lib/supabase/types/region";
 import { Sector } from "@/lib/supabase/types/sector";
 
 interface RegionDetailViewProps {
-  region: Region;
+  region: RegionWithStats;
   sectors: Sector[];
   isLoading: boolean;
   onRefresh: () => void;
@@ -46,7 +46,7 @@ export const RegionDetailView: React.FC<RegionDetailViewProps> = ({
           <div className="bg-background p-4 rounded-lg shadow">
             <h3 className="text-lg font-medium mb-1">Sectors</h3>
             <p className="text-3xl font-bold">
-              {region.sectorCount || region.sectors_count || sectors.length || 0}
+              {region.sectorCount || region.sectors_count || 0}
             </p>
           </div>
           <div className="bg-background p-4 rounded-lg shadow">

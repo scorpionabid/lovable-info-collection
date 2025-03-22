@@ -1,39 +1,38 @@
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase/client';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import { SchoolType } from '@/lib/supabase/types/school';
 
 export const useSchoolTypes = () => {
   const fetchSchoolTypes = async (): Promise<SchoolType[]> => {
     try {
-      // Use the RPC function instead of direct table access
-      const { data, error } = await supabase
-        .rpc('get_school_types');
-
+      // RPC funksiyası çağırmaq üçün
+      const { data, error } = await supabase.rpc('get_school_types');
+      
       if (error) {
         console.error('Error fetching school types:', error);
         throw error;
       }
       
-      // Map the raw data to the SchoolType interface
-      if (data && Array.isArray(data)) {
-        return data.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || ''
-        }));
+      if (!data) {
+        return [];
       }
       
-      return [];
+      // Map data to SchoolType format
+      return data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || ''
+      }));
     } catch (error) {
-      console.error('Error fetching school types:', error);
+      console.error("Error fetching school types:", error);
       return [];
     }
   };
 
-  return useQuery({
-    queryKey: ['school_types'],
-    queryFn: fetchSchoolTypes
+  return useQuery<SchoolType[]>({
+    queryKey: ["schoolTypes"],
+    queryFn: fetchSchoolTypes,
   });
 };
 

@@ -26,6 +26,7 @@ export const useRegionsData = ({
   const [sortColumn, setSortColumn] = useState(initialSortColumn);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(initialSortDirection);
 
+  // getRegions funksiyası PaginatedResult<RegionWithStats> qaytarmalıdır
   const {
     data,
     isLoading,
@@ -36,7 +37,7 @@ export const useRegionsData = ({
     queryFn: () => getRegions({
       ...filters,
       page: currentPage,
-      page_size: pageSize,
+      pageSize: pageSize, // page_size deyil pageSize
       field: sortColumn,
       direction: sortDirection
     }),
