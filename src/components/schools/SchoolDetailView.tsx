@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Edit, ArrowLeft } from "lucide-react";
 import { SchoolStats } from './details/SchoolStats';
 import { AdminInfo } from './details/AdminInfo';
-import { SchoolModal } from './modal/SchoolModal';
+import { SchoolModal } from './SchoolModal';
 import { getSchoolWithAdmin } from '@/services/supabase/school/queries/schoolQueries';
 
 export const SchoolDetailView = ({ schoolId }: { schoolId: string }) => {
@@ -101,7 +102,7 @@ export const SchoolDetailView = ({ schoolId }: { schoolId: string }) => {
           isOpen={isAdminModalOpen}
           onClose={() => setIsAdminModalOpen(false)}
           mode="edit"
-          initialData={schoolData}
+          school={schoolData}
           onSuccess={() => {
             // Refetch school details after admin assignment
             getSchoolWithAdmin(schoolId).then(updatedSchoolWithAdmin => {

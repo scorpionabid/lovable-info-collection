@@ -1,71 +1,53 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase/client";
-import { Control, Controller } from "react-hook-form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSchoolTypes } from '../hooks/useSchoolTypes';
+import { School, SchoolType } from '@/lib/supabase/types/school';
 
 interface SelectSchoolTypeProps {
-  control: Control<any>;
-  name: string;
-  error?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
   disabled?: boolean;
 }
 
-export const SelectSchoolType = ({ control, name, error, disabled = false }: SelectSchoolTypeProps) => {
-  const { data: schoolTypes = [], isLoading } = useQuery({
-    queryKey: ["schoolTypes"],
-    queryFn: async () => {
-      try {
-        // RPC funksiyası çağırarkən
-        const { data, error } = await supabase.rpc("get_school_types");
-        
-        if (error) {
-          console.error('Error fetching school types:', error);
-          throw error;
-        }
-        
-        if (!data || !Array.isArray(data)) {
-          return [];
-        }
-        
-        return data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || ''
-        }));
-      } catch (error) {
-        console.error("Error fetching school types:", error);
-        return [];
-      }
-    }
-  });
+export const SelectSchoolType: React.FC<SelectSchoolTypeProps> = ({
+  value,
+  onChange,
+  placeholder = "Məktəb növünü seçin",
+  disabled = false,
+}) => {
+  const { data: schoolTypes = [], isLoading } = useSchoolTypes();
 
   return (
-    <Controller
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <div>
-          <Select
-            disabled={disabled || isLoading}
-            value={field.value}
-            onValueChange={field.onChange}
-          >
-            <SelectTrigger className={error ? "border-red-500" : ""}>
-              <SelectValue placeholder="Məktəb tipi seçin" />
-            </SelectTrigger>
-            <SelectContent>
-              {schoolTypes.map((type: any) => (
-                <SelectItem key={type.id} value={type.id}>
-                  {type.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-        </div>
-      )}
-    />
+    <Select
+      value={value}
+      onValueChange={onChange}
+      disabled={disabled || isLoading}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {schoolTypes && schoolTypes.length > 0 ? (
+          schoolTypes.map((type: SchoolType) => (
+            <SelectItem key={type.id} value={type.id}>
+              {type.name}
+            </SelectItem>
+          ))
+        ) : (
+          <SelectItem value="none" disabled>
+            Məktəb növləri tapılmadı
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
   );
 };
 

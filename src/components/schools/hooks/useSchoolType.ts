@@ -16,12 +16,13 @@ export function useSchoolType(id: string | undefined) {
         throw error;
       }
       
-      if (!data || !Array.isArray(data)) {
+      if (!data) {
         return null;
       }
       
       // Axtarılan id ilə olan school type-ı tapmaq
-      const schoolType = data.find((item: any) => item.id === id);
+      const schoolTypeArray = data as any[];
+      const schoolType = schoolTypeArray.find((item: any) => item.id === id);
       
       if (!schoolType) {
         return null;

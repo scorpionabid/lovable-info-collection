@@ -29,8 +29,9 @@ export const useRegionSearch = () => {
 
   useEffect(() => {
     if (data) {
-      // Type assertion to ensure data is treated as RegionWithStats[]
-      setRegions(data as RegionWithStats[]);
+      // Safely handle potential type issues
+      const regionsData = Array.isArray(data) ? data as RegionWithStats[] : [];
+      setRegions(regionsData);
     }
   }, [data]);
 

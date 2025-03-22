@@ -15,15 +15,22 @@ export const SchoolModal = ({
   initialData,
   onSuccess,
   regionId,
-  onCreated
+  onCreated,
+  onSchoolCreated,
+  onSchoolUpdated,
+  school
 }: SchoolModalComponentProps) => {
   const handleSubmit = (data: any) => {
     // Form təqdim edildikdə
     console.log('Form submitted:', data);
     
-    // Əgər təqdim uğurludursa, onSuccess və ya onCreated funksiyasını çağırın
-    if (mode === 'create' && onCreated) {
-      onCreated();
+    // Əgər təqdim uğurludursa, müvafiq callback funksiyasını çağırın
+    if (mode === 'create') {
+      if (onCreated) onCreated();
+      if (onSchoolCreated) onSchoolCreated();
+    } else if (mode === 'edit') {
+      if (onSchoolUpdated) onSchoolUpdated();
+      if (onSuccess) onSuccess();
     } else if (onSuccess) {
       onSuccess();
     }
@@ -45,6 +52,9 @@ export const SchoolModal = ({
     }
   };
 
+  // İlkin məlumatları təyin et - ya initialData ya da school propundan istifadə et
+  const schoolData = initialData || school;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
@@ -53,7 +63,7 @@ export const SchoolModal = ({
         </DialogHeader>
         
         <SchoolForm
-          initialData={initialData as School}
+          initialData={schoolData as School}
           regionId={regionId}
           onSubmit={handleSubmit}
           isLoading={false}

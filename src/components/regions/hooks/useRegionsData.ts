@@ -26,21 +26,24 @@ export const useRegionsData = (initialPage = 1, initialPageSize = 10) => {
     try {
       const response = await getRegions(queryParams);
       
-      // Nəticələri düzgün formatda qaytarırıq
-      // Əgər response bir array deyilsə və data və count xüsusiyyətləri varsa
-      if (response && typeof response === 'object' && 'data' in response && 'count' in response) {
-        const regionsData = response.data as RegionWithStats[];
-        const totalCount = response.count as number;
-        return { data: regionsData, count: totalCount };
+      // Default empty values
+      let regionsData: RegionWithStats[] = [];
+      let count = 0;
+      
+      // Process response in a type-safe manner
+      if (response && typeof response === 'object') {
+        if ('data' in response && 'count' in response) {
+          if (Array.isArray(response.data)) {
+            regionsData = response.data as RegionWithStats[];
+            count = typeof response.count === 'number' ? response.count : 0;
+          }
+        } else if (Array.isArray(response)) {
+          regionsData = response as RegionWithStats[];
+          count = response.length;
+        }
       }
       
-      // Əgər response birbaşa RegionWithStats[] arrayidirsə
-      if (Array.isArray(response)) {
-        return { data: response, count: response.length };
-      }
-      
-      // Heç bir cavab alınmadığı halda boş nəticə qaytarırıq
-      return { data: [] as RegionWithStats[], count: 0 };
+      return { data: regionsData, count };
     } catch (error) {
       console.error('Error fetching regions:', error);
       throw error;

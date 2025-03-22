@@ -14,12 +14,13 @@ export const useSchoolTypes = () => {
         throw error;
       }
       
-      if (!data || !Array.isArray(data)) {
+      if (!data) {
         return [];
       }
       
       // Map data to SchoolType format
-      return data.map((item: any) => ({
+      const schoolTypesArray = data as any[];
+      return schoolTypesArray.map((item: any) => ({
         id: item.id,
         name: item.name,
         description: item.description || ''

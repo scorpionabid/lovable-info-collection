@@ -93,7 +93,7 @@ export const RegionModal: React.FC<RegionModalProps> = ({
         throw new Error("Region name is required");
       }
       return regionService.createRegion({
-        name: data.name,
+        name: data.name, // Make sure name is required
         code: data.code,
         description: data.description,
       });
