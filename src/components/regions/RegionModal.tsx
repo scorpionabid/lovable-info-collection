@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { CreateRegionDto } from '@/lib/supabase/types/region';
 
 // Define schema for region form
 const regionSchema = z.object({
@@ -82,7 +83,7 @@ export const RegionModal: React.FC<RegionModalProps> = ({
   
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: RegionFormValues) => regionService.createRegion(data),
+    mutationFn: (data: CreateRegionDto) => regionService.createRegion(data as CreateRegionDto),
     onSuccess: () => {
       toast({ title: 'Success', description: 'Region created successfully' });
       queryClient.invalidateQueries({ queryKey: ['regions'] });
@@ -125,14 +126,20 @@ export const RegionModal: React.FC<RegionModalProps> = ({
     if (isEditMode) {
       updateMutation.mutate(data);
     } else {
-      createMutation.mutate(data);
+      // Ensure data has name for createRegion
+      const createData: CreateRegionDto = {
+        name: data.name,
+        code: data.code,
+        description: data.description
+      };
+      createMutation.mutate(createData);
     }
   };
   
   return (
     <Modal
       title={isEditMode ? 'Edit Region' : 'Create New Region'}
-      open={isOpen}
+      isOpen={isOpen}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -144,7 +151,6 @@ export const RegionModal: React.FC<RegionModalProps> = ({
             id="name"
             {...register('name')}
             placeholder="Enter region name"
-            error={errors.name?.message}
           />
           {errors.name && (
             <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
@@ -159,7 +165,6 @@ export const RegionModal: React.FC<RegionModalProps> = ({
             id="code"
             {...register('code')}
             placeholder="Enter region code (optional)"
-            error={errors.code?.message}
           />
           {errors.code && (
             <p className="text-red-500 text-sm mt-1">{errors.code.message}</p>
@@ -175,7 +180,6 @@ export const RegionModal: React.FC<RegionModalProps> = ({
             {...register('description')}
             placeholder="Enter region description (optional)"
             rows={3}
-            error={errors.description?.message}
           />
           {errors.description && (
             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>

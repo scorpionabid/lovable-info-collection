@@ -1,51 +1,62 @@
 
 import React from 'react';
-import { User } from '@/lib/supabase/types';
+import { User } from '@/lib/supabase/types/user';
+import { getUserRoleName } from '../../utils/userUtils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface UserAvatarProps {
   user: User;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({ user, size = 'md' }) => {
-  // Get initials from user's name
   const getInitials = () => {
-    if (!user) return '??';
-    return `${user.first_name?.charAt(0) || '?'}${user.last_name?.charAt(0) || '?'}`.toUpperCase();
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  // Get background color based on user role
-  const getBackgroundColor = () => {
-    const roleName = user.roles?.name?.toLowerCase() || '';
-    
-    if (roleName.includes('super')) return 'bg-purple-500';
-    if (roleName.includes('region')) return 'bg-blue-500';
-    if (roleName.includes('sector')) return 'bg-green-500';
-    if (roleName.includes('school')) return 'bg-yellow-500';
-    return 'bg-gray-500';
-  };
-
-  // Determine size class
   const getSizeClass = () => {
     switch (size) {
-      case 'sm': return 'h-8 w-8 text-xs';
-      case 'lg': return 'h-16 w-16 text-xl';
-      case 'xl': return 'h-24 w-24 text-3xl';
+      case 'sm':
+        return 'h-8 w-8';
+      case 'lg':
+        return 'h-16 w-16';
       case 'md':
-      default: return 'h-12 w-12 text-base';
+      default:
+        return 'h-12 w-12';
     }
   };
 
-  // Using optional chaining to safely access avatar_url which may not exist
-  const avatarUrl = (user as any)?.avatar_url || '';
+  const roleName = getUserRoleName(user);
+  
+  const getRoleColorClass = () => {
+    switch (roleName.toLowerCase()) {
+      case 'super-admin':
+      case 'superadmin':
+        return 'bg-purple-500';
+      case 'region-admin':
+      case 'regionadmin':
+        return 'bg-blue-500';
+      case 'sector-admin':
+      case 'sectoradmin':
+        return 'bg-green-500';
+      case 'school-admin':
+      case 'schooladmin':
+        return 'bg-yellow-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
 
   return (
-    <Avatar className={`${getSizeClass()}`}>
-      <AvatarImage src={avatarUrl} alt={`${user.first_name} ${user.last_name}`} />
-      <AvatarFallback className={`${getBackgroundColor()} text-white font-medium`}>
+    <Avatar className={getSizeClass()}>
+      <AvatarImage src={user.avatar_url} alt={`${user.first_name} ${user.last_name}`} />
+      <AvatarFallback className={getRoleColorClass()}>
         {getInitials()}
       </AvatarFallback>
     </Avatar>
   );
 };
+
+export default UserAvatar;

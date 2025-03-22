@@ -1,111 +1,67 @@
 
-import { User } from "@/lib/supabase/types";
+import { User } from '@/lib/supabase/types/user';
+import { getRoleName, isRoleObject } from '@/lib/supabase/types/user/role';
 
-// Get the display name for a user
-export const getUserDisplayName = (user: User): string => {
-  if (!user) return 'Unknown User';
-  return `${user.first_name} ${user.last_name}`;
-};
-
-// Get the entity name (region, sector, or school) for a user
-export const getEntityName = (user: User): string => {
-  // Check if the user has relationships loaded
-  if (user.roles?.name === 'SuperAdmin') {
-    return 'Global';
-  }
-  
-  // Try to get from relationships first
-  if (user.roles?.name === 'RegionAdmin' && user.region) {
-    return user.region.name || 'Unknown Region';
-  }
-  
-  if (user.roles?.name === 'SectorAdmin' && user.sector) {
-    return user.sector.name || 'Unknown Sector';
-  }
-  
-  if (user.roles?.name === 'SchoolAdmin' && user.school) {
-    return user.school.name || 'Unknown School';
-  }
-  
-  // Fallback to just showing the role without the entity
-  return user.roles?.name || 'Unknown Role';
-};
-
-// Get role display name
-export const getRoleDisplayName = (user: User): string => {
-  if (!user || !user.roles) {
-    return 'Unknown Role';
-  }
-  
-  return user.roles.name || 'Unknown Role';
-};
-
-// Get role color class based on role name
-export const getRoleColorClass = (user: User): string => {
-  const roleName = user.roles?.name || '';
+export const getUserRoleBadgeColor = (user: User) => {
+  const roleName = getUserRoleName(user);
   
   switch (roleName.toLowerCase()) {
+    case 'super-admin':
     case 'superadmin':
-      return 'bg-purple-500 text-white';
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'region-admin':
     case 'regionadmin':
-      return 'bg-blue-500 text-white';
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'sector-admin':
     case 'sectoradmin':
-      return 'bg-green-500 text-white';
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'school-admin':
     case 'schooladmin':
-      return 'bg-yellow-500 text-black';
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     default:
-      return 'bg-gray-500 text-white';
+      return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
 
-// Get normalized role for compatibility
-export const getNormalizedRole = (user: User): string => {
-  if (!user || !user.roles) {
-    return 'unknown';
-  }
-  
-  const roleName = user.roles.name || '';
-  return roleName.toLowerCase().replace(/-/g, '').replace(/\s+/g, '');
-};
-
-// Sort users based on different criteria
-export const sortUsers = (users: User[], column: string | null, direction: 'asc' | 'desc'): User[] => {
-  if (!column) return users;
-  
-  return [...users].sort((a, b) => {
-    let valueA, valueB;
-    
-    switch (column) {
-      case 'name':
-        valueA = `${a.first_name} ${a.last_name}`.toLowerCase();
-        valueB = `${b.first_name} ${b.last_name}`.toLowerCase();
-        break;
-      case 'email':
-        valueA = a.email.toLowerCase();
-        valueB = b.email.toLowerCase();
-        break;
-      case 'role':
-        valueA = getRoleDisplayName(a).toLowerCase();
-        valueB = getRoleDisplayName(b).toLowerCase();
-        break;
-      case 'entity':
-        valueA = getEntityName(a).toLowerCase();
-        valueB = getEntityName(b).toLowerCase();
-        break;
-      case 'lastActive':
-        valueA = a.last_login || '';
-        valueB = b.last_login || '';
-        break;
-      case 'status':
-        valueA = a.is_active ? 'active' : 'inactive';
-        valueB = b.is_active ? 'active' : 'inactive';
-        break;
-      default:
-        return 0;
+export const getUserRoleName = (user: User): string => {
+  // First try to get from the roles property
+  if (user.roles) {
+    if (isRoleObject(user.roles)) {
+      return user.roles.name;
     }
-    
-    if (valueA < valueB) return direction === 'asc' ? -1 : 1;
-    if (valueA > valueB) return direction === 'asc' ? 1 : -1;
-    return 0;
-  });
+    return user.roles as string;
+  }
+  
+  // Fallback to role property
+  if (user.role) {
+    return user.role;
+  }
+  
+  // Fallback to userRole property
+  if (user.userRole) {
+    return user.userRole;
+  }
+  
+  return 'Unknown';
+};
+
+export const getUserDisplayEntity = (user: User): string => {
+  if (user.region) {
+    return `Region: ${user.region}`;
+  } else if (user.sector) {
+    return `Sektor: ${user.sector}`;
+  } else if (user.school) {
+    return `Məktəb: ${user.school}`;
+  }
+  return '-';
+};
+
+export const getUserStatusBadgeColor = (status: boolean): string => {
+  return status
+    ? 'bg-green-100 text-green-800 border-green-200'
+    : 'bg-red-100 text-red-800 border-red-200';
+};
+
+export const getUserStatusText = (status: boolean): string => {
+  return status ? 'Aktiv' : 'Deaktiv';
 };

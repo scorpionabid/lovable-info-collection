@@ -20,7 +20,7 @@ export function useSchoolType(id: string | undefined) {
         return null;
       }
       
-      // Məlumatları JSON Array olaraq qəbul edirik
+      // Axtarılan id ilə olan school type-ı tapmaq
       const schoolType = data.find((item: any) => item.id === id);
       
       if (!schoolType) {

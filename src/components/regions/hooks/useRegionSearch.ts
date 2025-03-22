@@ -1,8 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-// searchRegions eksport edilmədiyindən onu daxil etmirik
-// bunun əvəzinə getRegions funksiyasını istifadə edirik
 import { getRegions } from '@/services/supabase/region';
 
 export const useRegionSearch = () => {
@@ -23,16 +21,16 @@ export const useRegionSearch = () => {
       setError(null);
 
       try {
-        // searchRegions funksiyası olmadığı üçün, bunun əvəzinə getRegions istifadə edirik
-        const data = await getRegions({
+        const regionsResult = await getRegions({
           search: debouncedSearchTerm,
           status: 'all',
         });
         
-        if (Array.isArray(data)) {
-          setResults(data);
-        } else if (data && 'data' in data) {
-          setResults(data.data);
+        // Handle the results
+        if (Array.isArray(regionsResult)) {
+          setResults(regionsResult);
+        } else if (regionsResult && typeof regionsResult === 'object' && 'data' in regionsResult) {
+          setResults(regionsResult.data || []);
         } else {
           setResults([]);
         }

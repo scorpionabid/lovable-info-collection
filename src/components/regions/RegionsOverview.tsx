@@ -101,14 +101,13 @@ export const RegionsOverview: React.FC = () => {
         onSortChange={handleSortChange}
         isLoading={isLoading}
         isError={isError}
+        onViewRegion={handleViewRegion}
         onRefresh={refetch}
-        onView={handleViewRegion}
       />
-      
+
       <RegionModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        mode="create"
         onSuccess={handleRegionCreated}
       />
     </div>

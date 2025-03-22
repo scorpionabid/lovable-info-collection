@@ -43,11 +43,11 @@ export const UserTableContainer: React.FC<UserTableContainerProps> = ({
   const { columns, getSortIcon } = useUserTable();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedUsers(users.map(user => user.id));
-    } else {
+  const handleSelectAll = () => {
+    if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
+    } else {
+      setSelectedUsers(users.map(user => user.id));
     }
   };
 
@@ -87,17 +87,6 @@ export const UserTableContainer: React.FC<UserTableContainerProps> = ({
     </tr>
   );
 
-  // Helper function to get role name from user
-  const getRoleName = (user: User): string => {
-    const roleValue = user.role || user.roles;
-    
-    if (typeof roleValue === 'object' && roleValue) {
-      return roleValue.name || '';
-    }
-    
-    return String(roleValue || '');
-  };
-
   // Render pagination controls
   const renderPagination = () => {
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -135,7 +124,7 @@ export const UserTableContainer: React.FC<UserTableContainerProps> = ({
               <UserTableRow
                 key={user.id}
                 user={user}
-                selected={selectedUsers.includes(user.id)}
+                isSelected={selectedUsers.includes(user.id)}
                 onSelect={handleSelectUser}
                 onView={() => onViewUser(user)}
                 onEdit={() => onEditUser(user)}
@@ -152,3 +141,5 @@ export const UserTableContainer: React.FC<UserTableContainerProps> = ({
     </div>
   );
 };
+
+export default UserTableContainer;

@@ -1,165 +1,169 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { UsersList } from './components/UsersList';
-import { UserTableToolbar } from "./table/UserTableToolbar";
-import { UserTablePagination } from "./table/UserTablePagination";
-import { UserForm } from "./modals/UserForm";
-import { useUserExport } from "./hooks/useUserExport";
-import { useUsersData } from './hooks/useUsersData';
-import { useUserFormHandling } from './hooks/useUserFormHandling';
-import { toast } from "sonner";
-import { BulkActionsBar } from './components/BulkActionsBar';
-import { useLogger } from '@/hooks/useLogger';
+import { UserTable } from './UserTable';
+import { UserToolbar } from './toolbar/UserToolbar';
+import { UserFilterPanel } from './filters/UserFilterPanel';
+import { UserViewModal } from './modals/UserViewModal';
+import { UserEditModal } from './modals/UserEditModal';
+import { ConfirmDialog } from '../ui/confirm-dialog';
+import { useUsers } from '@/hooks/useUsers';
+import { useExportUsers } from '@/hooks/useExportUsers';
+import { UserRole as UserRoleType } from '@/lib/supabase/types/user/role';
+import { User } from '@/lib/supabase/types/user';
 
-export const UsersOverview = () => {
+export const UsersOverview: React.FC = () => {
   const navigate = useNavigate();
-  const { exportUsers } = useUserExport();
-  const logger = useLogger('UsersOverview');
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userIdToDelete, setUserIdToDelete] = useState<string | null>(null);
   
-  // Use our custom hook for user data and state management
+  const { exportToExcel, loading: isExporting } = useExportUsers();
+  
   const {
     users,
-    totalItems,
+    totalCount,
+    isLoading,
+    isError,
     currentPage,
+    pageSize,
+    sortColumn,
+    sortDirection,
+    filters,
     setCurrentPage,
-    itemsPerPage,
-    setItemsPerPage,
-    searchTerm,
-    setSearchTerm,
-    sortBy,
-    sortOrder: currentSortOrder,
-    setSortBy,
-    setSortOrder,
+    handleSortChange,
+    handleFilterChange,
     refetch,
-  } = useUsersData();
-
-  // Use our custom hook for form handling
-  const {
-    isFormOpen,
-    selectedUser,
-    handleAddUser,
-    handleEdit,
-    handleDelete,
-    handleFormSuccess,
-    setIsFormOpen
-  } = useUserFormHandling(refetch);
-
-  const handleExport = () => {
-    if (!users || users.length === 0) {
-      toast.error("İxrac etmək üçün məlumat tapılmadı");
-      return;
-    }
-    
-    logger.info('Exporting users data', { count: users.length });
-    exportUsers(users);
-    toast.success("İstifadəçilər uğurla ixrac edildi");
+    deleteUser,
+  } = useUsers();
+  
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    handleFilterChange({ ...filters, search: value });
   };
-
-  const handleBulkAction = (action: string) => {
-    if (selectedRows.length === 0) {
-      toast.warning("Əməliyyat üçün istifadəçi seçilməyib");
-      return;
-    }
-
-    logger.info('Bulk action triggered', { action, selectedCount: selectedRows.length });
-    
-    // Handle different bulk actions
-    switch (action) {
-      case 'delete':
-        // Implement bulk delete
-        toast.info(`${selectedRows.length} istifadəçi silmək üçün hazırlanır...`);
-        // Actual implementation would go here
-        break;
-      case 'activate':
-        // Implement bulk activate
-        toast.info(`${selectedRows.length} istifadəçi aktivləşdirilir...`);
-        // Actual implementation would go here
-        break;
-      case 'deactivate':
-        // Implement bulk deactivate
-        toast.info(`${selectedRows.length} istifadəçi deaktivləşdirilir...`);
-        // Actual implementation would go here
-        break;
-      default:
-        toast.error("Naməlum əməliyyat");
-    }
+  
+  const handleAddUser = () => {
+    navigate('/users/new');
   };
-
-  // Adapter function to convert string to event handler
-  const handleSearchInputChange = (value: string) => {
-    setSearchTerm(value);
+  
+  const handleExportUsers = async () => {
+    await exportToExcel(users, 'users-export.xlsx');
   };
-
-  // Handle sort changes
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortOrder(currentSortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
+  
+  const handleOpenFilters = () => {
+    setIsFilterPanelOpen(true);
+  };
+  
+  const handleCloseFilters = () => {
+    setIsFilterPanelOpen(false);
+  };
+  
+  const handleApplyFilters = (newFilters: any) => {
+    handleFilterChange({ ...filters, ...newFilters });
+  };
+  
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setIsViewModalOpen(true);
+  };
+  
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsEditModalOpen(true);
+  };
+  
+  const handleDeleteUser = (userId: string) => {
+    setUserIdToDelete(userId);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteUser = async () => {
+    if (userIdToDelete) {
+      try {
+        await deleteUser(userIdToDelete);
+        refetch();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+      }
     }
+    setIsDeleteDialogOpen(false);
+    setUserIdToDelete(null);
   };
-
+  
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">İstifadəçilər</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/users/import')}>
-            İdxal et
-          </Button>
-          <Button onClick={handleAddUser}>
-            Yeni İstifadəçi
-          </Button>
-        </div>
-      </div>
-
-      <UserTableToolbar 
-        search={searchTerm}
-        onSearchChange={handleSearchInputChange}
-        onExport={handleExport}
+    <div className="container mx-auto py-8">
+      <UserToolbar
+        searchValue={searchQuery}
+        onSearchChange={handleSearchChange}
         onAddUser={handleAddUser}
+        onExportUsers={handleExportUsers}
+        onOpenFilters={handleOpenFilters}
+        isExporting={isExporting}
       />
-
-      {selectedRows.length > 0 && (
-        <BulkActionsBar 
-          selectedCount={selectedRows.length}
-          onClearSelection={() => setSelectedRows([])}
-          onAction={handleBulkAction}
+      
+      <UserFilterPanel
+        isOpen={isFilterPanelOpen}
+        onClose={handleCloseFilters}
+        filters={filters}
+        onApplyFilters={handleApplyFilters}
+      />
+      
+      <div className="mt-6">
+        <UserTable
+          users={users}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          isLoading={isLoading}
+          isError={isError}
+          onSortChange={handleSortChange}
+          onPageChange={setCurrentPage}
+          onRefetch={refetch}
+          onViewUser={handleViewUser}
+          onEditUser={handleEditUser}
+          onDeleteUser={handleDeleteUser}
         />
+      </div>
+      
+      {selectedUser && (
+        <>
+          {isViewModalOpen && (
+            <UserViewModal
+              user={selectedUser}
+              onClose={() => setIsViewModalOpen(false)}
+            />
+          )}
+          
+          {isEditModalOpen && (
+            <UserEditModal
+              user={selectedUser}
+              onClose={() => setIsEditModalOpen(false)}
+              onUserUpdated={() => {
+                refetch();
+                setIsEditModalOpen(false);
+              }}
+            />
+          )}
+        </>
       )}
-
-      <UsersList
-        users={users}
-        isLoading={false}
-        sortColumn={sortBy}
-        sortOrder={currentSortOrder}
-        onEditUser={handleEdit}
-        onDeleteUser={handleDelete}
-        onSort={handleSort}
-        onRetry={refetch}
-        selectedRows={selectedRows}
-        onSelectedRowsChange={setSelectedRows}
-        onRefetch={refetch}
-      />
-
-      <UserTablePagination
-        page={currentPage}
-        perPage={itemsPerPage}
-        totalItems={totalItems}
-        setPage={setCurrentPage}
-        setPerPage={setItemsPerPage}
-      />
-
-      <UserForm
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSuccess={handleFormSuccess}
-        user={selectedUser}
+      
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete User"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteUser}
       />
     </div>
   );
 };
+
+export default UsersOverview;

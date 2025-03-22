@@ -1,104 +1,115 @@
 
-import React, { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { School } from '@/lib/supabase/types/school';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SchoolForm from './SchoolForm';
+import { SchoolForm } from './SchoolForm';
+import { SchoolFormValues } from './types';
+import * as schoolService from '@/services/supabase/school';
+import { toast } from 'sonner';
+import { SchoolView } from './SchoolView';
 
 export interface SchoolModalContentProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (data: any) => void;
   mode: 'create' | 'edit' | 'view';
-  initialData?: School | null;
-  sectorId?: string;
-  regionId?: string;
+  onClose: () => void;
+  initialData?: School;
+  regionId: string;
+  onSuccess: () => void;
 }
 
-const SchoolModalContent: React.FC<SchoolModalContentProps> = ({ 
-  isOpen,
+export const SchoolModalContent: React.FC<SchoolModalContentProps> = ({
+  mode,
   onClose,
-  onSave,
-  mode = 'create',
   initialData,
-  sectorId,
-  regionId
+  regionId,
+  onSuccess
 }) => {
-  const [activeTab, setActiveTab] = React.useState<string>('basic');
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Reset active tab when modal opens or closes
-  useEffect(() => {
-    if (isOpen) {
-      setActiveTab('basic');
+  const createSchoolMutation = useMutation({
+    mutationFn: schoolService.createSchool,
+    onSuccess: () => {
+      toast.success('Məktəb uğurla yaradıldı');
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+      onClose();
+      onSuccess();
+    },
+    onError: (error) => {
+      toast.error(`Xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+      setIsLoading(false);
     }
-  }, [isOpen]);
+  });
 
-  // Determine title based on mode
-  const getTitle = () => {
-    switch (mode) {
-      case 'create':
-        return 'Yeni Məktəb';
-      case 'edit':
-        return 'Məktəb Redaktəsi';
-      case 'view':
-        return 'Məktəb Məlumatları';
-      default:
-        return 'Məktəb';
+  const updateSchoolMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => 
+      schoolService.updateSchool(id, data),
+    onSuccess: () => {
+      toast.success('Məktəb uğurla yeniləndi');
+      queryClient.invalidateQueries({ queryKey: ['schools'] });
+      if (initialData?.id) {
+        queryClient.invalidateQueries({ queryKey: ['school', initialData.id] });
+      }
+      onClose();
+      onSuccess();
+    },
+    onError: (error) => {
+      toast.error(`Xəta baş verdi: ${error instanceof Error ? error.message : 'Bilinməyən xəta'}`);
+      setIsLoading(false);
+    }
+  });
+
+  const handleSubmit = (data: SchoolFormValues) => {
+    setIsLoading(true);
+
+    if (mode === 'create') {
+      const schoolData = {
+        name: data.name,
+        code: data.code,
+        region_id: data.regionId,
+        sector_id: data.sectorId,
+        type_id: data.type,
+        address: data.address || '',
+        status: data.status,
+        director: '',
+        email: data.contactEmail || '',
+        phone: data.contactPhone || '',
+        student_count: data.studentCount || 0,
+        teacher_count: data.teacherCount || 0
+      };
+      createSchoolMutation.mutate(schoolData);
+    } else if (mode === 'edit' && initialData?.id) {
+      const schoolData = {
+        name: data.name,
+        code: data.code,
+        region_id: data.regionId,
+        sector_id: data.sectorId,
+        type_id: data.type,
+        address: data.address || '',
+        status: data.status,
+        director: '',
+        email: data.contactEmail || '',
+        phone: data.contactPhone || '',
+        student_count: data.studentCount || 0,
+        teacher_count: data.teacherCount || 0
+      };
+      updateSchoolMutation.mutate({ id: initialData.id, data: schoolData });
     }
   };
 
-  // Determine if form should be read-only
-  const isReadOnly = mode === 'view';
+  // If view mode, render the school view component
+  if (mode === 'view' && initialData) {
+    return <SchoolView school={initialData} />;
+  }
 
-  // Only allow edit, create modes
-  const formMode = mode === 'view' ? 'edit' : mode;
-
+  // Render the form for create or edit modes
   return (
-    <div className="space-y-6 py-4 px-6">
-      <h2 className="text-xl font-semibold">{getTitle()}</h2>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="basic">Əsas Məlumatlar</TabsTrigger>
-          <TabsTrigger value="contact">Əlaqə</TabsTrigger>
-          <TabsTrigger value="additional">Əlavə</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="basic">
-          <SchoolForm 
-            mode={formMode} 
-            initialData={initialData}
-            isReadOnly={isReadOnly}
-            onSave={onSave}
-            sectorId={sectorId}
-            regionId={regionId}
-          />
-        </TabsContent>
-
-        <TabsContent value="contact">
-          <div className="bg-gray-50 p-4 rounded-md text-center">
-            <p className="text-gray-500">Bu funksionallıq hazırda inkişaf mərhələsindədir.</p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="additional">
-          <div className="bg-gray-50 p-4 rounded-md text-center">
-            <p className="text-gray-500">Bu funksionallıq hazırda inkişaf mərhələsindədir.</p>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={onClose}>
-          Bağla
-        </Button>
-        {!isReadOnly && (
-          <Button type="submit" form="school-form">
-            {mode === 'create' ? 'Yarat' : 'Yadda saxla'}
-          </Button>
-        )}
-      </div>
-    </div>
+    <SchoolForm
+      initialData={initialData}
+      regionId={regionId}
+      onSubmit={handleSubmit}
+      isLoading={isLoading || createSchoolMutation.isPending || updateSchoolMutation.isPending}
+      disabled={mode === 'view'}
+    />
   );
 };
 

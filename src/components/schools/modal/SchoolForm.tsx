@@ -1,145 +1,163 @@
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { schoolSchema, SchoolFormValues } from './types';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { School } from '@/lib/supabase/types/school';
-import { useSchoolTypesQuery } from '@/hooks/useSchoolTypesQuery';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createSchool, updateSchool } from '@/supabase';
-
-// Form schema using Zod
-const schoolFormSchema = z.object({
-  name: z.string().min(2, 'Məktəb adı ən azı 2 simvol olmalıdır'),
-  code: z.string().min(1, 'Kod daxil edin'),
-  region_id: z.string().uuid('Region seçin'),
-  sector_id: z.string().uuid('Sektor seçin'),
-  type_id: z.string().uuid('Məktəb növünü seçin'),
-  address: z.string().optional(),
-  director: z.string().optional(),
-  email: z.string().email('Düzgün email daxil edin').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  student_count: z.number().nonnegative().optional(),
-  teacher_count: z.number().nonnegative().optional(),
-});
-
-type SchoolFormValues = z.infer<typeof schoolFormSchema>;
+import { Textarea } from '@/components/ui/textarea';
+import { SelectRegion } from '../selects/SelectRegion';
+import { SelectSector } from '../selects/SelectSector';
+import { SelectSchoolType } from '../selects/SelectSchoolType';
 
 interface SchoolFormProps {
-  mode: 'create' | 'edit';
-  initialData?: School | null;
-  isReadOnly?: boolean;
-  onSave: (data: any) => void;
-  sectorId?: string;
+  initialData?: School;
   regionId?: string;
+  onSubmit: (data: SchoolFormValues) => void;
+  isLoading: boolean;
+  disabled?: boolean;
 }
 
-const SchoolForm: React.FC<SchoolFormProps> = ({
-  mode,
+export const SchoolForm: React.FC<SchoolFormProps> = ({
   initialData,
-  isReadOnly = false,
-  onSave,
-  sectorId,
-  regionId
+  regionId,
+  onSubmit,
+  isLoading,
+  disabled = false,
 }) => {
-  // Fetch school types
-  const { data: schoolTypesData, isLoading: isLoadingSchoolTypes } = useSchoolTypesQuery();
-  const schoolTypes = schoolTypesData || [];
-
-  // Create form with react-hook-form
-  const { register, handleSubmit, formState: { errors } } = useForm<SchoolFormValues>({
-    resolver: zodResolver(schoolFormSchema),
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    setValue,
+    control,
+  } = useForm<SchoolFormValues>({
+    resolver: zodResolver(schoolSchema),
     defaultValues: {
       name: initialData?.name || '',
       code: initialData?.code || '',
-      region_id: initialData?.region_id || regionId || '',
-      sector_id: initialData?.sector_id || sectorId || '',
-      type_id: initialData?.type_id || '',
+      regionId: initialData?.region_id || regionId || '',
+      sectorId: initialData?.sector_id || '',
+      type: initialData?.type_id || '',
       address: initialData?.address || '',
-      director: initialData?.director || '',
-      email: initialData?.email || '',
-      phone: initialData?.phone || '',
-      student_count: initialData?.student_count || 0,
-      teacher_count: initialData?.teacher_count || 0,
-    }
+      studentCount: initialData?.student_count || 0,
+      teacherCount: initialData?.teacher_count || 0,
+      contactEmail: initialData?.email || '',
+      contactPhone: initialData?.phone || '',
+      status: initialData?.status || 'Aktiv',
+    },
   });
 
-  const onSubmit = async (data: SchoolFormValues) => {
-    try {
-      if (mode === 'create') {
-        await createSchool(data);
-      } else {
-        if (initialData?.id) {
-          await updateSchool(initialData.id, data);
-        }
-      }
-      onSave(data);
-    } catch (error) {
-      console.error('Error saving school:', error);
-    }
+  const watchedRegionId = watch('regionId');
+
+  const handleFormSubmit = (data: SchoolFormValues) => {
+    onSubmit(data);
   };
 
   return (
-    <form id="school-form" onSubmit={handleSubmit(onSubmit)}>
-      <Card className="p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">Məktəb adı *</Label>
-            <Input
-              id="name"
-              {...register('name')}
-              disabled={isReadOnly}
-              error={errors.name?.message}
-            />
-            {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
-          </div>
-          
-          <div>
-            <Label htmlFor="code">Kod *</Label>
-            <Input
-              id="code"
-              {...register('code')}
-              disabled={isReadOnly}
-              error={errors.code?.message}
-            />
-            {errors.code && <p className="text-sm text-red-500">{errors.code.message}</p>}
-          </div>
-          
-          <div>
-            <Label htmlFor="type_id">Məktəb növü *</Label>
-            <Select disabled={isReadOnly} defaultValue={initialData?.type_id}>
-              <SelectTrigger>
-                <SelectValue placeholder="Məktəb növünü seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoadingSchoolTypes ? (
-                  <SelectItem value="loading">Yüklənir...</SelectItem>
-                ) : (
-                  schoolTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {errors.type_id && <p className="text-sm text-red-500">{errors.type_id.message}</p>}
-          </div>
-          
-          <div>
-            <Label htmlFor="address">Ünvan</Label>
-            <Input
-              id="address"
-              {...register('address')}
-              disabled={isReadOnly}
-              error={errors.address?.message}
-            />
-            {errors.address && <p className="text-sm text-red-500">{errors.address.message}</p>}
-          </div>
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* School name field */}
+        <div className="space-y-2">
+          <label htmlFor="name" className="block text-sm font-medium">
+            Məktəb adı *
+          </label>
+          <Input
+            id="name"
+            disabled={disabled}
+            {...register('name')}
+            className={errors.name ? 'border-red-500' : ''}
+          />
+          {errors.name && (
+            <p className="text-xs text-red-500">{errors.name.message}</p>
+          )}
         </div>
-      </Card>
+
+        {/* School code field */}
+        <div className="space-y-2">
+          <label htmlFor="code" className="block text-sm font-medium">
+            Məktəb kodu *
+          </label>
+          <Input
+            id="code"
+            disabled={disabled}
+            {...register('code')}
+            className={errors.code ? 'border-red-500' : ''}
+          />
+          {errors.code && (
+            <p className="text-xs text-red-500">{errors.code.message}</p>
+          )}
+        </div>
+
+        {/* Region select */}
+        <div className="space-y-2">
+          <label htmlFor="regionId" className="block text-sm font-medium">
+            Region *
+          </label>
+          <SelectRegion
+            control={control}
+            name="regionId"
+            error={errors.regionId?.message}
+            disabled={disabled || !!regionId}
+          />
+        </div>
+
+        {/* Sector select */}
+        <div className="space-y-2">
+          <label htmlFor="sectorId" className="block text-sm font-medium">
+            Sektor *
+          </label>
+          <SelectSector
+            control={control}
+            name="sectorId"
+            regionId={watchedRegionId}
+            error={errors.sectorId?.message}
+            disabled={disabled || !watchedRegionId}
+          />
+        </div>
+
+        {/* School type select */}
+        <div className="space-y-2">
+          <label htmlFor="type" className="block text-sm font-medium">
+            Məktəb tipi *
+          </label>
+          <SelectSchoolType
+            control={control}
+            name="type"
+            error={errors.type?.message}
+            disabled={disabled}
+          />
+        </div>
+
+        {/* Address field */}
+        <div className="space-y-2">
+          <label htmlFor="address" className="block text-sm font-medium">
+            Ünvan
+          </label>
+          <Input
+            id="address"
+            disabled={disabled}
+            {...register('address')}
+            className={errors.address ? 'border-red-500' : ''}
+          />
+          {errors.address && (
+            <p className="text-xs text-red-500">{errors.address.message}</p>
+          )}
+        </div>
+
+        {/* Additional fields can be added here */}
+      </div>
+
+      {/* Submit button */}
+      {!disabled && (
+        <div className="mt-6 flex justify-end">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Yüklənir...' : initialData ? 'Yenilə' : 'Yarat'}
+          </Button>
+        </div>
+      )}
     </form>
   );
 };
